@@ -1,0 +1,738 @@
+// ============================================================
+// DMSuite — Dashboard Design Brief
+// Hand-off from UI Designer → Developer
+// ============================================================
+// This file describes every visual element, token, layout rule,
+// and responsive behaviour visible in the reference screenshot.
+// ============================================================
+
+{
+  // ----------------------------------------------------------
+  // 1. GLOBAL DESIGN TOKENS
+  // ----------------------------------------------------------
+  "tokens": {
+
+    // ── 1a. Color Palettes ──────────────────────────────────
+    // Two main palettes (primary & secondary) plus a neutral
+    // gray scale and a handful of semantic / accent colors.
+
+    "colors": {
+
+      // Primary — used for active nav items, primary buttons,
+      // CTA highlights, toggles, progress-bar fills, and the
+      // "Upgrade" button.  Derived from a saturated chartreuse /
+      // electric-lime green.
+      "primary": {
+        "50":  "#f4ffe6",
+        "100": "#e4ffbf",
+        "200": "#ccff80",
+        "300": "#b3ff40",
+        "400": "#9dff1a",   // chart bar highlight color
+        "500": "#8ae600",   // main accent (nav active bg, buttons)
+        "600": "#6fbf00",
+        "700": "#558c00",
+        "800": "#3d6600",
+        "900": "#264000",
+        "950": "#132600"
+      },
+
+      // Secondary — used for the "Total Saving" card highlight
+      // border, secondary actions ("Request" button outline),
+      // selected table-row accent, info badges.  A cool cyan /
+      // teal hue.
+      "secondary": {
+        "50":  "#ecfeff",
+        "100": "#cffafe",
+        "200": "#a5f3fc",
+        "300": "#67e8f9",
+        "400": "#22d3ee",
+        "500": "#06b6d4",
+        "600": "#0891b2",
+        "700": "#0e7490",
+        "800": "#155e75",
+        "900": "#164e63",
+        "950": "#083344"
+      },
+
+      // Neutral / Gray — the backbone of the dark-mode UI
+      "gray": {
+        "50":  "#f8fafc",   // light-mode body text
+        "100": "#f1f5f9",   // light-mode card bg
+        "200": "#e2e8f0",   // light-mode borders
+        "300": "#cbd5e1",   // muted text (light)
+        "400": "#94a3b8",   // placeholder text / muted icons
+        "500": "#64748b",   // secondary text
+        "600": "#475569",   // dark-mode muted text
+        "700": "#334155",   // dark-mode card borders, table row separators
+        "800": "#1e293b",   // dark-mode card / surface bg
+        "850": "#172032",   // slightly darker card variant (spending-limits card)
+        "900": "#0f172a",   // dark-mode sidebar bg
+        "950": "#0a0f1a"    // dark-mode body / deepest bg
+      },
+
+      // Semantic / Accent one-offs
+      "accents": {
+        // Status pill colors
+        "success":    "#22c55e",  // "Received" badge, green dot
+        "error":      "#ef4444",  // "Failed" badge, red dot
+        "warning":    "#f59e0b",  // "Processed" badge, amber/orange
+        "info":       "#3b82f6",  // general informational blue
+
+        // Payment-method badges
+        "wireTransfer":  "#7c3aed",  // purple badge bg (Wire Transfer)
+        "bankTransfer":  "#2563eb",  // blue badge bg (Bank Transfer)
+
+        // Card (Visa) gradient
+        "cardGradientFrom": "#1a2a1a",
+        "cardGradientVia":  "#2a4a2a",
+        "cardGradientTo":   "#1a3a1a",
+
+        // Chart bar inactive
+        "chartBarMuted": "#1e293b",
+
+        // Upgrade banner gradient
+        "upgradeBannerFrom": "#0a2a0a",
+        "upgradeBannerTo":   "#0f2f10"
+      }
+    },
+
+    // ── 1b. Typography ──────────────────────────────────────
+    "typography": {
+      "fontFamily": {
+        "sans": ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        "mono": ["JetBrains Mono", "Fira Code", "monospace"]  // for payment IDs
+      },
+      "scale": {
+        // name     : [fontSize, lineHeight, fontWeight, letterSpacing]
+        "display":   ["2rem",    "2.5rem",   "700", "-0.025em"],  // $102,175.96
+        "h1":        ["1.5rem",  "2rem",     "700", "-0.02em" ],  // page title "Dashboard"
+        "h2":        ["1.25rem", "1.75rem",  "600", "-0.01em" ],  // card headlines ($21,219.24)
+        "h3":        ["1rem",    "1.5rem",   "600", "0"       ],  // card labels ("Total Revenue this month")
+        "body":      ["0.875rem","1.25rem",  "400", "0"       ],  // table cells, descriptions
+        "caption":   ["0.75rem", "1rem",     "500", "0.01em"  ],  // "Vs Last month", timestamps
+        "overline":  ["0.625rem","0.875rem", "600", "0.05em"  ]   // category legend labels
+      }
+    },
+
+    // ── 1c. Spacing & Sizing ────────────────────────────────
+    "spacing": {
+      "page-px":        "1.5rem",    // horizontal page padding (24px)
+      "page-py":        "1.5rem",    // vertical page padding
+      "card-px":        "1.25rem",   // card inner horizontal padding (20px)
+      "card-py":        "1.25rem",   // card inner vertical padding
+      "card-gap":       "1.5rem",    // gap between cards in a grid
+      "section-gap":    "1.5rem",    // gap between dashboard sections
+      "sidebar-width":  "15rem",     // 240px collapsed sidebar
+      "sidebar-collapsed-width": "4.5rem" // icon-only mode
+    },
+
+    // ── 1d. Radii ───────────────────────────────────────────
+    "borderRadius": {
+      "xs":   "0.25rem",   // small badges, status dots
+      "sm":   "0.375rem",  // pills, tags
+      "md":   "0.5rem",    // input fields, small buttons
+      "lg":   "0.75rem",   // cards, modals
+      "xl":   "1rem",      // large cards, visa card
+      "2xl":  "1.25rem",   // upgrade banner
+      "full": "9999px"     // avatars, round icon buttons
+    },
+
+    // ── 1e. Shadows ─────────────────────────────────────────
+    "shadows": {
+      // Dark mode uses very subtle shadows; the UI relies on
+      // surface-color contrast instead.
+      "card":    "0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3)",
+      "dropdown":"0 4px 12px rgba(0,0,0,0.5)",
+      "modal":   "0 8px 30px rgba(0,0,0,0.6)",
+      // Light mode
+      "card-light":    "0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)",
+      "dropdown-light":"0 4px 12px rgba(0,0,0,0.1)",
+      "modal-light":   "0 8px 30px rgba(0,0,0,0.15)"
+    },
+
+    // ── 1f. Transitions ─────────────────────────────────────
+    "motion": {
+      "duration": {
+        "fast":   "150ms",
+        "normal": "250ms",
+        "slow":   "400ms"
+      },
+      "easing": "cubic-bezier(0.4, 0, 0.2, 1)"
+    }
+  },
+
+  // ----------------------------------------------------------
+  // 2. THEME MODES
+  // ----------------------------------------------------------
+  // The screenshot is dark mode. Light mode inverts surfaces
+  // and adjusts text contrast as described below.
+  "themes": {
+    "dark": {
+      "bodyBg":          "gray.950",
+      "sidebarBg":       "gray.900",
+      "surfaceBg":       "gray.800",
+      "surfaceBgAlt":    "gray.850",     // spending-limits / visa card bg
+      "borderDefault":   "gray.700",
+      "textPrimary":     "gray.50",
+      "textSecondary":   "gray.400",
+      "textMuted":       "gray.500",
+      "inputBg":         "gray.900",
+      "inputBorder":     "gray.700",
+      "inputPlaceholder":"gray.500",
+      "tableRowHover":   "gray.800",     // slight lighten on hover
+      "tableRowStripeBg":"gray.850"
+    },
+    "light": {
+      "bodyBg":          "gray.50",
+      "sidebarBg":       "#ffffff",
+      "surfaceBg":       "#ffffff",
+      "surfaceBgAlt":    "gray.100",
+      "borderDefault":   "gray.200",
+      "textPrimary":     "gray.900",
+      "textSecondary":   "gray.600",
+      "textMuted":       "gray.400",
+      "inputBg":         "#ffffff",
+      "inputBorder":     "gray.300",
+      "inputPlaceholder":"gray.400",
+      "tableRowHover":   "gray.100",
+      "tableRowStripeBg":"gray.50"
+    }
+  },
+
+  // ----------------------------------------------------------
+  // 3. RESPONSIVE BREAKPOINTS  (Tailwind defaults)
+  // ----------------------------------------------------------
+  "breakpoints": {
+    "sm":  "640px",
+    "md":  "768px",
+    "lg":  "1024px",
+    "xl":  "1280px",
+    "2xl": "1536px"
+  },
+
+  // ----------------------------------------------------------
+  // 4. LAYOUT STRUCTURE
+  // ----------------------------------------------------------
+  "layout": {
+
+    // ── 4a. Top-level shell ─────────────────────────────────
+    "shell": {
+      "description": "Fixed sidebar on the left + scrollable main content area on the right.",
+      "sidebar": {
+        "position": "fixed",
+        "top": 0,
+        "left": 0,
+        "height": "100vh",
+        "width": "15rem",        // 240px
+        "bgColor": "theme.sidebarBg",
+        "borderRight": "1px solid theme.borderDefault",
+        "responsive": {
+          "below-lg": "hidden by default; toggled via hamburger icon in top bar",
+          "lg-and-above": "visible, fixed"
+        }
+      },
+      "mainContent": {
+        "marginLeft": "sidebar-width on lg+, 0 below lg",
+        "padding": "page-px / page-py",
+        "overflow": "auto",
+        "maxWidth": "none (fluid)"
+      }
+    },
+
+    // ── 4b. Sidebar detail ──────────────────────────────────
+    "sidebar": {
+      "logo": {
+        "description": "Green circle icon + 'Qiespend' brand text in white, with a collapse chevron «.",
+        "height": "3.5rem",
+        "padding": "1rem 1.25rem",
+        "collapseIcon": "chevron-left, toggles sidebar between full and icon-only"
+      },
+      "search": {
+        "description": "Small search input with magnifying-glass icon, rounded-md, inside sidebar top area.",
+        "bgColor": "gray.900 (dark) / gray.100 (light)",
+        "border": "1px solid gray.700",
+        "placeholder": "Search Anything..."
+      },
+      "navGroups": [
+        {
+          "label": "MENU",
+          "style": "overline, text-gray-500, uppercase, tracking-wider",
+          "items": [
+            { "icon": "grid-2x2",       "label": "Dashboard",    "active": true  },
+            { "icon": "bell",            "label": "Notification", "active": false },
+            { "icon": "bar-chart-2",     "label": "Analytics",    "active": false },
+            { "icon": "arrows-left-right","label": "Transaction","active": false },
+            { "icon": "credit-card",     "label": "Card",         "active": false },
+            { "icon": "clock",           "label": "History",       "active": false }
+          ]
+        },
+        {
+          "label": "FEATURES",
+          "items": [
+            { "icon": "puzzle",     "label": "Integration", "active": false },
+            { "icon": "zap",        "label": "Automation",  "active": false }
+          ]
+        },
+        {
+          "label": "TOOLS",
+          "items": [
+            { "icon": "settings",   "label": "Setting",     "active": false },
+            { "icon": "help-circle","label": "Help Center",  "active": false }
+          ]
+        }
+      ],
+      "navItemStyle": {
+        "height": "2.5rem",
+        "paddingX": "1rem",
+        "borderRadius": "md",
+        "fontSize": "body",
+        "iconSize": "1.25rem",
+        "gap": "0.75rem",
+        "activeState": {
+          "bgColor": "primary.500",
+          "textColor": "gray.950",
+          "fontWeight": "600"
+        },
+        "inactiveState": {
+          "bgColor": "transparent",
+          "textColor": "gray.400",
+          "hoverBg": "gray.800"
+        }
+      }
+    },
+
+    // ── 4c. Top bar (inside main content) ───────────────────
+    "topBar": {
+      "description": "Horizontal bar at the very top of the main content: page title on left, utility icons on right.",
+      "left": {
+        "pageTitle": "Dashboard",
+        "style": "h1, font-bold, text-white (dark) / text-gray-900 (light)"
+      },
+      "right": {
+        "items": [
+          { "type": "icon-button", "icon": "moon/sun",    "purpose": "theme toggle" },
+          { "type": "icon-button", "icon": "bell",         "purpose": "notifications", "badge": false },
+          { "type": "avatar",      "shape": "circle",      "size": "2rem" }
+        ],
+        "gap": "0.75rem"
+      },
+      "height": "4rem",
+      "borderBottom": "none — the bar blends into the page bg"
+    }
+  },
+
+  // ----------------------------------------------------------
+  // 5. DASHBOARD SECTIONS (top → bottom)
+  // ----------------------------------------------------------
+  "sections": [
+
+    // ── 5a. Action bar ──────────────────────────────────────
+    {
+      "id": "action-bar",
+      "description": "Row with two left-aligned action buttons and a right-aligned search input.",
+      "layout": "flex, justify-between, items-center, gap-3",
+      "responsive": {
+        "below-sm": "stack vertically, search full-width on top"
+      },
+      "children": [
+        {
+          "type": "button-group",
+          "buttons": [
+            {
+              "label": "Generate Report",
+              "icon": "file-text (left)",
+              "variant": "outline",
+              "border": "1px solid gray.700",
+              "bgColor": "gray.800",
+              "textColor": "gray.300",
+              "borderRadius": "md"
+            },
+            {
+              "label": "Export",
+              "icon": "download (left)",
+              "variant": "outline",
+              "border": "1px solid gray.700",
+              "bgColor": "gray.800",
+              "textColor": "gray.300",
+              "borderRadius": "md"
+            }
+          ]
+        },
+        {
+          "type": "search-input",
+          "placeholder": "Search Anything...",
+          "icon": "search (left)",
+          "width": "16rem",
+          "bgColor": "gray.800",
+          "border": "1px solid gray.700",
+          "borderRadius": "md"
+        }
+      ]
+    },
+
+    // ── 5b. KPI cards row ───────────────────────────────────
+    {
+      "id": "kpi-cards",
+      "description": "Three equal-width summary cards showing key financial metrics.",
+      "layout": "grid, grid-cols-3",
+      "gap": "card-gap",
+      "responsive": {
+        "below-md": "grid-cols-1",
+        "md-to-lg": "grid-cols-2 (third wraps)",
+        "lg-plus":  "grid-cols-3"
+      },
+      "cards": [
+        {
+          "label": "Total Revenue this month",
+          "value": "$21,219.24",
+          "footer": "⏲ Vs Last month",
+          "borderTop": "none",
+          "surfaceBg": "gray.800"
+        },
+        {
+          "label": "Total Saving",
+          "value": "$14,376.26",
+          "footer": "⏲ Vs Last month",
+          "borderTop": "none",
+          "highlight": "This card has a subtle cyan/secondary left-border or top-border accent (2px solid secondary.500). It appears slightly highlighted compared to the others.",
+          "surfaceBg": "gray.800"
+        },
+        {
+          "label": "Taxes to be paid",
+          "value": "$4,667.02",
+          "footer": "⏲ Vs Last month",
+          "surfaceBg": "gray.800"
+        }
+      ],
+      "cardStyle": {
+        "padding": "card-px card-py",
+        "borderRadius": "lg",
+        "border": "1px solid gray.700",
+        "labelStyle": "caption / text-gray-400",
+        "valueStyle": "h2 / text-white / font-bold",
+        "footerStyle": "caption / text-gray-500, clock icon inline"
+      }
+    },
+
+    // ── 5c. Middle row: Spending Limits + Balance & Chart ───
+    {
+      "id": "middle-row",
+      "description": "Two cards side by side. Left ~40% width (AI spending limits + Visa card). Right ~60% width (Available Balance + bar chart).",
+      "layout": "grid, grid-cols-5",
+      "responsive": {
+        "below-lg": "grid-cols-1 (stacked)",
+        "lg-plus":  "left card col-span-2, right card col-span-3"
+      },
+      "children": [
+
+        // Left card — AI Spending Limits
+        {
+          "id": "spending-limits-card",
+          "surfaceBg": "gray.800",
+          "borderRadius": "lg",
+          "border": "1px solid gray.700",
+          "padding": "card-px card-py",
+          "sections": [
+            {
+              "id": "spending-header",
+              "label": "AI-Generated Spending Limits",
+              "value": "$4,815.23",
+              "labelStyle": "h3 / text-gray-300",
+              "valueStyle": "h2 / text-white / font-bold"
+            },
+            {
+              "id": "progress-bar",
+              "label": "Smart Spending Limits",
+              "description": "A segmented horizontal progress bar with 4 colored segments representing category breakdown.",
+              "segments": [
+                { "category": "Shopping",      "percent": 27, "color": "primary.500" },
+                { "category": "Subscriptions", "percent": 35, "color": "secondary.500" },
+                { "category": "Dining Out",    "percent": 18, "color": "warning (#f59e0b)" },
+                { "category": "Other",         "percent": 20, "color": "gray.600" }
+              ],
+              "barHeight": "0.5rem",
+              "borderRadius": "full",
+              "legend": {
+                "layout": "flex-wrap, gap-x-4 gap-y-1, mt-3",
+                "itemStyle": "dot (8px circle) + overline label + percentage"
+              }
+            },
+            {
+              "id": "visa-card",
+              "description": "A mock credit/debit card rendered inside the spending-limits card.",
+              "style": {
+                "aspectRatio": "1.586 (standard card ratio)",
+                "borderRadius": "xl",
+                "bgGradient": "from cardGradientFrom via cardGradientVia to cardGradientTo — a dark greenish metallic gradient",
+                "padding": "1.25rem",
+                "maxWidth": "18rem"
+              },
+              "elements": [
+                { "position": "top-left",     "content": "VISA logo — white italic bold text" },
+                { "position": "center",        "content": "Card number: 3455 4562 7710 3507 — mono font, text-white, tracking-widest, body size" },
+                { "position": "bottom-left",   "content": "Chip icon (small gold/silver rectangle with lines)" },
+                { "position": "bottom-center",  "content": "John Carter — caption, text-gray-300" },
+                { "position": "bottom-right",   "content": "02/30 — caption, text-gray-300" }
+              ]
+            }
+          ]
+        },
+
+        // Right card — Available Balance + Chart
+        {
+          "id": "balance-chart-card",
+          "surfaceBg": "gray.800",
+          "borderRadius": "lg",
+          "border": "1px solid gray.700",
+          "padding": "card-px card-py",
+          "sections": [
+            {
+              "id": "balance-header",
+              "layout": "flex, justify-between, items-center",
+              "left": {
+                "label": "Available Balance",
+                "value": "$102,175.96",
+                "labelStyle": "h3 / text-gray-300",
+                "valueStyle": "display / text-white / font-bold"
+              },
+              "right": {
+                "buttons": [
+                  {
+                    "label": "Request",
+                    "variant": "outline",
+                    "border": "1px solid gray.600",
+                    "textColor": "gray.300",
+                    "borderRadius": "md"
+                  },
+                  {
+                    "label": "Transfer",
+                    "icon": "send (left)",
+                    "variant": "filled",
+                    "bgColor": "primary.500",
+                    "textColor": "gray.950",
+                    "fontWeight": "600",
+                    "borderRadius": "md"
+                  }
+                ],
+                "extraIcon": "three-dot-menu / kebab"
+              }
+            },
+            {
+              "id": "chart-toggle",
+              "description": "Two text tabs: 'Line view' and 'Bar view'. 'Line view' appears selected (underline or bold).",
+              "activeTab": "Line view",
+              "tabStyle": {
+                "active":   "text-white, border-b-2 border-primary-500 or font-semibold",
+                "inactive": "text-gray-500, no border"
+              }
+            },
+            {
+              "id": "bar-chart",
+              "description": "Vertical bar chart showing monthly data from Jan–Sep+. Y-axis labels ($43k repeated — likely placeholder). X-axis month abbreviations.",
+              "chartStyle": {
+                "barWidth": "~2rem",
+                "barGap": "between months, grouped",
+                "barRadius": "top-rounded (sm)",
+                "activeBarColor": "primary.400",
+                "inactiveBarColor": "gray.700 / gray.800",
+                "axisLabelColor": "gray.500",
+                "gridLines": "horizontal, dashed or very faint, gray.700/20%"
+              },
+              "footer": "⏲ Vs Last month — caption, text-gray-500"
+            }
+          ]
+        }
+      ]
+    },
+
+    // ── 5d. Transactions Table ──────────────────────────────
+    {
+      "id": "transactions-table",
+      "description": "Full-width data table listing recent payment transactions with search, filters, pagination, and bulk actions.",
+      "surfaceBg": "gray.800",
+      "borderRadius": "lg",
+      "border": "1px solid gray.700",
+      "padding": "card-px card-py",
+
+      // Table toolbar
+      "toolbar": {
+        "layout": "flex, justify-between, items-center, flex-wrap",
+        "left": [
+          {
+            "type": "search-input",
+            "placeholder": "Search Transaction...",
+            "icon": "search (left)",
+            "width": "14rem",
+            "bgColor": "gray.900",
+            "border": "1px solid gray.700",
+            "borderRadius": "md"
+          },
+          {
+            "type": "filter-chip",
+            "icon": "settings-sliders (left)",
+            "label": "Processed Date",
+            "variant": "outline",
+            "border": "1px solid gray.700"
+          },
+          {
+            "type": "filter-chip",
+            "icon": "settings-sliders (left)",
+            "label": "Processed Date",
+            "variant": "outline",
+            "note": "Appears twice in the screenshot — could be two different date filters (start/end) or a duplicate in the mockup."
+          },
+          {
+            "type": "filter-chip",
+            "icon": "chevron-down (right)",
+            "label": "More",
+            "variant": "outline"
+          }
+        ],
+        "right": [
+          {
+            "type": "button",
+            "icon": "upload",
+            "label": "Import",
+            "variant": "ghost",
+            "textColor": "gray.400"
+          },
+          {
+            "type": "button",
+            "icon": "download",
+            "label": "Export",
+            "variant": "ghost",
+            "textColor": "gray.400"
+          }
+        ]
+      },
+
+      // Table columns
+      "columns": [
+        { "key": "select",          "width": "3rem",   "type": "checkbox" },
+        { "key": "paymentId",       "label": "Payment ID",      "width": "auto", "fontFamily": "mono", "textColor": "gray.300" },
+        { "key": "totalAmount",     "label": "Total Amount",    "width": "auto", "fontWeight": "500" },
+        { "key": "to",              "label": "To",              "width": "auto", "hasAvatar": true, "avatarSize": "1.5rem", "avatarShape": "circle" },
+        { "key": "paymentPeriod",   "label": "Payment Period",  "width": "auto", "textColor": "gray.400" },
+        { "key": "paymentMethod",   "label": "Payment Method",  "width": "auto", "type": "badge" },
+        { "key": "processedDate",   "label": "Processed Date",  "width": "auto" },
+        { "key": "status",          "label": "Status",          "width": "auto", "type": "status-badge" }
+      ],
+
+      // Badge styles
+      "badgeStyles": {
+        "paymentMethod": {
+          "wireTransfer": { "bg": "accents.wireTransfer/15%", "text": "accents.wireTransfer", "label": "Wire Transfer" },
+          "bankTransfer": { "bg": "accents.bankTransfer/15%", "text": "accents.bankTransfer", "label": "Bank Transfer" }
+        },
+        "status": {
+          "received":  { "bg": "success/15%", "text": "success", "dotColor": "success",  "label": "Received" },
+          "failed":    { "bg": "error/15%",   "text": "error",   "dotColor": "error",    "label": "Failed" },
+          "processed": { "bg": "warning/15%", "text": "warning", "dotColor": "warning",  "label": "Processed" }
+        }
+      },
+
+      // Sample rows (from screenshot)
+      "sampleData": [
+        { "paymentId": "PAY-12345XYZ", "totalAmount": "$1,164.99 USD", "to": "Kathryn Murphy",  "paymentPeriod": "Mar 10 – Mar 15", "paymentMethod": "wireTransfer", "processedDate": "Mar 13", "status": "received" },
+        { "paymentId": "TXN-98765A9",  "totalAmount": "$1,072.98 USD", "to": "Guy Hawkins",     "paymentPeriod": "Mar 11 – Mar 12", "paymentMethod": "bankTransfer", "processedDate": "Mar 11", "status": "failed" },
+        { "paymentId": "INV-56789LMN", "totalAmount": "$977.98 USD",   "to": "Wade Warren",     "paymentPeriod": "Mar 4 – Mar 8",   "paymentMethod": "wireTransfer", "processedDate": "Mar 7",  "status": "processed" },
+        { "paymentId": "ORD-99887PQR", "totalAmount": "$535.98 USD",   "to": "Annette Black",   "paymentPeriod": "Feb 1 – Feb 15",  "paymentMethod": "bankTransfer", "processedDate": "Feb 12", "status": "received" }
+      ],
+
+      // Table row style
+      "rowStyle": {
+        "height": "3.5rem",
+        "borderBottom": "1px solid gray.700",
+        "hoverBg": "gray.750 (between 700 and 800)",
+        "fontSize": "body",
+        "textColor": "gray.200"
+      },
+
+      // Pagination
+      "pagination": {
+        "layout": "flex, justify-between, items-center",
+        "left": {
+          "type": "page-buttons",
+          "style": "inline number buttons (1, 2, 3, …, 20) with prev/next arrows",
+          "activePageStyle": {
+            "bgColor": "primary.500",
+            "textColor": "gray.950",
+            "borderRadius": "md"
+          },
+          "inactivePageStyle": {
+            "bgColor": "transparent",
+            "textColor": "gray.400",
+            "hoverBg": "gray.800"
+          },
+          "arrowStyle": {
+            "icon": "chevron-left / chevron-right",
+            "textColor": "gray.400",
+            "disabled": "gray.600 / cursor-not-allowed"
+          }
+        },
+        "right": {
+          "text": "Showing 1 to 8 of 50 entries",
+          "showAllLink": {
+            "label": "Show All",
+            "textColor": "primary.500",
+            "fontWeight": "600"
+          }
+        }
+      }
+    },
+
+    // ── 5e. Upgrade Banner (bottom-left overlay) ────────────
+    {
+      "id": "upgrade-banner",
+      "description": "A small floating toast / card anchored to the bottom-left of the viewport, overlaying the sidebar or main content. Has a dismiss X button.",
+      "position": "fixed, bottom-4 left-4 (or bottom of sidebar)",
+      "width": "16rem",
+      "bgColor": "gradient from accents.upgradeBannerFrom to accents.upgradeBannerTo — a dark green-tinted surface",
+      "border": "1px solid primary.800/30%",
+      "borderRadius": "xl",
+      "padding": "1rem",
+      "children": [
+        { "type": "badge",   "label": "Upgrade Pro!", "icon": "sparkles", "bgColor": "primary.500/15%", "textColor": "primary.400" },
+        { "type": "text",    "content": "Upgrade to Pro and elevate your experience today", "style": "caption, text-gray-400" },
+        { "type": "dismiss", "icon": "x", "position": "top-right" },
+        {
+          "type": "button-row",
+          "buttons": [
+            { "label": "Upgrade",     "icon": "crown (left)", "variant": "filled", "bgColor": "primary.500", "textColor": "gray.950", "borderRadius": "md" },
+            { "label": "Learn more",  "variant": "link", "textColor": "gray.400", "underline": false }
+          ]
+        }
+      ]
+    }
+  ],
+
+  // ----------------------------------------------------------
+  // 6. RESPONSIVE BEHAVIOUR SUMMARY
+  // ----------------------------------------------------------
+  "responsiveSummary": {
+    "mobile (below sm / 640px)": [
+      "Sidebar is completely hidden; accessible via hamburger menu icon in top bar.",
+      "All grids collapse to single column.",
+      "Visa card and chart stack vertically.",
+      "Table scrolls horizontally; toolbar filters collapse into a single 'Filters' dropdown.",
+      "Upgrade banner spans full width at bottom, or becomes a slim toast."
+    ],
+    "tablet (sm–lg / 640–1024px)": [
+      "Sidebar can be toggled (overlay mode).",
+      "KPI cards: 2-column grid (third card wraps to next row).",
+      "Middle row: stacked (spending card on top, balance card below).",
+      "Table is full-width with horizontal scroll if needed."
+    ],
+    "desktop (lg+ / 1024px+)": [
+      "Sidebar is always visible and fixed.",
+      "KPI cards: 3-column grid.",
+      "Middle row: 2/5 + 3/5 split.",
+      "Table fits without horizontal scroll.",
+      "Upgrade banner floats at bottom-left over sidebar area."
+    ],
+    "wide (xl+ / 1280px+)": [
+      "Same as desktop but with more generous spacing.",
+      "Chart shows more months."
+    ]
+  }
+}

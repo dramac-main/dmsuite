@@ -1,0 +1,25 @@
+{
+  "name": "DMSuite — AI Design & Business Suite",
+  "short_name": "DMSuite",
+  "description": "250+ AI-powered tools for design, video, audio, content, marketing, web/UI, documents, and business automation.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#030712",
+  "theme_color": "#8ae600",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "business", "design"]
+}
