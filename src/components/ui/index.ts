@@ -25,3 +25,4 @@ export {
   DropdownSeparator,
   DropdownLabel,
 } from "./Dropdown";
+export { Accordion, AccordionSection, useAccordion } from "./Accordion";

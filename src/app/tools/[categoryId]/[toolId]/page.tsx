@@ -60,6 +60,32 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   "sales-book-a5": dynamic(() => import("@/components/workspaces/SalesBookA5Workspace")),
   "price-list": dynamic(() => import("@/components/workspaces/PriceListWorkspace")),
 
+  // ── Phase 3: Document Tools (New) ──
+  "company-profile": dynamic(() => import("@/components/workspaces/CompanyProfileWorkspace")),
+  "business-plan": dynamic(() => import("@/components/workspaces/BusinessPlanWorkspace")),
+  "purchase-order": dynamic(() => import("@/components/workspaces/PurchaseOrderWorkspace")),
+  "diploma-designer": dynamic(() => import("@/components/workspaces/DiplomaDesignerWorkspace")),
+  "statement-of-account": dynamic(() => import("@/components/workspaces/StatementOfAccountWorkspace")),
+  "newsletter-print": dynamic(() => import("@/components/workspaces/NewsletterPrintWorkspace")),
+  "employee-handbook": dynamic(() => import("@/components/workspaces/EmployeeHandbookWorkspace")),
+  "job-description": dynamic(() => import("@/components/workspaces/JobDescriptionWorkspace")),
+  "lookbook": dynamic(() => import("@/components/workspaces/LookbookWorkspace")),
+  "line-sheet": dynamic(() => import("@/components/workspaces/LineSheetWorkspace")),
+  "real-estate-listing": dynamic(() => import("@/components/workspaces/RealEstateListingWorkspace")),
+  "event-program": dynamic(() => import("@/components/workspaces/EventProgramWorkspace")),
+  "ticket-designer": dynamic(() => import("@/components/workspaces/TicketDesignerWorkspace")),
+  "cover-letter": dynamic(() => import("@/components/workspaces/CoverLetterWorkspace")),
+  "invitation-designer": dynamic(() => import("@/components/workspaces/InvitationDesignerWorkspace")),
+  "training-manual": dynamic(() => import("@/components/workspaces/TrainingManualWorkspace")),
+  "user-guide": dynamic(() => import("@/components/workspaces/UserGuideWorkspace")),
+  "worksheet-designer": dynamic(() => import("@/components/workspaces/WorksheetDesignerWorkspace")),
+  "white-paper": dynamic(() => import("@/components/workspaces/WhitePaperWorkspace")),
+  "case-study": dynamic(() => import("@/components/workspaces/CaseStudyWorkspace")),
+  "media-kit": dynamic(() => import("@/components/workspaces/MediaKitWorkspace")),
+  "ebook-creator": dynamic(() => import("@/components/workspaces/EbookCreatorWorkspace")),
+  "portfolio-builder": dynamic(() => import("@/components/workspaces/PortfolioBuilderWorkspace")),
+  "greeting-card": dynamic(() => import("@/components/workspaces/GreetingCardWorkspace")),
+
   // ── Phase 3: Mockups ──
   "mockup-generator": dynamic(() => import("@/components/workspaces/MockupGeneratorWorkspace")),
 

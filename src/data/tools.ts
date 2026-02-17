@@ -731,7 +731,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design fashion lookbooks, product lookbooks, and portfolio books with editorial layouts",
         icon: "image",
-        status: "coming-soon",
+        status: "ready",
         tags: ["lookbook", "fashion", "portfolio", "editorial"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -757,7 +757,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create wholesale line sheets with product photos, SKUs, pricing, and order details",
         icon: "grid",
-        status: "coming-soon",
+        status: "ready",
         tags: ["line sheet", "wholesale", "B2B", "product"],
         outputs: ["pdf", "xlsx"],
         printReady: true,
@@ -771,7 +771,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create stunning multi-page company profiles that showcase your brand story, team, and services",
         icon: "building",
-        status: "coming-soon",
+        status: "ready",
         tags: ["company profile", "corporate", "branding", "about us"],
         aiProviders: ["claude"],
         outputs: ["pdf", "pptx"],
@@ -823,7 +823,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design printed newsletters, bulletins, and internal communications in A4/letter format",
         icon: "newspaper",
-        status: "coming-soon",
+        status: "ready",
         tags: ["newsletter", "print", "bulletin", "internal comms"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -873,7 +873,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate branded purchase orders with vendor details, line items, and approval workflows",
         icon: "clipboard",
-        status: "coming-soon",
+        status: "ready",
         tags: ["purchase order", "PO", "procurement", "vendor"],
         outputs: ["pdf", "xlsx"],
         printReady: true,
@@ -885,7 +885,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create account statements showing transaction history, balances, and aging summaries",
         icon: "chart",
-        status: "coming-soon",
+        status: "ready",
         tags: ["statement", "account", "aging", "balance"],
         outputs: ["pdf", "xlsx"],
         supportsPartEdit: true,
@@ -909,7 +909,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "AI-powered business plan generator with executive summary, market analysis, and financial projections",
         icon: "target",
-        status: "coming-soon",
+        status: "ready",
         tags: ["business plan", "strategy", "projections", "startup"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -921,7 +921,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Build comprehensive employee handbooks with policies, procedures, and company culture sections",
         icon: "bookOpen",
-        status: "coming-soon",
+        status: "ready",
         tags: ["employee handbook", "HR", "policies", "onboarding"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -933,7 +933,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create compelling job descriptions, role profiles, and hiring posts with inclusive language",
         icon: "users",
-        status: "coming-soon",
+        status: "ready",
         tags: ["job description", "hiring", "recruitment", "HR"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -959,7 +959,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design formal diplomas, accreditations, and professional designation certificates",
         icon: "award",
-        status: "coming-soon",
+        status: "ready",
         tags: ["diploma", "accreditation", "formal", "education"],
         outputs: ["pdf", "png", "tiff"],
         printReady: true,
@@ -997,7 +997,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design property listing sheets, feature sheets, open house flyers, and market reports",
         icon: "home",
-        status: "coming-soon",
+        status: "ready",
         tags: ["real estate", "listing", "property", "feature sheet"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -1010,7 +1010,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design event programs, conference agendas, wedding programs, and ceremony booklets",
         icon: "calendar",
-        status: "coming-soon",
+        status: "ready",
         tags: ["event program", "agenda", "conference", "wedding"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -1023,7 +1023,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design event tickets, admission passes, raffle tickets, and VIP passes with barcodes/QR",
         icon: "creditCard",
-        status: "coming-soon",
+        status: "ready",
         tags: ["ticket", "pass", "event", "VIP", "barcode"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -1061,7 +1061,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Build training manuals, SOPs, onboarding guides, and instruction booklets with step-by-step layouts",
         icon: "bookOpen",
-        status: "coming-soon",
+        status: "ready",
         tags: ["training", "manual", "SOP", "onboarding", "instruction"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -1075,7 +1075,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create product user guides, help docs, technical documentation, and quick-start guides",
         icon: "helpCircle",
-        status: "coming-soon",
+        status: "ready",
         tags: ["user guide", "documentation", "help", "technical"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx", "html"],
@@ -1087,7 +1087,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create fillable worksheets, forms, checklists, and planning templates for print or digital",
         icon: "clipboard",
-        status: "coming-soon",
+        status: "ready",
         tags: ["worksheet", "form", "checklist", "fillable", "template"],
         outputs: ["pdf", "docx"],
         printReady: true,
@@ -1100,7 +1100,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Write and design professional white papers and research documents with citations",
         icon: "fileText",
-        status: "coming-soon",
+        status: "ready",
         tags: ["white paper", "research", "thought leadership", "academic"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -1112,7 +1112,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Build compelling case studies that showcase client results with before/after data visualizations",
         icon: "trendingUp",
-        status: "coming-soon",
+        status: "ready",
         tags: ["case study", "success story", "portfolio", "results"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx", "pptx"],
@@ -1124,7 +1124,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create media kits, press kits, and sponsorship packages for PR and partnerships",
         icon: "newspaper",
-        status: "coming-soon",
+        status: "ready",
         tags: ["media kit", "press", "PR", "sponsorship"],
         outputs: ["pdf", "pptx"],
         supportsPartEdit: true,
@@ -1135,7 +1135,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design and export eBooks, digital magazines, interactive PDFs, and EPUB publications",
         icon: "tablet",
-        status: "coming-soon",
+        status: "ready",
         tags: ["ebook", "digital", "publication", "magazine", "EPUB"],
         aiProviders: ["claude"],
         outputs: ["pdf", "html"],
@@ -1160,7 +1160,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate tailored cover letters that match job descriptions with keyword optimization",
         icon: "mail",
-        status: "coming-soon",
+        status: "ready",
         tags: ["cover letter", "job", "application", "career"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -1172,7 +1172,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create stunning design portfolios, photography portfolios, and creative portfolios for print or web",
         icon: "image",
-        status: "coming-soon",
+        status: "ready",
         tags: ["portfolio", "creative", "photography", "design"],
         outputs: ["pdf", "html", "png"],
         supportsPartEdit: true,
@@ -1184,7 +1184,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design wedding invitations, party invites, corporate event invitations, and RSVPs",
         icon: "mail",
-        status: "coming-soon",
+        status: "ready",
         tags: ["invitation", "wedding", "party", "event", "RSVP"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -1197,7 +1197,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create greeting cards, thank-you cards, holiday cards, and folded cards with envelopes",
         icon: "mail",
-        status: "coming-soon",
+        status: "ready",
         tags: ["greeting card", "thank you", "holiday", "birthday"],
         outputs: ["pdf", "png"],
         printReady: true,

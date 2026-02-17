@@ -1,6 +1,6 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 72/194 tools with workspaces (37%) — 122 tools still need building — Build passes ✅ — Full audit complete ✅
+## Overall Status: 96/194 tools with workspaces (49%) — ~90 tools still need building — Build passes ✅ — Full audit complete ✅
 
 ---
 
@@ -45,6 +45,13 @@
 - [x] TemplateSlider — visual template preview
 - [x] AI revision engine with style locking
 
+### Session 22 Infrastructure ✅
+- [x] Accordion component (`src/components/ui/Accordion.tsx`) — single-open panels
+- [x] AI Design Engine (`src/lib/ai-design-engine.ts`) — professional design utilities
+- [x] Stock Image Hook (`src/hooks/useStockImages.tsx`) — search + panel component
+- [x] `generateColorPalette()` returns OBJECT (primary, primaryLight, primaryDark, etc.)
+- [x] `wrapCanvasText(ctx, text, maxWidth)` — 3 args only, returns string[]
+
 ### APIs ✅
 - [x] /api/chat — Claude + OpenAI with auto-fallback, streaming
 - [x] /api/images — Unsplash/Pexels/Pixabay stock image search
@@ -52,7 +59,7 @@
 
 ---
 
-## Workspace Status (69 files, 72 tool routes)
+## Workspace Status (93 files, 96 tool routes)
 
 ### SUBSTANTIAL (50KB+ — AUDITED Session 20 ✅ All solid)
 | Workspace | Size | Tools Routed | Notes |
@@ -66,6 +73,34 @@
 | PresentationWorkspace | 69KB | presentation | Slide management, themes |
 | BrandIdentityWorkspace | 64KB | brand-identity | Brand board, patterns |
 | LogoGeneratorWorkspace | 56KB | logo-generator | 18 designs, multi-res export |
+
+### NEW DOCUMENT TOOLS (Session 22 — 24 workspaces)
+| Workspace | Tool Routed | Description |
+|---|---|---|
+| CompanyProfileWorkspace | company-profile | 7-page company profile, 6 templates |
+| BusinessPlanWorkspace | business-plan | Multi-page plan with financial charts |
+| PurchaseOrderWorkspace | purchase-order | PO with line items, 7 currencies |
+| DiplomaDesignerWorkspace | diploma-designer | Diploma/certificate with seal, gold accents |
+| StatementOfAccountWorkspace | statement-of-account | Transaction table, running balance |
+| NewsletterPrintWorkspace | newsletter-print | Multi-page newsletter with masthead |
+| EmployeeHandbookWorkspace | employee-handbook | Multi-page handbook with chapters |
+| JobDescriptionWorkspace | job-description | Professional JD with lists |
+| LookbookWorkspace | lookbook | Fashion lookbook with product pages |
+| LineSheetWorkspace | line-sheet | Wholesale line sheet with pricing grid |
+| RealEstateListingWorkspace | real-estate-listing | Property feature sheet |
+| EventProgramWorkspace | event-program | Event program/agenda |
+| TicketDesignerWorkspace | ticket-designer | Ticket with barcode, tear-off stub |
+| CoverLetterWorkspace | cover-letter | Professional cover letter |
+| InvitationDesignerWorkspace | invitation-designer | Event invitations |
+| TrainingManualWorkspace | training-manual | Multi-page training manual |
+| UserGuideWorkspace | user-guide | Documentation with TOC |
+| WorksheetDesignerWorkspace | worksheet-designer | Printable worksheets/forms |
+| WhitePaperWorkspace | white-paper | Professional white paper |
+| CaseStudyWorkspace | case-study | Challenge/solution/results format |
+| MediaKitWorkspace | media-kit | Press/media kit with stats |
+| EbookCreatorWorkspace | ebook-creator | eBook with cover + chapters |
+| PortfolioBuilderWorkspace | portfolio-builder | Creative portfolio showcase |
+| GreetingCardWorkspace | greeting-card | Cards (birthday/thankyou/holiday) |
 
 ### MEDIUM (20KB–50KB — AUDITED Session 20)
 | Workspace | Size | Tool Routed | Status |
@@ -98,9 +133,9 @@
 
 ---
 
-## Tools NOT Built (122 total)
+## Tools NOT Built (~90 total)
 
-### Coming Soon (114 tools)
+### Coming Soon (~90 tools)
 These tools exist in tools.ts but have NO workspace component. They show the default placeholder when navigated to.
 
 Categories with most missing tools:
@@ -108,7 +143,7 @@ Categories with most missing tools:
 - **Content Writing**: ~14 missing (website-copy, ebook-writer, thread-writer, etc.)
 - **Marketing & Sales**: ~14 missing (marketing-strategy, campaign-builder, etc.)
 - **Design & Branding**: ~15 missing (brand-guidelines, social-media-story, etc.)
-- **Documents**: ~20 missing (company-profile, business-plan, etc.)
+- **Documents**: ✅ ALL DONE — 0 missing
 - **Web & UI**: ~7 missing (website-builder, app-screen-designer, etc.)
 - **Utilities**: ~12 missing (ai-image-chat, image-compression, etc.)
 - **Audio**: ~5 missing (voiceover-studio, sound-effects, etc.)
@@ -128,22 +163,22 @@ These workspaces use StickyCanvasLayout, have proper canvas rendering, AI integr
 - **Data**: AnalyticsDashboard, SEOOptimizer (non-canvas but solid)
 - **Media**: AIChatWorkspace, StockImageBrowser, StockImageIntegration
 
-### 🔄 NEEDS-ENHANCEMENT (~17 workspaces — functional but thin/simulated)
+### 🔄 NEEDS-ENHANCEMENT (~15 workspaces — functional but thin/simulated)
 These workspaces work but simulate backend processing or have limited canvas rendering:
 - **Media Processing**: BackgroundRemover, BatchProcessor, FileConverter, GifMaker, ImageEnhancer, VideoCompressor
 - **Audio**: MusicGenerator, PodcastTools, SubtitleGenerator, Transcription, VoiceCloner
 - **Web/Marketing**: LandingPage, LeadMagnet, SalesFunnel
-- **Motion**: MotionGraphics (299 lines — **thinnest workspace**)
 - **Documents**: PDFTools
-- **Calendar**: CalendarDesigner (486 lines — needs multi-month/year, events, holidays)
 
-### ✅ REBUILT (4 workspaces — Sessions 19-20)
+### ✅ REBUILT (6 workspaces — Sessions 19-21)
 | Workspace | Before | After | Session |
 |---|---|---|---|
 | LogoRevealWorkspace | 87 lines | 911 lines | 19 |
 | AIVideoGeneratorWorkspace | 113 lines | 745 lines | 19 |
 | VideoEditorWorkspace | 187 lines | ~700 lines | 20 |
 | TextToSpeechWorkspace | 346 lines | ~580 lines | 20 |
+| MotionGraphicsWorkspace | 299 lines | ~900 lines | 21 |
+| CalendarDesignerWorkspace | 486 lines | ~700 lines | 21 |
 
 ---
 
@@ -157,7 +192,9 @@ These workspaces work but simulate backend processing or have limited canvas ren
 - [ ] Export quality not print-ready in some tools
 - [ ] No database (Supabase planned)
 - [ ] No authentication
-- [ ] 122 tools still need dedicated workspace implementations
+- [ ] ~90 tools still need dedicated workspace implementations
+- [ ] 15 agent-built document workspaces should be spot-checked for visual quality
+- [ ] Existing 16 document workspaces still use old Set<string> accordion (should migrate to Accordion component)
 
 ---
 
@@ -183,9 +220,30 @@ These workspaces work but simulate backend processing or have limited canvas ren
 - ✅ Committed (a052fb1) and pushed to origin/main
 - ✅ Updated memory bank with full audit results
 
-### Next Priority (Session 21+)
-1. **Enhance MotionGraphicsWorkspace** (299 lines — thinnest remaining)
-2. **Enhance CalendarDesignerWorkspace** (486 lines — needs multi-month view)
-3. **Address other needs-enhancement workspaces** (17 total)
-4. **Build missing tool workspaces** (122 tools — the big remaining work)
-5. **Server infrastructure** for real media processing (background removal, video encoding, etc.)
+### Session 21 — MotionGraphics & Calendar Rebuild
+- ✅ Rebuilt MotionGraphicsWorkspace (299→900+ lines) — keyframe animation, particle system, 24 templates
+- ✅ Rebuilt CalendarDesignerWorkspace (486→700+ lines) — year view, events, 6 templates
+- ✅ Updated progress.md with comprehensive audit data
+- ✅ Build passes with zero errors
+- ✅ Committed (fe31c81) and pushed to origin/main
+- ✅ Updated memory bank
+
+### Session 22 — Document & Business Tools Mass Build
+- ✅ Created global Accordion component (`src/components/ui/Accordion.tsx`)
+- ✅ Created AI Design Engine library (`src/lib/ai-design-engine.ts`)
+- ✅ Created useStockImages hook + StockImagePanel (`src/hooks/useStockImages.tsx`)
+- ✅ Built 24 new document/business workspace files (5 hand-built, 19 agent-built)
+- ✅ Added 24 routes to page.tsx
+- ✅ Changed 24 tool statuses from "coming-soon" to "ready" in tools.ts
+- ✅ Fixed 11 TypeScript errors (icon names, prop mismatches, type mismatches, palette indexing)
+- ✅ Renamed useStockImages.ts → .tsx (contained JSX)
+- ✅ Build passes with zero TypeScript errors
+- ✅ ALL 38 document tools now have workspaces — documents category 100% complete
+- ✅ Updated memory bank
+
+### Next Priority (Session 23+)
+1. **Migrate existing document workspaces** to new Accordion component
+2. **Spot-check agent-built workspaces** for visual rendering quality
+3. **Enhance 15 needs-enhancement workspaces** (simulated backends)
+4. **Build missing ~90 tool workspaces** (video, audio, content, marketing, web, utilities, design)
+5. **Server infrastructure** for real media processing
