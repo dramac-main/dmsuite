@@ -17,6 +17,11 @@ import {
   IconShare,
   IconSmartphone,
   IconRefresh,
+  IconHash,
+  IconChevronLeft,
+  IconChevronRight,
+  IconPlus,
+  IconLayers,
 } from "@/components/icons";
 import StockImagePicker, { type StockImage } from "@/components/StockImagePicker";
 import {
@@ -112,6 +117,35 @@ const platforms = [
   { id: "youtube-thumb", label: "YouTube Thumb", width: 1280, height: 720, ratio: "16:9", icon: "▶️" },
 ] as const;
 
+/* ── Platform Character Limits ────────────────────────────── */
+
+const platformCharLimits: Record<string, { label: string; limit: number }> = {
+  "instagram-post": { label: "Instagram", limit: 2200 },
+  "instagram-story": { label: "Instagram", limit: 2200 },
+  "twitter-post": { label: "Twitter/X", limit: 280 },
+  "facebook-post": { label: "Facebook", limit: 63206 },
+  "linkedin-post": { label: "LinkedIn", limit: 3000 },
+  "youtube-thumb": { label: "YouTube", limit: 5000 },
+};
+
+function CharCount({ value, platform }: { value: string; platform: string }) {
+  const info = platformCharLimits[platform];
+  if (!info) return null;
+  const len = value.length;
+  const pct = len / info.limit;
+  const color =
+    len > info.limit
+      ? "text-error-500"
+      : pct > 0.8
+        ? "text-warning-500"
+        : "text-success-500";
+  return (
+    <span className={`text-[0.5rem] tabular-nums ${color}`}>
+      {len}/{info.limit}
+    </span>
+  );
+}
+
 /* ── Composition Templates ───────────────────────────────── */
 
 const compositionOptions: { id: CompositionType; label: string; desc: string }[] = [
@@ -168,6 +202,15 @@ export default function SocialMediaPostWorkspace() {
   const [activeTab, setActiveTab] = useState<"design" | "export" | "present">("design");
   const [selectedExports, setSelectedExports] = useState<Set<string>>(new Set());
   const [isExporting, setIsExporting] = useState(false);
+
+  /* ── Hashtag Generator State ──────────────────────────── */
+  const [generatedHashtags, setGeneratedHashtags] = useState<string[]>([]);
+  const [isGeneratingHashtags, setIsGeneratingHashtags] = useState(false);
+
+  /* ── Carousel Mode State ─────────────────────────────── */
+  const [carouselMode, setCarouselMode] = useState(false);
+  const [slides, setSlides] = useState<DesignDocument[]>([]);
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0);
 
   const [config, setConfig] = useState<PostConfig>({
     platform: "instagram-post",
@@ -696,6 +739,130 @@ export default function SocialMediaPostWorkspace() {
     }
   }, [config, currentPlatform, updateConfig, revisionRequest]);
 
+  /* ── Hashtag Generator ──────────────────────────────────── */
+  const generateHashtags = useCallback(async () => {
+    const context = [config.headline, config.subtext, config.description, config.label]
+      .filter(Boolean)
+      .join(". ");
+    if (!context.trim()) return;
+    setIsGeneratingHashtags(true);
+    try {
+      const prompt = `Generate 15-20 highly relevant social media hashtags for the following content. The post is for ${currentPlatform.label}. Content: "${context}". Return ONLY the hashtags as a JSON array of strings, each starting with #. Example: ["#design","#marketing"]. No other text.`;
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }),
+      });
+      if (!response.ok) throw new Error("Generation failed");
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No stream");
+      let fullText = "";
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        fullText += decoder.decode(value, { stream: true });
+      }
+      const match = fullText.match(/\[([^\]]+)\]/);
+      if (match) {
+        try {
+          const parsed: string[] = JSON.parse(`[${match[1]}]`);
+          setGeneratedHashtags(parsed.map((h) => (h.startsWith("#") ? h : `#${h}`)));
+        } catch {
+          const tags = fullText.match(/#[\w]+/g);
+          if (tags) setGeneratedHashtags(tags);
+        }
+      } else {
+        const tags = fullText.match(/#[\w]+/g);
+        if (tags) setGeneratedHashtags(tags);
+      }
+    } catch {
+      /* Hashtag generation failed silently */
+    } finally {
+      setIsGeneratingHashtags(false);
+    }
+  }, [config.headline, config.subtext, config.description, config.label, currentPlatform.label]);
+
+  /* ── Carousel Mode Helpers ─────────────────────────────── */
+  const handleToggleCarousel = useCallback(() => {
+    setCarouselMode((prev) => {
+      if (!prev) {
+        // Entering carousel mode — first slide is the current doc
+        setSlides([{ ...doc }]);
+        setActiveSlideIndex(0);
+      }
+      return !prev;
+    });
+  }, [doc]);
+
+  const handleAddSlide = useCallback(() => {
+    const newSlide: DesignDocument = {
+      ...doc,
+      id: `slide_${Date.now()}`,
+      layers: [],
+      layerOrder: [],
+      selectedLayers: [],
+      history: [],
+      historyIndex: 0,
+      meta: { ...doc.meta, createdAt: Date.now(), updatedAt: Date.now() },
+    };
+    setSlides((prev) => [...prev, newSlide]);
+    setActiveSlideIndex((prev) => prev + 1);
+    setDoc(newSlide);
+    setUndoStack([]);
+    setRedoStack([]);
+  }, [doc]);
+
+  const handleSwitchSlide = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= slides.length) return;
+      // Save current slide
+      setSlides((prev) =>
+        prev.map((s, i) => (i === activeSlideIndex ? { ...doc } : s))
+      );
+      setActiveSlideIndex(index);
+      setDoc(slides[index]);
+      setUndoStack([]);
+      setRedoStack([]);
+    },
+    [slides, activeSlideIndex, doc]
+  );
+
+  const handleExportAllSlides = useCallback(async () => {
+    // Save current slide first
+    const allSlides = slides.map((s, i) => (i === activeSlideIndex ? { ...doc } : s));
+    setIsExporting(true);
+    try {
+      for (let i = 0; i < allSlides.length; i++) {
+        const slideDoc = allSlides[i];
+        const exportCanvas = renderToSize(slideDoc, currentPlatform.width, currentPlatform.height);
+        if (loadedImage) {
+          const ctx2 = exportCanvas.getContext("2d");
+          if (ctx2) {
+            ctx2.save();
+            ctx2.globalCompositeOperation = "destination-over";
+            drawCoverImage(ctx2, loadedImage, currentPlatform.width, currentPlatform.height);
+            ctx2.restore();
+          }
+        }
+        const blob = await new Promise<Blob | null>((resolve) =>
+          exportCanvas.toBlob((b) => resolve(b), "image/png")
+        );
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = window.document.createElement("a");
+          a.href = url;
+          a.download = `${config.headline || "carousel"}-slide-${i + 1}.png`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+        await new Promise((r) => setTimeout(r, 300));
+      }
+    } finally {
+      setIsExporting(false);
+    }
+  }, [slides, activeSlideIndex, doc, currentPlatform, loadedImage, config.headline]);
+
   /* ── Multi-Format Export ───────────────────────────────── */
   const exportFormats = useMemo(() => getExportFormats(), []);
   const exportByPlatform = useMemo(() => getExportFormatsByPlatform(), []);
@@ -1068,27 +1235,45 @@ export default function SocialMediaPostWorkspace() {
             toggle={toggleSection}
           >
             <div className="space-y-2">
-              <input
-                type="text"
-                placeholder="Headline"
-                value={config.headline}
-                onChange={(e) => updateConfig({ headline: e.target.value })}
-                className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
-              />
-              <input
-                type="text"
-                placeholder="Supporting text"
-                value={config.subtext}
-                onChange={(e) => updateConfig({ subtext: e.target.value })}
-                className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
-              />
-              <input
-                type="text"
-                placeholder="CTA button text"
-                value={config.ctaText}
-                onChange={(e) => updateConfig({ ctaText: e.target.value })}
-                className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
-              />
+              <div>
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[0.5rem] text-gray-400">Headline</span>
+                  <CharCount value={config.headline} platform={config.platform} />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Headline"
+                  value={config.headline}
+                  onChange={(e) => updateConfig({ headline: e.target.value })}
+                  className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[0.5rem] text-gray-400">Supporting text</span>
+                  <CharCount value={config.subtext} platform={config.platform} />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Supporting text"
+                  value={config.subtext}
+                  onChange={(e) => updateConfig({ subtext: e.target.value })}
+                  className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[0.5rem] text-gray-400">CTA button text</span>
+                  <CharCount value={config.ctaText} platform={config.platform} />
+                </div>
+                <input
+                  type="text"
+                  placeholder="CTA button text"
+                  value={config.ctaText}
+                  onChange={(e) => updateConfig({ ctaText: e.target.value })}
+                  className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                />
+              </div>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -1164,6 +1349,50 @@ export default function SocialMediaPostWorkspace() {
                 </div>
               </div>
             )}
+
+            {/* Hashtag Generator */}
+            <div className="mt-2 pt-2 border-t border-secondary-500/10">
+              <button
+                onClick={generateHashtags}
+                disabled={isGeneratingHashtags || (!config.headline && !config.subtext && !config.description)}
+                className="w-full flex items-center justify-center gap-1.5 h-8 rounded-lg border border-secondary-500/20 text-secondary-400 text-[0.625rem] font-semibold hover:bg-secondary-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {isGeneratingHashtags ? (
+                  <>
+                    <IconLoader className="size-3 animate-spin" />
+                    Generating Hashtags…
+                  </>
+                ) : (
+                  <>
+                    <IconHash className="size-3" />
+                    Generate Hashtags
+                  </>
+                )}
+              </button>
+              {generatedHashtags.length > 0 && (
+                <div className="mt-2 space-y-1.5">
+                  <div className="flex flex-wrap gap-1">
+                    {generatedHashtags.map((tag, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex px-1.5 py-0.5 rounded-md bg-secondary-500/10 text-secondary-400 text-[0.5625rem] font-medium cursor-pointer hover:bg-secondary-500/20 transition-colors"
+                        onClick={() => navigator.clipboard.writeText(tag)}
+                        title={`Click to copy ${tag}`}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(generatedHashtags.join(" "))}
+                    className="flex items-center gap-1 text-[0.5rem] text-secondary-400 hover:text-secondary-300 transition-colors"
+                  >
+                    <IconCopy className="size-2.5" />
+                    Copy all hashtags
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Style Controls */}
@@ -1256,6 +1485,45 @@ export default function SocialMediaPostWorkspace() {
 
         {/* ── Center: Canvas + Export + Mockup ──────────────── */}
         <div className="lg:col-span-6 space-y-3">
+          {/* Carousel mode toggle */}
+          <div className="flex items-center justify-between">
+            <button
+              onClick={handleToggleCarousel}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[0.625rem] font-semibold border transition-all ${
+                carouselMode
+                  ? "border-primary-500 bg-primary-500/10 text-primary-500"
+                  : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-gray-300 dark:hover:border-gray-600"
+              }`}
+            >
+              <IconLayers className="size-3.5" />
+              Carousel Mode
+              {carouselMode && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-md bg-primary-500/20 text-primary-500 text-[0.5rem] font-bold">
+                  {slides.length} slide{slides.length !== 1 ? "s" : ""}
+                </span>
+              )}
+            </button>
+            {carouselMode && (
+              <button
+                onClick={handleExportAllSlides}
+                disabled={isExporting}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary-500 text-gray-950 text-[0.625rem] font-bold hover:bg-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isExporting ? (
+                  <>
+                    <IconLoader className="size-3 animate-spin" />
+                    Exporting…
+                  </>
+                ) : (
+                  <>
+                    <IconDownload className="size-3" />
+                    Export All Slides
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+
           {/* Tab bar */}
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
             {(
@@ -1356,6 +1624,60 @@ export default function SocialMediaPostWorkspace() {
                   <kbd className="px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-[0.5rem]">Ctrl+Z</kbd> undo
                 </p>
               </div>
+
+              {/* Carousel Slide Strip */}
+              {carouselMode && (
+                <div className="px-4 py-2.5 border-t border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleSwitchSlide(activeSlideIndex - 1)}
+                      disabled={activeSlideIndex === 0}
+                      className="p-1 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 transition-colors"
+                    >
+                      <IconChevronLeft className="size-4" />
+                    </button>
+                    <div className="flex-1 flex items-center gap-1.5 overflow-x-auto py-1">
+                      {slides.map((slide, i) => (
+                        <button
+                          key={slide.id}
+                          onClick={() => handleSwitchSlide(i)}
+                          className={`relative shrink-0 w-12 h-12 rounded-lg border-2 transition-all overflow-hidden ${
+                            i === activeSlideIndex
+                              ? "border-primary-500 ring-2 ring-primary-500/30"
+                              : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                          }`}
+                        >
+                          <div
+                            className="w-full h-full flex items-center justify-center text-[0.5rem] font-bold"
+                            style={{ backgroundColor: slide.backgroundColor }}
+                          >
+                            <span className={i === activeSlideIndex ? "text-primary-500" : "text-gray-400"}>
+                              {i + 1}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                      <button
+                        onClick={handleAddSlide}
+                        className="shrink-0 w-12 h-12 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-400 hover:text-primary-500 hover:border-primary-500/30 transition-all"
+                        title="Add slide"
+                      >
+                        <IconPlus className="size-4" />
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => handleSwitchSlide(activeSlideIndex + 1)}
+                      disabled={activeSlideIndex >= slides.length - 1}
+                      className="p-1 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30 transition-colors"
+                    >
+                      <IconChevronRight className="size-4" />
+                    </button>
+                  </div>
+                  <p className="text-[0.5rem] text-gray-400 text-center mt-1">
+                    Slide {activeSlideIndex + 1} of {slides.length}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

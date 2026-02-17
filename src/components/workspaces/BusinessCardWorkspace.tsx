@@ -11,7 +11,10 @@ import {
   IconWand,
   IconLayout,
   IconRefresh,
+  IconMaximize,
 } from "@/components/icons";
+import { hexToRgba, getContrastColor } from "@/lib/canvas-utils";
+import { jsPDF } from "jspdf";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -23,13 +26,16 @@ interface CardConfig {
   phone: string;
   website: string;
   address: string;
+  qrCodeUrl: string;
   layout: string;
   primaryColor: string;
   secondaryColor: string;
   textColor: string;
   bgColor: string;
   fontStyle: "modern" | "classic" | "bold" | "elegant";
-  cardStyle: "standard" | "square" | "rounded";
+  cardStyle: "standard" | "square" | "rounded" | "custom";
+  customWidthMm: number;
+  customHeightMm: number;
   side: "front" | "back";
 }
 
@@ -55,11 +61,19 @@ const colorPresets = [
   { name: "White", primary: "#18181b", secondary: "#d4d4d8", text: "#18181b", bg: "#ffffff" },
 ];
 
-const cardSizes = {
+const cardSizes: Record<string, { w: number; h: number; label: string; ratio: string }> = {
   standard: { w: 1050, h: 600, label: "Standard (3.5×2\")", ratio: "1050 / 600" },
   square: { w: 750, h: 750, label: "Square (2.5×2.5\")", ratio: "750 / 750" },
   rounded: { w: 1050, h: 600, label: "Rounded (3.5×2\")", ratio: "1050 / 600" },
 };
+
+/* ── Print Constants ─────────────────────────────────────── */
+
+/** 1mm in 300-DPI pixels */
+const MM_PX = 300 / 25.4; // ~11.81 px per mm
+const BLEED_MM = 3;
+const SAFE_MM = 5;
+const CROP_MARK_LEN = 12; // px on canvas
 
 /* ── Font Helpers ─────────────────────────────────────────── */
 
@@ -78,29 +92,15 @@ function getFont(w: number, s: number, style: CardConfig["fontStyle"]): string {
 
 /* ── Helpers ──────────────────────────────────────────────── */
 
-function hexToRgba(hex: string, alpha: number): string {
-  const c = hex.replace("#", "");
-  const r = parseInt(c.slice(0, 2), 16);
-  const g = parseInt(c.slice(2, 4), 16);
-  const b = parseInt(c.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-function getContrastColor(hex: string): string {
-  const c = hex.replace("#", "");
-  const r = parseInt(c.slice(0, 2), 16);
-  const g = parseInt(c.slice(2, 4), 16);
-  const b = parseInt(c.slice(4, 6), 16);
-  return (0.299 * r + 0.587 * g + 0.114 * b) > 128 ? "#000000" : "#ffffff";
-}
-
 /* ── Canvas Renderer ─────────────────────────────────────── */
 
 function renderCard(canvas: HTMLCanvasElement, config: CardConfig) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  const size = cardSizes[config.cardStyle];
+  const size = config.cardStyle === "custom"
+    ? { w: Math.round(config.customWidthMm * MM_PX), h: Math.round(config.customHeightMm * MM_PX) }
+    : (cardSizes[config.cardStyle] || cardSizes.standard);
   const W = size.w;
   const H = size.h;
   canvas.width = W;
@@ -489,6 +489,75 @@ function getContactLines(c: CardConfig): string[] {
   return lines;
 }
 
+/* ── QR Code Placeholder Renderer ────────────────────────── */
+
+function drawQrPlaceholder(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, size: number, fg: string,
+) {
+  const modules = 9;
+  const cellSize = size / modules;
+  // Deterministic pattern that looks like a QR code
+  const pattern = [
+    [1,1,1,1,1,1,1,0,1],
+    [1,0,0,0,0,0,1,0,0],
+    [1,0,1,1,1,0,1,0,1],
+    [1,0,1,1,1,0,1,0,0],
+    [1,0,1,1,1,0,1,0,1],
+    [1,0,0,0,0,0,1,0,1],
+    [1,1,1,1,1,1,1,0,1],
+    [0,0,0,0,0,0,0,0,0],
+    [1,0,1,0,1,0,1,0,1],
+  ];
+  // White background
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(x - 2, y - 2, size + 4, size + 4);
+  // Draw modules
+  ctx.fillStyle = fg;
+  for (let row = 0; row < modules; row++) {
+    for (let col = 0; col < modules; col++) {
+      if (pattern[row][col]) {
+        ctx.fillRect(x + col * cellSize, y + row * cellSize, cellSize, cellSize);
+      }
+    }
+  }
+  // Label
+  ctx.font = "bold 8px sans-serif";
+  ctx.fillStyle = hexToRgba(fg, 0.5);
+  ctx.textAlign = "center";
+  ctx.fillText("QR", x + size / 2, y + size + 10);
+}
+
+/* ── Bleed / Safe Zone Overlay ───────────────────────────── */
+
+function drawBleedOverlay(ctx: CanvasRenderingContext2D, W: number, H: number) {
+  const bPx = BLEED_MM * (W / (cardSizes.standard?.w || W)) * MM_PX;
+  const b = Math.min(bPx, W * 0.04); // clamp to 4% max
+  ctx.save();
+  ctx.fillStyle = "rgba(255, 60, 60, 0.12)";
+  // Top
+  ctx.fillRect(0, 0, W, b);
+  // Bottom
+  ctx.fillRect(0, H - b, W, b);
+  // Left
+  ctx.fillRect(0, b, b, H - b * 2);
+  // Right
+  ctx.fillRect(W - b, b, b, H - b * 2);
+  ctx.restore();
+}
+
+function drawSafeZone(ctx: CanvasRenderingContext2D, W: number, H: number) {
+  const sPx = SAFE_MM * (W / (cardSizes.standard?.w || W)) * MM_PX;
+  const s = Math.min(sPx, W * 0.07);
+  ctx.save();
+  ctx.strokeStyle = "rgba(34, 197, 94, 0.6)";
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 4]);
+  ctx.strokeRect(s, s, W - s * 2, H - s * 2);
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
 /* ── Collapsible Section ─────────────────────────────────── */
 
 function Section({ icon, label, id, open, toggle, children }: {
@@ -516,11 +585,20 @@ export default function BusinessCardWorkspace() {
   const [config, setConfig] = useState<CardConfig>({
     name: "", title: "", company: "",
     email: "", phone: "", website: "", address: "",
+    qrCodeUrl: "",
     layout: "clean-left",
     primaryColor: "#8ae600", secondaryColor: "#06b6d4",
     textColor: "#ffffff", bgColor: "#0a0a0a",
-    fontStyle: "modern", cardStyle: "standard", side: "front",
+    fontStyle: "modern", cardStyle: "standard",
+    customWidthMm: 89, customHeightMm: 51,
+    side: "front",
   });
+
+  const backCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [showBleed, setShowBleed] = useState(false);
+  const [showSafeZone, setShowSafeZone] = useState(false);
+  const [bleedInExport, setBleedInExport] = useState(false);
+  const [sideBySide, setSideBySide] = useState(false);
 
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(["details", "layout", "style"]));
   const toggleSection = (id: string) => {
@@ -535,11 +613,47 @@ export default function BusinessCardWorkspace() {
     setConfig(prev => ({ ...prev, ...partial }));
   }, []);
 
+  // Compute card size (support custom)
+  const getCardSize = useCallback(() => {
+    if (config.cardStyle === "custom") {
+      const w = Math.round(config.customWidthMm * MM_PX);
+      const h = Math.round(config.customHeightMm * MM_PX);
+      return { w, h, label: `Custom (${config.customWidthMm}×${config.customHeightMm}mm)`, ratio: `${w} / ${h}` };
+    }
+    return cardSizes[config.cardStyle] || cardSizes.standard;
+  }, [config.cardStyle, config.customWidthMm, config.customHeightMm]);
+
   // Render canvas
   useEffect(() => {
-    if (!canvasRef.current) return;
-    renderCard(canvasRef.current, config);
-  }, [config]);
+    const renderToCanvas = (canvas: HTMLCanvasElement, cfg: CardConfig) => {
+      renderCard(canvas, cfg);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const size = cfg.cardStyle === "custom"
+        ? { w: Math.round(cfg.customWidthMm * MM_PX), h: Math.round(cfg.customHeightMm * MM_PX) }
+        : (cardSizes[cfg.cardStyle] || cardSizes.standard);
+      // Draw QR code if URL is set (bottom-right of front, or center-bottom of back)
+      if (cfg.qrCodeUrl) {
+        const qrSize = Math.min(size.w, size.h) * 0.16;
+        if (cfg.side === "front") {
+          drawQrPlaceholder(ctx, size.w - qrSize - size.w * 0.06, size.h - qrSize - size.h * 0.12, qrSize, "#000000");
+        } else {
+          drawQrPlaceholder(ctx, size.w / 2 - qrSize / 2, size.h * 0.65, qrSize, "#000000");
+        }
+      }
+      // Bleed overlay
+      if (showBleed) drawBleedOverlay(ctx, size.w, size.h);
+      // Safe zone
+      if (showSafeZone) drawSafeZone(ctx, size.w, size.h);
+    };
+
+    if (canvasRef.current) renderToCanvas(canvasRef.current, config);
+    // Render back canvas for side-by-side
+    if (sideBySide && backCanvasRef.current) {
+      const backCfg = { ...config, side: config.side === "front" ? "back" as const : "front" as const };
+      renderToCanvas(backCanvasRef.current, backCfg);
+    }
+  }, [config, showBleed, showSafeZone, sideBySide]);
 
   // AI generation
   const generateWithAI = useCallback(async () => {
@@ -617,7 +731,74 @@ Return each on its own line with the label and value.`;
     } catch { /* clipboard may not be available */ }
   }, []);
 
-  const currentSize = cardSizes[config.cardStyle];
+  // PDF export with crop marks
+  const handleExportPdf = useCallback(() => {
+    const size = getCardSize();
+    // Standard business card: 3.5" × 2" (88.9mm × 50.8mm)
+    const cardWmm = config.cardStyle === "custom" ? config.customWidthMm : (size.w / MM_PX);
+    const cardHmm = config.cardStyle === "custom" ? config.customHeightMm : (size.h / MM_PX);
+    const bleedMm = bleedInExport ? BLEED_MM : 0;
+    const cropLen = bleedInExport ? 5 : 0; // mm
+    const margin = bleedMm + cropLen + 3; // extra spacing
+    const pageW = cardWmm + margin * 2;
+    const pageH = cardHmm + margin * 2;
+
+    const pdf = new jsPDF({ orientation: pageW > pageH ? "l" : "p", unit: "mm", format: [pageW, pageH] });
+
+    const addPage = (side: "front" | "back", isFirst: boolean) => {
+      if (!isFirst) pdf.addPage([pageW, pageH], pageW > pageH ? "l" : "p");
+      // Render side to offscreen canvas
+      const offscreen = document.createElement("canvas");
+      const cfg = { ...config, side };
+      // Set canvas to custom size if custom
+      if (config.cardStyle === "custom") {
+        offscreen.width = Math.round(config.customWidthMm * MM_PX);
+        offscreen.height = Math.round(config.customHeightMm * MM_PX);
+      }
+      renderCard(offscreen, cfg);
+      if (cfg.qrCodeUrl) {
+        const ctx = offscreen.getContext("2d");
+        if (ctx) {
+          const qrSize = Math.min(offscreen.width, offscreen.height) * 0.16;
+          if (side === "front") {
+            drawQrPlaceholder(ctx, offscreen.width - qrSize - offscreen.width * 0.06, offscreen.height - qrSize - offscreen.height * 0.12, qrSize, "#000000");
+          } else {
+            drawQrPlaceholder(ctx, offscreen.width / 2 - qrSize / 2, offscreen.height * 0.65, qrSize, "#000000");
+          }
+        }
+      }
+      const imgData = offscreen.toDataURL("image/png");
+      pdf.addImage(imgData, "PNG", margin, margin, cardWmm, cardHmm);
+
+      // Crop marks
+      if (bleedInExport) {
+        pdf.setDrawColor(0);
+        pdf.setLineWidth(0.2);
+        const x1 = margin;
+        const y1 = margin;
+        const x2 = margin + cardWmm;
+        const y2 = margin + cardHmm;
+        // Top-left
+        pdf.line(x1, y1 - cropLen, x1, y1 - 1);
+        pdf.line(x1 - cropLen, y1, x1 - 1, y1);
+        // Top-right
+        pdf.line(x2, y1 - cropLen, x2, y1 - 1);
+        pdf.line(x2 + 1, y1, x2 + cropLen, y1);
+        // Bottom-left
+        pdf.line(x1, y2 + 1, x1, y2 + cropLen);
+        pdf.line(x1 - cropLen, y2, x1 - 1, y2);
+        // Bottom-right
+        pdf.line(x2, y2 + 1, x2, y2 + cropLen);
+        pdf.line(x2 + 1, y2, x2 + cropLen, y2);
+      }
+    };
+
+    addPage("front", true);
+    addPage("back", false);
+    pdf.save(`business-card-${config.name || "design"}.pdf`);
+  }, [config, bleedInExport, getCardSize]);
+
+  const currentSize = getCardSize();
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -650,6 +831,13 @@ Return each on its own line with the label and value.`;
             <input type="text" placeholder="Address (optional)" value={config.address}
               onChange={(e) => updateConfig({ address: e.target.value })}
               className="w-full h-10 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
+            <div className="pt-1">
+              <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 mb-1 block">QR Code URL</label>
+              <input type="url" placeholder="https://yoursite.com" value={config.qrCodeUrl}
+                onChange={(e) => updateConfig({ qrCodeUrl: e.target.value })}
+                className="w-full h-10 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
+              {config.qrCodeUrl && <p className="text-[0.5rem] text-primary-500 mt-0.5">✓ QR code will appear on card</p>}
+            </div>
           </div>
         </Section>
 
@@ -666,11 +854,28 @@ Return each on its own line with the label and value.`;
               ))}
             </div>
             <div className="flex gap-1.5">
-              {(["standard", "square", "rounded"] as const).map((s) => (
+              {(["standard", "square", "rounded", "custom"] as const).map((s) => (
                 <button key={s} onClick={() => updateConfig({ cardStyle: s })}
                   className={`flex-1 px-3 py-2 rounded-xl border text-xs font-semibold capitalize transition-all ${config.cardStyle === s ? "border-primary-500 bg-primary-500/5 text-primary-500 ring-1 ring-primary-500/30" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}>{s}</button>
               ))}
             </div>
+            {config.cardStyle === "custom" && (
+              <div className="flex gap-2 items-center">
+                <div className="flex-1">
+                  <label className="text-[0.5625rem] text-gray-400 mb-0.5 block">Width (mm)</label>
+                  <input type="number" min={30} max={200} value={config.customWidthMm}
+                    onChange={(e) => updateConfig({ customWidthMm: Math.max(30, Math.min(200, Number(e.target.value) || 89)) })}
+                    className="w-full h-9 px-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs text-center focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
+                </div>
+                <span className="text-gray-400 text-xs pt-4">×</span>
+                <div className="flex-1">
+                  <label className="text-[0.5625rem] text-gray-400 mb-0.5 block">Height (mm)</label>
+                  <input type="number" min={30} max={200} value={config.customHeightMm}
+                    onChange={(e) => updateConfig({ customHeightMm: Math.max(30, Math.min(200, Number(e.target.value) || 51)) })}
+                    className="w-full h-9 px-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs text-center focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
+                </div>
+              </div>
+            )}
             <div className="flex gap-1.5">
               <button onClick={() => updateConfig({ side: "front" })}
                 className={`flex-1 px-3 py-2 rounded-xl border text-xs font-semibold transition-all ${config.side === "front" ? "border-primary-500 bg-primary-500/5 text-primary-500 ring-1 ring-primary-500/30" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400"}`}>Front</button>
@@ -711,6 +916,29 @@ Return each on its own line with the label and value.`;
           </div>
         </Section>
 
+        {/* Print Settings */}
+        <Section icon={<IconMaximize className="size-3.5" />} label="Print Settings" id="print" open={openSections.has("print")} toggle={toggleSection}>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={showBleed} onChange={(e) => setShowBleed(e.target.checked)}
+                className="size-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-500 focus:ring-primary-500/30" />
+              <span className="text-xs text-gray-600 dark:text-gray-300">Show bleed area (3mm)</span>
+              <span className="ml-auto size-2.5 rounded-full bg-error-500/40" />
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={showSafeZone} onChange={(e) => setShowSafeZone(e.target.checked)}
+                className="size-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-500 focus:ring-primary-500/30" />
+              <span className="text-xs text-gray-600 dark:text-gray-300">Show safe zone (5mm inset)</span>
+              <span className="ml-auto size-2.5 rounded-full border-2 border-dashed border-success-500/60" />
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={bleedInExport} onChange={(e) => setBleedInExport(e.target.checked)}
+                className="size-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-500 focus:ring-primary-500/30" />
+              <span className="text-xs text-gray-600 dark:text-gray-300">Include crop marks in PDF export</span>
+            </label>
+          </div>
+        </Section>
+
         {/* AI Generate */}
         <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-4">
           <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-secondary-500 mb-3">
@@ -729,10 +957,14 @@ Return each on its own line with the label and value.`;
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-800">
             <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">Preview — {config.side === "front" ? "Front" : "Back"}</span>
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">{sideBySide ? "Preview — Front & Back" : `Preview — ${config.side === "front" ? "Front" : "Back"}`}</span>
               <span className="text-xs text-gray-400">{currentSize.label}</span>
             </div>
             <div className="flex items-center gap-1.5">
+              <button onClick={() => setSideBySide(!sideBySide)}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${sideBySide ? "bg-primary-500/10 text-primary-500" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"}`}>
+                <IconLayout className="size-3" />{sideBySide ? "Single" : "Both"}
+              </button>
               <button onClick={handleCopyCanvas} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                 <IconCopy className="size-3" />Copy
               </button>
@@ -742,10 +974,29 @@ Return each on its own line with the label and value.`;
             </div>
           </div>
           <div className="flex items-center justify-center p-8 bg-[repeating-conic-gradient(#e5e7eb_0%_25%,transparent_0%_50%)] dark:bg-[repeating-conic-gradient(#1f2937_0%_25%,transparent_0%_50%)] bg-size-[24px_24px] min-h-72">
-            <div className="shadow-2xl rounded-lg overflow-hidden max-w-md w-full">
-              <canvas ref={canvasRef} className="w-full h-auto"
-                style={{ aspectRatio: currentSize.ratio }} />
-            </div>
+            {sideBySide ? (
+              <div className="flex gap-6 items-center w-full justify-center">
+                <div className="flex-1 max-w-xs">
+                  <p className="text-[0.625rem] font-semibold text-center text-gray-400 mb-1.5 uppercase tracking-wider">{config.side === "front" ? "Front" : "Back"}</p>
+                  <div className="shadow-2xl rounded-lg overflow-hidden">
+                    <canvas ref={canvasRef} className="w-full h-auto"
+                      style={{ aspectRatio: currentSize.ratio }} />
+                  </div>
+                </div>
+                <div className="flex-1 max-w-xs">
+                  <p className="text-[0.625rem] font-semibold text-center text-gray-400 mb-1.5 uppercase tracking-wider">{config.side === "front" ? "Back" : "Front"}</p>
+                  <div className="shadow-2xl rounded-lg overflow-hidden">
+                    <canvas ref={backCanvasRef} className="w-full h-auto"
+                      style={{ aspectRatio: currentSize.ratio }} />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="shadow-2xl rounded-lg overflow-hidden max-w-md w-full">
+                <canvas ref={canvasRef} className="w-full h-auto"
+                  style={{ aspectRatio: currentSize.ratio }} />
+              </div>
+            )}
           </div>
         </div>
 
@@ -776,9 +1027,9 @@ Return each on its own line with the label and value.`;
               <IconCopy className="size-4" /><span className="text-xs font-semibold">Clipboard</span>
               <span className="text-[0.5625rem] opacity-60">Paste anywhere</span>
             </button>
-            <button disabled className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-400 cursor-not-allowed">
+            <button onClick={handleExportPdf} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-info-500/30 bg-info-500/5 text-info-500 transition-colors hover:bg-info-500/10">
               <IconDownload className="size-4" /><span className="text-xs font-semibold">.pdf</span>
-              <span className="text-[0.5625rem]">Coming soon</span>
+              <span className="text-[0.5625rem] opacity-60">{bleedInExport ? "With crops" : "Print ready"}</span>
             </button>
             <button onClick={() => updateConfig({ side: config.side === "front" ? "back" : "front" })} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
               <IconRefresh className="size-4" /><span className="text-xs font-semibold">Flip Card</span>

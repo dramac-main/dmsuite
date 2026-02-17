@@ -1,37 +1,28 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Session 20 — Phase 1 Foundation Fortification Implementation
+**Phase:** Phase 1 + Phase 2 COMPLETE — All 15 waves implemented
 
-Session 20 implemented Phase 1 (Foundation Fortification) covering Waves 1.1–1.4, fixing critical bugs, eliminating code duplication, improving performance, and adding accessibility/keyboard navigation.
+Session implemented ALL remaining Phase 1 (Waves 1.5–1.6) and ALL Phase 2 (Waves 2.1–2.9). Build passes with zero TypeScript errors.
 
-### Phase 1 Changes Implemented
+### Phase 1 Completed (Foundation Fortification)
+- Wave 1.1: Bug fixes, Link migration, skeleton fixes, manifest updates
+- Wave 1.2: DRY refactoring, WorkspaceShell, CanvasWorkspaceShell, color maps
+- Wave 1.3: Dynamic imports, Suspense, debounce, z-index scale
+- Wave 1.4: PWA manifest, service worker, MobileBottomNav, mobile sidebar, InstallPrompt
+- Wave 1.5: Shortcuts registry, global shortcuts, canvas shortcuts, ShortcutsHelpModal
+- Wave 1.6: Skip-to-content, focus trap in Modal, accessibility audit
 
-#### Wave 1.1 — Critical Bug Fixes & Code Hygiene
-- **`<a href>` → `<Link>`** — Replaced in 6 files: Sidebar, HeroBanner, QuickAccess, ToolCard, error, tools page
-- **`min-h-screen` → `min-h-dvh`** — Fixed in loading.tsx, error.tsx, not-found.tsx
-- **Loading skeleton width** — Fixed `w-60 xl:w-64` → `w-60` to match Sidebar
-- **ThemeSwitch hover** — Fixed light-mode hover text `hover:text-gray-200` → `hover:text-gray-900`
-- **HeroBanner search** — Fixed onBlur race condition (containerRef + relatedTarget)
-- **Manifest + jsonld** — Updated "116+" to "250+"
-- **Inline SVGs** — Replaced with `<IconRefresh>`, `<IconHome>` from shared icons
-- **ToolCard** — Uses `<Link>` for ready, `<div>` for non-ready
-
-#### Wave 1.2 — DRY & Code Consolidation
-- **Color maps** — Consolidated to `@/lib/colors.ts` (`bgOpacity10`, `groupHoverBg10`)
-- **Dynamic imports** — 12 workspace imports now use `next/dynamic`
-- **Workspace lookup map** — Replaced if-chain with `workspaceComponents[toolId]`
-
-#### Wave 1.3 — PWA & Mobile Fixes
-- **viewportFit** — Added `viewportFit: "cover"` to layout.tsx
-
-#### Wave 1.4 — Keyboard & Accessibility
-- **Sidebar** — Added `aria-label="Main navigation"`
-- **HeroBanner** — Arrow key nav, combobox ARIA, visual highlight
-- **CommandPalette** — Fixed React 19 Compiler warnings
-
-#### Lint Cleanup
-- Fixed z-index bracket notation (4 files), break-words, flex-shrink-0, aspect ratios (2), unused imports
+### Phase 2 Completed (Existing Tools Rebuild)
+- Wave 2.1: Canvas infrastructure — UUID layers, serialization, multi-selection, snapping, viewport/zoom, alignment/distribution
+- Wave 2.2: AI revision engine — revision protocol, revision history store, style locking
+- Wave 2.3: AI Chat — react-markdown + remark-gfm + rehype-highlight, message editing, regeneration, export (MD/JSON/TXT), system prompt presets, stop generation (AbortController), token display, conversation search
+- Wave 2.4: Logo Generator — SVG sanitization (DOMParser whitelist), transparent PNG export, PDF logo sheet (jsPDF), keyboard shortcuts
+- Wave 2.5: Social/Poster/Banner — Hashtag generator, character counts, carousel mode, print bleed/safe zones, PDF export, QR code, grid overlay, HTML5 export, click-through URL, file size indicator, ad compliance checker, mockup frames
+- Wave 2.6: Brand Identity — PDF brand guidelines, SVG export, WCAG accessibility checker, tone of voice, brand kit save/load. Business Card — QR code, print bleed/safe zones, PDF with crop marks, custom dimensions, side-by-side preview
+- Wave 2.7: Presentation — PPTX export (pptxgenjs), PDF export, PNG all slides, slideshow mode, slide reorder/duplicate/copy, image upload, chart placeholders
+- Wave 2.8: Resume — PDF export (jsPDF), ATS scoring, section reorder, custom sections. Invoice — PDF export, line item reorder, payment terms, discounts, bank details. Email — HTML export (table-based), mobile preview, merge tags, copy HTML, plain text version
+- Wave 2.9: Stock Image Browser — Collections/boards, color search, orientation filter, favorites with localStorage persistence
 
 ### Phase Documents (PHASES/ directory)
 - `MASTER-PLAN.md` — Overview, dependencies, success metrics, standards
@@ -112,44 +103,36 @@ Session 20 implemented Phase 1 (Foundation Fortification) covering Waves 1.1–1
 ## Current State of the App
 - ✅ Dashboard at `/dashboard` with 250+ AI tools
 - ✅ **Command Palette** — Cmd+K global search, theme toggle fixed
-- ✅ **AI Chat workspace** — Model selector (Claude/GPT), streaming, conversation history
-- ✅ **Logo Generator workspace** — 18 instant designs + AI, 6 styles, PNG+SVG export
-- ✅ **Social Media Post workspace** — LAYER-BASED: AI Design Director with revision, 6 platforms, 12 compositions, device mockups
-- ✅ **Brand Identity Kit workspace** — Canvas brand board, 8 palettes, 6 font pairings, 6 patterns
-- ✅ **Business Card Designer workspace** — 6 layouts, front/back, 3 card styles, print-ready
-- ✅ **Poster & Flyer Designer workspace** — LAYER-BASED: AI Design Director with revision, mockups
-- ✅ **Banner Ad Designer workspace** — LAYER-BASED: AI Design Director with revision
-- ✅ **Presentation Designer workspace** — REBUILT: 9 layouts, 8 themes, 3 aspect ratios, rich graphics, decorative elements, slide filmstrip, AI generation
-- ✅ **Resume/CV Builder workspace** — REBUILT: 6 templates, 4 page sizes, skill bars + circles, overflow protection, Zambian defaults
-- ✅ **Invoice Designer workspace** — REBUILT: 6 graphic templates, 3 page sizes, ZMW currency default, 16% VAT, overflow protection
-- ✅ **Email Template workspace** — REBUILT: 6 templates, 6 themes, dynamic height, block-based content, proper containment
-- ✅ **AI Image Analysis API** — Claude Vision for composition analysis
-- ✅ **Stock Image Browser** — Routes 4 image tools
+- ✅ **AI Chat workspace** — Full react-markdown, message editing/regeneration, export (MD/JSON/TXT), system prompts, stop generation, token display, conversation search
+- ✅ **Logo Generator workspace** — 18 instant designs + AI, SVG sanitization, transparent PNG, PDF logo sheet, keyboard shortcuts
+- ✅ **Social Media Post workspace** — LAYER-BASED: AI Design Director, hashtag generator, character counts, carousel mode
+- ✅ **Brand Identity Kit workspace** — PDF brand guidelines, SVG export, WCAG accessibility checker, tone of voice, brand kit save/load
+- ✅ **Business Card Designer workspace** — QR code, print bleed/safe zones, PDF with crop marks, custom dimensions, side-by-side preview
+- ✅ **Poster & Flyer Designer workspace** — LAYER-BASED: print bleed, safe zones, PDF export, QR code, grid overlay
+- ✅ **Banner Ad Designer workspace** — LAYER-BASED: HTML5 export, click-through URL, file size indicator, ad compliance checker, mockup frames
+- ✅ **Presentation Designer workspace** — PPTX export, PDF export, slideshow mode, slide management, image upload, chart placeholders
+- ✅ **Resume/CV Builder workspace** — PDF export (jsPDF), ATS scoring, section reorder, custom sections
+- ✅ **Invoice Designer workspace** — PDF export, line item reorder, payment terms, discounts, bank details
+- ✅ **Email Template workspace** — HTML export (table-based), mobile preview, merge tags, copy HTML, plain text version
+- ✅ **Stock Image Browser** — Collections/boards, color search, orientation filter, favorites
 - ✅ Multi-AI API: Claude + OpenAI with auto-fallback
-- ✅ Zustand stores: sidebar, chat, preferences (all persisted)
-- ✅ 82 SVG icon components (70 in iconMap)
+- ✅ Zustand stores: sidebar, chat, preferences, revision-history (all persisted)
+- ✅ 82+ SVG icon components (70+ in iconMap)
 - ✅ 9 reusable UI primitives
 - ✅ SEO, sitemap, robots, JSON-LD
-- ⚠️ ~181 tools still show placeholder workspace (183 marked ready, only 12 implemented)
+- ✅ PWA: manifest, service worker, install prompt, mobile bottom nav
+- ✅ Keyboard shortcuts: global, canvas, workspace-specific
+- ✅ Accessibility: skip-to-content, focus traps, ARIA attributes
+- ✅ Canvas infrastructure: UUID layers, serialization, multi-selection, snapping, viewport/zoom, alignment
+- ✅ AI revision engine with style locking
+- ⚠️ ~181 tools still show placeholder workspace
 - ⚠️ Part-Edit / Consistency Engine not yet built
 - ⚠️ Favicon/icon PNG files not generated
-- ⚠️ Brand Identity Kit & Business Card not yet converted to layer-based architecture
-- ⚠️ Interactive canvas editing (click-to-edit) not yet implemented in new workspaces
-- ⚠️ No PDF export in any tool (critical gap for resume, invoice, presentation)
-- ⚠️ No HTML export for email templates (critical gap)
-- ⚠️ 3 layer-based workspaces share ~85% code (~5,600 lines duplication)
-- ✅ All `<a href>` replaced with Next.js `<Link>` (Phase 1 Wave 1.1)
-- ⚠️ No mobile bottom navigation bar
-- ⚠️ No service worker (PWA incomplete)
-- ⚠️ Workspaces don't use UI primitives from `@/components/ui/`
-- ⚠️ Only 8 keyboard shortcuts total (need 30+)
 
 ## Next Steps (Priority Order — Follow PHASES/ Documents)
-1. **Phase 1: Foundation Fortification** — Fix bugs, DRY, PWA, mobile nav, shortcuts
-2. **Phase 2: Rebuild Existing Tools** — Canvas engine, AI revision, proper exports
-3. **Phase 3: New Design & Document Tools** — 20+ new workspaces
-4. **Phase 4: Video/Audio/Content/Marketing/Web** — Complete all studios
-5. **Phase 5: Platform Maturity & Launch** — Auth, DB, payments, deployment
+1. **Phase 3: New Design & Document Tools** — 20+ new workspaces (PHASES/PHASE-3)
+2. **Phase 4: Video/Audio/Content/Marketing/Web** — Complete all studios (PHASES/PHASE-4)
+3. **Phase 5: Platform Maturity & Launch** — Auth, DB, payments, deployment (PHASES/PHASE-5)
 
 ## Active Decisions
 - **Foundation art vs layers** — Background design elements (hero shapes, accent bars, glass cards, geometric decorations) render directly on canvas context via `renderCompositionFoundation()` — they are NOT Layer objects, NOT selectable, NOT in the layer panel. Only content (text, CTA, template decorations) are interactive layers.

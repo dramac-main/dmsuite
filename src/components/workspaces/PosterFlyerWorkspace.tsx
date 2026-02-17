@@ -50,6 +50,7 @@ import {
   duplicateLayer,
   renderToSize,
 } from "@/lib/canvas-layers";
+import { jsPDF } from "jspdf";
 import {
   type CompositionType,
   type ExportFormat,
@@ -152,6 +153,13 @@ export default function PosterFlyerWorkspace() {
   const [activeTab, setActiveTab] = useState<"design" | "export" | "present">("design");
   const [selectedExports, setSelectedExports] = useState<Set<string>>(new Set());
   const [isExporting, setIsExporting] = useState(false);
+
+  /* ── Print & Layout state ────────────────────────────── */
+  const [showBleed, setShowBleed] = useState(false);
+  const [showSafeZone, setShowSafeZone] = useState(false);
+  const [showGrid, setShowGrid] = useState(false);
+  const [gridSize, setGridSize] = useState(50);
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
 
   const [config, setConfig] = useState<PosterConfig>({
     format: "a4-portrait",
@@ -385,7 +393,124 @@ export default function PosterFlyerWorkspace() {
       const layer = doc.layers.find((l) => l.id === id);
       if (layer) drawSelectionHandles(ctx, layer);
     }
-  }, [doc, config, currentFormat, loadedImage]);
+
+    /* ── Grid Overlay ──────────────────────────────────── */
+    if (showGrid && gridSize > 4) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+      ctx.lineWidth = 0.5;
+      for (let gx = gridSize; gx < w; gx += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(gx, 0);
+        ctx.lineTo(gx, h);
+        ctx.stroke();
+      }
+      for (let gy = gridSize; gy < h; gy += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, gy);
+        ctx.lineTo(w, gy);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    /* ── QR Code Placeholder ───────────────────────────── */
+    if (qrCodeUrl.trim()) {
+      const qrSize = Math.min(w, h) * 0.12;
+      const qrX = w - qrSize - 20;
+      const qrY = h - qrSize - 20;
+      ctx.save();
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(qrX, qrY, qrSize, qrSize);
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(qrX, qrY, qrSize, qrSize);
+      // Draw a simple QR-like pattern
+      const cellCount = 7;
+      const cellSize = (qrSize - 8) / cellCount;
+      const pattern = [
+        [1,1,1,1,1,1,1],
+        [1,0,0,0,0,0,1],
+        [1,0,1,1,1,0,1],
+        [1,0,1,0,1,0,1],
+        [1,0,1,1,1,0,1],
+        [1,0,0,0,0,0,1],
+        [1,1,1,1,1,1,1],
+      ];
+      ctx.fillStyle = "#000000";
+      for (let row = 0; row < cellCount; row++) {
+        for (let col = 0; col < cellCount; col++) {
+          if (pattern[row][col]) {
+            ctx.fillRect(qrX + 4 + col * cellSize, qrY + 4 + row * cellSize, cellSize, cellSize);
+          }
+        }
+      }
+      ctx.font = `bold ${Math.max(8, qrSize * 0.14)}px sans-serif`;
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("QR", qrX + qrSize / 2, qrY + qrSize / 2);
+      ctx.restore();
+    }
+
+    /* ── Print Bleed & Trim Marks ──────────────────────── */
+    if (showBleed) {
+      const bleed = 11.3; // 3mm ≈ 11.3px at 96dpi
+      const markLen = 20;
+      ctx.save();
+      // Bleed overlay — semi-transparent red around edges
+      ctx.fillStyle = "rgba(255, 0, 0, 0.12)";
+      ctx.fillRect(0, 0, w, bleed);           // top
+      ctx.fillRect(0, h - bleed, w, bleed);   // bottom
+      ctx.fillRect(0, bleed, bleed, h - bleed * 2); // left
+      ctx.fillRect(w - bleed, bleed, bleed, h - bleed * 2); // right
+
+      // Trim marks — corner crop marks
+      ctx.strokeStyle = "rgba(255, 0, 0, 0.7)";
+      ctx.lineWidth = 1;
+      // Top-left
+      ctx.beginPath();
+      ctx.moveTo(bleed, 0); ctx.lineTo(bleed, markLen);
+      ctx.moveTo(0, bleed); ctx.lineTo(markLen, bleed);
+      ctx.stroke();
+      // Top-right
+      ctx.beginPath();
+      ctx.moveTo(w - bleed, 0); ctx.lineTo(w - bleed, markLen);
+      ctx.moveTo(w, bleed); ctx.lineTo(w - markLen, bleed);
+      ctx.stroke();
+      // Bottom-left
+      ctx.beginPath();
+      ctx.moveTo(bleed, h); ctx.lineTo(bleed, h - markLen);
+      ctx.moveTo(0, h - bleed); ctx.lineTo(markLen, h - bleed);
+      ctx.stroke();
+      // Bottom-right
+      ctx.beginPath();
+      ctx.moveTo(w - bleed, h); ctx.lineTo(w - bleed, h - markLen);
+      ctx.moveTo(w, h - bleed); ctx.lineTo(w - markLen, h - bleed);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    /* ── Safe Zone Overlay ─────────────────────────────── */
+    if (showSafeZone) {
+      const safeInset = 37.8; // 10mm ≈ 37.8px at 96dpi
+      ctx.save();
+      // Green overlay outside safe area
+      ctx.fillStyle = "rgba(0, 200, 80, 0.06)";
+      ctx.fillRect(0, 0, w, safeInset);                             // top
+      ctx.fillRect(0, h - safeInset, w, safeInset);                 // bottom
+      ctx.fillRect(0, safeInset, safeInset, h - safeInset * 2);     // left
+      ctx.fillRect(w - safeInset, safeInset, safeInset, h - safeInset * 2); // right
+
+      // Dashed border at safe zone
+      ctx.strokeStyle = "rgba(0, 200, 80, 0.5)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([6, 4]);
+      ctx.strokeRect(safeInset, safeInset, w - safeInset * 2, h - safeInset * 2);
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+  }, [doc, config, currentFormat, loadedImage, showBleed, showSafeZone, showGrid, gridSize, qrCodeUrl]);
 
   /* ── Canvas Interaction ────────────────────────────────── */
   const getCanvasPoint = useCallback(
@@ -772,6 +897,44 @@ export default function PosterFlyerWorkspace() {
     }, "image/png");
   }, [activeMockup]);
 
+  /* ── PDF Export ──────────────────────────────────────── */
+  const handleDownloadPdf = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const w = currentFormat.width;
+    const h = currentFormat.height;
+    const pxToMm = (px: number) => px * 0.2645833;
+    const wMm = pxToMm(w);
+    const hMm = pxToMm(h);
+    const orientation = wMm > hMm ? "landscape" : "portrait";
+    const pdf = new jsPDF({ orientation, unit: "mm", format: [wMm, hMm] });
+
+    const imgData = canvas.toDataURL("image/png");
+    pdf.addImage(imgData, "PNG", 0, 0, wMm, hMm);
+
+    // Draw crop marks in PDF if bleed is enabled
+    if (showBleed) {
+      const bleedMm = 3;
+      const markLenMm = 5;
+      pdf.setDrawColor(255, 0, 0);
+      pdf.setLineWidth(0.25);
+      // Top-left
+      pdf.line(bleedMm, 0, bleedMm, markLenMm);
+      pdf.line(0, bleedMm, markLenMm, bleedMm);
+      // Top-right
+      pdf.line(wMm - bleedMm, 0, wMm - bleedMm, markLenMm);
+      pdf.line(wMm, bleedMm, wMm - markLenMm, bleedMm);
+      // Bottom-left
+      pdf.line(bleedMm, hMm, bleedMm, hMm - markLenMm);
+      pdf.line(0, hMm - bleedMm, markLenMm, hMm - bleedMm);
+      // Bottom-right
+      pdf.line(wMm - bleedMm, hMm, wMm - bleedMm, hMm - markLenMm);
+      pdf.line(wMm, hMm - bleedMm, wMm - markLenMm, hMm - bleedMm);
+    }
+
+    pdf.save(`poster-${config.format}.pdf`);
+  }, [config.format, currentFormat, showBleed]);
+
   /* ── Helpers ───────────────────────────────────────────── */
   const toggleSection = (id: string) => {
     setOpenSections((prev) => {
@@ -1140,6 +1303,110 @@ export default function PosterFlyerWorkspace() {
               </div>
             </div>
           </Section>
+
+          {/* Print & Layout */}
+          <Section
+            icon={
+              <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <rect x="6" y="6" width="12" height="12" />
+                <path d="M6 2v4M18 2v4M6 18v4M18 18v4M2 6h4M2 18h4M18 6h4M18 18h4" />
+              </svg>
+            }
+            label="Print & Layout"
+            id="print-layout"
+            open={openSections.has("print-layout")}
+            toggle={toggleSection}
+          >
+            <div className="space-y-2.5">
+              {/* Bleed toggle */}
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-[0.625rem] font-medium text-gray-600 dark:text-gray-300">Bleed &amp; Trim Marks (3mm)</span>
+                <button
+                  onClick={() => setShowBleed((p) => !p)}
+                  className={`relative w-8 h-4.5 rounded-full transition-colors ${
+                    showBleed ? "bg-red-500" : "bg-gray-300 dark:bg-gray-600"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 size-3.5 rounded-full bg-white shadow transition-transform ${
+                      showBleed ? "translate-x-3.5" : ""
+                    }`}
+                  />
+                </button>
+              </label>
+
+              {/* Safe zone toggle */}
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-[0.625rem] font-medium text-gray-600 dark:text-gray-300">Safe Zone (10mm inset)</span>
+                <button
+                  onClick={() => setShowSafeZone((p) => !p)}
+                  className={`relative w-8 h-4.5 rounded-full transition-colors ${
+                    showSafeZone ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 size-3.5 rounded-full bg-white shadow transition-transform ${
+                      showSafeZone ? "translate-x-3.5" : ""
+                    }`}
+                  />
+                </button>
+              </label>
+
+              {/* Grid toggle */}
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-[0.625rem] font-medium text-gray-600 dark:text-gray-300">Grid Overlay</span>
+                <button
+                  onClick={() => setShowGrid((p) => !p)}
+                  className={`relative w-8 h-4.5 rounded-full transition-colors ${
+                    showGrid ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 size-3.5 rounded-full bg-white shadow transition-transform ${
+                      showGrid ? "translate-x-3.5" : ""
+                    }`}
+                  />
+                </button>
+              </label>
+
+              {/* Grid size slider */}
+              {showGrid && (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[0.5625rem] font-semibold uppercase tracking-wider text-gray-400">
+                      Grid Size
+                    </span>
+                    <span className="text-[0.5625rem] text-gray-500 tabular-nums">{gridSize}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="10"
+                    max="200"
+                    value={gridSize}
+                    onChange={(e) => setGridSize(parseInt(e.target.value))}
+                    className="w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-blue-500"
+                  />
+                </div>
+              )}
+
+              {/* QR Code URL */}
+              <div>
+                <span className="text-[0.5625rem] font-semibold uppercase tracking-wider text-gray-400 mb-1 block">
+                  QR Code URL
+                </span>
+                <input
+                  type="url"
+                  placeholder="https://example.com"
+                  value={qrCodeUrl}
+                  onChange={(e) => setQrCodeUrl(e.target.value)}
+                  className="w-full h-8 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                />
+                {qrCodeUrl.trim() && (
+                  <p className="text-[0.5rem] text-gray-400 mt-1">QR placeholder shown at bottom-right of canvas</p>
+                )}
+              </div>
+            </div>
+          </Section>
         </div>
 
         {/* ── Center: Canvas / Export / Present ───────────── */}
@@ -1430,7 +1697,7 @@ export default function PosterFlyerWorkspace() {
           {/* Quick Export (design tab) */}
           {activeTab === "design" && (
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 <button
                   onClick={handleDownloadPng}
                   className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-primary-500/30 bg-primary-500/5 text-primary-500 transition-colors hover:bg-primary-500/10"
@@ -1444,6 +1711,13 @@ export default function PosterFlyerWorkspace() {
                 >
                   <IconDownload className="size-3.5" />
                   <span className="text-[0.625rem] font-semibold">.jpg</span>
+                </button>
+                <button
+                  onClick={handleDownloadPdf}
+                  className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-red-500/30 bg-red-500/5 text-red-500 transition-colors hover:bg-red-500/10"
+                >
+                  <IconDownload className="size-3.5" />
+                  <span className="text-[0.625rem] font-semibold">.pdf</span>
                 </button>
                 <button
                   onClick={handleCopyCanvas}

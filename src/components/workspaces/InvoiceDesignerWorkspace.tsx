@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { jsPDF } from "jspdf";
 import {
   IconReceipt,
   IconSparkles,
@@ -9,8 +10,12 @@ import {
   IconDownload,
   IconPlus,
   IconTrash,
+  IconChevronUp,
+  IconChevronDown,
+  IconCreditCard,
+  IconFileText,
 } from "@/components/icons";
-import { cleanAIText } from "@/lib/canvas-utils";
+import { cleanAIText, roundRect, lighten } from "@/lib/canvas-utils";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -19,6 +24,43 @@ interface LineItem {
   description: string;
   quantity: number;
   rate: number;
+  discountType: "percent" | "fixed";
+  discountValue: number;
+}
+
+interface PaymentDetails {
+  bankName: string;
+  accountNumber: string;
+  routingNumber: string;
+  paypalEmail: string;
+  venmoHandle: string;
+}
+
+type PaymentTermsOption = "receipt" | "net15" | "net30" | "net60" | "net90" | "custom";
+
+const PAYMENT_TERMS: { id: PaymentTermsOption; label: string; days: number | null }[] = [
+  { id: "receipt", label: "Due on Receipt", days: 0 },
+  { id: "net15", label: "Net 15", days: 15 },
+  { id: "net30", label: "Net 30", days: 30 },
+  { id: "net60", label: "Net 60", days: 60 },
+  { id: "net90", label: "Net 90", days: 90 },
+  { id: "custom", label: "Custom", days: null },
+];
+
+function calcDueDate(invoiceDate: string, terms: PaymentTermsOption): string {
+  if (terms === "custom" || terms === "receipt" || !invoiceDate) return "";
+  const t = PAYMENT_TERMS.find((p) => p.id === terms);
+  if (!t || t.days === null) return "";
+  const d = new Date(invoiceDate);
+  d.setDate(d.getDate() + t.days);
+  return d.toISOString().slice(0, 10);
+}
+
+function calcLineItemTotal(item: LineItem): number {
+  const gross = item.quantity * item.rate;
+  if (item.discountValue <= 0) return gross;
+  if (item.discountType === "percent") return gross * (1 - item.discountValue / 100);
+  return Math.max(0, gross - item.discountValue);
 }
 
 interface InvoiceConfig {
@@ -37,6 +79,7 @@ interface InvoiceConfig {
   currencySymbol: string;
   taxRate: number;
   taxLabel: string;
+  paymentTerms: PaymentTermsOption;
   notes: string;
   template: InvoiceTemplate;
   primaryColor: string;
@@ -95,35 +138,6 @@ function uid() {
 
 /* ── Canvas Helpers ────────────────────────────────────────── */
 
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
-
-function lighten(hex: string, pct: number): string {
-  const num = parseInt(hex.replace("#", ""), 16);
-  const r = Math.min(255, ((num >> 16) & 0xff) + Math.round((255 * pct) / 100));
-  const g = Math.min(255, ((num >> 8) & 0xff) + Math.round((255 * pct) / 100));
-  const b = Math.min(255, (num & 0xff) + Math.round((255 * pct) / 100));
-  return `rgb(${r},${g},${b})`;
-}
-
 function fmtMoney(amount: number, sym: string): string {
   return `${sym}${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -132,8 +146,18 @@ function fmtMoney(amount: number, sym: string): string {
 
 export default function InvoiceDesignerWorkspace() {
   const [items, setItems] = useState<LineItem[]>([
-    { id: uid(), description: "", quantity: 1, rate: 0 },
+    { id: uid(), description: "", quantity: 1, rate: 0, discountType: "percent", discountValue: 0 },
   ]);
+
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>({
+    bankName: "",
+    accountNumber: "",
+    routingNumber: "",
+    paypalEmail: "",
+    venmoHandle: "",
+  });
+
+  const [paymentTerms, setPaymentTerms] = useState<PaymentTermsOption>("net30");
 
   const [config, setConfig] = useState<InvoiceConfig>({
     businessName: "",
@@ -151,6 +175,7 @@ export default function InvoiceDesignerWorkspace() {
     currencySymbol: "K",
     taxRate: 16,
     taxLabel: "VAT",
+    paymentTerms: "net30" as PaymentTermsOption,
     notes: "",
     template: "modern",
     primaryColor: "#1e40af",
@@ -160,7 +185,7 @@ export default function InvoiceDesignerWorkspace() {
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "business" | "client" | "items" | "details"
+    "business" | "client" | "items" | "details" | "payment"
   >("business");
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -173,10 +198,23 @@ export default function InvoiceDesignerWorkspace() {
     return { w: ps.w, h: ps.h };
   }, [config.pageSize]);
 
-  const subtotal = items.reduce((s, it) => s + it.quantity * it.rate, 0);
+  const subtotal = items.reduce((s, it) => s + calcLineItemTotal(it), 0);
   const taxAmount = subtotal * (config.taxRate / 100);
   const total = subtotal + taxAmount;
   const sym = config.currencySymbol;
+
+  /* ── Auto-calc due date from payment terms ─── */
+  useEffect(() => {
+    if (paymentTerms !== "custom") {
+      const computed = calcDueDate(config.invoiceDate, paymentTerms);
+      if (paymentTerms === "receipt") {
+        updateConfig({ dueDate: config.invoiceDate, paymentTerms });
+      } else if (computed) {
+        updateConfig({ dueDate: computed, paymentTerms });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentTerms, config.invoiceDate]);
 
   /* ── Canvas Render ──────────────────────────────────────── */
   useEffect(() => {
@@ -228,11 +266,12 @@ export default function InvoiceDesignerWorkspace() {
       let y = startY;
       if (y > maxY - 40) return y;
 
-      const descW = tableW * 0.48;
-      const qtyW = tableW * 0.12;
-      const rateW = tableW * 0.2;
+      const descW = tableW * 0.36;
+      const qtyW = tableW * 0.1;
+      const rateW = tableW * 0.16;
+      const discW = tableW * 0.18;
       const amtW = tableW * 0.2;
-      const cols = [colX, colX + descW, colX + descW + qtyW, colX + descW + qtyW + rateW];
+      const cols = [colX, colX + descW, colX + descW + qtyW, colX + descW + qtyW + rateW, colX + descW + qtyW + rateW + discW];
 
       /* Header */
       ctx.fillStyle = primary + "10";
@@ -244,6 +283,7 @@ export default function InvoiceDesignerWorkspace() {
       ctx.textAlign = "center";
       safeText("QTY", cols[1] + qtyW / 2, y, qtyW);
       safeText("RATE", cols[2] + rateW / 2, y, rateW);
+      safeText("DISCOUNT", cols[3] + discW / 2, y, discW);
       ctx.textAlign = "right";
       safeText("AMOUNT", colX + tableW - 4, y, amtW);
       y += 14;
@@ -261,7 +301,11 @@ export default function InvoiceDesignerWorkspace() {
       ctx.textAlign = "left";
       items.forEach((item, idx) => {
         if (y > maxY - 30) return;
-        const amt = item.quantity * item.rate;
+        const amt = calcLineItemTotal(item);
+        const hasDiscount = item.discountValue > 0;
+        const discLabel = hasDiscount
+          ? item.discountType === "percent" ? `${item.discountValue}%` : fmtMoney(item.discountValue, sym)
+          : "—";
         /* Zebra stripe */
         if (idx % 2 === 1) {
           ctx.fillStyle = "#f8f9fa";
@@ -273,6 +317,8 @@ export default function InvoiceDesignerWorkspace() {
         ctx.textAlign = "center";
         safeText(String(item.quantity), cols[1] + qtyW / 2, y, qtyW);
         safeText(fmtMoney(item.rate, sym), cols[2] + rateW / 2, y, rateW);
+        ctx.fillStyle = hasDiscount ? "#b91c1c" : "#999999";
+        safeText(discLabel, cols[3] + discW / 2, y, discW);
         ctx.textAlign = "right";
         ctx.fillStyle = "#111111";
         ctx.font = `500 8px ${font}`;
@@ -376,11 +422,12 @@ export default function InvoiceDesignerWorkspace() {
       const y = startY;
       ctx.font = `400 7px ${font}`;
       ctx.fillStyle = "#999999";
+      const termsLbl = PAYMENT_TERMS.find((t) => t.id === paymentTerms)?.label || "Net 30";
       const items2 = [
         { label: "INVOICE #", val: config.invoiceNumber },
         { label: "DATE", val: config.invoiceDate },
         { label: "DUE DATE", val: config.dueDate || "On receipt" },
-        { label: "CURRENCY", val: config.currency },
+        { label: "TERMS", val: termsLbl },
       ];
       const colW = CW / items2.length;
       items2.forEach((item, i) => {
@@ -442,6 +489,35 @@ export default function InvoiceDesignerWorkspace() {
         y = wrapClip(config.notes, M, y, CW, 11);
       }
 
+      /* Payment terms */
+      const termsLabel = PAYMENT_TERMS.find((t) => t.id === paymentTerms)?.label || "Net 30";
+      if (y < maxY - 20) {
+        y += 4;
+        ctx.fillStyle = "#999999";
+        ctx.font = `600 7px ${font}`;
+        safeText("PAYMENT TERMS", M, y, CW);
+        y += 12;
+        ctx.fillStyle = "#333333";
+        ctx.font = `400 7.5px ${font}`;
+        safeText(termsLabel, M, y, CW);
+        y += 14;
+      }
+
+      /* Payment details */
+      if ((paymentDetails.bankName || paymentDetails.paypalEmail || paymentDetails.venmoHandle) && y < maxY - 30) {
+        ctx.fillStyle = "#999999";
+        ctx.font = `600 7px ${font}`;
+        safeText("PAYMENT DETAILS", M, y, CW);
+        y += 12;
+        ctx.fillStyle = "#333333";
+        ctx.font = `400 7.5px ${font}`;
+        if (paymentDetails.bankName) { safeText(`Bank: ${paymentDetails.bankName}`, M, y, CW); y += 11; }
+        if (paymentDetails.accountNumber) { safeText(`Account: ${paymentDetails.accountNumber}`, M, y, CW); y += 11; }
+        if (paymentDetails.routingNumber) { safeText(`Routing: ${paymentDetails.routingNumber}`, M, y, CW); y += 11; }
+        if (paymentDetails.paypalEmail) { safeText(`PayPal: ${paymentDetails.paypalEmail}`, M, y, CW); y += 11; }
+        if (paymentDetails.venmoHandle) { safeText(`Venmo: ${paymentDetails.venmoHandle}`, M, y, CW); y += 11; }
+      }
+
       /* Footer line */
       ctx.fillStyle = primary;
       ctx.fillRect(0, H - 4, W, 4);
@@ -496,6 +572,28 @@ export default function InvoiceDesignerWorkspace() {
         ctx.fillStyle = "#555555";
         ctx.font = `400 7.5px ${font}`;
         y = wrapClip(config.notes, M, y, CW, 11);
+      }
+
+      /* Payment terms */
+      const classicTermsLabel = PAYMENT_TERMS.find((t) => t.id === paymentTerms)?.label || "Net 30";
+      if (y < maxY - 20) {
+        y += 4;
+        ctx.fillStyle = "#999999";
+        ctx.font = `600 7px ${font}`;
+        safeText("PAYMENT TERMS: " + classicTermsLabel, M, y, CW);
+        y += 14;
+      }
+      if ((paymentDetails.bankName || paymentDetails.paypalEmail) && y < maxY - 20) {
+        ctx.fillStyle = "#999999";
+        ctx.font = `600 7px ${font}`;
+        safeText("PAYMENT DETAILS", M, y, CW); y += 12;
+        ctx.fillStyle = "#555555";
+        ctx.font = `400 7.5px ${font}`;
+        if (paymentDetails.bankName) { safeText(`Bank: ${paymentDetails.bankName}`, M, y, CW); y += 11; }
+        if (paymentDetails.accountNumber) { safeText(`Acc: ${paymentDetails.accountNumber}`, M, y, CW); y += 11; }
+        if (paymentDetails.routingNumber) { safeText(`Routing: ${paymentDetails.routingNumber}`, M, y, CW); y += 11; }
+        if (paymentDetails.paypalEmail) { safeText(`PayPal: ${paymentDetails.paypalEmail}`, M, y, CW); y += 11; }
+        if (paymentDetails.venmoHandle) { safeText(`Venmo: ${paymentDetails.venmoHandle}`, M, y, CW); y += 11; }
       }
 
       ctx.fillStyle = primary;
@@ -710,7 +808,7 @@ export default function InvoiceDesignerWorkspace() {
       safeText("Thank you for your business", W / 2, H - 10, CW);
       ctx.textAlign = "left";
     }
-  }, [config, items, subtotal, taxAmount, total, sym, pageDims]);
+  }, [config, items, subtotal, taxAmount, total, sym, pageDims, paymentTerms, paymentDetails]);
 
   /* ── AI Generation ──────────────────────────────────────── */
   const generateInvoice = useCallback(async () => {
@@ -786,6 +884,8 @@ Rules:
               description: cleanAIText((it.description as string) || ""),
               quantity: (it.quantity as number) || 1,
               rate: (it.rate as number) || 0,
+              discountType: "percent" as const,
+              discountValue: 0,
             })),
           );
         }
@@ -796,6 +896,236 @@ Rules:
       setIsGenerating(false);
     }
   }, [config, updateConfig]);
+
+  /* ── Line Item Reorder ─────────────────────────────────── */
+  const moveItemUp = useCallback((index: number) => {
+    if (index <= 0) return;
+    setItems((prev) => {
+      const next = [...prev];
+      [next[index - 1], next[index]] = [next[index], next[index - 1]];
+      return next;
+    });
+  }, []);
+
+  const moveItemDown = useCallback((index: number) => {
+    setItems((prev) => {
+      if (index >= prev.length - 1) return prev;
+      const next = [...prev];
+      [next[index], next[index + 1]] = [next[index + 1], next[index]];
+      return next;
+    });
+  }, []);
+
+  /* ── PDF Export ──────────────────────────────────────────── */
+  const handleDownloadPdf = useCallback(() => {
+    const ps = PAGE_SIZES.find((p) => p.id === config.pageSize) || PAGE_SIZES[0];
+    const isA4 = ps.id === "a4";
+    const format = isA4 ? "a4" : ps.id === "letter" ? "letter" : "legal";
+    const doc = new jsPDF({ unit: "pt", format });
+    const W = doc.internal.pageSize.getWidth();
+    const M = 40;
+    const CW = W - M * 2;
+    let y = M + 20;
+
+    const primary = config.primaryColor;
+
+    /* Header bar */
+    doc.setFillColor(primary);
+    doc.rect(0, 0, W, 60, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("INVOICE", M, 38);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(config.businessName || "Your Business", M, 52);
+
+    y = 80;
+
+    /* Invoice meta row */
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.setFont("helvetica", "bold");
+    const metaCols = [
+      { label: "INVOICE #", val: config.invoiceNumber },
+      { label: "DATE", val: config.invoiceDate },
+      { label: "DUE DATE", val: config.dueDate || "On receipt" },
+      { label: "TERMS", val: PAYMENT_TERMS.find((t) => t.id === paymentTerms)?.label || "Net 30" },
+    ];
+    const metaW = CW / metaCols.length;
+    metaCols.forEach((mc, i) => {
+      const x = M + i * metaW;
+      doc.setTextColor(150, 150, 150);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(6.5);
+      doc.text(mc.label, x, y);
+      doc.setTextColor(30, 30, 30);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.text(mc.val, x, y + 12);
+    });
+    y += 30;
+
+    /* Business info (left) */
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(17, 17, 17);
+    doc.text(config.businessName || "Your Business", M, y);
+    y += 13;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(85, 85, 85);
+    if (config.businessAddress) { doc.text(config.businessAddress, M, y); y += 11; }
+    if (config.businessEmail) { doc.text(config.businessEmail, M, y); y += 11; }
+    if (config.businessPhone) { doc.text(config.businessPhone, M, y); y += 11; }
+
+    /* Client info (right side) */
+    let ry = y - (config.businessAddress ? 11 : 0) - (config.businessEmail ? 11 : 0) - (config.businessPhone ? 11 : 0);
+    const rightX = M + CW / 2 + 10;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.text("BILL TO", rightX, ry);
+    ry += 13;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(17, 17, 17);
+    doc.text(config.clientName || "Client Name", rightX, ry);
+    ry += 12;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(85, 85, 85);
+    if (config.clientAddress) { doc.text(config.clientAddress, rightX, ry); ry += 11; }
+    if (config.clientEmail) { doc.text(config.clientEmail, rightX, ry); ry += 11; }
+
+    y = Math.max(y, ry) + 16;
+
+    /* Line items table */
+    const colWidths = [CW * 0.36, CW * 0.1, CW * 0.16, CW * 0.18, CW * 0.2];
+    const colHeaders = ["DESCRIPTION", "QTY", "RATE", "DISCOUNT", "AMOUNT"];
+    const colX2 = [M];
+    for (let i = 1; i < 5; i++) colX2.push(colX2[i - 1] + colWidths[i - 1]);
+
+    /* Table header bg */
+    doc.setFillColor(240, 242, 245);
+    doc.rect(M, y - 10, CW, 16, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(80, 80, 80);
+    colHeaders.forEach((h, i) => {
+      if (i === 0) doc.text(h, colX2[i] + 4, y);
+      else if (i === 4) doc.text(h, colX2[i] + colWidths[i] - 4, y, { align: "right" });
+      else doc.text(h, colX2[i] + colWidths[i] / 2, y, { align: "center" });
+    });
+    y += 14;
+
+    /* Table rows */
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    items.forEach((item, idx) => {
+      const amt = calcLineItemTotal(item);
+      const hasDisc = item.discountValue > 0;
+      const discLabel = hasDisc
+        ? item.discountType === "percent" ? `${item.discountValue}%` : fmtMoney(item.discountValue, sym)
+        : "—";
+      if (idx % 2 === 1) {
+        doc.setFillColor(248, 249, 250);
+        doc.rect(M, y - 9, CW, 15, "F");
+      }
+      doc.setTextColor(51, 51, 51);
+      doc.text(item.description || "Item", colX2[0] + 4, y);
+      doc.text(String(item.quantity), colX2[1] + colWidths[1] / 2, y, { align: "center" });
+      doc.text(fmtMoney(item.rate, sym), colX2[2] + colWidths[2] / 2, y, { align: "center" });
+      if (hasDisc) doc.setTextColor(185, 28, 28);
+      else doc.setTextColor(150, 150, 150);
+      doc.text(discLabel, colX2[3] + colWidths[3] / 2, y, { align: "center" });
+      doc.setTextColor(17, 17, 17);
+      doc.setFont("helvetica", "bold");
+      doc.text(fmtMoney(amt, sym), colX2[4] + colWidths[4] - 4, y, { align: "right" });
+      doc.setFont("helvetica", "normal");
+      y += 15;
+    });
+
+    /* Divider */
+    y += 4;
+    doc.setDrawColor(220, 220, 220);
+    doc.line(M + CW * 0.55, y, M + CW, y);
+    y += 14;
+
+    /* Totals */
+    const totX = M + CW * 0.6;
+    const totValX = M + CW - 4;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(85, 85, 85);
+    doc.text("Subtotal", totX, y);
+    doc.text(fmtMoney(subtotal, sym), totValX, y, { align: "right" });
+    y += 13;
+    doc.text(`${config.taxLabel} (${config.taxRate}%)`, totX, y);
+    doc.text(fmtMoney(taxAmount, sym), totValX, y, { align: "right" });
+    y += 16;
+
+    /* Grand total */
+    doc.setFillColor(240, 242, 245);
+    doc.roundedRect(totX - 8, y - 11, M + CW - totX + 12, 20, 3, 3, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(primary);
+    doc.text("TOTAL", totX, y + 2);
+    doc.text(fmtMoney(total, sym), totValX, y + 2, { align: "right" });
+    y += 30;
+
+    /* Payment terms */
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.text("PAYMENT TERMS", M, y);
+    y += 11;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(51, 51, 51);
+    doc.text(PAYMENT_TERMS.find((t) => t.id === paymentTerms)?.label || "Net 30", M, y);
+    y += 16;
+
+    /* Payment details */
+    if (paymentDetails.bankName || paymentDetails.paypalEmail || paymentDetails.venmoHandle) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7);
+      doc.setTextColor(150, 150, 150);
+      doc.text("PAYMENT DETAILS", M, y);
+      y += 11;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(51, 51, 51);
+      if (paymentDetails.bankName) { doc.text(`Bank: ${paymentDetails.bankName}`, M, y); y += 11; }
+      if (paymentDetails.accountNumber) { doc.text(`Account: ${paymentDetails.accountNumber}`, M, y); y += 11; }
+      if (paymentDetails.routingNumber) { doc.text(`Routing: ${paymentDetails.routingNumber}`, M, y); y += 11; }
+      if (paymentDetails.paypalEmail) { doc.text(`PayPal: ${paymentDetails.paypalEmail}`, M, y); y += 11; }
+      if (paymentDetails.venmoHandle) { doc.text(`Venmo: ${paymentDetails.venmoHandle}`, M, y); y += 11; }
+      y += 6;
+    }
+
+    /* Notes */
+    if (config.notes) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7);
+      doc.setTextColor(150, 150, 150);
+      doc.text("NOTES", M, y);
+      y += 11;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(85, 85, 85);
+      const noteLines = doc.splitTextToSize(config.notes, CW);
+      doc.text(noteLines, M, y);
+    }
+
+    /* Footer bar */
+    const pH = doc.internal.pageSize.getHeight();
+    doc.setFillColor(primary);
+    doc.rect(0, pH - 4, W, 4, "F");
+
+    doc.save(`${config.invoiceNumber || "invoice"}.pdf`);
+  }, [config, items, subtotal, taxAmount, total, sym, paymentTerms, paymentDetails]);
 
   /* ── Export ──────────────────────────────────────────────── */
   const exportInvoice = useCallback(() => {
@@ -931,12 +1261,18 @@ Rules:
         </div>
 
         {/* Export */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
           <button
-            onClick={exportInvoice}
+            onClick={handleDownloadPdf}
             className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-linear-to-r from-primary-500 to-secondary-500 text-white text-[0.625rem] font-bold hover:from-primary-400 hover:to-secondary-400 transition-colors"
           >
-            <IconDownload className="size-3" /> Export Invoice (PNG)
+            <IconFileText className="size-3" /> Download PDF
+          </button>
+          <button
+            onClick={exportInvoice}
+            className="w-full flex items-center justify-center gap-2 h-9 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[0.625rem] font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            <IconDownload className="size-3" /> Export PNG
           </button>
         </div>
       </div>
@@ -965,6 +1301,7 @@ Rules:
               { id: "client" as const, label: "Client" },
               { id: "items" as const, label: "Items" },
               { id: "details" as const, label: "Details" },
+              { id: "payment" as const, label: "Payment" },
             ] as const
           ).map((tab) => (
             <button
@@ -1077,15 +1414,33 @@ Rules:
                   <label className="text-[0.625rem] font-semibold text-gray-500">
                     Item {i + 1}
                   </label>
-                  <button
-                    onClick={() =>
-                      setItems((p) => p.filter((_, j) => j !== i))
-                    }
-                    disabled={items.length <= 1}
-                    className="text-gray-400 hover:text-red-500 disabled:opacity-30 transition-colors"
-                  >
-                    <IconTrash className="size-3" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => moveItemUp(i)}
+                      disabled={i === 0}
+                      title="Move Up"
+                      className="text-gray-400 hover:text-primary-500 disabled:opacity-30 transition-colors"
+                    >
+                      <IconChevronUp className="size-3" />
+                    </button>
+                    <button
+                      onClick={() => moveItemDown(i)}
+                      disabled={i === items.length - 1}
+                      title="Move Down"
+                      className="text-gray-400 hover:text-primary-500 disabled:opacity-30 transition-colors"
+                    >
+                      <IconChevronDown className="size-3" />
+                    </button>
+                    <button
+                      onClick={() =>
+                        setItems((p) => p.filter((_, j) => j !== i))
+                      }
+                      disabled={items.length <= 1}
+                      className="text-gray-400 hover:text-red-500 disabled:opacity-30 transition-colors"
+                    >
+                      <IconTrash className="size-3" />
+                    </button>
+                  </div>
                 </div>
                 <input
                   type="text"
@@ -1153,9 +1508,53 @@ Rules:
                       Amount
                     </label>
                     <div className="px-2 py-1 rounded bg-gray-50 dark:bg-gray-800 text-[0.625rem] font-semibold text-gray-700 dark:text-gray-300">
-                      {fmtMoney(item.quantity * item.rate, sym)}
+                      {fmtMoney(calcLineItemTotal(item), sym)}
                     </div>
                   </div>
+                </div>
+                {/* Discount row */}
+                <div className="flex gap-1.5 items-end">
+                  <div className="w-20">
+                    <label className="text-[0.5rem] text-gray-400">Discount Type</label>
+                    <select
+                      value={item.discountType}
+                      onChange={(e) =>
+                        setItems((p) =>
+                          p.map((x, j) =>
+                            j === i ? { ...x, discountType: e.target.value as "percent" | "fixed" } : x,
+                          ),
+                        )
+                      }
+                      className="w-full px-1.5 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50"
+                    >
+                      <option value="percent">%</option>
+                      <option value="fixed">{sym} Fixed</option>
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-[0.5rem] text-gray-400">Discount</label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={item.discountType === "percent" ? 1 : 0.01}
+                      max={item.discountType === "percent" ? 100 : undefined}
+                      value={item.discountValue}
+                      onChange={(e) =>
+                        setItems((p) =>
+                          p.map((x, j) =>
+                            j === i ? { ...x, discountValue: parseFloat(e.target.value) || 0 } : x,
+                          ),
+                        )
+                      }
+                      placeholder="0"
+                      className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50"
+                    />
+                  </div>
+                  {item.discountValue > 0 && (
+                    <div className="text-[0.5rem] text-red-500 pb-1">
+                      −{item.discountType === "percent" ? `${item.discountValue}%` : fmtMoney(item.discountValue, sym)}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -1163,7 +1562,7 @@ Rules:
               onClick={() =>
                 setItems((p) => [
                   ...p,
-                  { id: uid(), description: "", quantity: 1, rate: 0 },
+                  { id: uid(), description: "", quantity: 1, rate: 0, discountType: "percent" as const, discountValue: 0 },
                 ])
               }
               className="w-full py-2 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 text-[0.625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors"
@@ -1188,6 +1587,59 @@ Rules:
                 <span>
                   {fmtMoney(total, sym)} {config.currency}
                 </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Payment */}
+        {activeTab === "payment" && (
+          <div className="space-y-3">
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+              <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+                <IconCreditCard className="size-3" />
+                Bank Details
+              </label>
+              {([
+                { key: "bankName" as const, label: "Bank Name", ph: "Zanaco / Stanbic / FNB" },
+                { key: "accountNumber" as const, label: "Account Number", ph: "00123456789" },
+                { key: "routingNumber" as const, label: "Routing / Sort Code", ph: "00-12-34" },
+              ]).map(({ key, label, ph }) => (
+                <div key={key}>
+                  <label className="text-[0.5625rem] text-gray-500">{label}</label>
+                  <input
+                    type="text"
+                    value={paymentDetails[key]}
+                    onChange={(e) => setPaymentDetails((p) => ({ ...p, [key]: e.target.value }))}
+                    placeholder={ph}
+                    className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+              <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+                Digital Payments (Optional)
+              </label>
+              <div>
+                <label className="text-[0.5625rem] text-gray-500">PayPal Email</label>
+                <input
+                  type="email"
+                  value={paymentDetails.paypalEmail}
+                  onChange={(e) => setPaymentDetails((p) => ({ ...p, paypalEmail: e.target.value }))}
+                  placeholder="payments@company.co.zm"
+                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
+                />
+              </div>
+              <div>
+                <label className="text-[0.5625rem] text-gray-500">Venmo Handle</label>
+                <input
+                  type="text"
+                  value={paymentDetails.venmoHandle}
+                  onChange={(e) => setPaymentDetails((p) => ({ ...p, venmoHandle: e.target.value }))}
+                  placeholder="@your-handle"
+                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
+                />
               </div>
             </div>
           </div>
@@ -1272,6 +1724,31 @@ Rules:
                   className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
                 />
               </div>
+            </div>
+            <div>
+              <label className="text-[0.5625rem] text-gray-500">
+                Payment Terms
+              </label>
+              <select
+                value={paymentTerms}
+                onChange={(e) => {
+                  const val = e.target.value as PaymentTermsOption;
+                  setPaymentTerms(val);
+                  if (val !== "custom") {
+                    updateConfig({ paymentTerms: val });
+                  }
+                }}
+                className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
+              >
+                {PAYMENT_TERMS.map((pt) => (
+                  <option key={pt.id} value={pt.id}>{pt.label}</option>
+                ))}
+              </select>
+              {paymentTerms !== "custom" && paymentTerms !== "receipt" && config.dueDate && (
+                <p className="text-[0.5rem] text-gray-400 mt-0.5">
+                  Due date auto-calculated: {config.dueDate}
+                </p>
+              )}
             </div>
             <div>
               <label className="text-[0.5625rem] text-gray-500">

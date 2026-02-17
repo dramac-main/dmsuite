@@ -11,8 +11,17 @@ import {
   IconTrash,
   IconChevronLeft,
   IconChevronRight,
+  IconChevronUp,
+  IconChevronDown,
+  IconCopy,
+  IconClipboard,
+  IconImage,
+  IconChart,
+  IconMaximize,
 } from "@/components/icons";
-import { cleanAIText } from "@/lib/canvas-utils";
+import { cleanAIText, roundRect } from "@/lib/canvas-utils";
+import PptxGenJS from "pptxgenjs";
+import { jsPDF } from "jspdf";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -24,6 +33,8 @@ interface Slide {
   body: string;
   bullets: string[];
   note: string;
+  imageUrl: string;
+  chartPlaceholder: "" | "bar" | "line" | "pie";
 }
 
 interface PresentationConfig {
@@ -153,27 +164,6 @@ function uid() {
 
 /* ── Canvas Helpers ────────────────────────────────────────── */
 
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
-
 /* ── Component ─────────────────────────────────────────────── */
 
 export default function PresentationWorkspace() {
@@ -186,9 +176,17 @@ export default function PresentationWorkspace() {
       body: "",
       bullets: [],
       note: "",
+      imageUrl: "",
+      chartPlaceholder: "",
     },
   ]);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isPresentMode, setIsPresentMode] = useState(false);
+  const [clipboardSlide, setClipboardSlide] = useState<Slide | null>(null);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const presentRef = useRef<HTMLDivElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const loadedImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
 
   const [config, setConfig] = useState<PresentationConfig>({
     theme: "midnight",
@@ -616,7 +614,487 @@ export default function PresentationWorkspace() {
         safeText(title, M, M + 30, CW);
       }
     }
+
+    /* ── Draw uploaded image if present ────────────────────── */
+    if (slide.imageUrl) {
+      const img = loadedImagesRef.current.get(slide.imageUrl);
+      if (img) {
+        const imgW = 160;
+        const imgH = 120;
+        const imgX = W - M - imgW;
+        const imgY = M + 10;
+        ctx.save();
+        roundRect(ctx, imgX, imgY, imgW, imgH, 6);
+        ctx.clip();
+        ctx.drawImage(img, imgX, imgY, imgW, imgH);
+        ctx.restore();
+        ctx.strokeStyle = accent + "33";
+        ctx.lineWidth = 1;
+        roundRect(ctx, imgX, imgY, imgW, imgH, 6);
+        ctx.stroke();
+      }
+    }
+
+    /* ── Draw chart placeholder if present ─────────────────── */
+    if (slide.chartPlaceholder) {
+      const cw = 180;
+      const ch = 100;
+      const cx = W - M - cw;
+      const cy2 = H - M - ch - 10;
+      ctx.fillStyle = accent + "11";
+      ctx.fillRect(cx, cy2, cw, ch);
+      ctx.strokeStyle = accent + "44";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(cx, cy2, cw, ch);
+
+      /* Draw mini chart icon */
+      ctx.fillStyle = accent + "44";
+      if (slide.chartPlaceholder === "bar") {
+        const bw = 14;
+        const gap = 6;
+        const bars = [0.4, 0.7, 0.5, 0.9, 0.6, 0.8];
+        bars.forEach((h, idx) => {
+          const bx = cx + 24 + idx * (bw + gap);
+          const bh = (ch - 40) * h;
+          const by = cy2 + ch - 20 - bh;
+          ctx.fillRect(bx, by, bw, bh);
+        });
+      } else if (slide.chartPlaceholder === "line") {
+        ctx.strokeStyle = accent + "66";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        const pts = [0.6, 0.3, 0.5, 0.2, 0.4, 0.15, 0.35];
+        pts.forEach((p, idx) => {
+          const px = cx + 20 + idx * ((cw - 40) / (pts.length - 1));
+          const py = cy2 + 15 + (ch - 35) * p;
+          if (idx === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+      } else if (slide.chartPlaceholder === "pie") {
+        const pcx = cx + cw / 2;
+        const pcy = cy2 + ch / 2;
+        const pr = Math.min(cw, ch) / 2 - 15;
+        const slices = [0.35, 0.25, 0.2, 0.2];
+        let startAngle = -Math.PI / 2;
+        const alphas = ["44", "66", "33", "22"];
+        slices.forEach((s, idx) => {
+          const endAngle = startAngle + s * Math.PI * 2;
+          ctx.fillStyle = accent + alphas[idx];
+          ctx.beginPath();
+          ctx.moveTo(pcx, pcy);
+          ctx.arc(pcx, pcy, pr, startAngle, endAngle);
+          ctx.closePath();
+          ctx.fill();
+          startAngle = endAngle;
+        });
+      }
+
+      ctx.fillStyle = muted;
+      ctx.font = `600 11px ${fontBase}`;
+      ctx.textAlign = "center";
+      ctx.fillText(
+        `Chart: ${slide.chartPlaceholder.charAt(0).toUpperCase() + slide.chartPlaceholder.slice(1)}`,
+        cx + cw / 2,
+        cy2 + ch - 6,
+        cw - 20,
+      );
+      ctx.textAlign = "left";
+    }
   }, [slide, config, themeData, dims, currentSlide, slides.length]);
+
+  /* ── Load images for slides ─────────────────────────────── */
+  useEffect(() => {
+    slides.forEach((s) => {
+      if (s.imageUrl && !loadedImagesRef.current.has(s.imageUrl)) {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          loadedImagesRef.current.set(s.imageUrl, img);
+          /* Trigger re-render to paint image on canvas */
+          setSlides((prev) => [...prev]);
+        };
+        img.src = s.imageUrl;
+      }
+    });
+  }, [slides]);
+
+  /* ── Presenter Mode Keyboard ────────────────────────────── */
+  useEffect(() => {
+    if (!isPresentMode) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight" || e.key === " ") {
+        e.preventDefault();
+        setCurrentSlide((p) => Math.min(slides.length - 1, p + 1));
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        setCurrentSlide((p) => Math.max(0, p - 1));
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setIsPresentMode(false);
+        if (document.fullscreenElement) document.exitFullscreen();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isPresentMode, slides.length]);
+
+  /* Exit present mode if fullscreen exits externally */
+  useEffect(() => {
+    const handler = () => {
+      if (!document.fullscreenElement && isPresentMode) {
+        setIsPresentMode(false);
+      }
+    };
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  }, [isPresentMode]);
+
+  /* ── Present Mode Toggle ────────────────────────────────── */
+  const enterPresentMode = useCallback(() => {
+    setIsPresentMode(true);
+    setTimeout(() => {
+      presentRef.current?.requestFullscreen?.();
+    }, 50);
+  }, []);
+
+  /* ── Slide Management ───────────────────────────────────── */
+  const moveSlide = useCallback(
+    (index: number, direction: "up" | "down") => {
+      setSlides((prev) => {
+        const next = [...prev];
+        const target = direction === "up" ? index - 1 : index + 1;
+        if (target < 0 || target >= next.length) return prev;
+        [next[index], next[target]] = [next[target], next[index]];
+        return next;
+      });
+      const target = direction === "up" ? index - 1 : index + 1;
+      if (target >= 0 && target < slides.length) setCurrentSlide(target);
+    },
+    [slides.length],
+  );
+
+  const duplicateSlide = useCallback(
+    (index: number) => {
+      const src = slides[index];
+      const dup: Slide = { ...src, id: uid(), bullets: [...src.bullets] };
+      setSlides((prev) => [
+        ...prev.slice(0, index + 1),
+        dup,
+        ...prev.slice(index + 1),
+      ]);
+      setCurrentSlide(index + 1);
+    },
+    [slides],
+  );
+
+  const copySlide = useCallback(
+    (index: number) => {
+      setClipboardSlide({ ...slides[index], bullets: [...slides[index].bullets] });
+    },
+    [slides],
+  );
+
+  const pasteSlide = useCallback(() => {
+    if (!clipboardSlide) return;
+    const pasted: Slide = { ...clipboardSlide, id: uid(), bullets: [...clipboardSlide.bullets] };
+    setSlides((prev) => [
+      ...prev.slice(0, currentSlide + 1),
+      pasted,
+      ...prev.slice(currentSlide + 1),
+    ]);
+    setCurrentSlide(currentSlide + 1);
+  }, [clipboardSlide, currentSlide]);
+
+  /* ── Helper: render one slide to an off-screen canvas ──── */
+  const renderSlideToCanvas = useCallback(
+    (slideIndex: number): HTMLCanvasElement => {
+      const offCanvas = document.createElement("canvas");
+      offCanvas.width = dims.w;
+      offCanvas.height = dims.h;
+      const ctx = offCanvas.getContext("2d")!;
+      const { bg, fg, accent, muted } = themeData;
+      const fontBase =
+        config.fontStyle === "classic"
+          ? "Georgia, serif"
+          : config.fontStyle === "bold"
+            ? "'Arial Black', sans-serif"
+            : config.fontStyle === "minimal"
+              ? "'Helvetica Neue', Helvetica, sans-serif"
+              : "'Inter', 'Segoe UI', sans-serif";
+      const W = dims.w;
+      const H = dims.h;
+      const M = 48;
+      const CW = W - M * 2;
+      const s = slides[slideIndex];
+
+      /* Background */
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+
+      /* Decorative elements */
+      ctx.globalAlpha = 0.04;
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.arc(W, 0, 180, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(0, H, 120, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      /* Slide number */
+      ctx.fillStyle = muted;
+      ctx.font = `400 10px ${fontBase}`;
+      ctx.textAlign = "right";
+      ctx.fillText(`${slideIndex + 1} / ${slides.length}`, W - M, H - 18, 100);
+      ctx.textAlign = "left";
+
+      /* Bottom accent line */
+      ctx.fillStyle = accent;
+      ctx.fillRect(M, H - 6, CW, 2);
+
+      /* Title */
+      const title = s.title || "Slide Title";
+      ctx.fillStyle = fg;
+      if (s.layout === "title") {
+        ctx.textAlign = "center";
+        ctx.fillStyle = accent;
+        ctx.fillRect(W / 2 - 30, H * 0.38, 60, 3);
+        ctx.fillStyle = fg;
+        ctx.font = `800 ${config.fontStyle === "bold" ? 38 : 34}px ${fontBase}`;
+        ctx.fillText(title, W / 2, H * 0.48, CW);
+        if (s.subtitle) {
+          ctx.fillStyle = muted;
+          ctx.font = `300 16px ${fontBase}`;
+          ctx.fillText(s.subtitle, W / 2, H * 0.48 + 40, CW);
+        }
+        ctx.textAlign = "left";
+      } else {
+        ctx.font = `700 22px ${fontBase}`;
+        ctx.fillText(title, M, M + 30, CW);
+        ctx.fillStyle = accent;
+        ctx.fillRect(M, M + 38, 40, 3);
+        let cy = M + 60;
+        if (s.body) {
+          ctx.fillStyle = fg;
+          ctx.font = `400 13px ${fontBase}`;
+          const words = s.body.split(" ");
+          let line = "";
+          for (const word of words) {
+            const test = line + word + " ";
+            if (ctx.measureText(test).width > CW && line) {
+              ctx.fillText(line.trim(), M, cy, CW);
+              line = word + " ";
+              cy += 20;
+            } else line = test;
+          }
+          ctx.fillText(line.trim(), M, cy, CW);
+          cy += 24;
+        }
+        s.bullets.filter((b) => b.trim()).forEach((b) => {
+          if (cy > H - 30) return;
+          ctx.fillStyle = accent;
+          ctx.beginPath();
+          ctx.arc(M + 6, cy - 4, 3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = fg;
+          ctx.font = `400 12px ${fontBase}`;
+          ctx.fillText(b, M + 18, cy, CW - 18);
+          cy += 24;
+        });
+      }
+
+      /* Draw uploaded image if present */
+      if (s.imageUrl) {
+        const img = loadedImagesRef.current.get(s.imageUrl);
+        if (img) {
+          const imgW = 160;
+          const imgH = 120;
+          const imgX = W - M - imgW;
+          const imgY = M + 10;
+          ctx.drawImage(img, imgX, imgY, imgW, imgH);
+        }
+      }
+
+      /* Draw chart placeholder if present */
+      if (s.chartPlaceholder) {
+        const cw = 180;
+        const ch = 100;
+        const cx = W - M - cw;
+        const cy2 = H - M - ch - 10;
+        ctx.fillStyle = accent + "11";
+        ctx.fillRect(cx, cy2, cw, ch);
+        ctx.strokeStyle = accent + "44";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(cx, cy2, cw, ch);
+        ctx.fillStyle = muted;
+        ctx.font = `600 11px ${fontBase}`;
+        ctx.textAlign = "center";
+        ctx.fillText(
+          `Chart: ${s.chartPlaceholder.charAt(0).toUpperCase() + s.chartPlaceholder.slice(1)}`,
+          cx + cw / 2,
+          cy2 + ch / 2 + 4,
+          cw - 20,
+        );
+        ctx.textAlign = "left";
+      }
+
+      return offCanvas;
+    },
+    [slides, dims, themeData, config],
+  );
+
+  /* ── PPTX Export ────────────────────────────────────────── */
+  const exportPPTX = useCallback(async () => {
+    const pptx = new PptxGenJS();
+    pptx.layout = "LAYOUT_WIDE";
+    const { bg, fg, accent, muted } = themeData;
+
+    for (const s of slides) {
+      const pptSlide = pptx.addSlide();
+      pptSlide.background = { color: bg.replace("#", "") };
+
+      const fontFace =
+        config.fontStyle === "classic"
+          ? "Georgia"
+          : config.fontStyle === "bold"
+            ? "Arial Black"
+            : config.fontStyle === "minimal"
+              ? "Helvetica"
+              : "Segoe UI";
+
+      /* Title text */
+      if (s.title) {
+        const isTitleSlide = s.layout === "title" || s.layout === "section";
+        pptSlide.addText(s.title, {
+          x: isTitleSlide ? 1 : 0.5,
+          y: isTitleSlide ? "40%" : 0.3,
+          w: isTitleSlide ? 8 : 9,
+          h: 0.8,
+          fontSize: isTitleSlide ? 32 : 22,
+          fontFace,
+          color: fg.replace("#", ""),
+          bold: true,
+          align: isTitleSlide ? "center" : "left",
+        });
+      }
+
+      /* Subtitle */
+      if (s.subtitle) {
+        pptSlide.addText(s.subtitle, {
+          x: s.layout === "title" ? 1 : 0.5,
+          y: s.layout === "title" ? "55%" : 1.0,
+          w: 8,
+          h: 0.5,
+          fontSize: 14,
+          fontFace,
+          color: muted.replace("#", ""),
+          align: s.layout === "title" ? "center" : "left",
+        });
+      }
+
+      /* Body */
+      if (s.body) {
+        pptSlide.addText(s.body, {
+          x: 0.5,
+          y: 1.5,
+          w: 9,
+          h: 2.5,
+          fontSize: 12,
+          fontFace,
+          color: fg.replace("#", ""),
+        });
+      }
+
+      /* Bullets */
+      const filteredBullets = s.bullets.filter((b) => b.trim());
+      if (filteredBullets.length > 0) {
+        pptSlide.addText(
+          filteredBullets.map((b) => ({
+            text: b,
+            options: { bullet: true, color: fg.replace("#", "") },
+          })),
+          {
+            x: 0.5,
+            y: s.body ? 3.8 : 1.5,
+            w: 9,
+            h: 2,
+            fontSize: 12,
+            fontFace,
+            color: fg.replace("#", ""),
+          },
+        );
+      }
+
+      /* Chart placeholder as shape */
+      if (s.chartPlaceholder) {
+        pptSlide.addShape(pptx.ShapeType.rect, {
+          x: 6.5,
+          y: 3.5,
+          w: 3,
+          h: 1.8,
+          fill: { color: accent.replace("#", ""), transparency: 90 },
+          line: { color: accent.replace("#", ""), width: 1 },
+        });
+        pptSlide.addText(
+          `Chart: ${s.chartPlaceholder.charAt(0).toUpperCase() + s.chartPlaceholder.slice(1)}`,
+          {
+            x: 6.5,
+            y: 3.5,
+            w: 3,
+            h: 1.8,
+            fontSize: 11,
+            fontFace,
+            color: muted.replace("#", ""),
+            align: "center",
+            valign: "middle",
+          },
+        );
+      }
+
+      /* Accent bar at bottom */
+      pptSlide.addShape(pptx.ShapeType.rect, {
+        x: 0.5,
+        y: 5.2,
+        w: 9,
+        h: 0.04,
+        fill: { color: accent.replace("#", "") },
+      });
+    }
+
+    await pptx.writeFile({ fileName: "presentation.pptx" });
+  }, [slides, themeData, config]);
+
+  /* ── PDF Export ──────────────────────────────────────────── */
+  const exportPDF = useCallback(() => {
+    const isWide = dims.w > dims.h;
+    const pdf = new jsPDF({
+      orientation: isWide ? "landscape" : "portrait",
+      unit: "px",
+      format: [dims.w, dims.h],
+    });
+
+    slides.forEach((_, idx) => {
+      if (idx > 0) pdf.addPage([dims.w, dims.h], isWide ? "landscape" : "portrait");
+      const offCanvas = renderSlideToCanvas(idx);
+      const imgData = offCanvas.toDataURL("image/png");
+      pdf.addImage(imgData, "PNG", 0, 0, dims.w, dims.h);
+    });
+
+    pdf.save("presentation.pdf");
+  }, [slides, dims, renderSlideToCanvas]);
+
+  /* ── PNG All Slides Export ──────────────────────────────── */
+  const exportAllPNG = useCallback(() => {
+    slides.forEach((_, idx) => {
+      const offCanvas = renderSlideToCanvas(idx);
+      const link = document.createElement("a");
+      link.download = `slide-${idx + 1}.png`;
+      link.href = offCanvas.toDataURL("image/png");
+      link.click();
+    });
+  }, [slides, renderSlideToCanvas]);
 
   /* ── AI Generation ──────────────────────────────────────── */
   const generatePresentation = useCallback(async () => {
@@ -692,6 +1170,8 @@ Rules:
                   cleanAIText(b),
                 ),
                 note: "",
+                imageUrl: "",
+                chartPlaceholder: "",
               }),
             ),
           );
@@ -722,6 +1202,22 @@ Rules:
       );
     },
     [currentSlide],
+  );
+
+  /* ── Image Upload Handler ───────────────────────────────── */
+  const handleImageUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const url = ev.target?.result as string;
+        if (url) updateSlide({ imageUrl: url });
+      };
+      reader.readAsDataURL(file);
+      e.target.value = "";
+    },
+    [updateSlide],
   );
 
   /* ── Render ─────────────────────────────────────────────── */
@@ -828,12 +1324,48 @@ Rules:
         </div>
 
         {/* Export */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-1.5">
+          <div className="relative">
+            <button
+              onClick={() => setExportMenuOpen((p) => !p)}
+              className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-linear-to-r from-primary-500 to-secondary-500 text-white text-[0.625rem] font-bold hover:from-primary-400 hover:to-secondary-400 transition-colors"
+            >
+              <IconDownload className="size-3" /> Export ▾
+            </button>
+            {exportMenuOpen && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
+                <button
+                  onClick={() => { exportSlide(); setExportMenuOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  📄 Current Slide (PNG)
+                </button>
+                <button
+                  onClick={() => { exportAllPNG(); setExportMenuOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  🖼️ All Slides (PNG)
+                </button>
+                <button
+                  onClick={() => { exportPDF(); setExportMenuOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  📕 Export PDF
+                </button>
+                <button
+                  onClick={() => { exportPPTX(); setExportMenuOpen(false); }}
+                  className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  📊 Export PPTX
+                </button>
+              </div>
+            )}
+          </div>
           <button
-            onClick={exportSlide}
-            className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-linear-to-r from-primary-500 to-secondary-500 text-white text-[0.625rem] font-bold hover:from-primary-400 hover:to-secondary-400 transition-colors"
+            onClick={enterPresentMode}
+            className="w-full flex items-center justify-center gap-2 h-9 rounded-xl border border-primary-500/30 text-primary-500 text-[0.625rem] font-bold hover:bg-primary-500/10 transition-colors"
           >
-            <IconDownload className="size-3" /> Export Slide (PNG)
+            <IconMaximize className="size-3" /> Present
           </button>
         </div>
 
@@ -843,33 +1375,46 @@ Rules:
             <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
               Slides ({slides.length})
             </label>
-            <button
-              onClick={() => {
-                setSlides((p) => [
-                  ...p,
-                  {
-                    id: uid(),
-                    layout: "content",
-                    title: "",
-                    subtitle: "",
-                    body: "",
-                    bullets: [],
-                    note: "",
-                  },
-                ]);
-                setCurrentSlide(slides.length);
-              }}
-              className="text-primary-500 hover:text-primary-400"
-            >
-              <IconPlus className="size-3.5" />
-            </button>
-          </div>
-          <div className="space-y-1 max-h-60 overflow-y-auto">
-            {slides.map((s, i) => (
+            <div className="flex items-center gap-1">
+              {clipboardSlide && (
+                <button
+                  onClick={pasteSlide}
+                  title="Paste slide"
+                  className="text-secondary-500 hover:text-secondary-400"
+                >
+                  <IconClipboard className="size-3.5" />
+                </button>
+              )}
               <button
+                onClick={() => {
+                  setSlides((p) => [
+                    ...p,
+                    {
+                      id: uid(),
+                      layout: "content",
+                      title: "",
+                      subtitle: "",
+                      body: "",
+                      bullets: [],
+                      note: "",
+                      imageUrl: "",
+                      chartPlaceholder: "",
+                    },
+                  ]);
+                  setCurrentSlide(slides.length);
+                }}
+                className="text-primary-500 hover:text-primary-400"
+              >
+                <IconPlus className="size-3.5" />
+              </button>
+            </div>
+          </div>
+          <div className="space-y-1 max-h-72 overflow-y-auto">
+            {slides.map((s, i) => (
+              <div
                 key={s.id}
                 onClick={() => setCurrentSlide(i)}
-                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-all ${currentSlide === i ? "bg-primary-500/10 ring-1 ring-primary-500/30" : "hover:bg-gray-50 dark:hover:bg-gray-800"}`}
+                className={`w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-left transition-all cursor-pointer ${currentSlide === i ? "bg-primary-500/10 ring-1 ring-primary-500/30" : "hover:bg-gray-50 dark:hover:bg-gray-800"}`}
               >
                 <span
                   className="size-5 rounded flex items-center justify-center text-[0.5rem] font-bold shrink-0"
@@ -880,23 +1425,54 @@ Rules:
                 >
                   {i + 1}
                 </span>
-                <span className="text-[0.5625rem] text-gray-600 dark:text-gray-400 truncate">
+                <span className="text-[0.5625rem] text-gray-600 dark:text-gray-400 truncate flex-1 min-w-0">
                   {s.title || s.layout}
                 </span>
-                {slides.length > 1 && (
+                <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSlides((p) => p.filter((_, j) => j !== i));
-                      if (currentSlide >= slides.length - 1)
-                        setCurrentSlide(Math.max(0, slides.length - 2));
-                    }}
-                    className="ml-auto text-gray-300 hover:text-red-500"
+                    onClick={() => moveSlide(i, "up")}
+                    disabled={i === 0}
+                    title="Move up"
+                    className="text-gray-400 hover:text-primary-500 disabled:opacity-20"
                   >
-                    <IconTrash className="size-2.5" />
+                    <IconChevronUp className="size-2.5" />
                   </button>
-                )}
-              </button>
+                  <button
+                    onClick={() => moveSlide(i, "down")}
+                    disabled={i === slides.length - 1}
+                    title="Move down"
+                    className="text-gray-400 hover:text-primary-500 disabled:opacity-20"
+                  >
+                    <IconChevronDown className="size-2.5" />
+                  </button>
+                  <button
+                    onClick={() => duplicateSlide(i)}
+                    title="Duplicate"
+                    className="text-gray-400 hover:text-secondary-500"
+                  >
+                    <IconCopy className="size-2.5" />
+                  </button>
+                  <button
+                    onClick={() => copySlide(i)}
+                    title="Copy to clipboard"
+                    className="text-gray-400 hover:text-secondary-500"
+                  >
+                    <IconClipboard className="size-2.5" />
+                  </button>
+                  {slides.length > 1 && (
+                    <button
+                      onClick={() => {
+                        setSlides((p) => p.filter((_, j) => j !== i));
+                        if (currentSlide >= slides.length - 1)
+                          setCurrentSlide(Math.max(0, slides.length - 2));
+                      }}
+                      className="text-gray-400 hover:text-red-500"
+                    >
+                      <IconTrash className="size-2.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -1054,7 +1630,127 @@ Rules:
             className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all resize-none"
           />
         </div>
+
+        {/* Image Upload */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+            <IconImage className="size-3 inline mr-1" />
+            Slide Image
+          </label>
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+          {slide.imageUrl ? (
+            <div className="space-y-1.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={slide.imageUrl}
+                alt="Slide"
+                className="w-full h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+              />
+              <div className="flex gap-1">
+                <button
+                  onClick={() => imageInputRef.current?.click()}
+                  className="flex-1 py-1 rounded-lg text-[0.5625rem] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Replace
+                </button>
+                <button
+                  onClick={() => updateSlide({ imageUrl: "" })}
+                  className="flex-1 py-1 rounded-lg text-[0.5625rem] font-semibold bg-gray-100 dark:bg-gray-800 text-red-500 hover:bg-red-500/10 transition-colors"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => imageInputRef.current?.click()}
+              className="w-full py-3 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 text-[0.5625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors flex flex-col items-center gap-1"
+            >
+              <IconImage className="size-4" />
+              Upload Image
+            </button>
+          )}
+          <div>
+            <label className="text-[0.5625rem] text-gray-500">Or paste URL</label>
+            <input
+              type="url"
+              value={slide.imageUrl}
+              onChange={(e) => updateSlide({ imageUrl: e.target.value })}
+              placeholder="https://..."
+              className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
+            />
+          </div>
+        </div>
+
+        {/* Chart Placeholder */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+            <IconChart className="size-3 inline mr-1" />
+            Chart Placeholder
+          </label>
+          <div className="grid grid-cols-4 gap-1">
+            {(["" , "bar", "line", "pie"] as const).map((ct) => (
+              <button
+                key={ct || "none"}
+                onClick={() => updateSlide({ chartPlaceholder: ct })}
+                className={`py-1.5 rounded-lg text-[0.5625rem] font-semibold capitalize transition-all ${
+                  slide.chartPlaceholder === ct
+                    ? "bg-primary-500 text-white"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}
+              >
+                {ct || "None"}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
+
+      {/* ── Presenter Mode Overlay ── */}
+      {isPresentMode && (
+        <div
+          ref={presentRef}
+          className="fixed inset-0 z-9999 bg-black flex flex-col items-center justify-center"
+          onClick={(e) => {
+            /* Click right half = next, left half = previous */
+            const rect = (e.target as HTMLElement).getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            if (x > rect.width / 2) {
+              setCurrentSlide((p) => Math.min(slides.length - 1, p + 1));
+            } else {
+              setCurrentSlide((p) => Math.max(0, p - 1));
+            }
+          }}
+        >
+          <canvas
+            ref={(el) => {
+              if (!el) return;
+              /* Render current slide full-screen */
+              const offCanvas = renderSlideToCanvas(currentSlide);
+              el.width = offCanvas.width;
+              el.height = offCanvas.height;
+              const ctx = el.getContext("2d");
+              if (ctx) ctx.drawImage(offCanvas, 0, 0);
+            }}
+            className="max-w-full max-h-full"
+            style={{ objectFit: "contain" }}
+          />
+          {/* Slide counter */}
+          <div className="absolute bottom-6 right-8 text-white/60 text-sm font-medium bg-black/50 px-3 py-1 rounded-full">
+            {currentSlide + 1} / {slides.length}
+          </div>
+          {/* ESC hint */}
+          <div className="absolute top-6 right-8 text-white/30 text-xs">
+            Press ESC to exit
+          </div>
+        </div>
+      )}
     </div>
   );
 }

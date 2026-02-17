@@ -1,6 +1,9 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback, useMemo } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
 import { useChatStore } from "@/stores";
 import type { ChatMessage, ChatConversation } from "@/stores";
 import {
@@ -12,58 +15,51 @@ import {
   IconLoader,
   IconCopy,
   IconCheck,
+  IconSearch,
+  IconDownload,
+  IconX,
 } from "@/components/icons";
 
-/* ── Markdown-lite renderer ──────────────────────────────────
-   Handles **bold**, *italic*, `code`, ```code blocks```, and newlines.
-   For a production app, swap with react-markdown. */
-function renderMarkdown(text: string) {
-  // Split by code blocks first
-  const parts = text.split(/(```[\s\S]*?```)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith("```") && part.endsWith("```")) {
-      const code = part.slice(3, -3).replace(/^\w+\n/, ""); // strip language tag
-      return (
-        <pre
-          key={i}
-          className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 my-2 overflow-x-auto text-xs font-mono text-gray-800 dark:text-gray-200"
-        >
-          <code>{code}</code>
-        </pre>
-      );
-    }
-    // Inline formatting
-    const formatted = part
-      .split(/(\*\*.*?\*\*|\*.*?\*|`.*?`)/g)
-      .map((seg, j) => {
-        if (seg.startsWith("**") && seg.endsWith("**"))
-          return <strong key={j}>{seg.slice(2, -2)}</strong>;
-        if (seg.startsWith("*") && seg.endsWith("*"))
-          return <em key={j}>{seg.slice(1, -1)}</em>;
-        if (seg.startsWith("`") && seg.endsWith("`"))
-          return (
-            <code
-              key={j}
-              className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs font-mono"
-            >
-              {seg.slice(1, -1)}
-            </code>
-          );
-        return seg;
-      });
-    return <span key={i}>{formatted}</span>;
-  });
+/* ── System Prompt Presets ───────────────────────────────── */
+const systemPromptPresets: { id: string; label: string; prompt: string }[] = [
+  { id: "default", label: "Default", prompt: "You are a helpful AI assistant for DMSuite, a design & business creative suite." },
+  { id: "creative", label: "Creative Writer", prompt: "You are a creative writing assistant. Help with taglines, copy, stories, and creative content. Be imaginative and vivid." },
+  { id: "code", label: "Code Assistant", prompt: "You are an expert coding assistant. Write clean, well-documented code. Explain your reasoning." },
+  { id: "business", label: "Business Advisor", prompt: "You are a business strategy advisor. Help with planning, marketing, analytics, and growth strategies." },
+  { id: "design", label: "Design Consultant", prompt: "You are a design consultant. Help with color theory, typography, layout, branding, and visual design decisions." },
+];
+
+/* ── Estimate token count ────────────────────────────────── */
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4);
 }
 
 /* ── Message Bubble ──────────────────────────────────────── */
-function MessageBubble({ message }: { message: ChatMessage }) {
+function MessageBubble({
+  message,
+  onEdit,
+  onRegenerate,
+}: {
+  message: ChatMessage;
+  onEdit?: (newContent: string) => void;
+  onRegenerate?: () => void;
+}) {
   const [copied, setCopied] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(message.content);
   const isUser = message.role === "user";
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSaveEdit = () => {
+    if (editText.trim() && onEdit) {
+      onEdit(editText.trim());
+    }
+    setEditing(false);
   };
 
   return (
@@ -85,23 +81,56 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 
       {/* Content */}
       <div className={`group max-w-[80%] ${isUser ? "items-end" : "items-start"}`}>
-        <div
-          className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-            isUser
-              ? "bg-primary-500 text-gray-950 rounded-tr-md"
-              : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-md"
-          }`}
-        >
-          {isUser ? message.content : renderMarkdown(message.content)}
-        </div>
+        {editing ? (
+          <div className="space-y-2">
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              className="w-full rounded-xl border border-primary-500/50 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 resize-none min-h-20"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleSaveEdit}
+                className="px-3 py-1 rounded-lg bg-primary-500 text-gray-950 text-xs font-medium hover:bg-primary-400 transition-colors"
+              >
+                Save &amp; Resend
+              </button>
+              <button
+                onClick={() => { setEditing(false); setEditText(message.content); }}
+                className="px-3 py-1 rounded-lg text-gray-400 hover:text-gray-300 text-xs transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div
+            className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+              isUser
+                ? "bg-primary-500 text-gray-950 rounded-tr-md"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-tl-md"
+            }`}
+          >
+            {isUser ? (
+              message.content
+            ) : (
+              <div className="prose prose-sm dark:prose-invert max-w-none prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-700 prose-code:text-primary-400 prose-headings:text-gray-900 dark:prose-headings:text-white">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+                  {message.content}
+                </ReactMarkdown>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Actions */}
-        {!isUser && message.content && (
+        {!editing && message.content && (
           <div className="flex items-center gap-2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               onClick={handleCopy}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1"
-              title="Copy message"
+              aria-label="Copy message"
             >
               {copied ? (
                 <IconCheck className="size-3.5 text-success" />
@@ -109,11 +138,32 @@ function MessageBubble({ message }: { message: ChatMessage }) {
                 <IconCopy className="size-3.5" />
               )}
             </button>
+            {isUser && onEdit && (
+              <button
+                onClick={() => setEditing(true)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1 text-[0.625rem]"
+                aria-label="Edit message"
+              >
+                Edit
+              </button>
+            )}
+            {!isUser && onRegenerate && (
+              <button
+                onClick={onRegenerate}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1 text-[0.625rem]"
+                aria-label="Regenerate response"
+              >
+                Regenerate
+              </button>
+            )}
             <span className="text-[0.625rem] text-gray-400">
               {new Date(message.timestamp).toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
               })}
+            </span>
+            <span className="text-[0.625rem] text-gray-500">
+              ~{estimateTokens(message.content)} tokens
             </span>
           </div>
         )}
@@ -225,12 +275,33 @@ export default function AIChatWorkspace() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [selectedModel, setSelectedModel] = useState<ModelId>("claude");
+  const [systemPrompt, setSystemPrompt] = useState(systemPromptPresets[0].prompt);
+  const [showSystemPrompt, setShowSystemPrompt] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const activeConversation = getActiveConversation();
   const messages = activeConversation?.messages ?? [];
   const activeModel = modelOptions.find((m) => m.id === selectedModel)!;
+
+  // Token counts
+  const totalTokens = useMemo(
+    () => messages.reduce((sum, m) => sum + estimateTokens(m.content), 0),
+    [messages]
+  );
+
+  // Filtered conversations for search
+  const filteredConversations = useMemo(() => {
+    if (!searchQuery.trim()) return conversations;
+    const q = searchQuery.toLowerCase();
+    return conversations.filter(
+      (c) =>
+        c.title.toLowerCase().includes(q) ||
+        c.messages.some((m) => m.content.toLowerCase().includes(q))
+    );
+  }, [conversations, searchQuery]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -243,20 +314,21 @@ export default function AIChatWorkspace() {
   }, [activeConversationId]);
 
   /** Send a message */
-  const handleSend = async () => {
-    const content = inputDraft.trim();
+  const handleSend = useCallback(async (overrideContent?: string) => {
+    const content = (overrideContent ?? inputDraft).trim();
     if (!content || isGenerating) return;
 
-    // Create conversation if none active
     let convId = activeConversationId;
     if (!convId) {
       convId = createConversation();
     }
 
-    // Add user message
     addMessage({ role: "user", content });
     setInputDraft("");
     setIsGenerating(true);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
       const response = await fetch("/api/chat", {
@@ -264,52 +336,107 @@ export default function AIChatWorkspace() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: [
+            { role: "system", content: systemPrompt },
             ...messages.map((m) => ({ role: m.role, content: m.content })),
             { role: "user", content },
           ],
           provider: activeModel.provider,
         }),
+        signal: controller.signal,
       });
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
 
-      // Handle streaming response
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-
       if (!reader) throw new Error("No response body");
 
-      // Add empty assistant message
       addMessage({ role: "assistant", content: "" });
 
       let fullContent = "";
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         const chunk = decoder.decode(value, { stream: true });
         fullContent += chunk;
         updateLastAssistantMessage(fullContent);
       }
     } catch (error) {
-      console.error("Chat error:", error);
-      addMessage({
-        role: "assistant",
-        content:
-          "I encountered an error. Please check that your API key is configured in `.env.local` (`ANTHROPIC_API_KEY` for Claude or `OPENAI_API_KEY` for GPT) and restart the dev server.",
-      });
+      if ((error as Error).name === "AbortError") {
+        // User stopped — keep partial response
+      } else {
+        console.error("Chat error:", error);
+        addMessage({
+          role: "assistant",
+          content: "I encountered an error. Please check your API key in `.env.local` and restart the dev server.",
+        });
+      }
     } finally {
       setIsGenerating(false);
+      abortControllerRef.current = null;
     }
-  };
+  }, [inputDraft, isGenerating, activeConversationId, createConversation, addMessage, setInputDraft, setIsGenerating, messages, activeModel.provider, updateLastAssistantMessage, systemPrompt]);
 
-  /** Handle keyboard shortcuts */
+  /** Stop generation */
+  const handleStop = useCallback(() => {
+    abortControllerRef.current?.abort();
+    setIsGenerating(false);
+  }, [setIsGenerating]);
+
+  /** Edit a user message — re-send from that point */
+  const handleEditMessage = useCallback((newContent: string) => {
+    handleSend(newContent);
+  }, [handleSend]);
+
+  /** Regenerate last assistant response */
+  const handleRegenerate = useCallback(() => {
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+    if (lastUserMsg) {
+      handleSend(lastUserMsg.content);
+    }
+  }, [messages, handleSend]);
+
+  /** Export conversation */
+  const handleExport = useCallback((format: "markdown" | "json" | "text") => {
+    if (!activeConversation) return;
+
+    let content = "";
+    const filename = `chat-${activeConversation.title.replace(/\s+/g, "-").toLowerCase()}`;
+
+    switch (format) {
+      case "markdown":
+        content = messages.map((m) =>
+          `## ${m.role === "user" ? "You" : "Assistant"}\n\n${m.content}\n`
+        ).join("\n---\n\n");
+        break;
+      case "json":
+        content = JSON.stringify({ title: activeConversation.title, messages }, null, 2);
+        break;
+      case "text":
+        content = messages.map((m) =>
+          `[${m.role.toUpperCase()}]\n${m.content}`
+        ).join("\n\n---\n\n");
+        break;
+    }
+
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${filename}.${format === "json" ? "json" : format === "markdown" ? "md" : "txt"}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [activeConversation, messages]);
+
+  /** Keyboard shortcuts */
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+    if (e.key === "n" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      createConversation();
     }
   };
 
@@ -326,18 +453,27 @@ export default function AIChatWorkspace() {
         >
           <div className="p-3 h-full flex flex-col w-64">
             <button
-              onClick={() => {
-                createConversation();
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium
-                bg-primary-500/10 text-primary-500 hover:bg-primary-500/20 transition-colors mb-3"
+              onClick={() => createConversation()}
+              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium bg-primary-500/10 text-primary-500 hover:bg-primary-500/20 transition-colors mb-2"
             >
               <IconPlus className="size-4" />
               New Chat
             </button>
 
+            {/* Conversation search */}
+            <div className="relative mb-2">
+              <IconSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search chats..."
+                className="w-full h-8 rounded-lg pl-8 pr-3 bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700/50 text-xs text-gray-900 dark:text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-primary-500/40 transition-all"
+              />
+            </div>
+
             <div className="flex-1 overflow-y-auto space-y-1">
-              {conversations.map((conv) => (
+              {filteredConversations.map((conv) => (
                 <ConversationItem
                   key={conv.id}
                   conversation={conv}
@@ -346,10 +482,9 @@ export default function AIChatWorkspace() {
                   onDelete={() => deleteConversation(conv.id)}
                 />
               ))}
-
-              {conversations.length === 0 && (
+              {filteredConversations.length === 0 && (
                 <p className="text-xs text-gray-400 text-center py-8">
-                  No conversations yet
+                  {searchQuery ? "No matches found" : "No conversations yet"}
                 </p>
               )}
             </div>
@@ -358,32 +493,99 @@ export default function AIChatWorkspace() {
 
         {/* ── Main Chat Area ─────────────────────────────── */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Mobile history toggle */}
-          <div className="sm:hidden flex items-center gap-2 px-4 py-2 border-b border-gray-200 dark:border-gray-800">
+          {/* Top bar */}
+          <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-200 dark:border-gray-800">
             <button
               onClick={() => setShowHistory(!showHistory)}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-sm flex items-center gap-1.5"
+              className="sm:hidden text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-sm flex items-center gap-1.5"
             >
               <IconMessageCircle className="size-4" />
-              {showHistory ? "Hide History" : "Chat History"}
+              {showHistory ? "Hide" : "History"}
             </button>
             <div className="flex-1" />
+
+            {/* System prompt toggle */}
+            <button
+              onClick={() => setShowSystemPrompt(!showSystemPrompt)}
+              className={`text-xs px-2 py-1 rounded-md transition-colors ${
+                showSystemPrompt ? "bg-primary-500/10 text-primary-500" : "text-gray-400 hover:text-gray-300"
+              }`}
+            >
+              System
+            </button>
+
+            {/* Export */}
+            <div className="relative group">
+              <button className="text-gray-400 hover:text-gray-300 p-1 transition-colors" aria-label="Export conversation">
+                <IconDownload className="size-4" />
+              </button>
+              <div className="absolute right-0 top-full mt-1 w-32 bg-gray-900 border border-gray-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                {(["markdown", "json", "text"] as const).map((fmt) => (
+                  <button
+                    key={fmt}
+                    onClick={() => handleExport(fmt)}
+                    className="block w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-gray-800 first:rounded-t-lg last:rounded-b-lg capitalize"
+                  >
+                    {fmt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Token count */}
+            <span className="text-[0.625rem] text-gray-500 tabular-nums">
+              ~{totalTokens.toLocaleString()} tokens
+            </span>
+
             <button
               onClick={() => createConversation()}
-              className="text-primary-500 hover:text-primary-400 text-sm flex items-center gap-1"
+              className="sm:hidden text-primary-500 hover:text-primary-400 text-sm flex items-center gap-1"
             >
               <IconPlus className="size-4" />
-              New
             </button>
           </div>
+
+          {/* System prompt panel */}
+          {showSystemPrompt && (
+            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <span className="text-xs font-medium text-gray-500">Preset:</span>
+                {systemPromptPresets.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setSystemPrompt(p.prompt)}
+                    className={`text-[0.625rem] px-2 py-0.5 rounded-md transition-colors ${
+                      systemPrompt === p.prompt
+                        ? "bg-primary-500/10 text-primary-500"
+                        : "text-gray-400 hover:text-gray-300 hover:bg-gray-700/50"
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                value={systemPrompt}
+                onChange={(e) => setSystemPrompt(e.target.value)}
+                rows={2}
+                className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-primary-500/40 resize-none"
+                placeholder="System prompt..."
+              />
+            </div>
+          )}
 
           {/* Messages area */}
           {messages.length === 0 && !isGenerating ? (
             <EmptyState />
           ) : (
             <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4">
-              {messages.map((msg) => (
-                <MessageBubble key={msg.id} message={msg} />
+              {messages.map((msg, idx) => (
+                <MessageBubble
+                  key={msg.id}
+                  message={msg}
+                  onEdit={msg.role === "user" ? handleEditMessage : undefined}
+                  onRegenerate={msg.role === "assistant" && idx === messages.length - 1 ? handleRegenerate : undefined}
+                />
               ))}
 
               {/* Typing indicator */}
@@ -412,11 +614,22 @@ export default function AIChatWorkspace() {
             {/* Model selector */}
             <div className="flex items-center gap-1.5 mb-2.5">
               {modelOptions.map((m) => (
-                <button key={m.id} onClick={() => setSelectedModel(m.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedModel === m.id ? "bg-primary-500/10 text-primary-500 ring-1 ring-primary-500/30" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"}`}>
-                  <span className="text-sm">{m.icon}</span>{m.label}
+                <button
+                  key={m.id}
+                  onClick={() => setSelectedModel(m.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    selectedModel === m.id
+                      ? "bg-primary-500/10 text-primary-500 ring-1 ring-primary-500/30"
+                      : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  <span className="text-sm">{m.icon}</span>
+                  {m.label}
                 </button>
               ))}
+              <span className="text-[0.625rem] text-gray-500 ml-auto">
+                ~{estimateTokens(inputDraft)} tokens
+              </span>
             </div>
 
             <div className="flex items-end gap-3">
@@ -428,15 +641,8 @@ export default function AIChatWorkspace() {
                   onKeyDown={handleKeyDown}
                   placeholder="Ask anything..."
                   rows={1}
-                  className="w-full resize-none rounded-xl border border-gray-200 dark:border-gray-700
-                    bg-gray-50 dark:bg-gray-800 px-4 py-3 pr-12 text-sm
-                    text-gray-900 dark:text-white placeholder:text-gray-400
-                    focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500
-                    transition-colors max-h-32"
-                  style={{
-                    height: "auto",
-                    minHeight: "44px",
-                  }}
+                  className="w-full resize-none rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3 pr-12 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-colors max-h-32"
+                  style={{ height: "auto", minHeight: "44px" }}
                   onInput={(e) => {
                     const target = e.target as HTMLTextAreaElement;
                     target.style.height = "auto";
@@ -446,24 +652,28 @@ export default function AIChatWorkspace() {
                 />
               </div>
 
-              <button
-                onClick={handleSend}
-                disabled={!inputDraft.trim() || isGenerating}
-                className="size-11 rounded-xl bg-primary-500 text-gray-950 flex items-center justify-center
-                  hover:bg-primary-400 disabled:opacity-40 disabled:cursor-not-allowed
-                  transition-colors shadow-lg shadow-primary-500/20 shrink-0"
-                title="Send message"
-              >
-                {isGenerating ? (
-                  <IconLoader className="size-5 animate-spin" />
-                ) : (
+              {isGenerating ? (
+                <button
+                  onClick={handleStop}
+                  className="size-11 rounded-xl bg-error text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg shrink-0"
+                  aria-label="Stop generation"
+                >
+                  <IconX className="size-5" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleSend()}
+                  disabled={!inputDraft.trim()}
+                  className="size-11 rounded-xl bg-primary-500 text-gray-950 flex items-center justify-center hover:bg-primary-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-lg shadow-primary-500/20 shrink-0"
+                  aria-label="Send message"
+                >
                   <IconSend className="size-5" />
-                )}
-              </button>
+                </button>
+              )}
             </div>
 
             <p className="text-[0.625rem] text-gray-400 mt-2 text-center">
-              Powered by {activeModel.label} &middot; Shift+Enter for new line
+              Powered by {activeModel.label} &middot; Shift+Enter for new line &middot; Ctrl+N new chat
             </p>
           </div>
         </div>

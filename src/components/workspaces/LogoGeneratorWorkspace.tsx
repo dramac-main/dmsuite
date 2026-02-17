@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { jsPDF } from "jspdf";
 import {
   IconSparkles,
   IconDownload,
@@ -12,6 +13,9 @@ import {
   IconType,
   IconWand,
   IconRefresh,
+  IconFileText,
+  IconChevronLeft,
+  IconChevronRight,
 } from "@/components/icons";
 
 /* ── Types ─────────────────────────────────────────────────── */
@@ -94,21 +98,93 @@ function getTrackingWide(cat: FontCategory): number {
 
 /* ── Color helpers ───────────────────────────────────────── */
 
-function hexToRgb(hex: string): [number, number, number] {
-  const c = hex.replace("#", "");
-  return [parseInt(c.slice(0, 2), 16), parseInt(c.slice(2, 4), 16), parseInt(c.slice(4, 6), 16)];
-}
-
-function getContrastColor(hex: string): string {
-  const [r, g, b] = hexToRgb(hex);
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5 ? "#000000" : "#ffffff";
-}
+import { getContrastColor } from "@/lib/canvas-utils";
 
 /* ── XML escape ──────────────────────────────────────────── */
 
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
+
+/* ── SVG Sanitizer ───────────────────────────────────────── */
+
+const ALLOWED_SVG_ELEMENTS = new Set([
+  "svg", "g", "defs", "linearGradient", "radialGradient", "stop",
+  "path", "circle", "ellipse", "rect", "line", "polyline", "polygon",
+  "text", "tspan", "textPath", "use", "clipPath", "mask", "filter",
+  "feGaussianBlur", "feOffset", "feMerge", "feMergeNode", "feColorMatrix",
+  "feBlend", "feComposite", "pattern", "image", "symbol", "marker",
+]);
+
+const ALLOWED_SVG_ATTRS = new Set([
+  "viewBox", "xmlns", "width", "height", "x", "y", "cx", "cy", "r",
+  "rx", "ry", "d", "fill", "stroke", "stroke-width", "stroke-linecap",
+  "stroke-linejoin", "stroke-dasharray", "opacity", "transform",
+  "font-family", "font-size", "font-weight", "letter-spacing",
+  "text-anchor", "dominant-baseline", "id", "class", "offset",
+  "stop-color", "stop-opacity", "x1", "y1", "x2", "y2",
+  "gradientUnits", "gradientTransform", "spreadMethod", "fx", "fy",
+  "points", "dx", "dy", "rotate",
+]);
+
+function sanitizeSvg(raw: string): string {
+  if (typeof window === "undefined") return raw;
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(raw, "image/svg+xml");
+  const errorNode = doc.querySelector("parsererror");
+  if (errorNode) return "";
+
+  function walkNode(node: Element): void {
+    const children = Array.from(node.children);
+    for (const child of children) {
+      const tag = child.localName.toLowerCase();
+      // Strip <script> and any disallowed elements
+      if (!ALLOWED_SVG_ELEMENTS.has(tag)) {
+        child.remove();
+        continue;
+      }
+      // Remove disallowed attributes
+      const attrs = Array.from(child.attributes);
+      for (const attr of attrs) {
+        const name = attr.name.toLowerCase();
+        // Strip event handlers (on*)
+        if (name.startsWith("on")) {
+          child.removeAttribute(attr.name);
+          continue;
+        }
+        // Strip xlink:href with javascript:
+        if (
+          (name === "xlink:href" || name === "href") &&
+          attr.value.trim().toLowerCase().startsWith("javascript:")
+        ) {
+          child.removeAttribute(attr.name);
+          continue;
+        }
+        if (!ALLOWED_SVG_ATTRS.has(attr.name)) {
+          child.removeAttribute(attr.name);
+        }
+      }
+      walkNode(child);
+    }
+  }
+
+  const svgEl = doc.documentElement;
+  // Sanitize root svg element attributes
+  const rootAttrs = Array.from(svgEl.attributes);
+  for (const attr of rootAttrs) {
+    if (attr.name.toLowerCase().startsWith("on")) {
+      svgEl.removeAttribute(attr.name);
+    } else if (!ALLOWED_SVG_ATTRS.has(attr.name)) {
+      svgEl.removeAttribute(attr.name);
+    }
+  }
+  walkNode(svgEl);
+
+  const serializer = new XMLSerializer();
+  return serializer.serializeToString(svgEl);
+}
+
+type PngBgOption = "white" | "black" | "transparent" | "custom";
 
 /* ── SVG Logo Generator ─────────────────────────────────── */
 
@@ -205,6 +281,8 @@ export default function LogoGeneratorWorkspace() {
   const [activeTab, setActiveTab] = useState<"configure" | "gallery">("configure");
   const [copiedSvg, setCopiedSvg] = useState(false);
   const [previewBg, setPreviewBg] = useState<"checker" | "white" | "dark" | "brand">("checker");
+  const [pngBg, setPngBg] = useState<PngBgOption>("white");
+  const [pngCustomColor, setPngCustomColor] = useState("#000000");
 
   const updateConfig = useCallback((partial: Partial<LogoConfig>) => {
     setConfig((prev) => ({ ...prev, ...partial }));
@@ -238,7 +316,9 @@ export default function LogoGeneratorWorkspace() {
       const decoder = new TextDecoder();
       while (true) { const { done, value } = await reader.read(); if (done) break; fullText += decoder.decode(value, { stream: true }); }
       const svgMatches = fullText.match(/<svg[\s\S]*?<\/svg>/gi) || [];
-      const newVariants: LogoVariant[] = svgMatches.map((svg, i) => ({ id: `ai-${Date.now()}-${i}`, svg, label: `AI Design ${aiVariants.length + i + 1}` }));
+      const newVariants: LogoVariant[] = svgMatches
+        .map((raw, i) => ({ id: `ai-${Date.now()}-${i}`, svg: sanitizeSvg(raw), label: `AI Design ${aiVariants.length + i + 1}` }))
+        .filter((v) => v.svg.length > 0);
       if (newVariants.length > 0) { setAiVariants((prev) => [...newVariants, ...prev]); setSelectedVariant(newVariants[0].id); }
     } catch (err) { console.error("AI logo generation error:", err); }
     finally { setIsGenerating(false); }
@@ -262,7 +342,13 @@ export default function LogoGeneratorWorkspace() {
     const svgBlob = new Blob([selectedLogo.svg], { type: "image/svg+xml;charset=utf-8" });
     const svgUrl = URL.createObjectURL(svgBlob);
     img.onload = () => {
-      ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (pngBg === "transparent") {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      } else {
+        const bgColors: Record<string, string> = { white: "#ffffff", black: "#000000", custom: pngCustomColor };
+        ctx.fillStyle = bgColors[pngBg] ?? "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
       const s = Math.min((canvas.width * 0.85) / img.naturalWidth, (canvas.height * 0.7) / img.naturalHeight);
       const w = img.naturalWidth * s; const h = img.naturalHeight * s;
       ctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
@@ -270,7 +356,138 @@ export default function LogoGeneratorWorkspace() {
       canvas.toBlob((blob) => { if (!blob) return; const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${config.brandName.replace(/\s+/g, "-").toLowerCase() || "logo"}-${scale}x.png`; a.click(); URL.revokeObjectURL(url); }, "image/png");
     };
     img.src = svgUrl;
-  }, [selectedLogo, config.brandName]);
+  }, [selectedLogo, config.brandName, pngBg, pngCustomColor]);
+
+  /* ── PDF export ──────────────────────────────────────── */
+  const handleDownloadPdf = useCallback(async () => {
+    if (!selectedLogo && allVariants.length === 0) return;
+    const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+    const pw = pdf.internal.pageSize.getWidth();
+    let yPos = 40;
+
+    // Header
+    pdf.setFontSize(24);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(config.brandName || "Logo Sheet", pw / 2, yPos, { align: "center" });
+    yPos += 24;
+
+    if (config.tagline) {
+      pdf.setFontSize(11);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(120);
+      pdf.text(config.tagline, pw / 2, yPos, { align: "center" });
+      yPos += 20;
+    }
+
+    // Colors
+    pdf.setFontSize(9);
+    pdf.setTextColor(100);
+    pdf.text(`Primary: ${config.primaryColor}  |  Secondary: ${config.secondaryColor}`, pw / 2, yPos, { align: "center" });
+    yPos += 28;
+
+    // Render each variant
+    const variants = allVariants.length > 0 ? allVariants : (selectedLogo ? [selectedLogo] : []);
+    const margin = 40;
+    const colW = (pw - margin * 2 - 20) / 2;
+    const rowH = colW * 0.55;
+
+    for (let i = 0; i < variants.length; i++) {
+      const col = i % 2;
+      if (i > 0 && col === 0) yPos += rowH + 30;
+      if (yPos + rowH + 40 > pdf.internal.pageSize.getHeight()) {
+        pdf.addPage();
+        yPos = 40;
+      }
+
+      const xOff = margin + col * (colW + 20);
+
+      // Label
+      pdf.setFontSize(8);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(80);
+      pdf.text(variants[i].label, xOff, yPos);
+
+      // Render SVG to image
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 600; canvas.height = 330;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          const img = new Image();
+          const blob = new Blob([variants[i].svg], { type: "image/svg+xml;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          await new Promise<void>((resolve) => {
+            img.onload = () => {
+              const s = Math.min((canvas.width * 0.85) / img.naturalWidth, (canvas.height * 0.7) / img.naturalHeight);
+              const w = img.naturalWidth * s;
+              const h = img.naturalHeight * s;
+              ctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+              URL.revokeObjectURL(url);
+              resolve();
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+            img.src = url;
+          });
+          const dataUrl = canvas.toDataURL("image/png");
+          pdf.addImage(dataUrl, "PNG", xOff, yPos + 10, colW, rowH);
+        }
+      } catch { /* skip variant on error */ }
+    }
+
+    pdf.save(`${config.brandName.replace(/\s+/g, "-").toLowerCase() || "logo"}-sheet.pdf`);
+  }, [allVariants, selectedLogo, config]);
+
+  /* ── Keyboard shortcuts ────────────────────────────────── */
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement)?.tagName;
+      const isInput = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+
+      // Ctrl+E → download SVG
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "e") {
+        e.preventDefault();
+        handleDownloadSvg();
+        return;
+      }
+      // Ctrl+G → generate AI variants
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "g") {
+        e.preventDefault();
+        generateAiLogos();
+        return;
+      }
+
+      if (isInput) return;
+
+      // ←/→ → cycle through variants
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        e.preventDefault();
+        const variants = allVariants;
+        if (variants.length === 0) return;
+        const currentIdx = variants.findIndex((v) => v.id === selectedVariant);
+        let nextIdx: number;
+        if (e.key === "ArrowLeft") {
+          nextIdx = currentIdx <= 0 ? variants.length - 1 : currentIdx - 1;
+        } else {
+          nextIdx = currentIdx >= variants.length - 1 ? 0 : currentIdx + 1;
+        }
+        setSelectedVariant(variants[nextIdx].id);
+        return;
+      }
+
+      // 1-6 → select style by index
+      const num = parseInt(e.key, 10);
+      if (num >= 1 && num <= 6 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        const style = logoStyles[num - 1];
+        if (style) updateConfig({ style: style.id });
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleDownloadSvg, generateAiLogos, allVariants, selectedVariant, updateConfig]);
 
   const previewBgClass = { checker: "bg-[repeating-conic-gradient(#e5e7eb_0%_25%,transparent_0%_50%)] dark:bg-[repeating-conic-gradient(#1f2937_0%_25%,transparent_0%_50%)] bg-size-[20px_20px]", white: "bg-white", dark: "bg-gray-950", brand: "" }[previewBg];
 
@@ -374,6 +591,12 @@ export default function LogoGeneratorWorkspace() {
             <div className="flex items-center gap-3">
               <span className="text-sm font-semibold text-gray-900 dark:text-white">Preview</span>
               {selectedLogo && <span className="text-xs text-gray-400 font-medium">{selectedLogo.label}</span>}
+              {allVariants.length > 1 && (
+                <div className="flex items-center gap-0.5">
+                  <button onClick={() => { const idx = allVariants.findIndex((v) => v.id === selectedVariant); setSelectedVariant(allVariants[idx <= 0 ? allVariants.length - 1 : idx - 1].id); }} className="size-6 rounded-md flex items-center justify-center text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Previous (←)"><IconChevronLeft className="size-3.5" /></button>
+                  <button onClick={() => { const idx = allVariants.findIndex((v) => v.id === selectedVariant); setSelectedVariant(allVariants[idx >= allVariants.length - 1 ? 0 : idx + 1].id); }} className="size-6 rounded-md flex items-center justify-center text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Next (→)"><IconChevronRight className="size-3.5" /></button>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-1.5">
               {(["checker", "white", "dark", "brand"] as const).map((bg) => (
@@ -412,12 +635,31 @@ export default function LogoGeneratorWorkspace() {
         {selectedLogo && (
           <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Export</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {/* PNG Background Option */}
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-[0.6875rem] text-gray-500 dark:text-gray-400 font-medium">PNG Background</span>
+              <div className="flex items-center gap-1">
+                {(["white", "black", "transparent", "custom"] as PngBgOption[]).map((opt) => (
+                  <button key={opt} onClick={() => setPngBg(opt)} className={`px-2 py-1 rounded-md text-[0.625rem] font-semibold transition-all ${
+                    pngBg === opt
+                      ? "bg-primary-500/10 text-primary-500 ring-1 ring-primary-500/30"
+                      : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  }`}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</button>
+                ))}
+              </div>
+              {pngBg === "custom" && (
+                <input type="color" value={pngCustomColor} onChange={(e) => setPngCustomColor(e.target.value)}
+                  className="size-6 rounded border border-gray-200 dark:border-gray-700 cursor-pointer bg-transparent" />
+              )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               <button onClick={handleDownloadSvg} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-primary-500/30 bg-primary-500/5 text-primary-500 transition-colors hover:bg-primary-500/10"><IconDownload className="size-4" /><span className="text-xs font-semibold">.svg</span><span className="text-[0.5625rem] opacity-60">Vector</span></button>
               <button onClick={() => handleDownloadPng(1)} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-secondary-500/30 bg-secondary-500/5 text-secondary-500 transition-colors hover:bg-secondary-500/10"><IconDownload className="size-4" /><span className="text-xs font-semibold">.png</span><span className="text-[0.5625rem] opacity-60">1200×600</span></button>
               <button onClick={() => handleDownloadPng(2)} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-secondary-500/30 bg-secondary-500/5 text-secondary-500 transition-colors hover:bg-secondary-500/10"><IconDownload className="size-4" /><span className="text-xs font-semibold">.png 2×</span><span className="text-[0.5625rem] opacity-60">2400×1200</span></button>
               <button onClick={() => handleDownloadPng(4)} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-secondary-500/30 bg-secondary-500/5 text-secondary-500 transition-colors hover:bg-secondary-500/10"><IconDownload className="size-4" /><span className="text-xs font-semibold">.png 4×</span><span className="text-[0.5625rem] opacity-60">4800×2400</span></button>
+              <button onClick={handleDownloadPdf} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-warning/30 bg-warning/5 text-warning transition-colors hover:bg-warning/10"><IconFileText className="size-4" /><span className="text-xs font-semibold">.pdf</span><span className="text-[0.5625rem] opacity-60">Logo Sheet</span></button>
             </div>
+            <p className="text-[0.5625rem] text-gray-400 mt-2">⌨ Ctrl+E SVG · ←→ cycle variants · 1-6 style · Ctrl+G AI generate</p>
           </div>
         )}
       </div>

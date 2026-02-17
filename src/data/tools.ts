@@ -151,7 +151,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create cinematic logo reveals, animated intros, 3D logo spins, and motion logos",
         icon: "play",
-        status: "ready",
+        status: "coming-soon",
         tags: ["logo", "animation", "motion", "reveal", "intro"],
         aiProviders: ["luma", "runway"],
         outputs: ["mp4", "webm", "gif", "mov"],
@@ -175,7 +175,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create comprehensive brand guidelines with logo usage, color specs, typography rules, and do/don't examples",
         icon: "bookOpen",
-        status: "ready",
+        status: "coming-soon",
         tags: ["brand guidelines", "style guide", "brand book", "identity"],
         aiProviders: ["claude"],
         outputs: ["pdf", "pptx"],
@@ -202,7 +202,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create branded letterheads for official correspondence with matching continuation pages",
         icon: "fileText",
-        status: "ready",
+        status: "coming-soon",
         tags: ["letterhead", "stationery", "branding", "corporate"],
         outputs: ["pdf", "docx", "png"],
         printReady: true,
@@ -215,7 +215,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design branded envelopes — DL, C5, C4, #10, and custom sizes with window placement",
         icon: "mail",
-        status: "ready",
+        status: "coming-soon",
         tags: ["envelope", "stationery", "mail", "print"],
         outputs: ["pdf", "png", "ai"],
         printReady: true,
@@ -227,7 +227,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design branded compliment slips and with-compliments cards matching your stationery suite",
         icon: "fileText",
-        status: "ready",
+        status: "coming-soon",
         tags: ["compliment slip", "stationery", "corporate"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -240,7 +240,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create company stamps, rubber stamps, embossed seals, and wax seal designs",
         icon: "award",
-        status: "ready",
+        status: "coming-soon",
         tags: ["stamp", "seal", "emboss", "wax", "corporate"],
         outputs: ["svg", "png", "pdf", "ai"],
         supportsPartEdit: true,
@@ -264,7 +264,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create vertical stories, reel covers, and highlight covers for Instagram, TikTok, and Snapchat",
         icon: "smartphone",
-        status: "ready",
+        status: "coming-soon",
         tags: ["stories", "reels", "vertical", "highlight", "social media"],
         outputs: ["png", "jpg"],
         supportsPartEdit: true,
@@ -275,7 +275,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design multi-slide carousels for Instagram, LinkedIn, and Facebook with consistent styling",
         icon: "layers",
-        status: "ready",
+        status: "coming-soon",
         tags: ["carousel", "swipe", "instagram", "linkedin", "multi-slide"],
         outputs: ["png", "pdf"],
         supportsPartEdit: true,
@@ -286,7 +286,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design matching profile pictures, cover photos, and banners for all platforms at once",
         icon: "user",
-        status: "ready",
+        status: "coming-soon",
         tags: ["profile", "cover photo", "banner", "social media"],
         outputs: ["png", "jpg"],
         supportsPartEdit: true,
@@ -297,7 +297,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create tall, scroll-stopping Pinterest pins optimized for clicks and saves",
         icon: "image",
-        status: "ready",
+        status: "coming-soon",
         tags: ["pinterest", "pin", "tall", "vertical"],
         outputs: ["png", "jpg"],
         supportsPartEdit: true,
@@ -346,7 +346,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create bi-fold, tri-fold, z-fold, and gate-fold brochures with professional layouts",
         icon: "bookOpen",
-        status: "ready",
+        status: "coming-soon",
         tags: ["brochure", "print", "fold", "bi-fold", "tri-fold"],
         outputs: ["pdf", "png", "ai"],
         printReady: true,
@@ -359,7 +359,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design standard 4×9 inch rack cards for hotels, tourism, real estate, and retail",
         icon: "fileText",
-        status: "ready",
+        status: "coming-soon",
         tags: ["rack card", "tourism", "hotel", "real estate", "print"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -371,7 +371,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create custom door hangers for real estate, hospitality, and marketing campaigns",
         icon: "home",
-        status: "ready",
+        status: "coming-soon",
         tags: ["door hanger", "real estate", "marketing", "print"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -384,7 +384,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Build data-driven infographics with smart data visualizations, charts, icons, and flow diagrams",
         icon: "chart",
-        status: "ready",
+        status: "coming-soon",
         tags: ["infographic", "data", "visualization", "chart"],
         aiProviders: ["claude"],
         outputs: ["png", "pdf", "svg"],
@@ -396,7 +396,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design magazine spreads, covers, and interior layouts with professional typography and grids",
         icon: "bookOpen",
-        status: "ready",
+        status: "coming-soon",
         tags: ["magazine", "layout", "spread", "editorial", "publication"],
         outputs: ["pdf", "png", "ai"],
         printReady: true,
@@ -409,7 +409,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design stunning front covers, back covers, and full wraps for paperback and hardcover books",
         icon: "bookOpen",
-        status: "ready",
+        status: "coming-soon",
         tags: ["book cover", "publishing", "paperback", "hardcover"],
         outputs: ["pdf", "png", "tiff", "ai"],
         printReady: true,
@@ -421,7 +421,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design print advertisements for newspapers and magazines in standard column sizes",
         icon: "newspaper",
-        status: "ready",
+        status: "coming-soon",
         tags: ["newspaper", "magazine", "ad", "print", "advertising"],
         outputs: ["pdf", "tiff", "eps"],
         printReady: true,
@@ -434,7 +434,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate custom icons, spot illustrations, and vector graphics in any style with AI",
         icon: "penTool",
-        status: "ready",
+        status: "coming-soon",
         tags: ["icon", "illustration", "vector", "custom", "flat", "3d"],
         aiProviders: ["stable-diffusion", "flux"],
         outputs: ["svg", "png", "ai"],
@@ -492,7 +492,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Edit specific parts of an image with AI — change objects, extend scenes, fix details while keeping everything else consistent",
         icon: "penTool",
-        status: "ready",
+        status: "coming-soon",
         tags: ["inpainting", "edit", "part-edit", "consistency", "AI"],
         aiProviders: ["stable-diffusion", "flux"],
         outputs: ["png", "jpg"],
@@ -505,7 +505,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Place designs on realistic mockups — t-shirts, mugs, screens, packaging, signage, vehicles, and more",
         icon: "monitor",
-        status: "ready",
+        status: "coming-soon",
         tags: ["mockup", "product", "presentation", "realistic"],
         aiProviders: ["stable-diffusion"],
         outputs: ["png", "jpg", "psd"],
@@ -517,7 +517,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design product packaging — boxes, bags, bottles, cans, pouches, and custom dielines with 3D preview",
         icon: "box",
-        status: "ready",
+        status: "coming-soon",
         tags: ["packaging", "box", "label", "dieline", "3D"],
         outputs: ["pdf", "ai", "svg", "png"],
         printReady: true,
@@ -529,7 +529,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design product labels for bottles, jars, cans, and containers with regulatory layouts",
         icon: "tag",
-        status: "ready",
+        status: "coming-soon",
         tags: ["label", "product", "bottle", "jar", "regulatory"],
         outputs: ["pdf", "png", "ai"],
         printReady: true,
@@ -541,7 +541,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create custom stickers, decals, badges, and die-cut shapes for products and branding",
         icon: "tag",
-        status: "ready",
+        status: "coming-soon",
         tags: ["sticker", "decal", "badge", "die-cut"],
         outputs: ["pdf", "png", "svg"],
         printReady: true,
@@ -554,7 +554,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design signage, billboards, pull-up banners, A-frames, and large format prints",
         icon: "maximize",
-        status: "ready",
+        status: "coming-soon",
         tags: ["signage", "billboard", "large format", "pull-up", "A-frame"],
         outputs: ["pdf", "tiff", "png"],
         printReady: true,
@@ -579,7 +579,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design window decals, wall murals, vinyl graphics, and environmental graphics",
         icon: "maximize",
-        status: "ready",
+        status: "coming-soon",
         tags: ["window", "wall", "mural", "vinyl", "environmental"],
         outputs: ["pdf", "png", "tiff"],
         printReady: true,
@@ -604,7 +604,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create print-ready designs for t-shirts, hoodies, caps, totebags, and all merchandise",
         icon: "shirt",
-        status: "ready",
+        status: "coming-soon",
         tags: ["t-shirt", "merchandise", "apparel", "hoodie", "print-on-demand"],
         outputs: ["png", "svg", "pdf", "psd"],
         printReady: true,
@@ -628,7 +628,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate seamless patterns, textures, and tileable backgrounds for any design",
         icon: "grid",
-        status: "ready",
+        status: "coming-soon",
         tags: ["pattern", "texture", "background", "seamless", "tileable"],
         aiProviders: ["stable-diffusion"],
         outputs: ["png", "svg", "jpg"],
@@ -640,7 +640,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate harmonious palettes from images, moods, keywords, or industry with WCAG contrast checks",
         icon: "droplet",
-        status: "ready",
+        status: "coming-soon",
         tags: ["color", "palette", "harmony", "WCAG", "accessibility"],
         outputs: ["png", "json", "svg"],
       },
@@ -650,7 +650,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Find perfect font combinations, test sizes, and generate type specimens with AI",
         icon: "type",
-        status: "ready",
+        status: "coming-soon",
         tags: ["typography", "fonts", "pairing", "type specimen"],
         aiProviders: ["claude"],
         outputs: ["png", "pdf"],
@@ -661,7 +661,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Build visual mood boards with AI-curated images, colors, textures, and typography",
         icon: "grid",
-        status: "ready",
+        status: "coming-soon",
         tags: ["mood board", "inspiration", "visual", "creative direction"],
         aiProviders: ["claude", "stable-diffusion"],
         outputs: ["png", "pdf"],
@@ -690,7 +690,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design professional A4 sales books with multi-page layouts, covers, contents, and print-ready export with bleed",
         icon: "bookOpen",
-        status: "ready",
+        status: "coming-soon",
         tags: ["sales book", "A4", "print", "catalog", "multi-page"],
         aiProviders: ["claude"],
         outputs: ["pdf", "png"],
@@ -704,7 +704,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Compact A5 sales books — perfect for product catalogs, handouts, and leave-behinds",
         icon: "bookOpen",
-        status: "ready",
+        status: "coming-soon",
         tags: ["sales book", "A5", "print", "catalog", "compact"],
         aiProviders: ["claude"],
         outputs: ["pdf", "png"],
@@ -718,7 +718,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Multi-page product catalogs with smart image layouts, pricing tables, and order forms",
         icon: "grid",
-        status: "ready",
+        status: "coming-soon",
         tags: ["catalog", "product", "multi-page", "pricing"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -731,7 +731,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design fashion lookbooks, product lookbooks, and portfolio books with editorial layouts",
         icon: "image",
-        status: "ready",
+        status: "coming-soon",
         tags: ["lookbook", "fashion", "portfolio", "editorial"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -744,7 +744,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create beautiful price lists, rate cards, and service menus with branded layouts",
         icon: "tag",
-        status: "ready",
+        status: "coming-soon",
         tags: ["price list", "rate card", "pricing", "service menu"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -757,7 +757,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create wholesale line sheets with product photos, SKUs, pricing, and order details",
         icon: "grid",
-        status: "ready",
+        status: "coming-soon",
         tags: ["line sheet", "wholesale", "B2B", "product"],
         outputs: ["pdf", "xlsx"],
         printReady: true,
@@ -771,7 +771,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create stunning multi-page company profiles that showcase your brand story, team, and services",
         icon: "building",
-        status: "ready",
+        status: "coming-soon",
         tags: ["company profile", "corporate", "branding", "about us"],
         aiProviders: ["claude"],
         outputs: ["pdf", "pptx"],
@@ -785,7 +785,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate winning proposals and pitch decks with data-driven layouts and compelling narratives",
         icon: "presentation",
-        status: "ready",
+        status: "coming-soon",
         tags: ["proposal", "pitch", "deck", "presentation", "RFP"],
         aiProviders: ["claude"],
         outputs: ["pdf", "pptx"],
@@ -809,7 +809,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create annual reports, financial reports, ESG reports, and board packs with charts and data",
         icon: "chart",
-        status: "ready",
+        status: "coming-soon",
         tags: ["report", "annual", "financial", "ESG", "board pack"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -823,7 +823,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design printed newsletters, bulletins, and internal communications in A4/letter format",
         icon: "newspaper",
-        status: "ready",
+        status: "coming-soon",
         tags: ["newsletter", "print", "bulletin", "internal comms"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -850,7 +850,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate professional quotes and estimates with itemized breakdowns and terms",
         icon: "calculator",
-        status: "ready",
+        status: "coming-soon",
         tags: ["quote", "estimate", "pricing", "proposal"],
         outputs: ["pdf", "xlsx"],
         printReady: true,
@@ -862,7 +862,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create branded receipts, payment confirmations, and delivery notes",
         icon: "receipt",
-        status: "ready",
+        status: "coming-soon",
         tags: ["receipt", "payment", "confirmation", "delivery note"],
         outputs: ["pdf", "png"],
         supportsPartEdit: true,
@@ -873,7 +873,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate branded purchase orders with vendor details, line items, and approval workflows",
         icon: "clipboard",
-        status: "ready",
+        status: "coming-soon",
         tags: ["purchase order", "PO", "procurement", "vendor"],
         outputs: ["pdf", "xlsx"],
         printReady: true,
@@ -885,7 +885,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create account statements showing transaction history, balances, and aging summaries",
         icon: "chart",
-        status: "ready",
+        status: "coming-soon",
         tags: ["statement", "account", "aging", "balance"],
         outputs: ["pdf", "xlsx"],
         supportsPartEdit: true,
@@ -897,7 +897,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate legal contracts, service agreements, NDAs, and freelancer agreements from templates",
         icon: "shield",
-        status: "ready",
+        status: "coming-soon",
         tags: ["contract", "agreement", "legal", "NDA", "freelancer"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -909,7 +909,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "AI-powered business plan generator with executive summary, market analysis, and financial projections",
         icon: "target",
-        status: "ready",
+        status: "coming-soon",
         tags: ["business plan", "strategy", "projections", "startup"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -921,7 +921,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Build comprehensive employee handbooks with policies, procedures, and company culture sections",
         icon: "bookOpen",
-        status: "ready",
+        status: "coming-soon",
         tags: ["employee handbook", "HR", "policies", "onboarding"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -933,7 +933,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create compelling job descriptions, role profiles, and hiring posts with inclusive language",
         icon: "users",
-        status: "ready",
+        status: "coming-soon",
         tags: ["job description", "hiring", "recruitment", "HR"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -946,7 +946,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design certificates of achievement, completion, appreciation, and training with ornamental borders",
         icon: "award",
-        status: "ready",
+        status: "coming-soon",
         tags: ["certificate", "award", "achievement", "diploma"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -959,7 +959,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design formal diplomas, accreditations, and professional designation certificates",
         icon: "award",
-        status: "ready",
+        status: "coming-soon",
         tags: ["diploma", "accreditation", "formal", "education"],
         outputs: ["pdf", "png", "tiff"],
         printReady: true,
@@ -971,7 +971,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design gift vouchers, discount coupons, loyalty cards, and promotional offers",
         icon: "tag",
-        status: "ready",
+        status: "coming-soon",
         tags: ["gift voucher", "coupon", "loyalty", "discount", "promo"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -984,7 +984,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create restaurant menus, cafe menus, bar menus, wine lists, and food truck menus",
         icon: "utensils",
-        status: "ready",
+        status: "coming-soon",
         tags: ["menu", "restaurant", "food", "cafe", "wine list"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -997,7 +997,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design property listing sheets, feature sheets, open house flyers, and market reports",
         icon: "home",
-        status: "ready",
+        status: "coming-soon",
         tags: ["real estate", "listing", "property", "feature sheet"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -1010,7 +1010,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design event programs, conference agendas, wedding programs, and ceremony booklets",
         icon: "calendar",
-        status: "ready",
+        status: "coming-soon",
         tags: ["event program", "agenda", "conference", "wedding"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -1023,7 +1023,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design event tickets, admission passes, raffle tickets, and VIP passes with barcodes/QR",
         icon: "creditCard",
-        status: "ready",
+        status: "coming-soon",
         tags: ["ticket", "pass", "event", "VIP", "barcode"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -1035,7 +1035,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design employee ID badges, event passes, conference badges, and lanyards with photo areas",
         icon: "creditCard",
-        status: "ready",
+        status: "coming-soon",
         tags: ["ID badge", "lanyard", "pass", "event", "employee"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -1047,7 +1047,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create branded desk, wall, and pocket calendars with custom imagery and events",
         icon: "calendar",
-        status: "ready",
+        status: "coming-soon",
         tags: ["calendar", "desk", "wall", "pocket", "print"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -1061,7 +1061,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Build training manuals, SOPs, onboarding guides, and instruction booklets with step-by-step layouts",
         icon: "bookOpen",
-        status: "ready",
+        status: "coming-soon",
         tags: ["training", "manual", "SOP", "onboarding", "instruction"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -1075,7 +1075,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create product user guides, help docs, technical documentation, and quick-start guides",
         icon: "helpCircle",
-        status: "ready",
+        status: "coming-soon",
         tags: ["user guide", "documentation", "help", "technical"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx", "html"],
@@ -1087,7 +1087,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create fillable worksheets, forms, checklists, and planning templates for print or digital",
         icon: "clipboard",
-        status: "ready",
+        status: "coming-soon",
         tags: ["worksheet", "form", "checklist", "fillable", "template"],
         outputs: ["pdf", "docx"],
         printReady: true,
@@ -1100,7 +1100,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Write and design professional white papers and research documents with citations",
         icon: "fileText",
-        status: "ready",
+        status: "coming-soon",
         tags: ["white paper", "research", "thought leadership", "academic"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -1112,7 +1112,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Build compelling case studies that showcase client results with before/after data visualizations",
         icon: "trendingUp",
-        status: "ready",
+        status: "coming-soon",
         tags: ["case study", "success story", "portfolio", "results"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx", "pptx"],
@@ -1124,7 +1124,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create media kits, press kits, and sponsorship packages for PR and partnerships",
         icon: "newspaper",
-        status: "ready",
+        status: "coming-soon",
         tags: ["media kit", "press", "PR", "sponsorship"],
         outputs: ["pdf", "pptx"],
         supportsPartEdit: true,
@@ -1135,7 +1135,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design and export eBooks, digital magazines, interactive PDFs, and EPUB publications",
         icon: "tablet",
-        status: "ready",
+        status: "coming-soon",
         tags: ["ebook", "digital", "publication", "magazine", "EPUB"],
         aiProviders: ["claude"],
         outputs: ["pdf", "html"],
@@ -1160,7 +1160,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate tailored cover letters that match job descriptions with keyword optimization",
         icon: "mail",
-        status: "ready",
+        status: "coming-soon",
         tags: ["cover letter", "job", "application", "career"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -1172,7 +1172,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create stunning design portfolios, photography portfolios, and creative portfolios for print or web",
         icon: "image",
-        status: "ready",
+        status: "coming-soon",
         tags: ["portfolio", "creative", "photography", "design"],
         outputs: ["pdf", "html", "png"],
         supportsPartEdit: true,
@@ -1184,7 +1184,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design wedding invitations, party invites, corporate event invitations, and RSVPs",
         icon: "mail",
-        status: "ready",
+        status: "coming-soon",
         tags: ["invitation", "wedding", "party", "event", "RSVP"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -1197,7 +1197,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create greeting cards, thank-you cards, holiday cards, and folded cards with envelopes",
         icon: "mail",
-        status: "ready",
+        status: "coming-soon",
         tags: ["greeting card", "thank you", "holiday", "birthday"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -1227,7 +1227,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Edit videos with AI-powered smart cuts, transitions, color grading, and timeline editing",
         icon: "film",
-        status: "ready",
+        status: "coming-soon",
         tags: ["video", "edit", "cut", "trim", "timeline"],
         aiProviders: ["built-in"],
         outputs: ["mp4", "webm", "mov"],
@@ -1239,7 +1239,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "AI-powered video trimming that detects scenes, removes silence, and keeps the best parts",
         icon: "scissors",
-        status: "ready",
+        status: "coming-soon",
         tags: ["trim", "cut", "scene detection", "silence removal"],
         aiProviders: ["built-in"],
         outputs: ["mp4", "webm"],
@@ -1250,7 +1250,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Merge multiple video clips into one seamless video with transition effects",
         icon: "layers",
-        status: "ready",
+        status: "coming-soon",
         tags: ["merge", "join", "combine", "video"],
         outputs: ["mp4", "webm", "mov"],
       },
@@ -1261,7 +1261,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create professional motion graphics for ads, intros, explainers, and social content",
         icon: "zap",
-        status: "ready",
+        status: "coming-soon",
         tags: ["motion", "graphics", "animation", "mograph"],
         aiProviders: ["luma"],
         outputs: ["mp4", "webm", "gif", "mov"],
@@ -1273,7 +1273,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate cinematic logo reveals, stingers, and animated brand intros with 3D effects, particles, and light",
         icon: "sparkles",
-        status: "ready",
+        status: "coming-soon",
         tags: ["logo", "reveal", "intro", "cinematic", "stinger"],
         aiProviders: ["luma", "runway"],
         outputs: ["mp4", "webm", "mov", "gif"],
@@ -1285,7 +1285,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create YouTube intros, outros, end screens, and channel bumpers with animations",
         icon: "play",
-        status: "ready",
+        status: "coming-soon",
         tags: ["intro", "outro", "youtube", "end screen", "bumper"],
         outputs: ["mp4", "webm", "gif"],
         supportsPartEdit: true,
@@ -1296,7 +1296,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Animate text, titles, lower thirds, typography reveals, and call-to-action overlays",
         icon: "type",
-        status: "ready",
+        status: "coming-soon",
         tags: ["text", "animation", "title", "lower third", "CTA"],
         outputs: ["mp4", "webm", "gif"],
         supportsPartEdit: true,
@@ -1307,7 +1307,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create dynamic text animations synchronized with audio for lyrics, quotes, and storytelling",
         icon: "type",
-        status: "ready",
+        status: "coming-soon",
         tags: ["kinetic", "typography", "lyrics", "audio sync"],
         outputs: ["mp4", "webm"],
         supportsPartEdit: true,
@@ -1318,7 +1318,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Apply cinematic transitions, glitch effects, light leaks, lens flares, and overlays",
         icon: "layers",
-        status: "ready",
+        status: "coming-soon",
         tags: ["transition", "effects", "glitch", "cinematic", "overlay"],
         outputs: ["mp4", "webm"],
       },
@@ -1352,7 +1352,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Turn text prompts into video clips with AI — commercials, scenes, B-roll, and concept videos",
         icon: "wand",
-        status: "ready",
+        status: "coming-soon",
         tags: ["text-to-video", "AI", "generative", "commercial"],
         aiProviders: ["luma", "runway"],
         outputs: ["mp4", "webm"],
@@ -1364,7 +1364,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Bring still images to life with AI — camera motion, parallax, zoom, and cinematic movement",
         icon: "play",
-        status: "ready",
+        status: "coming-soon",
         tags: ["image-to-video", "animate", "parallax", "camera motion"],
         aiProviders: ["luma", "runway"],
         outputs: ["mp4", "webm"],
@@ -1388,7 +1388,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create vertical videos for Reels, TikTok, Shorts, and Stories with auto-format for each platform",
         icon: "smartphone",
-        status: "ready",
+        status: "coming-soon",
         tags: ["social media", "reels", "tiktok", "shorts", "vertical"],
         outputs: ["mp4", "webm"],
         supportsPartEdit: true,
@@ -1399,7 +1399,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create product demonstration videos, unboxing sequences, and app walkthroughs",
         icon: "monitor",
-        status: "ready",
+        status: "coming-soon",
         tags: ["product", "demo", "walkthrough", "unboxing"],
         outputs: ["mp4", "webm"],
         supportsPartEdit: true,
@@ -1410,7 +1410,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Build animated explainer videos for products, services, and complex concepts",
         icon: "messageCircle",
-        status: "ready",
+        status: "coming-soon",
         tags: ["explainer", "animated", "whiteboard", "video"],
         aiProviders: ["claude"],
         outputs: ["mp4", "webm"],
@@ -1422,7 +1422,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create client testimonial videos with lower thirds, branding, and text overlays",
         icon: "star",
-        status: "ready",
+        status: "coming-soon",
         tags: ["testimonial", "review", "client", "video"],
         outputs: ["mp4", "webm"],
         supportsPartEdit: true,
@@ -1433,7 +1433,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create promotional videos, sale announcements, and marketing video ads",
         icon: "megaphone",
-        status: "ready",
+        status: "coming-soon",
         tags: ["promo", "promotional", "ad", "sale", "marketing"],
         outputs: ["mp4", "webm", "gif"],
         supportsPartEdit: true,
@@ -1444,7 +1444,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create animated countdown timers, launch countdowns, and event teasers",
         icon: "clock",
-        status: "ready",
+        status: "coming-soon",
         tags: ["countdown", "timer", "launch", "teaser"],
         outputs: ["mp4", "gif"],
         supportsPartEdit: true,
@@ -1456,7 +1456,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design click-worthy thumbnails for YouTube, courses, podcasts, and video content",
         icon: "image",
-        status: "ready",
+        status: "coming-soon",
         tags: ["thumbnail", "youtube", "click", "CTR"],
         outputs: ["png", "jpg"],
         supportsPartEdit: true,
@@ -1467,7 +1467,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Turn images into stunning slideshow videos with transitions, Ken Burns, and music sync",
         icon: "image",
-        status: "ready",
+        status: "coming-soon",
         tags: ["slideshow", "photo", "video", "Ken Burns"],
         outputs: ["mp4", "webm"],
         supportsPartEdit: true,
@@ -1478,7 +1478,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Auto-generate accurate subtitles, captions, and SRT files with AI transcription in 50+ languages",
         icon: "subtitles",
-        status: "ready",
+        status: "coming-soon",
         tags: ["subtitle", "caption", "transcription", "SRT", "multilingual"],
         aiProviders: ["whisper"],
         outputs: ["mp4", "json"],
@@ -1489,7 +1489,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Write engaging video scripts for any platform with scene descriptions and shot lists",
         icon: "fileText",
-        status: "ready",
+        status: "coming-soon",
         tags: ["script", "writing", "video", "shot list"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -1500,7 +1500,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Convert video clips to optimized GIFs with frame control, speed, and loop settings",
         icon: "repeat",
-        status: "ready",
+        status: "coming-soon",
         tags: ["GIF", "convert", "video", "loop"],
         outputs: ["gif", "webp"],
       },
@@ -1510,7 +1510,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Professional color grading, LUT application, and color matching across video clips",
         icon: "droplet",
-        status: "ready",
+        status: "coming-soon",
         tags: ["color", "grading", "LUT", "cinematic", "matching"],
         outputs: ["mp4", "mov"],
         supportsPartEdit: true,
@@ -1521,7 +1521,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Auto-sync video cuts to music beats, add royalty-free music, and mix audio tracks",
         icon: "music",
-        status: "ready",
+        status: "coming-soon",
         tags: ["audio", "music", "sync", "beat", "royalty-free"],
         outputs: ["mp4", "mp3", "wav"],
       },
@@ -1531,7 +1531,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Record, edit, and enhance screen recordings with cursor effects, zoom, and annotations",
         icon: "monitor",
-        status: "ready",
+        status: "coming-soon",
         tags: ["screen", "recording", "tutorial", "cursor", "annotation"],
         outputs: ["mp4", "webm", "gif"],
         supportsPartEdit: true,
@@ -1569,7 +1569,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Convert text to natural-sounding speech with 100+ voices, accents, and emotions",
         icon: "mic",
-        status: "ready",
+        status: "coming-soon",
         tags: ["TTS", "voice", "speech", "narration"],
         aiProviders: ["elevenlabs"],
         outputs: ["mp3", "wav"],
@@ -1591,7 +1591,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Record, edit, and enhance voiceovers with noise removal, EQ, and compression",
         icon: "mic",
-        status: "ready",
+        status: "coming-soon",
         tags: ["voiceover", "recording", "narration", "audio"],
         outputs: ["mp3", "wav"],
         supportsPartEdit: true,
@@ -1602,7 +1602,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Edit podcasts with AI — remove filler words, level audio, add intros/outros, and master",
         icon: "headphones",
-        status: "ready",
+        status: "coming-soon",
         tags: ["podcast", "edit", "filler removal", "mastering"],
         aiProviders: ["whisper", "built-in"],
         outputs: ["mp3", "wav"],
@@ -1614,7 +1614,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Transcribe audio and video to text with speaker detection, timestamps, and summaries",
         icon: "fileText",
-        status: "ready",
+        status: "coming-soon",
         tags: ["transcription", "speech-to-text", "speaker", "summary"],
         aiProviders: ["whisper"],
         outputs: ["json", "docx", "pdf"],
@@ -1625,7 +1625,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate royalty-free background music, jingles, and soundtracks from text prompts",
         icon: "music",
-        status: "ready",
+        status: "coming-soon",
         tags: ["music", "AI", "soundtrack", "jingle", "royalty-free"],
         aiProviders: ["suno"],
         outputs: ["mp3", "wav"],
@@ -1637,7 +1637,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate and browse sound effects — whooshes, impacts, UI sounds, nature, and ambience",
         icon: "zap",
-        status: "ready",
+        status: "coming-soon",
         tags: ["SFX", "sound effects", "foley", "ambience"],
         aiProviders: ["built-in"],
         outputs: ["mp3", "wav"],
@@ -1648,7 +1648,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Remove background noise, enhance speech clarity, and master audio to broadcast quality",
         icon: "zap",
-        status: "ready",
+        status: "coming-soon",
         tags: ["denoise", "enhance", "master", "clarity"],
         aiProviders: ["built-in"],
         outputs: ["mp3", "wav"],
@@ -1659,7 +1659,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Convert between MP3, WAV, FLAC, AAC, OGG, and other audio formats with quality settings",
         icon: "repeat",
-        status: "ready",
+        status: "coming-soon",
         tags: ["convert", "format", "audio", "MP3", "WAV"],
         outputs: ["mp3", "wav"],
       },
@@ -1686,7 +1686,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Write SEO-optimized blog posts, articles, and thought leadership pieces with AI-powered research",
         icon: "fileText",
-        status: "ready",
+        status: "coming-soon",
         tags: ["blog", "article", "SEO", "writing", "thought leadership"],
         aiProviders: ["claude"],
         outputs: ["html", "docx", "pdf"],
@@ -1698,7 +1698,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Write complete website copy — homepages, about pages, services, FAQs, and more with SEO optimization",
         icon: "globe",
-        status: "ready",
+        status: "coming-soon",
         tags: ["website", "copy", "web", "pages", "SEO"],
         aiProviders: ["claude"],
         outputs: ["html", "docx"],
@@ -1710,7 +1710,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Write high-converting landing page copy with headlines, benefits, CTAs, and objection handling",
         icon: "layout",
-        status: "ready",
+        status: "coming-soon",
         tags: ["landing page", "copy", "conversion", "CTA", "objection"],
         aiProviders: ["claude"],
         outputs: ["html", "docx"],
@@ -1722,7 +1722,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Write complete eBooks chapter-by-chapter with AI — outlines, drafts, and final polished content",
         icon: "bookOpen",
-        status: "ready",
+        status: "coming-soon",
         tags: ["ebook", "book", "chapter", "long-form", "writing"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -1735,7 +1735,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate engaging captions for all social platforms with hashtags, emojis, and CTAs",
         icon: "messageCircle",
-        status: "ready",
+        status: "coming-soon",
         tags: ["caption", "social media", "hashtag", "engagement"],
         aiProviders: ["claude"],
         outputs: ["json"],
@@ -1746,7 +1746,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Write viral Twitter/X threads and LinkedIn carousel scripts with hooks and engagement patterns",
         icon: "layers",
-        status: "ready",
+        status: "coming-soon",
         tags: ["thread", "twitter", "linkedin", "viral", "carousel"],
         aiProviders: ["claude"],
         outputs: ["json", "docx"],
@@ -1758,7 +1758,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate trending, niche-specific, and branded hashtag sets with reach estimates",
         icon: "hash",
-        status: "ready",
+        status: "coming-soon",
         tags: ["hashtag", "trending", "social media", "reach"],
         aiProviders: ["claude"],
         outputs: ["json"],
@@ -1770,7 +1770,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Write email sequences, newsletters, drip campaigns, and marketing emails with A/B variants",
         icon: "mail",
-        status: "ready",
+        status: "coming-soon",
         tags: ["email", "campaign", "newsletter", "marketing", "drip"],
         aiProviders: ["claude"],
         outputs: ["html", "docx"],
@@ -1782,7 +1782,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Write personalized cold emails, DMs, and outreach sequences that get responses",
         icon: "mail",
-        status: "ready",
+        status: "coming-soon",
         tags: ["cold email", "outreach", "personalized", "sales"],
         aiProviders: ["claude"],
         outputs: ["docx"],
@@ -1795,7 +1795,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Optimize content for search with keyword analysis, semantic clusters, and SERP insights",
         icon: "search",
-        status: "ready",
+        status: "coming-soon",
         tags: ["SEO", "keywords", "optimization", "SERP", "semantic"],
         aiProviders: ["claude"],
         outputs: ["html", "json"],
@@ -1806,7 +1806,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate SEO-optimized meta descriptions, title tags, and schema markup for any page",
         icon: "search",
-        status: "ready",
+        status: "coming-soon",
         tags: ["meta", "description", "title tag", "schema", "SEO"],
         aiProviders: ["claude"],
         outputs: ["json", "html"],
@@ -1818,7 +1818,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate high-converting ad copy for Google Ads, Meta Ads, LinkedIn, TikTok, and display ads",
         icon: "megaphone",
-        status: "ready",
+        status: "coming-soon",
         tags: ["ad", "copy", "advertising", "conversion", "Google Ads"],
         aiProviders: ["claude"],
         outputs: ["json", "docx"],
@@ -1830,7 +1830,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Write compelling product descriptions for e-commerce, catalogs, and Amazon listings",
         icon: "tag",
-        status: "ready",
+        status: "coming-soon",
         tags: ["product", "description", "e-commerce", "Amazon"],
         aiProviders: ["claude"],
         outputs: ["html", "docx"],
@@ -1842,7 +1842,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate memorable taglines, slogans, brand catchphrases, and mission statements",
         icon: "sparkles",
-        status: "ready",
+        status: "coming-soon",
         tags: ["tagline", "slogan", "branding", "mission"],
         aiProviders: ["claude"],
         outputs: ["json"],
@@ -1854,7 +1854,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Plan and schedule content across all platforms with AI suggestions and content pillars",
         icon: "calendar",
-        status: "ready",
+        status: "coming-soon",
         tags: ["calendar", "planning", "schedule", "content pillars"],
         aiProviders: ["claude"],
         outputs: ["json", "xlsx"],
@@ -1865,7 +1865,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Transform one piece of content into 10+ formats — blog → threads, carousels, videos, emails",
         icon: "repeat",
-        status: "ready",
+        status: "coming-soon",
         tags: ["repurpose", "transform", "multi-format", "recycle"],
         aiProviders: ["claude"],
         outputs: ["json", "docx"],
@@ -1877,7 +1877,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Write professional press releases, media announcements, and news articles with AP style",
         icon: "newspaper",
-        status: "ready",
+        status: "coming-soon",
         tags: ["press release", "PR", "media", "announcement", "AP style"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -1889,7 +1889,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Write speeches, presentation scripts, keynote outlines, and MC scripts with timing",
         icon: "mic",
-        status: "ready",
+        status: "coming-soon",
         tags: ["speech", "script", "keynote", "presentation", "MC"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -1901,7 +1901,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate podcast show notes, timestamps, episode summaries, and guest bios",
         icon: "headphones",
-        status: "ready",
+        status: "coming-soon",
         tags: ["podcast", "show notes", "summary", "timestamps"],
         aiProviders: ["claude", "whisper"],
         outputs: ["html", "docx"],
@@ -1912,7 +1912,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Write optimized YouTube descriptions with chapters, timestamps, links, and SEO keywords",
         icon: "play",
-        status: "ready",
+        status: "coming-soon",
         tags: ["youtube", "description", "SEO", "chapters"],
         aiProviders: ["claude"],
         outputs: ["json"],
@@ -1923,7 +1923,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate testimonial request templates, follow-up sequences, and review prompts",
         icon: "star",
-        status: "ready",
+        status: "coming-soon",
         tags: ["testimonial", "review", "social proof", "request"],
         aiProviders: ["claude"],
         outputs: ["docx"],
@@ -1934,7 +1934,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Translate content into 100+ languages while preserving tone, style, and brand voice",
         icon: "globe",
-        status: "ready",
+        status: "coming-soon",
         tags: ["translate", "language", "localization", "multilingual"],
         aiProviders: ["claude"],
         outputs: ["docx", "json"],
@@ -1946,7 +1946,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Check grammar, spelling, tone, readability, and style with AI-powered suggestions",
         icon: "penTool",
-        status: "ready",
+        status: "coming-soon",
         tags: ["grammar", "spelling", "tone", "readability", "proofread"],
         aiProviders: ["claude"],
         outputs: ["json"],
@@ -1974,7 +1974,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Build comprehensive marketing strategies with AI-powered competitive insights and channel recommendations",
         icon: "target",
-        status: "ready",
+        status: "coming-soon",
         tags: ["strategy", "marketing", "planning", "competitive"],
         aiProviders: ["claude"],
         outputs: ["pdf", "pptx"],
@@ -1986,7 +1986,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Plan and execute multi-channel marketing campaigns with budgets, timelines, and KPIs",
         icon: "megaphone",
-        status: "ready",
+        status: "coming-soon",
         tags: ["campaign", "multi-channel", "marketing", "KPI"],
         aiProviders: ["claude"],
         outputs: ["pdf", "xlsx"],
@@ -1998,7 +1998,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Plan social media strategies with content pillars, posting schedules, and growth tactics",
         icon: "share",
-        status: "ready",
+        status: "coming-soon",
         tags: ["social media", "strategy", "content pillars", "growth"],
         aiProviders: ["claude"],
         outputs: ["pdf", "xlsx"],
@@ -2010,7 +2010,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Define brand positioning, unique value proposition, and competitive differentiation strategy",
         icon: "target",
-        status: "ready",
+        status: "coming-soon",
         tags: ["positioning", "UVP", "differentiation", "brand"],
         aiProviders: ["claude"],
         outputs: ["pdf", "pptx"],
@@ -2022,7 +2022,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Build comprehensive GTM plans for product launches with channels, messaging, and timeline",
         icon: "trendingUp",
-        status: "ready",
+        status: "coming-soon",
         tags: ["GTM", "launch", "go-to-market", "product launch"],
         aiProviders: ["claude"],
         outputs: ["pdf", "pptx"],
@@ -2035,7 +2035,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create detailed buyer personas with demographics, psychographics, pain points, and buying triggers",
         icon: "users",
-        status: "ready",
+        status: "coming-soon",
         tags: ["persona", "buyer", "customer", "profile", "psychographics"],
         aiProviders: ["claude"],
         outputs: ["pdf", "png"],
@@ -2047,7 +2047,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Analyze competitors — strengths, weaknesses, pricing, messaging, and strategic gaps",
         icon: "search",
-        status: "ready",
+        status: "coming-soon",
         tags: ["competitor", "analysis", "strategy", "SWOT"],
         aiProviders: ["claude"],
         outputs: ["pdf", "xlsx"],
@@ -2059,7 +2059,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate market research briefs, industry analysis, and trend reports with AI insights",
         icon: "chart",
-        status: "ready",
+        status: "coming-soon",
         tags: ["market research", "industry", "trends", "analysis"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -2071,7 +2071,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate comprehensive SWOT analyses with actionable recommendations and priority matrix",
         icon: "grid",
-        status: "ready",
+        status: "coming-soon",
         tags: ["SWOT", "analysis", "strategy", "strengths"],
         aiProviders: ["claude"],
         outputs: ["pdf", "pptx"],
@@ -2084,7 +2084,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design and visualize sales funnels with conversion optimization tips and email sequences",
         icon: "filter",
-        status: "ready",
+        status: "coming-soon",
         tags: ["funnel", "sales", "conversion", "optimization"],
         aiProviders: ["claude"],
         outputs: ["pdf", "png"],
@@ -2096,7 +2096,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create lead magnets — checklists, guides, templates, worksheets, and calculators",
         icon: "magnet",
-        status: "ready",
+        status: "coming-soon",
         tags: ["lead magnet", "checklist", "guide", "freebie"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -2108,7 +2108,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Build persuasive sales decks with data, client success stories, and ROI projections",
         icon: "presentation",
-        status: "ready",
+        status: "coming-soon",
         tags: ["sales deck", "presentation", "pitch", "ROI"],
         aiProviders: ["claude"],
         outputs: ["pdf", "pptx"],
@@ -2120,7 +2120,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Write customized sales proposals with scope, pricing, timelines, and terms",
         icon: "fileText",
-        status: "ready",
+        status: "coming-soon",
         tags: ["proposal", "sales", "scope", "pricing"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -2133,7 +2133,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate A/B test variants for headlines, CTAs, email subject lines, and ad copy",
         icon: "split",
-        status: "ready",
+        status: "coming-soon",
         tags: ["A/B test", "variant", "optimization", "CTA"],
         aiProviders: ["claude"],
         outputs: ["json", "docx"],
@@ -2144,7 +2144,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Build automated email sequences for welcome series, nurturing, onboarding, and win-back",
         icon: "mail",
-        status: "ready",
+        status: "coming-soon",
         tags: ["email", "sequence", "automation", "nurture", "drip"],
         aiProviders: ["claude"],
         outputs: ["html", "json"],
@@ -2157,7 +2157,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Calculate optimal pricing with cost analysis, margin planning, and competitive benchmarking",
         icon: "calculator",
-        status: "ready",
+        status: "coming-soon",
         tags: ["pricing", "calculator", "margin", "strategy"],
         aiProviders: ["claude"],
         outputs: ["xlsx", "pdf"],
@@ -2168,7 +2168,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Calculate and present ROI for campaigns, projects, and investments with visual reports",
         icon: "trendingUp",
-        status: "ready",
+        status: "coming-soon",
         tags: ["ROI", "calculator", "campaign", "investment"],
         aiProviders: ["claude"],
         outputs: ["pdf", "xlsx"],
@@ -2208,7 +2208,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate complete website designs from text descriptions — layouts, hero sections, and components",
         icon: "globe",
-        status: "ready",
+        status: "coming-soon",
         tags: ["website", "builder", "design", "layout", "AI"],
         aiProviders: ["claude"],
         outputs: ["html", "png"],
@@ -2220,7 +2220,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate wireframes and low-fidelity prototypes from text descriptions or sketches",
         icon: "layout",
-        status: "ready",
+        status: "coming-soon",
         tags: ["wireframe", "prototype", "low-fi", "UX"],
         aiProviders: ["claude"],
         outputs: ["png", "svg", "pdf"],
@@ -2232,7 +2232,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design buttons, forms, cards, navigation bars, and UI elements with consistent styling",
         icon: "layout",
-        status: "ready",
+        status: "coming-soon",
         tags: ["UI", "component", "button", "form", "design system"],
         outputs: ["png", "svg", "html"],
         supportsPartEdit: true,
@@ -2243,7 +2243,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design mobile app screens, tablet layouts, and responsive UI mockups",
         icon: "smartphone",
-        status: "ready",
+        status: "coming-soon",
         tags: ["app", "mobile", "screen", "UI", "responsive"],
         outputs: ["png", "svg", "pdf"],
         supportsPartEdit: true,
@@ -2265,7 +2265,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate favicons, PWA icons, app store icons, and adaptive icons in all required sizes",
         icon: "image",
-        status: "ready",
+        status: "coming-soon",
         tags: ["favicon", "app icon", "PWA", "sizes"],
         outputs: ["png", "svg"],
       },
@@ -2275,7 +2275,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate OG images, Twitter cards, and social share images for any URL or content",
         icon: "image",
-        status: "ready",
+        status: "coming-soon",
         tags: ["OG image", "social share", "Twitter card", "meta"],
         outputs: ["png", "jpg"],
         supportsPartEdit: true,
@@ -2286,7 +2286,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Add device frames, backgrounds, annotations, and branding to screenshots",
         icon: "monitor",
-        status: "ready",
+        status: "coming-soon",
         tags: ["screenshot", "mockup", "device frame", "annotation"],
         outputs: ["png", "jpg"],
         supportsPartEdit: true,
@@ -2297,7 +2297,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create beautiful CSS gradients, mesh gradients, and gradient backgrounds with code export",
         icon: "droplet",
-        status: "ready",
+        status: "coming-soon",
         tags: ["CSS", "gradient", "mesh", "background", "code"],
         outputs: ["html", "png"],
       },
@@ -2346,7 +2346,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Upload images and get AI analysis — describe designs, suggest improvements, extract colors and fonts",
         icon: "sparkles",
-        status: "ready",
+        status: "coming-soon",
         tags: ["AI", "vision", "image", "analyze", "describe"],
         aiProviders: ["claude"],
         outputs: ["json"],
@@ -2358,7 +2358,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Convert between image, video, document, and audio formats — 100+ format combinations",
         icon: "repeat",
-        status: "ready",
+        status: "coming-soon",
         tags: ["convert", "format", "file", "image", "video"],
         outputs: ["png", "jpg", "pdf", "mp4", "svg"],
       },
@@ -2368,7 +2368,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Resize, crop, compress, watermark, rename, and format-convert multiple images at once",
         icon: "layers",
-        status: "ready",
+        status: "coming-soon",
         tags: ["batch", "process", "resize", "compress", "watermark"],
         outputs: ["png", "jpg", "webp"],
       },
@@ -2378,7 +2378,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Compress images for web without visible quality loss — WebP, AVIF, and optimized PNG/JPG",
         icon: "minimize",
-        status: "ready",
+        status: "coming-soon",
         tags: ["compress", "optimize", "web", "image", "WebP", "AVIF"],
         outputs: ["webp", "avif", "png", "jpg"],
       },
@@ -2388,7 +2388,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Merge, split, compress, convert, protect, and sign PDFs with smart processing",
         icon: "fileText",
-        status: "ready",
+        status: "coming-soon",
         tags: ["PDF", "merge", "split", "compress", "sign"],
         outputs: ["pdf"],
       },
@@ -2399,7 +2399,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Store and manage brand assets — logos, colors, fonts, guidelines, and templates in one place",
         icon: "briefcase",
-        status: "ready",
+        status: "coming-soon",
         tags: ["brand kit", "assets", "management", "guidelines"],
       },
       {
@@ -2408,7 +2408,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Organize, tag, search, and share all your design assets with smart AI categorization",
         icon: "folder",
-        status: "ready",
+        status: "coming-soon",
         tags: ["assets", "library", "organize", "search", "DAM"],
       },
       {
@@ -2417,7 +2417,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Auto-generate comprehensive style guides from your brand assets with usage examples",
         icon: "bookOpen",
-        status: "ready",
+        status: "coming-soon",
         tags: ["style guide", "documentation", "brand", "usage"],
         outputs: ["pdf", "html"],
       },
@@ -2428,7 +2428,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Track design projects, deadlines, revisions, and client deliverables with kanban boards",
         icon: "clipboard",
-        status: "ready",
+        status: "coming-soon",
         tags: ["project", "management", "deadline", "kanban"],
       },
       {
@@ -2437,7 +2437,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create structured client briefs from conversations, meeting notes, or requirements with AI",
         icon: "fileText",
-        status: "ready",
+        status: "coming-soon",
         tags: ["brief", "client", "requirements", "discovery"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -2448,7 +2448,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Collect, organize, and track client feedback on design deliverables with annotation tools",
         icon: "messageCircle",
-        status: "ready",
+        status: "coming-soon",
         tags: ["feedback", "review", "approval", "annotation"],
       },
       {
@@ -2457,7 +2457,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Track invoices, payments, and outstanding balances for freelance and agency work",
         icon: "receipt",
-        status: "ready",
+        status: "coming-soon",
         tags: ["invoice", "payment", "tracking", "freelance"],
       },
       // ── Design Utilities ────────────────────────────────────
@@ -2467,7 +2467,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate branded QR codes with custom colors, logos, patterns, and trackable analytics",
         icon: "grid",
-        status: "ready",
+        status: "coming-soon",
         tags: ["QR code", "link", "scannable", "branded"],
         outputs: ["svg", "png", "pdf"],
       },
@@ -2477,7 +2477,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate barcodes — UPC, EAN, Code 128, and Data Matrix for products and inventory",
         icon: "grid",
-        status: "ready",
+        status: "coming-soon",
         tags: ["barcode", "UPC", "EAN", "product", "inventory"],
         outputs: ["svg", "png", "pdf"],
       },
@@ -2487,7 +2487,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Add text or image watermarks to photos, documents, and videos with batch processing",
         icon: "shield",
-        status: "ready",
+        status: "coming-soon",
         tags: ["watermark", "protect", "branding", "batch"],
         outputs: ["png", "jpg", "pdf"],
       },
@@ -2497,7 +2497,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Convert between HEX, RGB, HSL, CMYK, Pantone, and RAL color codes with visual preview",
         icon: "droplet",
-        status: "ready",
+        status: "coming-soon",
         tags: ["color", "convert", "HEX", "RGB", "CMYK", "Pantone"],
         outputs: ["json"],
       },
@@ -2507,7 +2507,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Convert between px, pt, em, rem, cm, mm, inches, and DPI for print and digital",
         icon: "calculator",
-        status: "ready",
+        status: "coming-soon",
         tags: ["unit", "convert", "pixel", "print", "DPI"],
       },
       {
@@ -2516,7 +2516,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Check color contrast ratios, WCAG compliance, and accessibility scores for designs",
         icon: "helpCircle",
-        status: "ready",
+        status: "coming-soon",
         tags: ["contrast", "accessibility", "WCAG", "a11y"],
         outputs: ["json", "pdf"],
       },

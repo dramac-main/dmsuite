@@ -9,8 +9,14 @@ import {
   IconDownload,
   IconPlus,
   IconTrash,
+  IconCopy,
+  IconCheck,
+  IconClipboard,
+  IconSmartphone,
+  IconMonitor,
+  IconTag,
 } from "@/components/icons";
-import { cleanAIText } from "@/lib/canvas-utils";
+import { cleanAIText, roundRect, lighten, darken } from "@/lib/canvas-utils";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -75,44 +81,16 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+type PreviewMode = "desktop" | "mobile" | "both";
+
+const MERGE_TAGS = [
+  { tag: "{{first_name}}", label: "First Name" },
+  { tag: "{{last_name}}", label: "Last Name" },
+  { tag: "{{company}}", label: "Company" },
+  { tag: "{{email}}", label: "Email" },
+] as const;
+
 /* ── Canvas Helpers ────────────────────────────────────────── */
-
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
-
-function lighten(hex: string, pct: number): string {
-  const num = parseInt(hex.replace("#", ""), 16);
-  const r = Math.min(255, ((num >> 16) & 0xff) + Math.round((255 * pct) / 100));
-  const g = Math.min(255, ((num >> 8) & 0xff) + Math.round((255 * pct) / 100));
-  const b = Math.min(255, (num & 0xff) + Math.round((255 * pct) / 100));
-  return `rgb(${r},${g},${b})`;
-}
-
-function darken(hex: string, pct: number): string {
-  const num = parseInt(hex.replace("#", ""), 16);
-  const r = Math.max(0, ((num >> 16) & 0xff) - Math.round((255 * pct) / 100));
-  const g = Math.max(0, ((num >> 8) & 0xff) - Math.round((255 * pct) / 100));
-  const b = Math.max(0, (num & 0xff) - Math.round((255 * pct) / 100));
-  return `rgb(${r},${g},${b})`;
-}
 
 /* ── Component ─────────────────────────────────────────────── */
 
@@ -135,7 +113,14 @@ export default function EmailTemplateWorkspace() {
   });
 
   const [isGenerating, setIsGenerating] = useState(false);
+  const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
+  const [showHtmlPanel, setShowHtmlPanel] = useState(false);
+  const [copiedHtml, setCopiedHtml] = useState(false);
+  const [copiedPlain, setCopiedPlain] = useState(false);
+  const [mergeTagOpen, setMergeTagOpen] = useState(false);
+  const [activeBlockIndex, setActiveBlockIndex] = useState<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const blockTextRefs = useRef<Map<number, HTMLTextAreaElement | HTMLInputElement>>(new Map());
 
   const updateConfig = useCallback((upd: Partial<EmailConfig>) => {
     setConfig((p) => ({ ...p, ...upd }));
@@ -557,7 +542,7 @@ Rules:
     }
   }, [config, updateConfig]);
 
-  /* ── Export ──────────────────────────────────────────────── */
+  /* ── Export PNG ──────────────────────────────────────────── */
   const exportEmail = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -566,6 +551,201 @@ Rules:
     link.href = canvas.toDataURL("image/png");
     link.click();
   }, []);
+
+  /* ── HTML Generation ────────────────────────────────────── */
+  const getThemeColors = useCallback(() => {
+    const primary = config.primaryColor;
+    let bgColor = "#f4f4f7";
+    let cardBg = "#ffffff";
+    let textColor = "#333333";
+    let mutedColor = "#888888";
+    let borderColor = "#e5e7eb";
+
+    if (config.theme === "dark") {
+      bgColor = "#1a1a2e"; cardBg = "#16213e"; textColor = "#e0e0e0"; mutedColor = "#9a9ab0"; borderColor = "#2a2a4a";
+    } else if (config.theme === "branded") {
+      bgColor = "#f8f8ff"; cardBg = "#ffffff"; textColor = "#1a1a1a"; mutedColor = "#666666"; borderColor = "#e8e8f0";
+    } else if (config.theme === "elegant") {
+      bgColor = "#faf9f6"; cardBg = "#ffffff"; textColor = "#2c2c2c"; mutedColor = "#8a8a8a"; borderColor = "#e8e4de";
+    } else if (config.theme === "modern") {
+      bgColor = "#f0f4f8"; cardBg = "#ffffff"; textColor = "#1e293b"; mutedColor = "#64748b"; borderColor = "#e2e8f0";
+    } else if (config.theme === "bold") {
+      bgColor = primary; cardBg = "#ffffff"; textColor = "#111111"; mutedColor = "#555555"; borderColor = "#dddddd";
+    }
+    return { bgColor, cardBg, textColor, mutedColor, borderColor, primary };
+  }, [config.primaryColor, config.theme]);
+
+  const generateEmailHtml = useCallback(() => {
+    const { bgColor, cardBg, textColor, mutedColor, primary } = getThemeColors();
+    const isHero = config.template === "promotional" || config.template === "welcome" || config.template === "announcement";
+
+    const renderMergeTags = (text: string) =>
+      text.replace(/\{\{(\w+)\}\}/g, '<span style="background-color:#fef3c7;color:#92400e;padding:1px 4px;border-radius:3px;font-weight:600;">{{$1}}</span>');
+
+    let blocksHtml = "";
+    blocks.forEach((block) => {
+      const align = block.align || "left";
+      switch (block.type) {
+        case "heading":
+          blocksHtml += `<tr><td align="${align}" style="padding:12px 28px 4px 28px;font-size:22px;font-weight:700;color:${textColor};font-family:'Segoe UI',Helvetica,Arial,sans-serif;">${renderMergeTags(block.content || "Heading")}</td></tr>\n`;
+          break;
+        case "text":
+          blocksHtml += `<tr><td align="${align}" style="padding:8px 28px;font-size:15px;line-height:1.6;color:${textColor};font-family:'Segoe UI',Helvetica,Arial,sans-serif;">${renderMergeTags(block.content || "Your email body text goes here.")}</td></tr>\n`;
+          break;
+        case "button": {
+          const label = block.content || "Call to Action";
+          blocksHtml += `<tr><td align="${align}" style="padding:16px 28px;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:${align === "center" ? "0 auto" : align === "right" ? "0 0 0 auto" : "0"};">
+    <tr>
+      <td style="background:${primary};border-radius:6px;">
+        <a href="#" target="_blank" style="display:inline-block;padding:12px 32px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;font-family:'Segoe UI',Helvetica,Arial,sans-serif;">${renderMergeTags(label)}</a>
+      </td>
+    </tr>
+  </table>
+</td></tr>\n`;
+          break;
+        }
+        case "divider":
+          blocksHtml += `<tr><td style="padding:12px 28px;"><hr style="border:none;border-top:1px solid ${mutedColor}40;margin:0;" /></td></tr>\n`;
+          break;
+        case "image":
+          blocksHtml += `<tr><td align="${align}" style="padding:12px 28px;"><img src="https://placehold.co/540x200/e2e8f0/64748b?text=${encodeURIComponent(block.content || "Image")}" width="540" alt="${block.content || "Image"}" style="max-width:100%;height:auto;display:block;border-radius:6px;margin:${align === "center" ? "0 auto" : align === "right" ? "0 0 0 auto" : "0"};" /></td></tr>\n`;
+          break;
+        case "spacer":
+          blocksHtml += `<tr><td style="padding:12px 0;">&nbsp;</td></tr>\n`;
+          break;
+      }
+    });
+
+    const headerHtml = isHero
+      ? `<tr><td style="background:${primary};padding:40px 28px;text-align:center;">
+  <h1 style="margin:0;font-size:24px;font-weight:700;color:#ffffff;font-family:'Segoe UI',Helvetica,Arial,sans-serif;">${renderMergeTags(config.headerText || "Your Brand")}</h1>
+  <p style="margin:8px 0 0 0;font-size:13px;color:#ffffffbb;font-family:'Segoe UI',Helvetica,Arial,sans-serif;">${renderMergeTags(config.preheader || "Preview text here")}</p>
+</td></tr>`
+      : `<tr><td style="background:${cardBg};padding:16px 28px;border-bottom:2px solid ${primary};text-align:${config.template === "minimal" ? "left" : "center"};">
+  <h1 style="margin:0;font-size:18px;font-weight:700;color:${textColor};font-family:'Segoe UI',Helvetica,Arial,sans-serif;">${renderMergeTags(config.headerText || "Your Brand")}</h1>
+</td></tr>`;
+
+    const html = `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no">
+<title>${config.headerText || "Email"}</title>
+<!--[if mso]><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->
+<style>body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}table,td{mso-table-lspace:0pt;mso-table-rspace:0pt}img{-ms-interpolation-mode:bicubic;border:0;height:auto;line-height:100%;outline:none;text-decoration:none}body{margin:0;padding:0;width:100%!important}@media only screen and (max-width:620px){.email-container{width:100%!important;max-width:100%!important}.fluid{max-width:100%!important;height:auto!important}}</style>
+</head>
+<body style="margin:0;padding:0;background-color:${bgColor};">
+${config.preheader ? `<div style="display:none;font-size:1px;color:${bgColor};line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${config.preheader}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>` : ""}
+<center style="width:100%;background:${bgColor};">
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="${config.width}" class="email-container" style="margin:0 auto;max-width:${config.width}px;">
+${headerHtml}
+<tr><td style="background:${cardBg};">
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+${blocksHtml}
+</table>
+</td></tr>
+<tr><td style="padding:20px 28px;text-align:center;font-size:11px;color:${mutedColor};font-family:'Segoe UI',Helvetica,Arial,sans-serif;">
+  <p style="margin:0 0 8px 0;">${renderMergeTags(config.footerText || "© 2025 Your Company | Lusaka, Zambia")}</p>
+  <p style="margin:0;"><a href="#" style="color:${primary};text-decoration:underline;font-size:10px;">Unsubscribe</a> &nbsp;|&nbsp; <a href="#" style="color:${primary};text-decoration:underline;font-size:10px;">Preferences</a> &nbsp;|&nbsp; <a href="#" style="color:${primary};text-decoration:underline;font-size:10px;">View in Browser</a></p>
+</td></tr>
+</table>
+</center>
+</body>
+</html>`;
+    return html;
+  }, [blocks, config, getThemeColors]);
+
+  /* ── Plain Text Generation ──────────────────────────────── */
+  const generatePlainText = useCallback(() => {
+    let text = "";
+    text += (config.headerText || "Your Brand") + "\n";
+    text += "=" .repeat(40) + "\n\n";
+    if (config.preheader) text += config.preheader + "\n\n";
+
+    blocks.forEach((block) => {
+      switch (block.type) {
+        case "heading":
+          text += (block.content || "Heading").toUpperCase() + "\n";
+          text += "-".repeat(Math.min(block.content?.length || 7, 40)) + "\n\n";
+          break;
+        case "text":
+          text += (block.content || "Your email body text goes here.") + "\n\n";
+          break;
+        case "button": {
+          const label = block.content || "Call to Action";
+          text += `[ ${label} ] → #\n\n`;
+          break;
+        }
+        case "divider":
+          text += "---\n\n";
+          break;
+        case "image":
+          text += `[Image: ${block.content || "Image"}]\n\n`;
+          break;
+        case "spacer":
+          text += "\n";
+          break;
+      }
+    });
+
+    text += "-".repeat(40) + "\n";
+    text += (config.footerText || "© 2025 Your Company | Lusaka, Zambia") + "\n";
+    text += "Unsubscribe: # | Preferences: # | View in Browser: #\n";
+    return text;
+  }, [blocks, config]);
+
+  /* ── Copy & Download Helpers ────────────────────────────── */
+  const copyHtmlToClipboard = useCallback(async () => {
+    const html = generateEmailHtml();
+    await navigator.clipboard.writeText(html);
+    setCopiedHtml(true);
+    setTimeout(() => setCopiedHtml(false), 2000);
+  }, [generateEmailHtml]);
+
+  const downloadHtml = useCallback(() => {
+    const html = generateEmailHtml();
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.download = `${(config.headerText || "email-template").replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()}.html`;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [generateEmailHtml, config.headerText]);
+
+  const copyPlainText = useCallback(async () => {
+    const text = generatePlainText();
+    await navigator.clipboard.writeText(text);
+    setCopiedPlain(true);
+    setTimeout(() => setCopiedPlain(false), 2000);
+  }, [generatePlainText]);
+
+  /* ── Merge Tag Insertion ─────────────────────────────────── */
+  const insertMergeTag = useCallback((tag: string) => {
+    if (activeBlockIndex === null) return;
+    const el = blockTextRefs.current.get(activeBlockIndex);
+    if (!el) return;
+    const start = el.selectionStart ?? el.value.length;
+    const end = el.selectionEnd ?? el.value.length;
+    const before = el.value.slice(0, start);
+    const after = el.value.slice(end);
+    const newValue = before + tag + after;
+    setBlocks((p) =>
+      p.map((b, j) =>
+        j === activeBlockIndex ? { ...b, content: newValue } : b,
+      ),
+    );
+    setMergeTagOpen(false);
+    /* Restore cursor after React re-render */
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + tag.length;
+      el.setSelectionRange(pos, pos);
+    });
+  }, [activeBlockIndex]);
 
   /* ── Render ─────────────────────────────────────────────── */
   return (
@@ -725,24 +905,149 @@ Rules:
           </div>
         </div>
 
+        {/* Preview Mode */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+            Preview Mode
+          </label>
+          <div className="flex gap-1">
+            {(["desktop", "mobile", "both"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setPreviewMode(mode)}
+                className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[0.5625rem] font-semibold capitalize transition-all ${
+                  previewMode === mode
+                    ? "bg-primary-500 text-white"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}
+              >
+                {mode === "desktop" && <IconMonitor className="size-3" />}
+                {mode === "mobile" && <IconSmartphone className="size-3" />}
+                {mode === "both" && (
+                  <>
+                    <IconMonitor className="size-2.5" />
+                    <IconSmartphone className="size-2.5" />
+                  </>
+                )}
+                {mode}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Export */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-1.5">
+          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+            Export
+          </label>
           <button
             onClick={exportEmail}
-            className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-linear-to-r from-primary-500 to-secondary-500 text-white text-[0.625rem] font-bold hover:from-primary-400 hover:to-secondary-400 transition-colors"
+            className="w-full flex items-center justify-center gap-2 h-8 rounded-lg bg-linear-to-r from-primary-500 to-secondary-500 text-white text-[0.625rem] font-bold hover:from-primary-400 hover:to-secondary-400 transition-colors"
           >
-            <IconDownload className="size-3" /> Export Template (PNG)
+            <IconDownload className="size-3" /> Export PNG
+          </button>
+          <button
+            onClick={copyHtmlToClipboard}
+            className="w-full flex items-center justify-center gap-2 h-8 rounded-lg bg-linear-to-r from-secondary-500 to-primary-500 text-white text-[0.625rem] font-bold hover:from-secondary-400 hover:to-primary-400 transition-colors"
+          >
+            {copiedHtml ? (
+              <><IconCheck className="size-3" /> Copied!</>
+            ) : (
+              <><IconCopy className="size-3" /> Copy HTML</>
+            )}
+          </button>
+          <button
+            onClick={downloadHtml}
+            className="w-full flex items-center justify-center gap-2 h-8 rounded-lg border border-primary-500 text-primary-500 text-[0.625rem] font-bold hover:bg-primary-500/10 transition-colors"
+          >
+            <IconDownload className="size-3" /> Download HTML
+          </button>
+          <button
+            onClick={copyPlainText}
+            className="w-full flex items-center justify-center gap-2 h-8 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-[0.625rem] font-bold hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          >
+            {copiedPlain ? (
+              <><IconCheck className="size-3" /> Copied!</>
+            ) : (
+              <><IconClipboard className="size-3" /> Copy Plain Text</>
+            )}
+          </button>
+          <button
+            onClick={() => setShowHtmlPanel((p) => !p)}
+            className={`w-full flex items-center justify-center gap-2 h-8 rounded-lg text-[0.625rem] font-bold transition-colors ${
+              showHtmlPanel
+                ? "bg-primary-500/10 text-primary-500 border border-primary-500/30"
+                : "border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+            }`}
+          >
+            {showHtmlPanel ? "Hide HTML Preview" : "Show HTML Preview"}
           </button>
         </div>
       </div>
 
-      {/* ── Center: Canvas ── */}
-      <div className="flex-1 flex items-start justify-center bg-gray-100 dark:bg-gray-950/50 rounded-xl border border-gray-200 dark:border-gray-800 overflow-auto p-4">
-        <canvas
-          ref={canvasRef}
-          className="shadow-2xl rounded-lg"
-          style={{ maxWidth: "100%", width: config.width }}
-        />
+      {/* ── Center: Canvas + HTML Preview ── */}
+      <div className="flex-1 flex flex-col gap-3 min-w-0 overflow-hidden">
+        {/* Canvas Preview */}
+        <div className="flex-1 flex items-start justify-center bg-gray-100 dark:bg-gray-950/50 rounded-xl border border-gray-200 dark:border-gray-800 overflow-auto p-4 gap-6">
+          {(previewMode === "desktop" || previewMode === "both") && (
+            <div className="flex flex-col items-center gap-2 shrink-0">
+              <span className="text-[0.5625rem] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                <IconMonitor className="size-3" /> Desktop ({config.width}px)
+              </span>
+              <canvas
+                ref={canvasRef}
+                className="shadow-2xl rounded-lg"
+                style={{ maxWidth: "100%", width: config.width }}
+              />
+            </div>
+          )}
+          {(previewMode === "mobile" || previewMode === "both") && (
+            <div className="flex flex-col items-center gap-2 shrink-0">
+              <span className="text-[0.5625rem] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                <IconSmartphone className="size-3" /> Mobile (320px)
+              </span>
+              <div
+                className="shadow-2xl rounded-2xl border-4 border-gray-700 dark:border-gray-600 overflow-hidden bg-white"
+                style={{ width: 320 }}
+              >
+                <iframe
+                  srcDoc={generateEmailHtml()}
+                  title="Mobile email preview"
+                  className="w-full border-0"
+                  style={{ height: 560, pointerEvents: "none" }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* HTML Source Preview Panel */}
+        {showHtmlPanel && (
+          <div className="h-56 shrink-0 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+              <span className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+                HTML Source
+              </span>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={copyHtmlToClipboard}
+                  className="flex items-center gap-1 px-2 py-1 rounded text-[0.5625rem] font-semibold bg-primary-500/10 text-primary-500 hover:bg-primary-500/20 transition-colors"
+                >
+                  {copiedHtml ? <><IconCheck className="size-2.5" /> Copied!</> : <><IconCopy className="size-2.5" /> Copy</>}
+                </button>
+                <button
+                  onClick={downloadHtml}
+                  className="flex items-center gap-1 px-2 py-1 rounded text-[0.5625rem] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <IconDownload className="size-2.5" /> Download
+                </button>
+              </div>
+            </div>
+            <pre className="flex-1 overflow-auto p-3 text-[0.625rem] leading-relaxed text-gray-600 dark:text-gray-400 font-mono whitespace-pre-wrap break-all">
+              {generateEmailHtml()}
+            </pre>
+          </div>
+        )}
       </div>
 
       {/* ── Right Panel: Content Blocks ── */}
@@ -752,9 +1057,45 @@ Rules:
             <IconMail className="size-3 inline mr-1" />
             Content Blocks
           </label>
-          <span className="text-[0.5rem] text-gray-400">
-            {blocks.length} blocks
-          </span>
+          <div className="flex items-center gap-2">
+            {/* Merge Tag Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setMergeTagOpen((p) => !p)}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[0.5625rem] font-semibold transition-colors ${
+                  mergeTagOpen
+                    ? "bg-primary-500/10 text-primary-500"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}
+              >
+                <IconTag className="size-3" />
+                Merge Tags
+              </button>
+              {mergeTagOpen && (
+                <div className="absolute right-0 top-full mt-1 z-20 w-44 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl py-1">
+                  <div className="px-3 py-1.5 border-b border-gray-100 dark:border-gray-700">
+                    <span className="text-[0.5rem] font-semibold uppercase tracking-wider text-gray-400">
+                      {activeBlockIndex !== null ? "Insert into active block" : "Select a block first"}
+                    </span>
+                  </div>
+                  {MERGE_TAGS.map((mt) => (
+                    <button
+                      key={mt.tag}
+                      onClick={() => insertMergeTag(mt.tag)}
+                      disabled={activeBlockIndex === null}
+                      className="w-full flex items-center justify-between px-3 py-1.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <span className="text-[0.625rem] text-gray-700 dark:text-gray-300">{mt.label}</span>
+                      <code className="text-[0.5rem] font-mono bg-gray-100 dark:bg-gray-900 text-primary-500 px-1.5 py-0.5 rounded">{mt.tag}</code>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <span className="text-[0.5rem] text-gray-400">
+              {blocks.length} blocks
+            </span>
+          </div>
         </div>
 
         {blocks.map((block, i) => (
@@ -806,8 +1147,10 @@ Rules:
               <>
                 {block.type === "text" || block.type === "heading" ? (
                   <textarea
+                    ref={(el) => { if (el) blockTextRefs.current.set(i, el); else blockTextRefs.current.delete(i); }}
                     rows={block.type === "heading" ? 2 : 3}
                     value={block.content}
+                    onFocus={() => setActiveBlockIndex(i)}
                     onChange={(e) =>
                       setBlocks((p) =>
                         p.map((b, j) =>
@@ -826,8 +1169,10 @@ Rules:
                   />
                 ) : (
                   <input
+                    ref={(el) => { if (el) blockTextRefs.current.set(i, el); else blockTextRefs.current.delete(i); }}
                     type="text"
                     value={block.content}
+                    onFocus={() => setActiveBlockIndex(i)}
                     onChange={(e) =>
                       setBlocks((p) =>
                         p.map((b, j) =>

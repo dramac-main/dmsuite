@@ -15,6 +15,7 @@ import {
   roundRect,
   type FontStyle,
 } from "./canvas-utils";
+import { v4 as uuidv4 } from "uuid";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -181,7 +182,7 @@ export interface DesignDocument {
 
 let layerIdCounter = 0;
 function nextId(): string {
-  return `layer_${Date.now()}_${++layerIdCounter}`;
+  return uuidv4();
 }
 
 export function createTextLayer(
@@ -1017,4 +1018,291 @@ export function duplicateLayer(
     layerOrder: newOrder,
     selectedLayers: [newLayer.id],
   };
+}
+
+// ---------------------------------------------------------------------------
+// Serialization (Task 2.1.1)
+// ---------------------------------------------------------------------------
+
+/** Serialize a DesignDocument to JSON (strips image elements) */
+export function serializeDocument(doc: DesignDocument): string {
+  const clean = {
+    ...doc,
+    layers: doc.layers.map((l) => {
+      if (l.type === "image") {
+        const { imageElement, ...rest } = l;
+        return rest;
+      }
+      return l;
+    }),
+    // Don't serialize full history — just keep the current state
+    history: [],
+    historyIndex: 0,
+  };
+  return JSON.stringify(clean, null, 2);
+}
+
+/** Deserialize a JSON string back to a DesignDocument */
+export function deserializeDocument(json: string): DesignDocument {
+  const parsed = JSON.parse(json) as DesignDocument;
+  // Restore defaults for missing fields
+  return {
+    ...parsed,
+    history: [],
+    historyIndex: 0,
+    selectedLayers: [],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Deep Clone (Task 2.1.1)
+// ---------------------------------------------------------------------------
+
+/** Deep-clone a layer with a new unique ID */
+export function cloneLayer(layer: Layer): Layer {
+  const cloned: Layer = JSON.parse(JSON.stringify(layer));
+  return {
+    ...cloned,
+    id: nextId(),
+    name: `${layer.name} copy`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Group Layer Factory (Task 2.1.1)
+// ---------------------------------------------------------------------------
+
+/** Create a group from selected layer IDs */
+export function createGroupLayer(
+  doc: DesignDocument,
+  childIds: string[]
+): DesignDocument {
+  if (childIds.length < 2) return doc;
+
+  // Calculate bounding box of all children
+  const children = doc.layers.filter((l) => childIds.includes(l.id));
+  if (children.length === 0) return doc;
+
+  const minX = Math.min(...children.map((c) => c.x));
+  const minY = Math.min(...children.map((c) => c.y));
+  const maxX = Math.max(...children.map((c) => c.x + c.width));
+  const maxY = Math.max(...children.map((c) => c.y + c.height));
+
+  const group: GroupLayer = {
+    id: nextId(),
+    type: "group",
+    name: "Group",
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY,
+    rotation: 0,
+    opacity: 1,
+    visible: true,
+    locked: false,
+    anchorX: 0,
+    anchorY: 0,
+    children: childIds,
+  };
+
+  // Remove children from layer order and add group at the topmost child's position
+  const newOrder = doc.layerOrder.filter((id) => !childIds.includes(id));
+  const firstChildIdx = Math.min(
+    ...childIds.map((id) => doc.layerOrder.indexOf(id)).filter((i) => i >= 0)
+  );
+  newOrder.splice(firstChildIdx, 0, group.id);
+
+  return {
+    ...doc,
+    layers: [...doc.layers, group],
+    layerOrder: newOrder,
+    selectedLayers: [group.id],
+  };
+}
+
+/** Ungroup a group layer — restore children to the layer order */
+export function ungroupLayer(
+  doc: DesignDocument,
+  groupId: string
+): DesignDocument {
+  const group = doc.layers.find((l) => l.id === groupId);
+  if (!group || group.type !== "group") return doc;
+
+  const groupIdx = doc.layerOrder.indexOf(groupId);
+  const newOrder = doc.layerOrder.filter((id) => id !== groupId);
+  // Insert children at group's position
+  newOrder.splice(groupIdx, 0, ...group.children);
+
+  return {
+    ...doc,
+    layers: doc.layers.filter((l) => l.id !== groupId),
+    layerOrder: newOrder,
+    selectedLayers: group.children,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Multi-Selection Helpers (Task 2.1.2)
+// ---------------------------------------------------------------------------
+
+/** Get bounding box around multiple layers */
+export function getMultiSelectionBounds(
+  layers: Layer[],
+  selectedIds: string[]
+): { x: number; y: number; width: number; height: number } | null {
+  const selected = layers.filter((l) => selectedIds.includes(l.id));
+  if (selected.length === 0) return null;
+
+  const minX = Math.min(...selected.map((l) => l.x));
+  const minY = Math.min(...selected.map((l) => l.y));
+  const maxX = Math.max(...selected.map((l) => l.x + l.width));
+  const maxY = Math.max(...selected.map((l) => l.y + l.height));
+
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+/** Draw multi-selection bounding box (dashed blue border) */
+export function drawMultiSelectionHandles(
+  ctx: CanvasRenderingContext2D,
+  layers: Layer[],
+  selectedIds: string[]
+): void {
+  const bounds = getMultiSelectionBounds(layers, selectedIds);
+  if (!bounds || selectedIds.length < 2) return;
+
+  ctx.save();
+  ctx.strokeStyle = "#3b82f6";
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 4]);
+  ctx.strokeRect(bounds.x - 4, bounds.y - 4, bounds.width + 8, bounds.height + 8);
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+/** Toggle a layer in the selection (shift+click behavior) */
+export function toggleLayerSelection(
+  doc: DesignDocument,
+  layerId: string
+): DesignDocument {
+  const isSelected = doc.selectedLayers.includes(layerId);
+  return {
+    ...doc,
+    selectedLayers: isSelected
+      ? doc.selectedLayers.filter((id) => id !== layerId)
+      : [...doc.selectedLayers, layerId],
+  };
+}
+
+/** Move multiple selected layers by delta */
+export function moveSelectedLayers(
+  doc: DesignDocument,
+  dx: number,
+  dy: number
+): DesignDocument {
+  return {
+    ...doc,
+    layers: doc.layers.map((l) =>
+      doc.selectedLayers.includes(l.id)
+        ? { ...l, x: l.x + dx, y: l.y + dy }
+        : l
+    ),
+  };
+}
+
+/** Delete all selected layers */
+export function deleteSelectedLayers(doc: DesignDocument): DesignDocument {
+  return {
+    ...doc,
+    layers: doc.layers.filter((l) => !doc.selectedLayers.includes(l.id)),
+    layerOrder: doc.layerOrder.filter((id) => !doc.selectedLayers.includes(id)),
+    selectedLayers: [],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Layer Alignment & Distribution (Task 2.1.7)
+// ---------------------------------------------------------------------------
+
+export type AlignDirection = "left" | "center" | "right" | "top" | "middle" | "bottom";
+export type DistributeDirection = "horizontal" | "vertical";
+
+/** Align multiple selected layers */
+export function alignLayers(
+  doc: DesignDocument,
+  direction: AlignDirection
+): DesignDocument {
+  const selected = doc.layers.filter((l) => doc.selectedLayers.includes(l.id));
+  if (selected.length < 2) return doc;
+
+  const bounds = getMultiSelectionBounds(doc.layers, doc.selectedLayers);
+  if (!bounds) return doc;
+
+  return {
+    ...doc,
+    layers: doc.layers.map((l) => {
+      if (!doc.selectedLayers.includes(l.id)) return l;
+      switch (direction) {
+        case "left": return { ...l, x: bounds.x };
+        case "right": return { ...l, x: bounds.x + bounds.width - l.width };
+        case "center": return { ...l, x: bounds.x + (bounds.width - l.width) / 2 };
+        case "top": return { ...l, y: bounds.y };
+        case "bottom": return { ...l, y: bounds.y + bounds.height - l.height };
+        case "middle": return { ...l, y: bounds.y + (bounds.height - l.height) / 2 };
+        default: return l;
+      }
+    }),
+  };
+}
+
+/** Distribute selected layers evenly */
+export function distributeLayers(
+  doc: DesignDocument,
+  direction: DistributeDirection
+): DesignDocument {
+  const selected = doc.layers
+    .filter((l) => doc.selectedLayers.includes(l.id))
+    .sort((a, b) => (direction === "horizontal" ? a.x - b.x : a.y - b.y));
+
+  if (selected.length < 3) return doc;
+
+  const first = selected[0];
+  const last = selected[selected.length - 1];
+
+  if (direction === "horizontal") {
+    const totalWidth = selected.reduce((sum, l) => sum + l.width, 0);
+    const totalSpace = (last.x + last.width) - first.x - totalWidth;
+    const gap = totalSpace / (selected.length - 1);
+    let currentX = first.x + first.width + gap;
+
+    const updates = new Map<string, number>();
+    for (let i = 1; i < selected.length - 1; i++) {
+      updates.set(selected[i].id, currentX);
+      currentX += selected[i].width + gap;
+    }
+
+    return {
+      ...doc,
+      layers: doc.layers.map((l) =>
+        updates.has(l.id) ? { ...l, x: updates.get(l.id)! } : l
+      ),
+    };
+  } else {
+    const totalHeight = selected.reduce((sum, l) => sum + l.height, 0);
+    const totalSpace = (last.y + last.height) - first.y - totalHeight;
+    const gap = totalSpace / (selected.length - 1);
+    let currentY = first.y + first.height + gap;
+
+    const updates = new Map<string, number>();
+    for (let i = 1; i < selected.length - 1; i++) {
+      updates.set(selected[i].id, currentY);
+      currentY += selected[i].height + gap;
+    }
+
+    return {
+      ...doc,
+      layers: doc.layers.map((l) =>
+        updates.has(l.id) ? { ...l, y: updates.get(l.id)! } : l
+      ),
+    };
+  }
 }

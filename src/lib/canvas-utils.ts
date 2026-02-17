@@ -49,6 +49,26 @@ export function darkenColor(hex: string, amount: number): string {
   return `#${nr.toString(16).padStart(2, "0")}${ng.toString(16).padStart(2, "0")}${nb.toString(16).padStart(2, "0")}`;
 }
 
+/** Lighten a hex color by percentage (0-100) — returns rgb() string.
+ *  Used by document workspaces (Invoice, Resume, Email). */
+export function lighten(hex: string, pct: number): string {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const r = Math.min(255, ((num >> 16) & 0xff) + Math.round((255 * pct) / 100));
+  const g = Math.min(255, ((num >> 8) & 0xff) + Math.round((255 * pct) / 100));
+  const b = Math.min(255, (num & 0xff) + Math.round((255 * pct) / 100));
+  return `rgb(${r},${g},${b})`;
+}
+
+/** Darken a hex color by percentage (0-100) — returns rgb() string.
+ *  Used by document workspaces (Email). */
+export function darken(hex: string, pct: number): string {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const r = Math.max(0, ((num >> 16) & 0xff) - Math.round((255 * pct) / 100));
+  const g = Math.max(0, ((num >> 8) & 0xff) - Math.round((255 * pct) / 100));
+  const b = Math.max(0, (num & 0xff) - Math.round((255 * pct) / 100));
+  return `rgb(${r},${g},${b})`;
+}
+
 // ---------------------------------------------------------------------------
 // Font Utilities
 // ---------------------------------------------------------------------------

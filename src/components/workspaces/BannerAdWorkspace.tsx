@@ -15,6 +15,11 @@ import {
   IconSmartphone,
   IconShare,
   IconTarget,
+  IconCheck,
+  IconGlobe,
+  IconShield,
+  IconEye,
+  IconMonitor,
 } from "@/components/icons";
 import StockImagePicker, { type StockImage } from "@/components/StockImagePicker";
 import {
@@ -57,6 +62,9 @@ import {
   buildDesignDirectorPrompt,
   parseAIDesignDirective,
   renderCompositionFoundation,
+  getDeviceMockups,
+  renderDeviceMockup,
+  renderFullDesignToCanvas,
 } from "@/lib/design-foundation";
 
 /* ── Types ─────────────────────────────────────────────────── */
@@ -94,6 +102,47 @@ const bannerSizes = [
   { id: "half-page", label: "Half Page", width: 300, height: 600, cat: "Premium" },
   { id: "portrait", label: "Portrait", width: 300, height: 1050, cat: "Premium" },
 ] as const;
+
+/* ── Ad Network Compliance Specs ──────────────────────────── */
+
+interface AdNetworkSpec {
+  network: string;
+  sizes: { w: number; h: number }[];
+  maxFileKB: number;
+  color: string;
+}
+
+const adNetworkSpecs: AdNetworkSpec[] = [
+  {
+    network: "Google Ads",
+    maxFileKB: 150,
+    color: "#4285f4",
+    sizes: [
+      { w: 728, h: 90 }, { w: 468, h: 60 }, { w: 300, h: 250 }, { w: 336, h: 280 },
+      { w: 250, h: 250 }, { w: 160, h: 600 }, { w: 120, h: 600 }, { w: 970, h: 250 },
+      { w: 970, h: 90 }, { w: 300, h: 600 }, { w: 300, h: 1050 }, { w: 234, h: 60 },
+    ],
+  },
+  {
+    network: "Meta",
+    maxFileKB: 30720,
+    color: "#1877f2",
+    sizes: [
+      { w: 1200, h: 628 }, { w: 1080, h: 1080 }, { w: 1200, h: 1200 },
+      { w: 300, h: 250 }, { w: 728, h: 90 },
+    ],
+  },
+  {
+    network: "IAB Standard",
+    maxFileKB: 200,
+    color: "#00b894",
+    sizes: [
+      { w: 728, h: 90 }, { w: 468, h: 60 }, { w: 234, h: 60 }, { w: 300, h: 250 },
+      { w: 336, h: 280 }, { w: 250, h: 250 }, { w: 160, h: 600 }, { w: 120, h: 600 },
+      { w: 970, h: 250 }, { w: 970, h: 90 }, { w: 300, h: 600 }, { w: 300, h: 1050 },
+    ],
+  },
+];
 
 /* ── Composition Options ─────────────────────────────────── */
 
@@ -138,9 +187,16 @@ export default function BannerAdWorkspace() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [revisionRequest, setRevisionRequest] = useState("");
   const [imagePickerOpen, setImagePickerOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"design" | "export">("design");
+  const [activeTab, setActiveTab] = useState<"design" | "export" | "present">("design");
   const [selectedExports, setSelectedExports] = useState<Set<string>>(new Set());
   const [isExporting, setIsExporting] = useState(false);
+
+  /* ── New feature state ─────────────────────────────────── */
+  const [clickThroughUrl, setClickThroughUrl] = useState("");
+  const [exportedHtml, setExportedHtml] = useState<string | null>(null);
+  const [estimatedFileSize, setEstimatedFileSize] = useState<number | null>(null);
+  const [activeMockup, setActiveMockup] = useState<string | null>(null);
+  const mockupCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const [config, setConfig] = useState<BannerConfig>({
     size: "medium-rect",
@@ -368,6 +424,14 @@ export default function BannerAdWorkspace() {
     ctx.strokeStyle = hexToRgba(config.primaryColor, 0.15);
     ctx.lineWidth = 1;
     ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+
+    // Estimate file size
+    canvas.toBlob(
+      (blob) => {
+        if (blob) setEstimatedFileSize(blob.size);
+      },
+      "image/png"
+    );
   }, [doc, config, currentSize, loadedImage]);
 
   /* ── Canvas Interaction ────────────────────────────────── */
@@ -687,6 +751,152 @@ export default function BannerAdWorkspace() {
     }
   }, []);
 
+  /* ── HTML5/CSS Export ────────────────────────────────── */
+  const handleExportHtml = useCallback(() => {
+    const w = currentSize.width;
+    const h = currentSize.height;
+    const layerDivs: string[] = [];
+
+    for (let i = doc.layerOrder.length - 1; i >= 0; i--) {
+      const id = doc.layerOrder[i];
+      const layer = doc.layers.find((l) => l.id === id);
+      if (!layer || !layer.visible) continue;
+
+      const baseStyle = `position:absolute;left:${Math.round(layer.x)}px;top:${Math.round(layer.y)}px;width:${Math.round(layer.width)}px;height:${Math.round(layer.height)}px;opacity:${layer.opacity};`;
+
+      if (layer.type === "text") {
+        const t = layer as TextLayer;
+        layerDivs.push(
+          `  <div style="${baseStyle}font-size:${t.fontSize}px;font-weight:${t.fontWeight};color:${t.color};font-family:Inter,sans-serif;line-height:${t.lineHeight};letter-spacing:${t.letterSpacing}px;text-align:${t.align};overflow:hidden;">${t.text}</div>`
+        );
+      } else if (layer.type === "cta") {
+        const c = layer as CtaLayer;
+        layerDivs.push(
+          `  <div style="${baseStyle}background:${c.bgColor};color:${c.textColor};font-size:${c.fontSize}px;font-weight:700;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;border-radius:${c.cornerRadius}px;cursor:pointer;">${c.text}</div>`
+        );
+      } else if (layer.type === "shape") {
+        const s = layer as ShapeLayer;
+        const bg = s.fillColor + Math.round(s.fillOpacity * 255).toString(16).padStart(2, "0");
+        const radius = s.shape === "circle" ? "50%" : `${s.cornerRadius}px`;
+        layerDivs.push(
+          `  <div style="${baseStyle}background:${bg};border-radius:${radius};"></div>`
+        );
+      }
+    }
+
+    const innerContent = layerDivs.join("\n");
+    const wrapperOpen = clickThroughUrl
+      ? `<a href="${clickThroughUrl}" target="_blank" rel="noopener noreferrer" style="display:block;width:${w}px;height:${h}px;position:relative;text-decoration:none;">`
+      : `<div style="width:${w}px;height:${h}px;position:relative;">`;
+    const wrapperClose = clickThroughUrl ? `</a>` : `</div>`;
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="ad.size" content="width=${w},height=${h}">
+  <title>Banner Ad ${w}x${h}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f0f0f0; }
+    .banner { background: ${config.secondaryColor}; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    ${wrapperOpen}
+${innerContent}
+    ${wrapperClose}
+  </div>
+</body>
+</html>`;
+
+    setExportedHtml(html);
+    return html;
+  }, [doc, currentSize, config.secondaryColor, clickThroughUrl]);
+
+  const handleCopyHtml = useCallback(() => {
+    const html = handleExportHtml();
+    if (html) navigator.clipboard.writeText(html).catch(() => {});
+  }, [handleExportHtml]);
+
+  const handleDownloadHtml = useCallback(() => {
+    const html = handleExportHtml();
+    if (!html) return;
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `banner-${config.size}-${currentSize.width}x${currentSize.height}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [handleExportHtml, config.size, currentSize]);
+
+  /* ── Ad Network Compliance ──────────────────────────────── */
+  const complianceResults = useMemo(() => {
+    const w = currentSize.width;
+    const h = currentSize.height;
+    const fileSizeKB = estimatedFileSize ? estimatedFileSize / 1024 : 0;
+
+    return adNetworkSpecs.map((spec) => {
+      const sizeMatch = spec.sizes.some((s) => s.w === w && s.h === h);
+      const fileSizeOk = fileSizeKB <= spec.maxFileKB;
+      return {
+        network: spec.network,
+        color: spec.color,
+        sizeMatch,
+        fileSizeOk,
+        compliant: sizeMatch && fileSizeOk,
+        maxFileKB: spec.maxFileKB,
+      };
+    });
+  }, [currentSize, estimatedFileSize]);
+
+  /* ── Device Mockup Preview ─────────────────────────────── */
+  const deviceMockups = useMemo(() => getDeviceMockups(), []);
+
+  useEffect(() => {
+    if (!activeMockup || !mockupCanvasRef.current) return;
+    const mockup = deviceMockups.find((m) => m.id === activeMockup);
+    if (!mockup) return;
+
+    const designCanvas = renderFullDesignToCanvas(doc, {
+      composition: config.composition,
+      primaryColor: config.primaryColor,
+      secondaryColor: config.secondaryColor,
+      textColor: config.textColor,
+      fontStyle: config.fontStyle,
+      visualIntensity: config.visualIntensity,
+      backgroundImage: loadedImage,
+      overlayIntensity: config.overlayIntensity,
+    });
+
+    const result = renderDeviceMockup(designCanvas, mockup, {
+      backgroundColor: "#1a1a2e",
+      showAppChrome: true,
+      appName: config.brandName || undefined,
+    });
+
+    const mctx = mockupCanvasRef.current.getContext("2d");
+    if (!mctx) return;
+    mockupCanvasRef.current.width = result.width;
+    mockupCanvasRef.current.height = result.height;
+    mctx.drawImage(result, 0, 0);
+  }, [activeMockup, doc, config, loadedImage, deviceMockups]);
+
+  const handleDownloadMockup = useCallback(() => {
+    mockupCanvasRef.current?.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `banner-mockup-${activeMockup}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }, "image/png");
+  }, [activeMockup]);
+
   /* ── Helpers ───────────────────────────────────────────── */
   const toggleSection = (id: string) => {
     setOpenSections((prev) => {
@@ -907,6 +1117,22 @@ export default function BannerAdWorkspace() {
                   className="flex-1 h-8 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
                 />
               </div>
+              {/* Click-Through URL */}
+              <div className="flex items-center gap-1.5">
+                <IconGlobe className="size-3 text-gray-400 shrink-0" />
+                <input
+                  type="url"
+                  placeholder="Click-through URL (https://…)"
+                  value={clickThroughUrl}
+                  onChange={(e) => setClickThroughUrl(e.target.value)}
+                  className="flex-1 h-8 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                />
+              </div>
+              {clickThroughUrl && (
+                <p className="text-[0.5rem] text-gray-400 truncate">
+                  🔗 {clickThroughUrl}
+                </p>
+              )}
             </div>
           </Section>
 
@@ -1038,6 +1264,74 @@ export default function BannerAdWorkspace() {
               </div>
             </div>
           </Section>
+
+          {/* Ad Network Compliance */}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 space-y-2">
+            <div className="flex items-center gap-1.5">
+              <IconShield className="size-3 text-gray-400" />
+              <span className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+                Ad Compliance
+              </span>
+            </div>
+            <div className="space-y-1">
+              {complianceResults.map((r) => (
+                <div
+                  key={r.network}
+                  className="flex items-center gap-2 px-2 py-1 rounded-lg bg-gray-50 dark:bg-gray-800/50"
+                >
+                  <div
+                    className={`size-4 rounded-full flex items-center justify-center text-white text-[0.5rem] font-bold ${
+                      r.compliant ? "bg-success-500" : r.sizeMatch ? "bg-warning-500" : "bg-gray-400"
+                    }`}
+                  >
+                    {r.compliant ? "✓" : r.sizeMatch ? "!" : "✗"}
+                  </div>
+                  <span className="flex-1 text-[0.5625rem] font-medium text-gray-700 dark:text-gray-300">
+                    {r.network}
+                  </span>
+                  <div className="flex flex-col items-end">
+                    <span className={`text-[0.5rem] font-semibold ${
+                      r.sizeMatch ? "text-success-500" : "text-gray-400"
+                    }`}>
+                      {r.sizeMatch ? "Size ✓" : "Size ✗"}
+                    </span>
+                    <span className={`text-[0.5rem] ${
+                      r.fileSizeOk ? "text-success-500" : "text-error-500"
+                    }`}>
+                      {r.fileSizeOk ? `≤${r.maxFileKB}KB ✓` : `>${r.maxFileKB}KB ✗`}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {estimatedFileSize !== null && (
+              <div className="flex items-center gap-1.5 pt-1 border-t border-gray-100 dark:border-gray-800">
+                <span className="text-[0.5rem] text-gray-400">Est. file size:</span>
+                <span
+                  className={`text-[0.5625rem] font-bold tabular-nums ${
+                    estimatedFileSize / 1024 < 50
+                      ? "text-success-500"
+                      : estimatedFileSize / 1024 < 150
+                        ? "text-warning-500"
+                        : "text-error-500"
+                  }`}
+                >
+                  {estimatedFileSize < 1024
+                    ? `${estimatedFileSize} B`
+                    : `${(estimatedFileSize / 1024).toFixed(1)} KB`}
+                </span>
+                <span
+                  className={`size-2 rounded-full ${
+                    estimatedFileSize / 1024 < 50
+                      ? "bg-success-500"
+                      : estimatedFileSize / 1024 < 150
+                        ? "bg-warning-500"
+                        : "bg-error-500"
+                  }`}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── Center: Canvas / Export ─────────────────────── */}
@@ -1048,6 +1342,7 @@ export default function BannerAdWorkspace() {
               [
                 { id: "design", label: "Design", icon: <IconLayout className="size-3.5" /> },
                 { id: "export", label: "Export All Sizes", icon: <IconDownload className="size-3.5" /> },
+                { id: "present", label: "Client Preview", icon: <IconSmartphone className="size-3.5" /> },
               ] as const
             ).map((tab) => (
               <button
@@ -1113,6 +1408,19 @@ export default function BannerAdWorkspace() {
                     <IconDownload className="size-3" />
                     PNG
                   </button>
+                  {estimatedFileSize !== null && (
+                    <span
+                      className={`text-[0.5rem] font-semibold tabular-nums px-1.5 py-0.5 rounded-md ${
+                        estimatedFileSize / 1024 < 50
+                          ? "text-success-600 bg-success-500/10"
+                          : estimatedFileSize / 1024 < 150
+                            ? "text-warning-600 bg-warning-500/10"
+                            : "text-error-600 bg-error-500/10"
+                      }`}
+                    >
+                      {(estimatedFileSize / 1024).toFixed(1)}KB
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center justify-center p-6 bg-[repeating-conic-gradient(#e5e7eb_0%_25%,transparent_0%_50%)] dark:bg-[repeating-conic-gradient(#1f2937_0%_25%,transparent_0%_50%)] bg-size-[20px_20px] min-h-48">
@@ -1242,16 +1550,102 @@ export default function BannerAdWorkspace() {
             </div>
           )}
 
+          {/* Present Tab — Device Mockups */}
+          {activeTab === "present" && (
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                  Client Presentation
+                </h3>
+                <p className="text-[0.625rem] text-gray-400 mt-0.5">
+                  Preview your banner ad on real devices. See how it looks in context.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {deviceMockups.map((mockup) => (
+                  <button
+                    key={mockup.id}
+                    onClick={() => setActiveMockup(mockup.id)}
+                    className={`p-3 rounded-xl border text-center transition-all ${
+                      activeMockup === mockup.id
+                        ? "border-primary-500 bg-primary-500/5 ring-1 ring-primary-500/30"
+                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                    }`}
+                  >
+                    <div className="text-lg mb-1">
+                      {mockup.device === "phone"
+                        ? "📱"
+                        : mockup.device === "tablet"
+                          ? "📱"
+                          : mockup.device === "laptop"
+                            ? "💻"
+                            : "🖥️"}
+                    </div>
+                    <p
+                      className={`text-[0.625rem] font-semibold ${
+                        activeMockup === mockup.id
+                          ? "text-primary-500"
+                          : "text-gray-900 dark:text-white"
+                      }`}
+                    >
+                      {mockup.name}
+                    </p>
+                    <p className="text-[0.5rem] text-gray-400">{mockup.platform}</p>
+                  </button>
+                ))}
+              </div>
+
+              {activeMockup && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center p-6 rounded-xl bg-linear-to-br from-gray-900 to-gray-800 min-h-80">
+                    <canvas ref={mockupCanvasRef} className="max-w-xs w-full h-auto drop-shadow-2xl" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleDownloadMockup}
+                      className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors"
+                    >
+                      <IconDownload className="size-3.5" />
+                      Download Mockup
+                    </button>
+                    <button
+                      onClick={handleCopyCanvas}
+                      className="flex items-center justify-center gap-1.5 h-9 px-4 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    >
+                      <IconCopy className="size-3.5" />
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Quick Export (design tab) */}
           {activeTab === "design" && (
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-5 gap-2">
                 <button
                   onClick={handleDownloadPng}
                   className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-primary-500/30 bg-primary-500/5 text-primary-500 transition-colors hover:bg-primary-500/10"
                 >
                   <IconDownload className="size-3.5" />
                   <span className="text-[0.625rem] font-semibold">.png</span>
+                </button>
+                <button
+                  onClick={handleCopyHtml}
+                  className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-secondary-500/30 bg-secondary-500/5 text-secondary-500 transition-colors hover:bg-secondary-500/10"
+                >
+                  <IconMonitor className="size-3.5" />
+                  <span className="text-[0.625rem] font-semibold">HTML</span>
+                </button>
+                <button
+                  onClick={handleDownloadHtml}
+                  className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
+                  <IconGlobe className="size-3.5" />
+                  <span className="text-[0.625rem] font-semibold">.html</span>
                 </button>
                 <button
                   onClick={handleCopyCanvas}
@@ -1268,6 +1662,37 @@ export default function BannerAdWorkspace() {
                   <span className="text-[0.625rem] font-semibold">All Sizes</span>
                 </button>
               </div>
+              {/* HTML Export Preview */}
+              {exportedHtml && (
+                <div className="mt-3 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  <div className="flex items-center justify-between px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                    <span className="text-[0.5625rem] font-semibold text-gray-500 uppercase tracking-wider">HTML5 Banner</span>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={handleCopyHtml}
+                        className="px-2 py-0.5 rounded text-[0.5rem] font-semibold text-primary-500 hover:bg-primary-500/10 transition-colors"
+                      >
+                        Copy
+                      </button>
+                      <button
+                        onClick={() => setExportedHtml(null)}
+                        className="p-0.5 rounded text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        <IconX className="size-3" />
+                      </button>
+                    </div>
+                  </div>
+                  <pre className="p-3 text-[0.5rem] text-gray-600 dark:text-gray-400 overflow-x-auto max-h-32 font-mono leading-relaxed">
+                    {exportedHtml.slice(0, 600)}{exportedHtml.length > 600 ? "\n…" : ""}
+                  </pre>
+                </div>
+              )}
+              {clickThroughUrl && (
+                <div className="mt-2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                  <IconGlobe className="size-3 text-gray-400" />
+                  <span className="text-[0.5rem] text-gray-500 truncate">{clickThroughUrl}</span>
+                </div>
+              )}
             </div>
           )}
         </div>

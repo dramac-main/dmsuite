@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { searchTools, type FlatTool, totalToolCount } from "@/data/tools";
@@ -8,12 +8,19 @@ import { iconMap, IconSearch, IconArrowRight, IconX, IconSparkles } from "@/comp
 
 export default function HeroBanner() {
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [focused, setFocused] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  const results: FlatTool[] = useMemo(() => searchTools(query), [query]);
+  // Debounce search input by 150ms
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query), 150);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const results: FlatTool[] = useMemo(() => searchTools(debouncedQuery), [debouncedQuery]);
   const visibleResults = results.slice(0, 8);
   const showResults = focused && query.length > 0;
 

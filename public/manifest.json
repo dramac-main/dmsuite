@@ -1,9 +1,12 @@
 {
   "name": "DMSuite — AI Design & Business Suite",
   "short_name": "DMSuite",
+  "id": "dmsuite",
   "description": "250+ AI-powered tools for design, video, audio, content, marketing, web/UI, documents, and business automation.",
   "start_url": "/dashboard",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#030712",
   "theme_color": "#8ae600",
   "orientation": "any",
@@ -21,5 +24,36 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["productivity", "business", "design"]
+  "categories": ["productivity", "business", "design"],
+  "shortcuts": [
+    {
+      "name": "AI Chat",
+      "short_name": "Chat",
+      "url": "/tools/ai-toolkit/ai-chat",
+      "description": "Chat with Claude AI"
+    },
+    {
+      "name": "Logo Generator",
+      "short_name": "Logo",
+      "url": "/tools/design-creation/logo-generator",
+      "description": "Generate professional logos"
+    },
+    {
+      "name": "Social Media Post",
+      "short_name": "Social",
+      "url": "/tools/marketing-content/social-media-post",
+      "description": "Design social media posts"
+    },
+    {
+      "name": "Presentation",
+      "short_name": "Slides",
+      "url": "/tools/documents-business/presentation",
+      "description": "Create slide presentations"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "launch_handler": {
+    "client_mode": "auto"
+  }
 }

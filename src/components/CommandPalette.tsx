@@ -16,8 +16,9 @@ import { Kbd } from "@/components/ui";
 
 /** Action items (non-tool quick actions) */
 const quickActions = [
-  { id: "action:dashboard", label: "Go to Dashboard", icon: "grid", href: "/dashboard" },
-  { id: "action:theme", label: "Toggle Dark/Light Mode", icon: "settings", action: "toggle-theme" },
+  { id: "action:dashboard", label: "Go to Dashboard", icon: "grid", href: "/dashboard", kbd: "⌘H" },
+  { id: "action:theme", label: "Toggle Dark/Light Mode", icon: "settings", action: "toggle-theme", kbd: "⌘/" },
+  { id: "action:shortcuts", label: "Keyboard Shortcuts", icon: "settings", action: "shortcuts-help", kbd: "?" },
 ];
 
 export function CommandPalette() {
@@ -118,7 +119,7 @@ export function CommandPalette() {
   // Build unified items list for keyboard navigation
   type PaletteItem =
     | { type: "tool"; tool: EnrichedTool }
-    | { type: "action"; id: string; label: string; icon: string; href?: string; action?: string };
+    | { type: "action"; id: string; label: string; icon: string; href?: string; action?: string; kbd?: string };
 
   const items = useMemo<PaletteItem[]>(() => {
     const list: PaletteItem[] = [];
@@ -157,6 +158,8 @@ export function CommandPalette() {
           router.push(item.href);
         } else if (item.action === "toggle-theme") {
           toggleTheme();
+        } else if (item.action === "shortcuts-help") {
+          window.dispatchEvent(new CustomEvent("dmsuite:shortcuts-help"));
         }
         setOpen(false);
       }
@@ -316,7 +319,12 @@ export function CommandPalette() {
                         >
                           {ActionIcon && <ActionIcon className="size-4 shrink-0" />}
                           <span className="text-sm font-medium">{action.label}</span>
-                          <IconArrowRight className="size-3 ml-auto opacity-40" />
+                          {action.kbd && (
+                            <kbd className="ml-auto px-1.5 py-0.5 rounded text-[10px] font-mono bg-gray-100 dark:bg-gray-800 text-gray-400 border border-gray-200 dark:border-gray-700">
+                              {action.kbd}
+                            </kbd>
+                          )}
+                          {!action.kbd && <IconArrowRight className="size-3 ml-auto opacity-40" />}
                         </button>
                       );
                     })}

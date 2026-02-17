@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { CommandPalette } from "@/components/CommandPalette";
+import ClientShell from "@/components/ClientShell";
 import "./globals.css";
 
 const inter = Inter({
@@ -100,10 +101,24 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}
       >
+        {/* Skip-to-content link for accessibility */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-lg focus:bg-primary-500 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-gray-950 focus:outline-none focus:ring-2 focus:ring-primary-300"
+        >
+          Skip to main content
+        </a>
         <ThemeProvider>
           <CommandPalette />
+          <ClientShell />
           {children}
         </ThemeProvider>
+        {/* Service Worker registration */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js').catch(()=>{})})}`
+          }}
+        />
       </body>
     </html>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { jsPDF } from "jspdf";
 import {
   IconSparkles,
   IconDownload,
@@ -12,6 +13,11 @@ import {
   IconCheck,
   IconLayers,
   IconRefresh,
+  IconShield,
+  IconFileText,
+  IconBookOpen,
+  IconPlus,
+  IconTrash,
 } from "@/components/icons";
 
 /* ── Types ─────────────────────────────────────────────────── */
@@ -39,6 +45,12 @@ interface PatternConfig {
   opacity: number;
 }
 
+interface ToneOfVoice {
+  attributes: string;
+  exampleDo: string[];
+  exampleDont: string[];
+}
+
 interface BrandConfig {
   brandName: string;
   tagline: string;
@@ -47,6 +59,7 @@ interface BrandConfig {
   palette: ColorPalette;
   fontPairing: FontPairing;
   pattern: PatternConfig;
+  toneOfVoice: ToneOfVoice;
 }
 
 /* ── Preset Data ──────────────────────────────────────────── */
@@ -168,7 +181,7 @@ function renderBrandBoard(canvas: HTMLCanvasElement, config: BrandConfig) {
 
     // Border for light colors
     const rgb = hexToRgb(c.color);
-    if (rgb[0] + rgb[1] + rgb[2] > 600) {
+    if (rgb.r + rgb.g + rgb.b > 600) {
       ctx.strokeStyle = `${p.neutral}30`;
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -393,14 +406,10 @@ function drawPattern(
 
 /* ── Helpers ──────────────────────────────────────────────── */
 
-function hexToRgb(hex: string): [number, number, number] {
-  const c = hex.replace("#", "");
-  return [parseInt(c.slice(0, 2), 16), parseInt(c.slice(2, 4), 16), parseInt(c.slice(4, 6), 16)];
-}
+import { getContrastColor, hexToRgb } from "@/lib/canvas-utils";
 
 function getContrastForBg(hex: string): string {
-  const [r, g, b] = hexToRgb(hex);
-  return (0.299 * r + 0.587 * g + 0.114 * b) > 128 ? "#1a1a1a" : "#f5f5f5";
+  return getContrastColor(hex) === "#ffffff" ? "#f5f5f5" : "#1a1a1a";
 }
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
@@ -416,6 +425,481 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number): st
   }
   if (current) lines.push(current);
   return lines;
+}
+
+/* ── WCAG Contrast Utilities ──────────────────────────────── */
+
+function sRGBtoLinear(c: number): number {
+  const s = c / 255;
+  return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+}
+
+function relativeLuminance(hex: string): number {
+  const { r, g, b } = hexToRgb(hex);
+  return 0.2126 * sRGBtoLinear(r) + 0.7152 * sRGBtoLinear(g) + 0.0722 * sRGBtoLinear(b);
+}
+
+function contrastRatio(hex1: string, hex2: string): number {
+  const l1 = relativeLuminance(hex1);
+  const l2 = relativeLuminance(hex2);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function wcagLevel(ratio: number): { aa: boolean; aaLarge: boolean; aaa: boolean; aaaLarge: boolean } {
+  return {
+    aa: ratio >= 4.5,
+    aaLarge: ratio >= 3,
+    aaa: ratio >= 7,
+    aaaLarge: ratio >= 4.5,
+  };
+}
+
+/* ── SVG Export ──────────────────────────────────────────── */
+
+function exportBrandBoardSVG(config: BrandConfig): string {
+  const p = config.palette;
+  const f = config.fontPairing;
+  const name = config.brandName || "Your Brand";
+
+  const swatchColors = [
+    { color: p.primary, name: "Primary" },
+    { color: p.secondary, name: "Secondary" },
+    { color: p.accent, name: "Accent" },
+    { color: p.neutral, name: "Neutral" },
+    { color: p.background, name: "Background" },
+  ];
+
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200" width="1600" height="1200">`;
+  svg += `<rect width="1600" height="1200" fill="${p.background}"/>`;
+  // Header bar
+  svg += `<rect width="1600" height="6" fill="${p.primary}"/>`;
+  svg += `<text x="60" y="52" fill="${p.neutral}" opacity="0.5" font-size="12" font-family="${f.body}" font-weight="300">BRAND IDENTITY KIT</text>`;
+  svg += `<text x="60" y="120" fill="${p.primary}" font-size="56" font-family="${f.heading}" font-weight="${f.headingWeight}">${escapeXml(name)}</text>`;
+  if (config.tagline) {
+    svg += `<text x="60" y="158" fill="${p.neutral}" font-size="20" font-family="${f.body}">${escapeXml(config.tagline)}</text>`;
+  }
+  // Color palette section
+  svg += `<text x="60" y="210" fill="${p.neutral}" opacity="0.5" font-size="11" font-family="${f.body}" font-weight="600">COLOR PALETTE</text>`;
+  swatchColors.forEach((c, i) => {
+    const x = 60 + i * 280;
+    svg += `<rect x="${x}" y="230" width="260" height="140" rx="12" fill="${c.color}"/>`;
+    svg += `<text x="${x}" y="392" fill="${p.neutral}" font-size="12" font-family="${f.body}" font-weight="600">${c.name}</text>`;
+    svg += `<text x="${x}" y="410" fill="${p.neutral}" opacity="0.5" font-size="11" font-family="monospace">${c.color.toUpperCase()}</text>`;
+  });
+  // Typography section
+  svg += `<text x="60" y="440" fill="${p.neutral}" opacity="0.5" font-size="11" font-family="${f.body}" font-weight="600">TYPOGRAPHY</text>`;
+  svg += `<text x="60" y="496" fill="${getContrastForBg(p.background)}" font-size="44" font-family="${f.heading}" font-weight="${f.headingWeight}">Heading Typeface</text>`;
+  svg += `<text x="60" y="522" fill="${p.neutral}" font-size="14" font-family="${f.body}">Font: ${f.label} • Weights: ${f.headingWeight} / ${f.bodyWeight}</text>`;
+  // Logo applications
+  svg += `<text x="560" y="810" fill="${p.neutral}" opacity="0.5" font-size="11" font-family="${f.body}" font-weight="600">LOGO APPLICATIONS</text>`;
+  svg += `<rect x="560" y="830" width="480" height="130" rx="12" fill="#0a0a0a"/>`;
+  svg += `<text x="800" y="890" fill="${p.primary}" font-size="32" font-family="${f.heading}" font-weight="${f.headingWeight}" text-anchor="middle">${escapeXml(name)}</text>`;
+  svg += `<rect x="560" y="980" width="480" height="130" rx="12" fill="#ffffff"/>`;
+  svg += `<text x="800" y="1040" fill="${p.primary}" font-size="32" font-family="${f.heading}" font-weight="${f.headingWeight}" text-anchor="middle">${escapeXml(name)}</text>`;
+  // Footer
+  svg += `<rect y="1196" width="1600" height="4" fill="${p.primary}"/>`;
+  svg += `<text x="60" y="1180" fill="${p.neutral}" opacity="0.3" font-size="10" font-family="${f.body}">${escapeXml(name)} Identity Kit • Generated by DMSuite</text>`;
+  svg += `</svg>`;
+  return svg;
+}
+
+function escapeXml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/* ── PDF Export ───────────────────────────────────────────── */
+
+function exportBrandPDF(config: BrandConfig) {
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const W = 210;
+  const margin = 20;
+  const contentW = W - margin * 2;
+  const p = config.palette;
+  const f = config.fontPairing;
+  const name = config.brandName || "Your Brand";
+
+  // Helper: draw a colored rect
+  const drawRect = (x: number, y: number, w: number, h: number, color: string) => {
+    const { r, g, b } = hexToRgb(color);
+    pdf.setFillColor(r, g, b);
+    pdf.roundedRect(x, y, w, h, 2, 2, "F");
+  };
+
+  // Helper: set text color from hex
+  const setTextColor = (hex: string) => {
+    const { r, g, b } = hexToRgb(hex);
+    pdf.setTextColor(r, g, b);
+  };
+
+  // ─── PAGE 1: Cover ─────────────────────────────────────
+  drawRect(0, 0, W, 297, p.background);
+  // Top accent bar
+  drawRect(0, 0, W, 4, p.primary);
+
+  // Brand name
+  setTextColor(p.primary);
+  pdf.setFontSize(42);
+  pdf.setFont("helvetica", "bold");
+  pdf.text(name, W / 2, 120, { align: "center" });
+
+  if (config.tagline) {
+    setTextColor(p.neutral);
+    pdf.setFontSize(14);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(config.tagline, W / 2, 135, { align: "center" });
+  }
+
+  // Subtitle
+  setTextColor(p.neutral);
+  pdf.setFontSize(10);
+  pdf.text("BRAND IDENTITY GUIDELINES", W / 2, 160, { align: "center" });
+
+  // Footer info
+  pdf.setFontSize(8);
+  setTextColor(p.neutral);
+  pdf.text(`${config.industry || ""} ${config.personality ? "• " + config.personality : ""}`.trim(), W / 2, 260, { align: "center" });
+  pdf.text(`Generated by DMSuite • ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`, W / 2, 280, { align: "center" });
+  drawRect(0, 293, W, 4, p.primary);
+
+  // ─── PAGE 2: Color Palette ─────────────────────────────
+  pdf.addPage();
+  drawRect(0, 0, W, 297, "#ffffff");
+  drawRect(0, 0, W, 2, p.primary);
+
+  pdf.setFontSize(9);
+  setTextColor("#999999");
+  pdf.text("COLOR PALETTE", margin, 20);
+
+  pdf.setFontSize(22);
+  setTextColor("#1a1a1a");
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Brand Colors", margin, 32);
+  pdf.setFont("helvetica", "normal");
+
+  const colorEntries = [
+    { name: "Primary", hex: p.primary },
+    { name: "Secondary", hex: p.secondary },
+    { name: "Accent", hex: p.accent },
+    { name: "Neutral", hex: p.neutral },
+    { name: "Background", hex: p.background },
+  ];
+
+  const swatchSize = 30;
+  const swatchGap = 4;
+  colorEntries.forEach((c, i) => {
+    const x = margin + i * (swatchSize + swatchGap);
+    drawRect(x, 40, swatchSize, swatchSize, c.hex);
+    pdf.setFontSize(7);
+    setTextColor("#333333");
+    pdf.text(c.name, x, 40 + swatchSize + 6);
+    pdf.setFontSize(6);
+    setTextColor("#888888");
+    pdf.text(c.hex.toUpperCase(), x, 40 + swatchSize + 11);
+  });
+
+  // Usage guidelines
+  let uy = 100;
+  pdf.setFontSize(12);
+  setTextColor("#1a1a1a");
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Color Usage Guidelines", margin, uy);
+  pdf.setFont("helvetica", "normal");
+  uy += 8;
+
+  const guidelines = [
+    `Primary (${p.primary.toUpperCase()}) — Main brand color. Use for logos, headings, and CTAs.`,
+    `Secondary (${p.secondary.toUpperCase()}) — Supporting color for accents, links, and secondary elements.`,
+    `Accent (${p.accent.toUpperCase()}) — Highlights, badges, and emphasis. Use sparingly.`,
+    `Neutral (${p.neutral.toUpperCase()}) — Body text, borders, and subdued UI elements.`,
+    `Background (${p.background.toUpperCase()}) — Canvas and page backgrounds.`,
+  ];
+  pdf.setFontSize(9);
+  setTextColor("#444444");
+  guidelines.forEach((g) => {
+    pdf.text(`• ${g}`, margin, uy, { maxWidth: contentW });
+    uy += 10;
+  });
+
+  // Large swatches with contrast preview
+  uy += 8;
+  pdf.setFontSize(12);
+  setTextColor("#1a1a1a");
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Color & Contrast Preview", margin, uy);
+  pdf.setFont("helvetica", "normal");
+  uy += 8;
+
+  colorEntries.forEach((c) => {
+    drawRect(margin, uy, contentW, 16, c.hex);
+    const textCol = getContrastForBg(c.hex);
+    setTextColor(textCol);
+    pdf.setFontSize(10);
+    pdf.text(`${c.name}  ${c.hex.toUpperCase()}`, margin + 4, uy + 10);
+    uy += 20;
+  });
+
+  // ─── PAGE 3: Typography ────────────────────────────────
+  pdf.addPage();
+  drawRect(0, 0, W, 297, "#ffffff");
+  drawRect(0, 0, W, 2, p.primary);
+
+  pdf.setFontSize(9);
+  setTextColor("#999999");
+  pdf.text("TYPOGRAPHY", margin, 20);
+
+  pdf.setFontSize(22);
+  setTextColor("#1a1a1a");
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Font Pairings", margin, 32);
+  pdf.setFont("helvetica", "normal");
+
+  let ty = 45;
+  pdf.setFontSize(11);
+  setTextColor("#333333");
+  pdf.text(`Heading: ${f.label.split("/")[0]?.trim()} — Weight ${f.headingWeight}`, margin, ty); ty += 7;
+  pdf.text(`Body: ${f.label.split("/")[1]?.trim()} — Weight ${f.bodyWeight}`, margin, ty); ty += 14;
+
+  // Type scale
+  pdf.setFontSize(9);
+  setTextColor("#999999");
+  pdf.text("TYPE SCALE", margin, ty); ty += 8;
+
+  const typeScales = [
+    { label: "H1", size: 32 }, { label: "H2", size: 24 }, { label: "H3", size: 20 },
+    { label: "H4", size: 16 }, { label: "Body", size: 12 }, { label: "Small", size: 10 },
+    { label: "Caption", size: 8 },
+  ];
+  typeScales.forEach((ts) => {
+    pdf.setFontSize(ts.size > 24 ? 24 : ts.size);
+    setTextColor("#1a1a1a");
+    const isBold = ["H1", "H2", "H3", "H4"].includes(ts.label);
+    pdf.setFont("helvetica", isBold ? "bold" : "normal");
+    pdf.text(`${ts.label} — ${ts.size}px`, margin, ty);
+    ty += ts.size > 20 ? 14 : ts.size > 12 ? 10 : 7;
+  });
+
+  // Pangram
+  ty += 6;
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(11);
+  setTextColor("#444444");
+  pdf.text("The quick brown fox jumps over the lazy dog.", margin, ty); ty += 6;
+  pdf.text("Pack my box with five dozen liquor jugs.", margin, ty); ty += 12;
+
+  // Alphabet
+  pdf.setFontSize(14);
+  setTextColor("#888888");
+  pdf.text("Aa Bb Cc Dd Ee Ff Gg Hh Ii Jj Kk Ll Mm", margin, ty); ty += 8;
+  pdf.text("Nn Oo Pp Qq Rr Ss Tt Uu Vv Ww Xx Yy Zz", margin, ty); ty += 8;
+  pdf.text("0 1 2 3 4 5 6 7 8 9 ! @ # $ % & * ( )", margin, ty);
+
+  // ─── PAGE 4: Logo Usage ────────────────────────────────
+  pdf.addPage();
+  drawRect(0, 0, W, 297, "#ffffff");
+  drawRect(0, 0, W, 2, p.primary);
+
+  pdf.setFontSize(9);
+  setTextColor("#999999");
+  pdf.text("LOGO USAGE", margin, 20);
+
+  pdf.setFontSize(22);
+  setTextColor("#1a1a1a");
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Logo Applications", margin, 32);
+  pdf.setFont("helvetica", "normal");
+
+  // Dark bg logo
+  drawRect(margin, 45, contentW, 40, "#0a0a0a");
+  setTextColor(p.primary);
+  pdf.setFontSize(20);
+  pdf.setFont("helvetica", "bold");
+  pdf.text(name, W / 2, 68, { align: "center" });
+  if (config.tagline) {
+    pdf.setFontSize(8);
+    setTextColor("#888888");
+    pdf.setFont("helvetica", "normal");
+    pdf.text(config.tagline, W / 2, 78, { align: "center" });
+  }
+
+  // Light bg logo
+  drawRect(margin, 95, contentW, 40, "#ffffff");
+  pdf.setDrawColor(220, 220, 220);
+  pdf.roundedRect(margin, 95, contentW, 40, 2, 2, "S");
+  setTextColor(p.primary);
+  pdf.setFontSize(20);
+  pdf.setFont("helvetica", "bold");
+  pdf.text(name, W / 2, 118, { align: "center" });
+  if (config.tagline) {
+    pdf.setFontSize(8);
+    setTextColor("#666666");
+    pdf.setFont("helvetica", "normal");
+    pdf.text(config.tagline, W / 2, 128, { align: "center" });
+  }
+
+  // Color bg logo
+  drawRect(margin, 145, contentW, 40, p.primary);
+  setTextColor(getContrastForBg(p.primary));
+  pdf.setFontSize(20);
+  pdf.setFont("helvetica", "bold");
+  pdf.text(name, W / 2, 168, { align: "center" });
+
+  // Do's and Don'ts
+  let ly = 200;
+  pdf.setFontSize(12);
+  setTextColor("#1a1a1a");
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Logo Guidelines", margin, ly); ly += 8;
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9);
+  setTextColor("#444444");
+  const logoRules = [
+    "✓ Always maintain clear space around the logo",
+    "✓ Use approved brand colors only",
+    "✓ Ensure sufficient contrast against backgrounds",
+    "✗ Do not stretch or distort the logo",
+    "✗ Do not add effects like drop shadows or outlines",
+    "✗ Do not place on busy or clashing backgrounds",
+  ];
+  logoRules.forEach((rule) => {
+    pdf.text(rule, margin, ly); ly += 6;
+  });
+
+  // ─── PAGE 5: Pattern ───────────────────────────────────
+  pdf.addPage();
+  drawRect(0, 0, W, 297, "#ffffff");
+  drawRect(0, 0, W, 2, p.primary);
+
+  pdf.setFontSize(9);
+  setTextColor("#999999");
+  pdf.text("BRAND PATTERN", margin, 20);
+
+  pdf.setFontSize(22);
+  setTextColor("#1a1a1a");
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Pattern Preview", margin, 32);
+  pdf.setFont("helvetica", "normal");
+
+  // Pattern description
+  pdf.setFontSize(10);
+  setTextColor("#444444");
+  pdf.text(`Pattern Type: ${config.pattern.type}`, margin, 44);
+  pdf.text(`Opacity: ${Math.round(config.pattern.opacity * 100)}%`, margin, 51);
+  pdf.text(`Color: ${p.primary.toUpperCase()}`, margin, 58);
+
+  // Pattern swatch (rendered from canvas)
+  drawRect(margin, 68, contentW, 60, p.background);
+  pdf.setDrawColor(200, 200, 200);
+  pdf.roundedRect(margin, 68, contentW, 60, 2, 2, "S");
+
+  // Simple PDF pattern representation
+  const pxPerMM = 2;
+  const pRgb = hexToRgb(p.primary);
+  pdf.setDrawColor(pRgb.r, pRgb.g, pRgb.b);
+  pdf.setFillColor(pRgb.r, pRgb.g, pRgb.b);
+
+  if (config.pattern.type === "dots") {
+    for (let px = margin + 3; px < margin + contentW; px += 6) {
+      for (let py = 71; py < 125; py += 6) {
+        pdf.circle(px, py, 0.6 * pxPerMM * config.pattern.opacity, "F");
+      }
+    }
+  } else if (config.pattern.type === "lines") {
+    for (let py = 71; py < 125; py += 4) {
+      pdf.line(margin + 2, py, margin + contentW - 2, py);
+    }
+  } else if (config.pattern.type === "grid") {
+    for (let px = margin + 3; px < margin + contentW; px += 8) { pdf.line(px, 70, px, 126); }
+    for (let py = 71; py < 126; py += 8) { pdf.line(margin + 2, py, margin + contentW - 2, py); }
+  }
+
+  // ─── PAGE 6: Tone of Voice ─────────────────────────────
+  if (config.toneOfVoice.attributes || config.toneOfVoice.exampleDo.length > 0 || config.toneOfVoice.exampleDont.length > 0) {
+    pdf.addPage();
+    drawRect(0, 0, W, 297, "#ffffff");
+    drawRect(0, 0, W, 2, p.primary);
+
+    pdf.setFontSize(9);
+    setTextColor("#999999");
+    pdf.text("BRAND VOICE", margin, 20);
+
+    pdf.setFontSize(22);
+    setTextColor("#1a1a1a");
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Tone of Voice", margin, 32);
+    pdf.setFont("helvetica", "normal");
+
+    let vy = 44;
+    if (config.toneOfVoice.attributes) {
+      pdf.setFontSize(11);
+      setTextColor("#333333");
+      pdf.setFont("helvetica", "bold");
+      pdf.text("Voice Attributes", margin, vy); vy += 8;
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+      setTextColor("#444444");
+      const attrs = config.toneOfVoice.attributes.split(",").map((a) => a.trim()).filter(Boolean);
+      attrs.forEach((attr) => {
+        drawRect(margin, vy - 4, contentW, 9, `${p.primary}15`);
+        setTextColor("#333333");
+        pdf.text(`• ${attr}`, margin + 3, vy + 2);
+        vy += 12;
+      });
+    }
+
+    if (config.toneOfVoice.exampleDo.length > 0) {
+      vy += 6;
+      pdf.setFontSize(11);
+      setTextColor("#16a34a");
+      pdf.setFont("helvetica", "bold");
+      pdf.text("✓ Do Say", margin, vy); vy += 8;
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9);
+      setTextColor("#444444");
+      config.toneOfVoice.exampleDo.filter(Boolean).forEach((ex) => {
+        pdf.text(`"${ex}"`, margin + 4, vy);
+        vy += 7;
+      });
+    }
+
+    if (config.toneOfVoice.exampleDont.length > 0) {
+      vy += 6;
+      pdf.setFontSize(11);
+      setTextColor("#e11d48");
+      pdf.setFont("helvetica", "bold");
+      pdf.text("✗ Don't Say", margin, vy); vy += 8;
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9);
+      setTextColor("#444444");
+      config.toneOfVoice.exampleDont.filter(Boolean).forEach((ex) => {
+        pdf.text(`"${ex}"`, margin + 4, vy);
+        vy += 7;
+      });
+    }
+  }
+
+  // Save
+  pdf.save(`${(name).replace(/\s+/g, "-").toLowerCase()}-brand-guidelines.pdf`);
+}
+
+/* ── Brand Kit Storage ───────────────────────────────────── */
+
+const BRAND_KIT_KEY = "dmsuite-brand-kit";
+
+function saveBrandKit(config: BrandConfig) {
+  try {
+    localStorage.setItem(BRAND_KIT_KEY, JSON.stringify(config));
+    return true;
+  } catch { return false; }
+}
+
+function loadBrandKit(): BrandConfig | null {
+  try {
+    const raw = localStorage.getItem(BRAND_KIT_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as BrandConfig;
+  } catch { return null; }
 }
 
 /* ── Collapsible Section ─────────────────────────────────── */
@@ -451,7 +935,10 @@ export default function BrandIdentityWorkspace() {
     palette: palettePresets[0],
     fontPairing: fontPairings[0],
     pattern: { type: "dots", color: "#8ae600", opacity: 0.12 },
+    toneOfVoice: { attributes: "", exampleDo: [""], exampleDont: [""] },
   });
+
+  const [savedFeedback, setSavedFeedback] = useState<string | null>(null);
 
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(["basics", "palette", "typography"]));
   const toggleSection = (id: string) => {
@@ -561,6 +1048,42 @@ Return ONLY valid JSON, no markdown.`;
     setTimeout(() => setCopiedColors(false), 2000);
   }, [config.palette]);
 
+  // PDF export
+  const handleExportPDF = useCallback(() => {
+    exportBrandPDF(config);
+  }, [config]);
+
+  // SVG export
+  const handleExportSVG = useCallback(() => {
+    const svg = exportBrandBoardSVG(config);
+    const blob = new Blob([svg], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(config.brandName || "brand").replace(/\s+/g, "-").toLowerCase()}-brand-board.svg`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [config]);
+
+  // Save brand kit
+  const handleSaveBrandKit = useCallback(() => {
+    const ok = saveBrandKit(config);
+    setSavedFeedback(ok ? "Saved!" : "Error");
+    setTimeout(() => setSavedFeedback(null), 2000);
+  }, [config]);
+
+  // Load brand kit
+  const handleLoadBrandKit = useCallback(() => {
+    const loaded = loadBrandKit();
+    if (loaded) {
+      setConfig(loaded);
+      setSavedFeedback("Loaded!");
+    } else {
+      setSavedFeedback("No saved kit");
+    }
+    setTimeout(() => setSavedFeedback(null), 2000);
+  }, []);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
       {/* ── Left Panel ──────────────────────────────────────── */}
@@ -664,6 +1187,89 @@ Return ONLY valid JSON, no markdown.`;
           </div>
         </Section>
 
+        {/* Tone of Voice */}
+        <Section icon={<IconBookOpen className="size-3.5" />} label="Tone of Voice" id="tone" open={openSections.has("tone")} toggle={toggleSection}>
+          <div className="space-y-3">
+            <div>
+              <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 mb-1">Voice Attributes</p>
+              <input type="text" placeholder="e.g. Professional, Friendly, Bold" value={config.toneOfVoice.attributes}
+                onChange={(e) => updateConfig({ toneOfVoice: { ...config.toneOfVoice, attributes: e.target.value } })}
+                className="w-full h-10 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-sm placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
+              <p className="text-[0.5rem] text-gray-400 mt-0.5">Comma-separated attributes</p>
+            </div>
+
+            <div>
+              <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-success mb-1">✓ Do Say (example phrases)</p>
+              {config.toneOfVoice.exampleDo.map((ex, i) => (
+                <div key={`do-${i}`} className="flex items-center gap-1.5 mb-1.5">
+                  <input type="text" placeholder={`Example phrase ${i + 1}`} value={ex}
+                    onChange={(e) => {
+                      const next = [...config.toneOfVoice.exampleDo];
+                      next[i] = e.target.value;
+                      updateConfig({ toneOfVoice: { ...config.toneOfVoice, exampleDo: next } });
+                    }}
+                    className="flex-1 h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-success focus:ring-2 focus:ring-success/20 transition-all" />
+                  {config.toneOfVoice.exampleDo.length > 1 && (
+                    <button onClick={() => {
+                      const next = config.toneOfVoice.exampleDo.filter((_, j) => j !== i);
+                      updateConfig({ toneOfVoice: { ...config.toneOfVoice, exampleDo: next } });
+                    }} className="text-gray-400 hover:text-error transition-colors"><IconTrash className="size-3" /></button>
+                  )}
+                </div>
+              ))}
+              <button onClick={() => updateConfig({ toneOfVoice: { ...config.toneOfVoice, exampleDo: [...config.toneOfVoice.exampleDo, ""] } })}
+                className="flex items-center gap-1 text-[0.625rem] text-success hover:text-success/80 transition-colors font-medium">
+                <IconPlus className="size-2.5" />Add phrase
+              </button>
+            </div>
+
+            <div>
+              <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-error mb-1">✗ Don&apos;t Say</p>
+              {config.toneOfVoice.exampleDont.map((ex, i) => (
+                <div key={`dont-${i}`} className="flex items-center gap-1.5 mb-1.5">
+                  <input type="text" placeholder={`Avoid saying ${i + 1}`} value={ex}
+                    onChange={(e) => {
+                      const next = [...config.toneOfVoice.exampleDont];
+                      next[i] = e.target.value;
+                      updateConfig({ toneOfVoice: { ...config.toneOfVoice, exampleDont: next } });
+                    }}
+                    className="flex-1 h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-error focus:ring-2 focus:ring-error/20 transition-all" />
+                  {config.toneOfVoice.exampleDont.length > 1 && (
+                    <button onClick={() => {
+                      const next = config.toneOfVoice.exampleDont.filter((_, j) => j !== i);
+                      updateConfig({ toneOfVoice: { ...config.toneOfVoice, exampleDont: next } });
+                    }} className="text-gray-400 hover:text-error transition-colors"><IconTrash className="size-3" /></button>
+                  )}
+                </div>
+              ))}
+              <button onClick={() => updateConfig({ toneOfVoice: { ...config.toneOfVoice, exampleDont: [...config.toneOfVoice.exampleDont, ""] } })}
+                className="flex items-center gap-1 text-[0.625rem] text-error hover:text-error/80 transition-colors font-medium">
+                <IconPlus className="size-2.5" />Add phrase
+              </button>
+            </div>
+          </div>
+        </Section>
+
+        {/* Save / Load Brand Kit */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/30 p-4">
+          <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
+            <IconLayers className="size-3.5" />Brand Kit Storage
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={handleSaveBrandKit}
+              className="flex items-center justify-center gap-1.5 h-9 rounded-xl border border-primary-500/30 bg-primary-500/5 text-primary-500 text-xs font-semibold hover:bg-primary-500/10 transition-colors">
+              <IconDownload className="size-3" />Save Brand Kit
+            </button>
+            <button onClick={handleLoadBrandKit}
+              className="flex items-center justify-center gap-1.5 h-9 rounded-xl border border-secondary-500/30 bg-secondary-500/5 text-secondary-500 text-xs font-semibold hover:bg-secondary-500/10 transition-colors">
+              <IconRefresh className="size-3" />Load Brand Kit
+            </button>
+          </div>
+          {savedFeedback && (
+            <p className="text-[0.625rem] text-center mt-2 font-medium text-primary-500 animate-pulse">{savedFeedback}</p>
+          )}
+        </div>
+
         {/* AI Generate */}
         <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-4">
           <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-secondary-500 mb-3">
@@ -721,21 +1327,83 @@ Return ONLY valid JSON, no markdown.`;
           </div>
         </div>
 
+        {/* Color Accessibility Checker */}
+        <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
+            <IconShield className="size-3.5" />Color Accessibility (WCAG)
+          </h3>
+          <div className="space-y-2">
+            {(() => {
+              const paletteColors = [
+                { label: "Primary", hex: config.palette.primary },
+                { label: "Secondary", hex: config.palette.secondary },
+                { label: "Accent", hex: config.palette.accent },
+                { label: "Neutral", hex: config.palette.neutral },
+                { label: "Background", hex: config.palette.background },
+              ];
+              const pairs: { fg: typeof paletteColors[0]; bg: typeof paletteColors[0] }[] = [];
+              for (let i = 0; i < paletteColors.length; i++) {
+                for (let j = i + 1; j < paletteColors.length; j++) {
+                  pairs.push({ fg: paletteColors[i], bg: paletteColors[j] });
+                }
+              }
+              return pairs.map(({ fg, bg }) => {
+                const ratio = contrastRatio(fg.hex, bg.hex);
+                const level = wcagLevel(ratio);
+                return (
+                  <div key={`${fg.label}-${bg.label}`} className="flex items-center gap-3 p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                    <div className="flex items-center gap-1.5 min-w-28">
+                      <div className="size-4 rounded-full border border-gray-300 dark:border-gray-600" style={{ backgroundColor: fg.hex }} />
+                      <span className="text-[0.625rem] text-gray-500 dark:text-gray-400">on</span>
+                      <div className="size-4 rounded-full border border-gray-300 dark:border-gray-600" style={{ backgroundColor: bg.hex }} />
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-[0.625rem] font-medium text-gray-700 dark:text-gray-300">
+                        {fg.label} / {bg.label}
+                      </span>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-gray-700 dark:text-gray-300 tabular-nums">
+                      {ratio.toFixed(2)}:1
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className={`text-[0.5rem] font-bold px-1.5 py-0.5 rounded ${level.aa ? "bg-success/10 text-success" : "bg-error/10 text-error"}`}>
+                        AA {level.aa ? "✓" : "✗"}
+                      </span>
+                      <span className={`text-[0.5rem] font-bold px-1.5 py-0.5 rounded ${level.aaa ? "bg-success/10 text-success" : "bg-error/10 text-error"}`}>
+                        AAA {level.aaa ? "✓" : "✗"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+          <p className="text-[0.5rem] text-gray-400 mt-2">AA requires ≥ 4.5:1 for normal text • AAA requires ≥ 7:1</p>
+        </div>
+
         {/* Export */}
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Export</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <button onClick={handleDownloadPng} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-primary-500/30 bg-primary-500/5 text-primary-500 transition-colors hover:bg-primary-500/10">
               <IconDownload className="size-4" /><span className="text-xs font-semibold">Brand Board</span>
               <span className="text-[0.5625rem] opacity-60">1600×1200 PNG</span>
+            </button>
+            <button onClick={handleExportSVG} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-secondary-500/30 bg-secondary-500/5 text-secondary-500 transition-colors hover:bg-secondary-500/10">
+              <IconDownload className="size-4" /><span className="text-xs font-semibold">SVG Board</span>
+              <span className="text-[0.5625rem] opacity-60">Vector export</span>
+            </button>
+            <button onClick={handleExportPDF} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-primary-500/30 bg-primary-500/5 text-primary-500 transition-colors hover:bg-primary-500/10">
+              <IconFileText className="size-4" /><span className="text-xs font-semibold">PDF Guide</span>
+              <span className="text-[0.5625rem] opacity-60">Brand guidelines</span>
             </button>
             <button onClick={handleCopyColors} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-secondary-500/30 bg-secondary-500/5 text-secondary-500 transition-colors hover:bg-secondary-500/10">
               <IconCopy className="size-4" /><span className="text-xs font-semibold">Copy Colors</span>
               <span className="text-[0.5625rem] opacity-60">All hex values</span>
             </button>
-            <button disabled className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-400 cursor-not-allowed">
-              <IconDownload className="size-4" /><span className="text-xs font-semibold">PDF Guide</span>
-              <span className="text-[0.5625rem]">Coming soon</span>
+            <button onClick={handleSaveBrandKit} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-primary-500/30 bg-primary-500/5 text-primary-500 transition-colors hover:bg-primary-500/10">
+              <IconLayers className="size-4" /><span className="text-xs font-semibold">Save Kit</span>
+              <span className="text-[0.5625rem] opacity-60">To local storage</span>
             </button>
             <button onClick={() => { updateConfig({}); /* trigger re-render */ }} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
               <IconRefresh className="size-4" /><span className="text-xs font-semibold">Refresh</span>

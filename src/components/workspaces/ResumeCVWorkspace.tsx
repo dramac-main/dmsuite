@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { jsPDF } from "jspdf";
 import {
   IconUser,
   IconSparkles,
@@ -12,8 +13,12 @@ import {
   IconBookOpen,
   IconTrash,
   IconPlus,
+  IconChevronUp,
+  IconChevronDown,
+  IconShield,
+  IconFileText,
 } from "@/components/icons";
-import { cleanAIText } from "@/lib/canvas-utils";
+import { cleanAIText, roundRect, lighten } from "@/lib/canvas-utils";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -48,6 +53,12 @@ interface EducationEntry {
 interface SkillEntry {
   name: string;
   level: number; /* 0-100 */
+}
+
+interface CustomSection {
+  id: string;
+  title: string;
+  items: string[];
 }
 
 interface ResumeConfig {
@@ -100,41 +111,6 @@ function uid() {
 
 /* ── Canvas Helpers ────────────────────────────────────────── */
 
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
-
-function lighten(hex: string, pct: number): string {
-  const num = parseInt(hex.replace("#", ""), 16);
-  const r = Math.min(
-    255,
-    ((num >> 16) & 0xff) + Math.round((255 * pct) / 100),
-  );
-  const g = Math.min(
-    255,
-    ((num >> 8) & 0xff) + Math.round((255 * pct) / 100),
-  );
-  const b = Math.min(255, (num & 0xff) + Math.round((255 * pct) / 100));
-  return `rgb(${r},${g},${b})`;
-}
-
 /* ── Component ─────────────────────────────────────────────── */
 
 export default function ResumeCVWorkspace() {
@@ -177,9 +153,49 @@ export default function ResumeCVWorkspace() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [revisionRequest, setRevisionRequest] = useState("");
   const [activeSection, setActiveSection] = useState<
-    "personal" | "experience" | "education" | "skills"
+    "personal" | "experience" | "education" | "skills" | "sections"
   >("personal");
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  /* ── Section Reordering ── */
+  const [sectionOrder, setSectionOrder] = useState<string[]>([
+    "summary",
+    "experience",
+    "education",
+    "skills",
+  ]);
+
+  /* ── Custom Sections ── */
+  const [customSections, setCustomSections] = useState<CustomSection[]>([]);
+
+  const moveSectionUp = useCallback((idx: number) => {
+    if (idx <= 0) return;
+    setSectionOrder((prev) => {
+      const next = [...prev];
+      [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+      return next;
+    });
+  }, []);
+
+  const moveSectionDown = useCallback((idx: number) => {
+    setSectionOrder((prev) => {
+      if (idx >= prev.length - 1) return prev;
+      const next = [...prev];
+      [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+      return next;
+    });
+  }, []);
+
+  const addCustomSection = useCallback(() => {
+    const id = `custom-${uid()}`;
+    setCustomSections((prev) => [...prev, { id, title: "", items: [""] }]);
+    setSectionOrder((prev) => [...prev, id]);
+  }, []);
+
+  const removeCustomSection = useCallback((id: string) => {
+    setCustomSections((prev) => prev.filter((s) => s.id !== id));
+    setSectionOrder((prev) => prev.filter((s) => s !== id));
+  }, []);
 
   const updateConfig = useCallback((upd: Partial<ResumeConfig>) => {
     setConfig((p) => ({ ...p, ...upd }));
@@ -965,36 +981,49 @@ export default function ResumeCVWorkspace() {
       ctx.fillRect(M, y + 60, CW, 2);
       y += 76;
 
-      if (personal.summary) {
-        y = sectionHeader("PROFESSIONAL SUMMARY", M, y, CW);
-        ctx.fillStyle = "#333333";
-        ctx.font = `400 8.5px ${fontBase}`;
-        y = wrapClip(personal.summary, M, y, CW, 13);
-        y += 12;
-      }
-
-      if (experience.some((e) => e.company)) {
-        y = sectionHeader("EXPERIENCE", M, y, CW);
-        y = renderExperience(experience, M, y, CW, maxY, fontBase);
-        y += 6;
-      }
-
-      if (education.some((e) => e.institution)) {
-        y = sectionHeader("EDUCATION", M, y, CW);
-        y = renderEducation(education, M, y, CW, maxY);
-        y += 6;
-      }
-
-      if (skills.some((s) => s.name.trim())) {
-        y = sectionHeader("SKILLS", M, y, CW);
-        skills
-          .filter((s) => s.name.trim())
-          .forEach((sk) => {
-            y = drawSkillBar(sk.name, sk.level, M, y, CW);
-          });
+      /* Render sections according to sectionOrder */
+      for (const section of sectionOrder) {
+        if (section === "summary" && personal.summary) {
+          y = sectionHeader("PROFESSIONAL SUMMARY", M, y, CW);
+          ctx.fillStyle = "#333333";
+          ctx.font = `400 8.5px ${fontBase}`;
+          y = wrapClip(personal.summary, M, y, CW, 13);
+          y += 12;
+        } else if (section === "experience" && experience.some((e) => e.company)) {
+          y = sectionHeader("EXPERIENCE", M, y, CW);
+          y = renderExperience(experience, M, y, CW, maxY, fontBase);
+          y += 6;
+        } else if (section === "education" && education.some((e) => e.institution)) {
+          y = sectionHeader("EDUCATION", M, y, CW);
+          y = renderEducation(education, M, y, CW, maxY);
+          y += 6;
+        } else if (section === "skills" && skills.some((s) => s.name.trim())) {
+          y = sectionHeader("SKILLS", M, y, CW);
+          skills
+            .filter((s) => s.name.trim())
+            .forEach((sk) => {
+              y = drawSkillBar(sk.name, sk.level, M, y, CW);
+            });
+          y += 6;
+        } else if (section.startsWith("custom-")) {
+          const cs = customSections.find((c) => c.id === section);
+          if (cs && cs.title.trim()) {
+            y = sectionHeader(cs.title.toUpperCase(), M, y, CW);
+            ctx.fillStyle = "#444444";
+            ctx.font = `400 8px ${fontBase}`;
+            cs.items
+              .filter((it) => it.trim())
+              .forEach((item) => {
+                if (y > maxY - 10) return;
+                safeText("\u2022 " + item, M + 4, y, CW - 8);
+                y += 12;
+              });
+            y += 6;
+          }
+        }
       }
     }
-  }, [personal, experience, education, skills, config, pageDims]);
+  }, [personal, experience, education, skills, config, pageDims, sectionOrder, customSections]);
 
   /* ── AI Generation ──────────────────────────────────────── */
   const generateResume = useCallback(
@@ -1143,6 +1172,194 @@ Rules:
     link.click();
   }, [personal.fullName]);
 
+  /* ── ATS Compatibility Score ────────────────────────────── */
+  const atsScore = useMemo(() => {
+    let score = 0;
+    if (personal.fullName.trim()) score += 10;
+    if (personal.email.trim()) score += 10;
+    if (personal.phone.trim()) score += 10;
+    if (personal.summary.trim()) score += 15;
+    if (experience.some((e) => e.company.trim())) score += 20;
+    if (education.some((e) => e.institution.trim())) score += 15;
+    if (skills.some((s) => s.name.trim())) score += 10;
+    const wordCount = [
+      personal.fullName,
+      personal.summary,
+      ...experience.flatMap((e) => [e.role, e.company, ...e.highlights]),
+      ...education.map((e) => `${e.degree} ${e.field} ${e.institution}`),
+      ...skills.map((s) => s.name),
+    ]
+      .join(" ")
+      .split(/\s+/)
+      .filter(Boolean).length;
+    if (wordCount > 200) score += 10;
+    return score;
+  }, [personal, experience, education, skills]);
+
+  const atsColor =
+    atsScore > 80
+      ? "text-green-400 bg-green-500/10 border-green-500/30"
+      : atsScore >= 60
+        ? "text-yellow-400 bg-yellow-500/10 border-yellow-500/30"
+        : "text-red-400 bg-red-500/10 border-red-500/30";
+
+  /* ── PDF Export (jsPDF) ─────────────────────────────────── */
+  const handleDownloadPdf = useCallback(() => {
+    const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const M = 40;
+    const CW = pageW - M * 2;
+    let y = M;
+
+    const checkPage = (needed: number) => {
+      if (y + needed > pageH - M) {
+        doc.addPage();
+        y = M;
+      }
+    };
+
+    /* Name */
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text(personal.fullName || "Your Name", M, y + 22);
+    y += 30;
+
+    /* Job Title */
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.text(personal.jobTitle || "", M, y);
+    y += 16;
+
+    /* Contact info */
+    doc.setFontSize(8);
+    doc.setTextColor(120);
+    const contactStr = [personal.email, personal.phone, personal.location, personal.website]
+      .filter(Boolean)
+      .join("  |  ");
+    doc.text(contactStr, M, y);
+    y += 18;
+
+    /* Divider */
+    doc.setDrawColor(200);
+    doc.setLineWidth(0.5);
+    doc.line(M, y, pageW - M, y);
+    y += 14;
+
+    /* Helper: section header */
+    const pdfSectionHeader = (label: string) => {
+      checkPage(24);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(40);
+      doc.text(label.toUpperCase(), M, y);
+      y += 4;
+      doc.setDrawColor(200);
+      doc.setLineWidth(0.3);
+      doc.line(M, y, M + 40, y);
+      y += 12;
+    };
+
+    /* Helper: wrapped text */
+    const pdfWrap = (text: string, fontSize: number, indent = 0) => {
+      doc.setFontSize(fontSize);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(60);
+      const lines = doc.splitTextToSize(text, CW - indent);
+      for (const line of lines) {
+        checkPage(fontSize + 4);
+        doc.text(line, M + indent, y);
+        y += fontSize + 3;
+      }
+    };
+
+    /* Render sections in order */
+    for (const section of sectionOrder) {
+      if (section === "summary" && personal.summary.trim()) {
+        pdfSectionHeader("Professional Summary");
+        pdfWrap(personal.summary, 9);
+        y += 8;
+      } else if (section === "experience" && experience.some((e) => e.company.trim())) {
+        pdfSectionHeader("Experience");
+        experience
+          .filter((e) => e.company.trim())
+          .forEach((exp) => {
+            checkPage(30);
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(30);
+            doc.text(exp.role || "Role", M, y);
+            y += 13;
+            doc.setFontSize(8);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(120);
+            doc.text(`${exp.company}  |  ${exp.startDate} - ${exp.endDate}`, M, y);
+            y += 12;
+            doc.setTextColor(60);
+            exp.highlights.filter((h) => h.trim()).forEach((hl) => {
+              checkPage(14);
+              doc.setFontSize(8);
+              doc.text(`\u2022  ${hl}`, M + 6, y);
+              y += 11;
+            });
+            y += 6;
+          });
+        y += 4;
+      } else if (section === "education" && education.some((e) => e.institution.trim())) {
+        pdfSectionHeader("Education");
+        education
+          .filter((e) => e.institution.trim())
+          .forEach((edu) => {
+            checkPage(24);
+            doc.setFontSize(9);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(30);
+            doc.text(`${edu.degree} ${edu.field}`.trim() || "Degree", M, y);
+            y += 12;
+            doc.setFontSize(8);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(100);
+            doc.text(`${edu.institution}${edu.year ? ` \u2014 ${edu.year}` : ""}`, M, y);
+            y += 16;
+          });
+        y += 4;
+      } else if (section === "skills" && skills.some((s) => s.name.trim())) {
+        pdfSectionHeader("Skills");
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(60);
+        const skillStr = skills
+          .filter((s) => s.name.trim())
+          .map((s) => `${s.name} (${s.level}%)`)
+          .join("  \u2022  ");
+        const skillLines = doc.splitTextToSize(skillStr, CW);
+        for (const line of skillLines) {
+          checkPage(12);
+          doc.text(line, M, y);
+          y += 11;
+        }
+        y += 6;
+      } else if (section.startsWith("custom-")) {
+        const cs = customSections.find((c) => c.id === section);
+        if (cs && cs.title.trim()) {
+          pdfSectionHeader(cs.title);
+          cs.items.filter((it) => it.trim()).forEach((item) => {
+            checkPage(14);
+            doc.setFontSize(8);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(60);
+            doc.text(`\u2022  ${item}`, M + 6, y);
+            y += 11;
+          });
+          y += 6;
+        }
+      }
+    }
+
+    doc.save(`${personal.fullName || "resume"}.pdf`);
+  }, [personal, experience, education, skills, sectionOrder, customSections]);
+
   /* ── Render ─────────────────────────────────────────────── */
   return (
     <div className="flex gap-4 h-[calc(100vh-12rem)]">
@@ -1279,28 +1496,45 @@ Rules:
         </div>
 
         {/* Export */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
           <button
             onClick={exportResume}
             className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-linear-to-r from-primary-500 to-secondary-500 text-white text-[0.625rem] font-bold hover:from-primary-400 hover:to-secondary-400 transition-colors"
           >
             <IconDownload className="size-3" /> Export Resume (PNG)
           </button>
+          <button
+            onClick={handleDownloadPdf}
+            className="w-full flex items-center justify-center gap-2 h-9 rounded-xl border border-primary-500/30 text-primary-400 text-[0.625rem] font-bold hover:bg-primary-500/10 transition-colors"
+          >
+            <IconFileText className="size-3" /> Download PDF
+          </button>
         </div>
       </div>
 
       {/* ── Center: Canvas ── */}
-      <div className="flex-1 flex items-center justify-center bg-gray-100 dark:bg-gray-950/50 rounded-xl border border-gray-200 dark:border-gray-800 overflow-auto p-4">
-        <canvas
-          ref={canvasRef}
-          className="shadow-2xl rounded-sm bg-white"
-          style={{
-            maxWidth: "100%",
-            maxHeight: "100%",
-            width: "auto",
-            height: "auto",
-          }}
-        />
+      <div className="flex-1 flex flex-col bg-gray-100 dark:bg-gray-950/50 rounded-xl border border-gray-200 dark:border-gray-800 overflow-auto p-4">
+        {/* ATS Score Badge */}
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <div
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[0.625rem] font-bold ${atsColor}`}
+          >
+            <IconShield className="size-3" />
+            ATS Score: {atsScore}/100
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <canvas
+            ref={canvasRef}
+            className="shadow-2xl rounded-sm bg-white"
+            style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
+              width: "auto",
+              height: "auto",
+            }}
+          />
+        </div>
       </div>
 
       {/* ── Right Panel: Content Editor ── */}
@@ -1313,6 +1547,7 @@ Rules:
               { id: "experience" as const, label: "Work", Icon: IconBriefcase },
               { id: "education" as const, label: "Education", Icon: IconBookOpen },
               { id: "skills" as const, label: "Skills", Icon: IconAward },
+              { id: "sections" as const, label: "Sections", Icon: IconFileText },
             ] as const
           ).map((tab) => (
             <button
@@ -1688,6 +1923,148 @@ Rules:
             >
               <IconPlus className="size-3 inline mr-1" /> Add Skill
             </button>
+          </div>
+        )}
+
+        {/* Sections — Reordering & Custom */}
+        {activeSection === "sections" && (
+          <div className="space-y-3">
+            {/* Section Order */}
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+              <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+                Section Order
+              </label>
+              <p className="text-[0.5rem] text-gray-400">
+                Drag order affects the Clean template canvas & PDF export.
+              </p>
+              {sectionOrder.map((sec, idx) => {
+                const builtIn = ["summary", "experience", "education", "skills"];
+                const label = builtIn.includes(sec)
+                  ? sec.charAt(0).toUpperCase() + sec.slice(1)
+                  : customSections.find((c) => c.id === sec)?.title || sec;
+                return (
+                  <div
+                    key={sec}
+                    className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700"
+                  >
+                    <span className="flex-1 text-[0.625rem] font-medium text-gray-700 dark:text-gray-300 truncate">
+                      {label}
+                    </span>
+                    <button
+                      onClick={() => moveSectionUp(idx)}
+                      disabled={idx === 0}
+                      className="p-0.5 text-gray-400 hover:text-primary-500 disabled:opacity-30 transition-colors"
+                    >
+                      <IconChevronUp className="size-3" />
+                    </button>
+                    <button
+                      onClick={() => moveSectionDown(idx)}
+                      disabled={idx === sectionOrder.length - 1}
+                      className="p-0.5 text-gray-400 hover:text-primary-500 disabled:opacity-30 transition-colors"
+                    >
+                      <IconChevronDown className="size-3" />
+                    </button>
+                    {sec.startsWith("custom-") && (
+                      <button
+                        onClick={() => removeCustomSection(sec)}
+                        className="p-0.5 text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        <IconTrash className="size-3" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+              <button
+                onClick={addCustomSection}
+                className="w-full py-1.5 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 text-[0.5625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors"
+              >
+                <IconPlus className="size-3 inline mr-1" /> Add Custom Section
+              </button>
+            </div>
+
+            {/* Custom Section Editors */}
+            {customSections.map((cs) => (
+              <div
+                key={cs.id}
+                className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2"
+              >
+                <div className="flex items-center justify-between">
+                  <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+                    Custom Section
+                  </label>
+                  <button
+                    onClick={() => removeCustomSection(cs.id)}
+                    className="text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    <IconTrash className="size-3" />
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={cs.title}
+                  onChange={(e) =>
+                    setCustomSections((prev) =>
+                      prev.map((s) =>
+                        s.id === cs.id ? { ...s, title: e.target.value } : s,
+                      ),
+                    )
+                  }
+                  placeholder="Section title (e.g. Certifications)"
+                  className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50"
+                />
+                <label className="text-[0.5rem] text-gray-400">
+                  Items
+                </label>
+                {cs.items.map((item, ii) => (
+                  <div key={ii} className="flex gap-1">
+                    <input
+                      type="text"
+                      value={item}
+                      onChange={(e) => {
+                        const newItems = [...cs.items];
+                        newItems[ii] = e.target.value;
+                        setCustomSections((prev) =>
+                          prev.map((s) =>
+                            s.id === cs.id ? { ...s, items: newItems } : s,
+                          ),
+                        );
+                      }}
+                      placeholder="Bullet point..."
+                      className="flex-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50"
+                    />
+                    <button
+                      onClick={() => {
+                        const newItems = cs.items.filter((_, k) => k !== ii);
+                        setCustomSections((prev) =>
+                          prev.map((s) =>
+                            s.id === cs.id
+                              ? { ...s, items: newItems.length ? newItems : [""] }
+                              : s,
+                          ),
+                        );
+                      }}
+                      className="text-gray-400 hover:text-red-500 text-xs"
+                    >
+                      x
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => {
+                    const newItems = [...cs.items, ""];
+                    setCustomSections((prev) =>
+                      prev.map((s) =>
+                        s.id === cs.id ? { ...s, items: newItems } : s,
+                      ),
+                    );
+                  }}
+                  className="w-full py-0.5 text-[0.5rem] text-gray-400 hover:text-primary-500"
+                >
+                  + Add Item
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>
