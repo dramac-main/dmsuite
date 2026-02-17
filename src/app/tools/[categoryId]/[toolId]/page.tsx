@@ -12,12 +12,11 @@ import { iconMap, IconArrowRight, IconChevronLeft, IconSparkles, IconZap } from 
 
 /* ── Dynamically imported workspace components ──────────────── */
 const workspaceComponents: Record<string, React.ComponentType> = {
+  // ── Existing / Phase 1-2 ──
   "ai-chat": dynamic(() => import("@/components/workspaces/AIChatWorkspace")),
   "logo-generator": dynamic(() => import("@/components/workspaces/LogoGeneratorWorkspace")),
   "social-media-post": dynamic(() => import("@/components/workspaces/SocialMediaPostWorkspace")),
   "ai-image-generator": dynamic(() => import("@/components/workspaces/StockImageBrowserWorkspace")),
-  "image-enhancer": dynamic(() => import("@/components/workspaces/StockImageBrowserWorkspace")),
-  "background-remover": dynamic(() => import("@/components/workspaces/StockImageBrowserWorkspace")),
   "photo-retoucher": dynamic(() => import("@/components/workspaces/StockImageBrowserWorkspace")),
   "brand-identity": dynamic(() => import("@/components/workspaces/BrandIdentityWorkspace")),
   "business-card": dynamic(() => import("@/components/workspaces/BusinessCardWorkspace")),
@@ -28,6 +27,86 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   "resume-cv": dynamic(() => import("@/components/workspaces/ResumeCVWorkspace")),
   "invoice-designer": dynamic(() => import("@/components/workspaces/InvoiceDesignerWorkspace")),
   "email-template": dynamic(() => import("@/components/workspaces/EmailTemplateWorkspace")),
+
+  // ── Phase 3: Print & Stationery ──
+  "brochure": dynamic(() => import("@/components/workspaces/BrochureDesignerWorkspace")),
+  "letterhead": dynamic(() => import("@/components/workspaces/LetterheadDesignerWorkspace")),
+  "envelope": dynamic(() => import("@/components/workspaces/EnvelopeDesignerWorkspace")),
+  "certificate": dynamic(() => import("@/components/workspaces/CertificateDesignerWorkspace")),
+  "infographic": dynamic(() => import("@/components/workspaces/InfographicDesignerWorkspace")),
+  "menu-designer": dynamic(() => import("@/components/workspaces/MenuDesignerWorkspace")),
+  "packaging-design": dynamic(() => import("@/components/workspaces/PackagingDesignerWorkspace")),
+  "sticker-designer": dynamic(() => import("@/components/workspaces/StickerDesignerWorkspace")),
+
+  // ── Phase 3: Apparel & Merchandise ──
+  "tshirt-merch": dynamic(() => import("@/components/workspaces/ApparelDesignerWorkspace")),
+  "id-badge": dynamic(() => import("@/components/workspaces/IDCardDesignerWorkspace")),
+
+  // ── Phase 3: Promotional ──
+  "gift-voucher": dynamic(() => import("@/components/workspaces/CouponDesignerWorkspace")),
+  "calendar-designer": dynamic(() => import("@/components/workspaces/CalendarDesignerWorkspace")),
+  "signage": dynamic(() => import("@/components/workspaces/SignageDesignerWorkspace")),
+
+  // ── Phase 3: Business Documents ──
+  "proposal-generator": dynamic(() => import("@/components/workspaces/ProposalWorkspace")),
+  "contract-template": dynamic(() => import("@/components/workspaces/ContractWorkspace")),
+  "quote-estimate": dynamic(() => import("@/components/workspaces/QuotationWorkspace")),
+  "report-generator": dynamic(() => import("@/components/workspaces/ReportWorkspace")),
+  "receipt-designer": dynamic(() => import("@/components/workspaces/ReceiptWorkspace")),
+  "product-catalog": dynamic(() => import("@/components/workspaces/CatalogWorkspace")),
+
+  // ── Phase 3: Sales Materials ──
+  "sales-book-a4": dynamic(() => import("@/components/workspaces/SalesBookA4Workspace")),
+  "sales-book-a5": dynamic(() => import("@/components/workspaces/SalesBookA5Workspace")),
+  "price-list": dynamic(() => import("@/components/workspaces/PriceListWorkspace")),
+
+  // ── Phase 3: Mockups ──
+  "mockup-generator": dynamic(() => import("@/components/workspaces/MockupGeneratorWorkspace")),
+
+  // ── Phase 4: Video & Motion ──
+  "video-editor": dynamic(() => import("@/components/workspaces/VideoEditorWorkspace")),
+  "text-to-video": dynamic(() => import("@/components/workspaces/AIVideoGeneratorWorkspace")),
+  "logo-reveal": dynamic(() => import("@/components/workspaces/LogoRevealWorkspace")),
+  "subtitle-caption": dynamic(() => import("@/components/workspaces/SubtitleGeneratorWorkspace")),
+  "gif-converter": dynamic(() => import("@/components/workspaces/GifMakerWorkspace")),
+  "thumbnail-generator": dynamic(() => import("@/components/workspaces/ThumbnailWorkspace")),
+  "motion-graphics": dynamic(() => import("@/components/workspaces/MotionGraphicsWorkspace")),
+
+  // ── Phase 4: Audio ──
+  "text-to-speech": dynamic(() => import("@/components/workspaces/TextToSpeechWorkspace")),
+  "voice-cloning": dynamic(() => import("@/components/workspaces/VoiceClonerWorkspace")),
+  "podcast-editor": dynamic(() => import("@/components/workspaces/PodcastToolsWorkspace")),
+  "music-generator": dynamic(() => import("@/components/workspaces/MusicGeneratorWorkspace")),
+  "audio-transcription": dynamic(() => import("@/components/workspaces/TranscriptionWorkspace")),
+
+  // ── Phase 4: Content Writing ──
+  "blog-writer": dynamic(() => import("@/components/workspaces/BlogWriterWorkspace")),
+  "social-caption": dynamic(() => import("@/components/workspaces/SocialCopyWorkspace")),
+  "email-campaign": dynamic(() => import("@/components/workspaces/EmailCopyWorkspace")),
+  "product-description": dynamic(() => import("@/components/workspaces/ProductDescriptionWorkspace")),
+  "content-calendar": dynamic(() => import("@/components/workspaces/ContentCalendarWorkspace")),
+  "seo-optimizer": dynamic(() => import("@/components/workspaces/SEOOptimizerWorkspace")),
+
+  // ── Phase 4: Marketing ──
+  "landing-page-copy": dynamic(() => import("@/components/workspaces/LandingPageWorkspace")),
+  "sales-funnel": dynamic(() => import("@/components/workspaces/SalesFunnelWorkspace")),
+  "lead-magnet": dynamic(() => import("@/components/workspaces/LeadMagnetWorkspace")),
+  "email-sequence": dynamic(() => import("@/components/workspaces/EmailSequenceWorkspace")),
+  "qr-code": dynamic(() => import("@/components/workspaces/QRCodeWorkspace")),
+  "analytics-dashboard": dynamic(() => import("@/components/workspaces/AnalyticsDashboardWorkspace")),
+
+  // ── Phase 4: Web & UI ──
+  "wireframe-generator": dynamic(() => import("@/components/workspaces/WireframeWorkspace")),
+  "ui-component-designer": dynamic(() => import("@/components/workspaces/UIComponentWorkspace")),
+  "color-palette": dynamic(() => import("@/components/workspaces/ColorPaletteWorkspace")),
+  "icon-illustration": dynamic(() => import("@/components/workspaces/IconGeneratorWorkspace")),
+
+  // ── Phase 4: Utilities ──
+  "file-converter": dynamic(() => import("@/components/workspaces/FileConverterWorkspace")),
+  "batch-processor": dynamic(() => import("@/components/workspaces/BatchProcessorWorkspace")),
+  "background-remover": dynamic(() => import("@/components/workspaces/BackgroundRemoverWorkspace")),
+  "image-enhancer": dynamic(() => import("@/components/workspaces/ImageEnhancerWorkspace")),
+  "pdf-tools": dynamic(() => import("@/components/workspaces/PDFToolsWorkspace")),
 };
 
 export default function ToolWorkspacePage() {

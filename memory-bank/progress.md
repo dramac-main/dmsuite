@@ -1,6 +1,6 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: Phase 1 + Phase 2 COMPLETE — Build passes with zero errors
+## Overall Status: Phase 1 + Phase 2 + Phase 3 + Phase 4 COMPLETE — Build passes with zero errors
 
 ---
 
@@ -284,13 +284,8 @@
 
 ## What's Left
 
-### Immediate — More Workspaces & Polish
-- [x] Presentation Designer workspace (9 layouts, 8 themes, slide filmstrip, AI generation)
-- [x] Resume/CV Builder workspace (6 templates, tabbed editor, A4 canvas, AI generation)
-- [x] Invoice Designer workspace (6 templates, line items, auto-calc, tax/currency, AI generation)
-- [x] Email Template workspace (6 types, 6 themes, block-based editor, AI generation)
-- [ ] More tool workspaces (Brochure, Letterhead, Envelope, Infographic, etc.)
-- [ ] Part-edit / consistency engine architecture (layer system, style locking, version history)
+### Immediate — Polish & Remaining Workspaces
+- [ ] Remaining tool workspaces (~190 tools still using placeholder — Phase 3 & 4 covered ~57 additional tool IDs)
 - [ ] Generate favicon/icon PNG assets from Logo SVG
 - [ ] Add OPENAI_API_KEY to .env.local for GPT support
 - [ ] Wire sidebar store into dashboard/tool pages (replace local useState)
@@ -334,13 +329,14 @@
 ---
 
 ## Known Issues
-1. **~240 tools still show placeholder workspace** — 11 tool routes now have functional workspaces (AI Chat, Logo Generator, Social Media Post, Brand Identity Kit, Business Card, Poster, Flyer, AI Image Generator, Image Enhancer, Background Remover, Photo Retoucher)
+1. **~190 tools still show placeholder workspace** — 71 workspace component files now exist, covering the most important tools. Many specialty/niche tools within categories still use the generic placeholder.
 2. **Favicon PNGs missing** — Referenced in layout.tsx and manifest.json but not yet generated
 3. **OG image missing** — Referenced but not yet created
 4. **Tooltip animation** — Uses `animate-in` which requires custom keyframe
 5. **Requires `.env.local`** with `ANTHROPIC_API_KEY` for Claude (configured), `OPENAI_API_KEY` for GPT (not yet added), and stock image API keys (Unsplash, Pexels, Pixabay — all configured)
 6. **Sidebar store** created but not yet wired into actual sidebar/dashboard components
 7. **Brand Identity Kit & Business Card** not yet converted to layer-based architecture
+8. **Phase 4 workspaces are UI-complete** — functional UIs with simulated processing (no actual video/audio/file processing backends yet)
 
 ---
 
@@ -397,6 +393,71 @@
 | File | Purpose |
 |---|---|
 | `src/components/StockImagePicker.tsx` | Modal for searching/selecting stock photos from Unsplash/Pexels/Pixabay |
+
+### Phase 3 Tool Workspaces — Design & Document Studio (22 workspaces)
+| File | Tool ID | Purpose |
+|---|---|---|
+| `BrochureDesignerWorkspace.tsx` | `brochure` | Bi/tri/z/gate/accordion fold, panel editing, crop marks, bleed |
+| `LetterheadDesignerWorkspace.tsx` | `letterhead` | Header/footer zones, watermark, 6 templates |
+| `EnvelopeDesignerWorkspace.tsx` | `envelope` | DL/C5/C4/#10 sizes, front/back, window envelope |
+| `CertificateDesignerWorkspace.tsx` | `certificate` | 6 types, decorative borders, seal placement, serial numbers |
+| `InfographicDesignerWorkspace.tsx` | `infographic` | Section-based vertical layout, chart types, icon integration |
+| `MenuDesignerWorkspace.tsx` | `menu-designer` | Sections, item entries with dietary icons, ZMW pricing |
+| `PackagingDesignerWorkspace.tsx` | `packaging-design` | Die-cut templates, fold/cut lines, nutrition facts zone |
+| `StickerDesignerWorkspace.tsx` | `sticker-designer` | Shapes, sheet layout, cut line overlay |
+| `ApparelDesignerWorkspace.tsx` | `tshirt-merch` | T-shirt/hoodie/cap/tote/mug, print zones, garment colors |
+| `IDCardDesignerWorkspace.tsx` | `id-badge` | CR-80 size, front/back, photo placeholder, barcode |
+| `CouponDesignerWorkspace.tsx` | `gift-voucher` | Discount/voucher/ticket, perforation line, code generation |
+| `CalendarDesignerWorkspace.tsx` | `calendar-designer` | Wall/desk/planner/poster, month grid, Zambian holidays |
+| `SignageDesignerWorkspace.tsx` | `signage` | Large format, viewing distance, safe zones |
+| `ProposalWorkspace.tsx` | `proposal-generator` | Multi-page, sections, pricing table, auto-calc |
+| `ContractWorkspace.tsx` | `contract-template` | Clause library, party A/B, signature blocks, legal disclaimer |
+| `QuotationWorkspace.tsx` | `quote-estimate` | Line items, VAT 16%, ZMW, validity period |
+| `ReportWorkspace.tsx` | `report-generator` | Cover/TOC/body/appendices, charts, tables |
+| `ReceiptWorkspace.tsx` | `receipt-designer` | POS/professional formats, tax breakdown, payment method |
+| `CatalogWorkspace.tsx` | `product-catalog` | Product cards, grid/list layout, category sections |
+| `SalesBookA4Workspace.tsx` | `sales-book-a4` | Multi-page A4, 8 page types, company branding |
+| `SalesBookA5Workspace.tsx` | `sales-book-a5` | A5 compact version, shared logic pattern |
+| `PriceListWorkspace.tsx` | `price-list` | Categories with items, dot leaders, specials |
+| `MockupGeneratorWorkspace.tsx` | `mockup-generator` | 12 scenes, device frames, product mockups |
+
+### Phase 4 Tool Workspaces — Video, Audio, Content, Marketing & Web (34 workspaces)
+| File | Tool ID | Purpose |
+|---|---|---|
+| `VideoEditorWorkspace.tsx` | `video-editor` | Timeline UI, video/audio/text tracks, playback controls |
+| `AIVideoGeneratorWorkspace.tsx` | `text-to-video` | Text-to-video prompt, style presets, generation queue |
+| `LogoRevealWorkspace.tsx` | `logo-reveal` | Animation styles, duration, background, sound effects |
+| `SubtitleGeneratorWorkspace.tsx` | `subtitle-caption` | Subtitle entries CRUD, style panel, SRT/VTT export |
+| `GifMakerWorkspace.tsx` | `gif-converter` | Range selector, speed, quality, loop options, text overlay |
+| `ThumbnailWorkspace.tsx` | `thumbnail-generator` | Canvas-based, 4 platform presets, templates, AI title |
+| `MotionGraphicsWorkspace.tsx` | `motion-graphics` | 5 categories, template gallery, customization |
+| `VideoCompressorWorkspace.tsx` | — | Quality/format/resolution, bitrate, batch files |
+| `TextToSpeechWorkspace.tsx` | `text-to-speech` | 6 voices, 7 languages incl. Zambian, SSML, speed/pitch |
+| `VoiceClonerWorkspace.tsx` | `voice-cloning` | Sample upload, training progress, safety disclaimer |
+| `PodcastToolsWorkspace.tsx` | `podcast-editor` | Record/Edit/Enhance/Distribute tabs, episode metadata |
+| `MusicGeneratorWorkspace.tsx` | `music-generator` | AI prompt, 10 genres, 8 moods, instruments, BPM/key |
+| `TranscriptionWorkspace.tsx` | `audio-transcription` | Speaker diarization, editable transcript, search, 5 export formats |
+| `BlogWriterWorkspace.tsx` | `blog-writer` | Rich editor, tone/length, SEO keywords, AI outline/section/full |
+| `SocialCopyWorkspace.tsx` | `social-caption` | 6 platforms, char limits, hashtags, emoji density, CTA |
+| `EmailCopyWorkspace.tsx` | `email-campaign` | 7 email types, personalization tokens, A/B variants, spam score |
+| `ProductDescriptionWorkspace.tsx` | `product-description` | 7 categories, ZMW pricing, 5 marketplaces, 3 variations |
+| `ContentCalendarWorkspace.tsx` | `content-calendar` | Month/week view, 5 content types, color-coded, AI suggestions |
+| `SEOOptimizerWorkspace.tsx` | `seo-optimizer` | SEO score 0-100, 8-item checklist, keyword density, SERP preview |
+| `LandingPageWorkspace.tsx` | `landing-page-copy` | 6 goals, 6 templates, section builder, mobile preview |
+| `SalesFunnelWorkspace.tsx` | `sales-funnel` | 5 funnel types, stage visualizer, conversion/revenue calc |
+| `LeadMagnetWorkspace.tsx` | `lead-magnet` | 8 magnet types, opt-in preview, AI content generation |
+| `EmailSequenceWorkspace.tsx` | `email-sequence` | 7 sequence types, 3-10 emails, timeline, merge fields |
+| `QRCodeWorkspace.tsx` | `qr-code` | 8 data types, 4 styles, colors, SVG preview, PNG/SVG export |
+| `AnalyticsDashboardWorkspace.tsx` | `analytics-dashboard` | 5 dashboard types, KPI cards, bar charts, traffic sources |
+| `WireframeWorkspace.tsx` | `wireframe-generator` | Canvas-based, 6 page types, 3 device frames, 10 elements |
+| `UIComponentWorkspace.tsx` | `ui-component-designer` | 10 component types, 4 frameworks, live preview, code export |
+| `ColorPaletteWorkspace.tsx` | `color-palette` | 7 palette modes, WCAG contrast, tints/shades, export CSS/Tailwind |
+| `IconGeneratorWorkspace.tsx` | `icon-illustration` | 7 styles, AI SVG generation, multi-size, batch mode |
+| `FileConverterWorkspace.tsx` | `file-converter` | 4 categories (image/doc/audio/video), batch, progress |
+| `BatchProcessorWorkspace.tsx` | `batch-processor` | 7 operations, per-operation settings, results summary |
+| `BackgroundRemoverWorkspace.tsx` | `background-remover` | Before/after slider, 5 bg options, edge refinement, batch |
+| `ImageEnhancerWorkspace.tsx` | `image-enhancer` | 7 sliders, 8 AI presets, 8 filters, upscale 2x/4x, undo history |
+| `PDFToolsWorkspace.tsx` | `pdf-tools` | 6 tool tabs: merge, split, compress, protect, edit, convert |
 
 ### Global Components
 | File | Purpose |
