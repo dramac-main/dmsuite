@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   IconShield,
   IconSparkles,
   IconWand,
   IconLoader,
   IconDownload,
+  IconCopy,
 } from "@/components/icons";
 import { cleanAIText } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -52,7 +55,6 @@ const CARD_H = 540;
 export default function IDCardDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
 
   const [config, setConfig] = useState<IDCardConfig>({
     name: "John Mwamba",
@@ -333,107 +335,197 @@ export default function IDCardDesignerWorkspace() {
     link.click();
   };
 
-  /* ── UI ──────────────────────────────────────────────────── */
-  return (
-    <div>
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
-        {(["canvas", "settings"] as const).map((t) => (
-          <button key={t} onClick={() => setMobileTab(t)} className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}>{t}</button>
-        ))}
+  /* ── Zoom & Display ─────────────────────────────────────── */
+  const [zoom, setZoom] = useState(1);
+  const displayWidth = Math.min(480, CARD_W);
+  const displayHeight = displayWidth * (CARD_H / CARD_W);
+
+  /* ── Template Previews ──────────────────────────────────── */
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () =>
+      TEMPLATES.map((t) => ({
+        id: t.id,
+        label: t.name,
+        render: (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, w, h);
+          const pc = config.primaryColor;
+          if (t.id === "corporate" || t.id === "employee") {
+            ctx.fillStyle = pc;
+            ctx.fillRect(0, 0, w, h * 0.22);
+          } else if (t.id === "student") {
+            const grad = ctx.createLinearGradient(0, 0, w, 0);
+            grad.addColorStop(0, pc);
+            grad.addColorStop(1, pc + "99");
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h * 0.2);
+          } else if (t.id === "visitor") {
+            ctx.fillStyle = "#fef3c7";
+            ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = pc;
+            ctx.fillRect(0, 0, w, h * 0.15);
+          } else if (t.id === "event") {
+            ctx.fillStyle = pc;
+            ctx.fillRect(0, 0, w, h * 0.26);
+          } else if (t.id === "membership") {
+            const grad = ctx.createLinearGradient(0, 0, w, h);
+            grad.addColorStop(0, pc);
+            grad.addColorStop(1, "#111827");
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
+          }
+          ctx.fillStyle = "#e5e7eb";
+          ctx.fillRect(w * 0.06, h * 0.35, w * 0.25, w * 0.25);
+          ctx.fillStyle = "#94a3b8";
+          ctx.font = `bold ${Math.round(w * 0.07)}px sans-serif`;
+          ctx.textAlign = "left";
+          ctx.fillText(t.name, w * 0.38, h * 0.55);
+          ctx.strokeStyle = "#d1d5db";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(0, 0, w, h);
+        },
+      })),
+    [config.primaryColor]
+  );
+
+  /* ── Copy Canvas ────────────────────────────────────────── */
+  const handleCopy = useCallback(async () => {
+    if (!canvasRef.current) return;
+    try {
+      canvasRef.current.toBlob(async (blob) => {
+        if (!blob) return;
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob }),
+        ]);
+      }, "image/png");
+    } catch {
+      /* clipboard may not be available */
+    }
+  }, []);
+
+  /* ── Left Panel ─────────────────────────────────────────── */
+  const leftPanel = (
+    <div className="space-y-4">
+      {/* Template Slider */}
+      <TemplateSlider
+        templates={templatePreviews}
+        activeId={config.template}
+        onSelect={(id) => setConfig((p) => ({ ...p, template: id as CardTemplate }))}
+        thumbWidth={140}
+        thumbHeight={88}
+        label="Template"
+      />
+
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconShield className="size-4 text-primary-500" />ID Card Settings</h3>
+
+        <label className="block text-xs text-gray-400">Organization</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.organization} onChange={(e) => setConfig((p) => ({ ...p, organization: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Full Name</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.name} onChange={(e) => setConfig((p) => ({ ...p, name: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Title / Role</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.title} onChange={(e) => setConfig((p) => ({ ...p, title: e.target.value }))} />
+
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs text-gray-400">ID Number</label>
+            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.idNumber} onChange={(e) => setConfig((p) => ({ ...p, idNumber: e.target.value }))} />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400">Department</label>
+            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.department} onChange={(e) => setConfig((p) => ({ ...p, department: e.target.value }))} />
+          </div>
+        </div>
+
+        <label className="block text-xs text-gray-400">Phone</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.phone} onChange={(e) => setConfig((p) => ({ ...p, phone: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Email</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.email} onChange={(e) => setConfig((p) => ({ ...p, email: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Address</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.address} onChange={(e) => setConfig((p) => ({ ...p, address: e.target.value }))} />
+
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs text-gray-400">Issue Date</label>
+            <input type="date" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.issueDate} onChange={(e) => setConfig((p) => ({ ...p, issueDate: e.target.value }))} />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400">Expiry Date</label>
+            <input type="date" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.expiryDate} onChange={(e) => setConfig((p) => ({ ...p, expiryDate: e.target.value }))} />
+          </div>
+        </div>
+
+        <label className="block text-xs text-gray-400">Card Side</label>
+        <div className="flex gap-2">
+          {(["front", "back"] as const).map((s) => (
+            <button key={s} onClick={() => setConfig((p) => ({ ...p, side: s }))} className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold capitalize ${config.side === s ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-500"}`}>{s}</button>
+          ))}
+        </div>
+
+        <label className="block text-xs text-gray-400">Primary Color</label>
+        <div className="flex gap-1.5 flex-wrap">
+          {COLOR_PRESETS.map((c) => (
+            <button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
+          ))}
+        </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Settings */}
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconShield className="size-4 text-primary-500" />ID Card Settings</h3>
-
-            <label className="block text-xs text-gray-400">Organization</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.organization} onChange={(e) => setConfig((p) => ({ ...p, organization: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Full Name</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.name} onChange={(e) => setConfig((p) => ({ ...p, name: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Title / Role</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.title} onChange={(e) => setConfig((p) => ({ ...p, title: e.target.value }))} />
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs text-gray-400">ID Number</label>
-                <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.idNumber} onChange={(e) => setConfig((p) => ({ ...p, idNumber: e.target.value }))} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400">Department</label>
-                <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.department} onChange={(e) => setConfig((p) => ({ ...p, department: e.target.value }))} />
-              </div>
-            </div>
-
-            <label className="block text-xs text-gray-400">Phone</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.phone} onChange={(e) => setConfig((p) => ({ ...p, phone: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Email</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.email} onChange={(e) => setConfig((p) => ({ ...p, email: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Address</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.address} onChange={(e) => setConfig((p) => ({ ...p, address: e.target.value }))} />
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs text-gray-400">Issue Date</label>
-                <input type="date" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.issueDate} onChange={(e) => setConfig((p) => ({ ...p, issueDate: e.target.value }))} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400">Expiry Date</label>
-                <input type="date" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.expiryDate} onChange={(e) => setConfig((p) => ({ ...p, expiryDate: e.target.value }))} />
-              </div>
-            </div>
-
-            <label className="block text-xs text-gray-400">Card Side</label>
-            <div className="flex gap-2">
-              {(["front", "back"] as const).map((s) => (
-                <button key={s} onClick={() => setConfig((p) => ({ ...p, side: s }))} className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold capitalize ${config.side === s ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-500"}`}>{s}</button>
-              ))}
-            </div>
-
-            <label className="block text-xs text-gray-400">Template</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {TEMPLATES.map((t) => (
-                <button key={t.id} onClick={() => setConfig((p) => ({ ...p, template: t.id }))} className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${config.template === t.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{t.name}</button>
-              ))}
-            </div>
-
-            <label className="block text-xs text-gray-400">Primary Color</label>
-            <div className="flex gap-1.5 flex-wrap">
-              {COLOR_PRESETS.map((c) => (
-                <button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
-              ))}
-            </div>
-          </div>
-
-          {/* AI Generation */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Content Generator</h3>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the card holder (e.g. 'Senior engineer at a tech company in Lusaka')..." value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
-            <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
-              {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
-              {loading ? "Generating…" : "Generate Content"}
-            </button>
-          </div>
-
-          {/* Export */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-            <button onClick={exportPNG} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"><IconDownload className="size-4" />Export PNG</button>
-          </div>
-        </div>
-
-        {/* Canvas */}
-        <div className={`flex-1 min-w-0 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-          <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
-            <canvas ref={canvasRef} style={{ width: Math.min(CARD_W, 700), height: Math.min(CARD_W, 700) * (CARD_H / CARD_W) }} className="rounded-lg shadow-lg" />
-          </div>
-          <p className="text-xs text-gray-400 text-center mt-2">CR-80 ID Card — {config.side} — {CARD_W}×{CARD_H}px</p>
-        </div>
+      {/* AI Generation */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Content Generator</h3>
+        <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the card holder (e.g. 'Senior engineer at a tech company in Lusaka')..." value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
+        <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
+          {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
+          {loading ? "Generating…" : "Generate Content"}
+        </button>
       </div>
     </div>
+  );
+
+  // ── Toolbar ───────────────────────────────────────────
+  const toolbar = (
+    <div className="flex items-center gap-1.5">
+      <span className="text-xs font-semibold text-gray-400 capitalize">{config.side}</span>
+      <span className="text-gray-600 dark:text-gray-600">·</span>
+      <span className="text-xs text-gray-500">{config.template}</span>
+    </div>
+  );
+
+  return (
+    <StickyCanvasLayout
+      leftPanel={leftPanel}
+      canvasRef={canvasRef}
+      displayWidth={displayWidth}
+      displayHeight={displayHeight}
+      label={`CR-80 ID Card · ${config.side} · ${CARD_W}×${CARD_H}px`}
+      toolbar={toolbar}
+      mobileTabs={["Canvas", "Settings"]}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
+      onZoomFit={() => setZoom(1)}
+      actionsBar={
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportPNG}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors"
+          >
+            <IconDownload className="size-3" />
+            Download PNG
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors"
+          >
+            <IconCopy className="size-3" />
+            Copy
+          </button>
+        </div>
+      }
+    />
   );
 }

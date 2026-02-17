@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   IconMail,
   IconSparkles,
@@ -15,8 +15,12 @@ import {
   IconSmartphone,
   IconMonitor,
   IconTag,
+  IconDroplet,
 } from "@/components/icons";
 import { cleanAIText, roundRect, lighten, darken } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "./StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
+import { drawDocumentThumbnail } from "@/lib/template-renderers";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -125,6 +129,34 @@ export default function EmailTemplateWorkspace() {
   const updateConfig = useCallback((upd: Partial<EmailConfig>) => {
     setConfig((p) => ({ ...p, ...upd }));
   }, []);
+
+  /* ── Zoom ──────────────────────────────────────────────── */
+  const [zoom, setZoom] = useState(0.85);
+
+  /* ── Visual Template Previews ──────────────────────────── */
+  const HEADER_MAP: Record<EmailTemplate, "bar" | "strip" | "minimal" | "gradient" | "centered" | "sidebar"> = {
+    newsletter: "bar",
+    promotional: "gradient",
+    transactional: "minimal",
+    welcome: "gradient",
+    announcement: "centered",
+    minimal: "minimal",
+  };
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () =>
+      TEMPLATES.map((t) => ({
+        id: t.id,
+        label: t.name,
+        render: (ctx: CanvasRenderingContext2D, w: number, h: number) =>
+          drawDocumentThumbnail(ctx, w, h, {
+            primaryColor: config.primaryColor,
+            headerStyle: HEADER_MAP[t.id],
+            showSections: 3,
+          }),
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [config.primaryColor],
+  );
 
   /* ── Canvas Render ──────────────────────────────────────── */
   useEffect(() => {
@@ -749,497 +781,308 @@ ${blocksHtml}
 
   /* ── Render ─────────────────────────────────────────────── */
   return (
-    <div className="flex gap-4 h-[calc(100vh-12rem)]">
-      {/* ── Left Panel ── */}
-      <div className="w-72 shrink-0 overflow-y-auto space-y-3 pr-1">
-        {/* AI Director */}
-        <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-3">
-          <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-secondary-500 mb-2">
-            <IconSparkles className="size-3" />
-            AI Email Director
-          </label>
-          <textarea
-            rows={3}
-            placeholder="Describe your email: purpose, audience, key message, CTA..."
-            value={config.description}
-            onChange={(e) => updateConfig({ description: e.target.value })}
-            className="w-full px-3 py-2 rounded-xl border border-secondary-500/20 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-secondary-500/50 focus:ring-2 focus:ring-secondary-500/20 transition-all resize-none mb-2"
-          />
-          <button
-            onClick={generateEmail}
-            disabled={!config.description.trim() || isGenerating}
-            className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-linear-to-r from-secondary-500 to-primary-500 text-white text-[0.625rem] font-bold hover:from-secondary-400 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isGenerating ? (
-              <>
-                <IconLoader className="size-3 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <IconWand className="size-3" /> Generate Email
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Template */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Template
-          </label>
-          <div className="grid grid-cols-2 gap-1.5">
-            {TEMPLATES.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => updateConfig({ template: t.id })}
-                className={`flex flex-col items-start p-2 rounded-lg text-left transition-all ${config.template === t.id ? "ring-2 ring-primary-500 bg-primary-500/10" : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
-              >
-                <span className="text-[0.625rem] font-semibold text-gray-700 dark:text-gray-300">
-                  {t.name}
-                </span>
-                <span className="text-[0.5rem] text-gray-400">{t.desc}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Theme */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Theme
-          </label>
-          <div className="grid grid-cols-3 gap-1">
-            {THEMES.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => updateConfig({ theme: t.id })}
-                className={`py-1.5 rounded-lg text-[0.625rem] font-semibold transition-all ${config.theme === t.id ? "bg-primary-500 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
-              >
-                {t.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Color */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Brand Color
-          </label>
-          <div className="flex gap-1.5 flex-wrap">
-            {COLOR_PRESETS.map((c) => (
-              <button
-                key={c}
-                onClick={() => updateConfig({ primaryColor: c })}
-                className={`size-6 rounded-full transition-all ${config.primaryColor === c ? "ring-2 ring-offset-2 ring-primary-500 dark:ring-offset-gray-900" : "hover:scale-110"}`}
-                style={{ backgroundColor: c }}
-              />
-            ))}
-            <input
-              type="color"
-              value={config.primaryColor}
-              onChange={(e) => updateConfig({ primaryColor: e.target.value })}
-              className="size-6 rounded-full cursor-pointer border-0"
-            />
-          </div>
-        </div>
-
-        {/* Width */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Width: {config.width}px
-          </label>
-          <input
-            type="range"
-            min={400}
-            max={700}
-            value={config.width}
-            onChange={(e) =>
-              updateConfig({ width: parseInt(e.target.value) })
-            }
-            className="w-full h-1 accent-primary-500"
-          />
-        </div>
-
-        {/* Header/Footer */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Header & Footer
-          </label>
-          <div>
-            <label className="text-[0.5625rem] text-gray-500">
-              Header / Brand Name
-            </label>
-            <input
-              type="text"
-              value={config.headerText}
-              onChange={(e) => updateConfig({ headerText: e.target.value })}
-              placeholder="Your Brand"
-              className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
-            />
-          </div>
-          <div>
-            <label className="text-[0.5625rem] text-gray-500">
-              Preheader Text
-            </label>
-            <input
-              type="text"
-              value={config.preheader}
-              onChange={(e) => updateConfig({ preheader: e.target.value })}
-              placeholder="Preview text in inbox..."
-              className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
-            />
-          </div>
-          <div>
-            <label className="text-[0.5625rem] text-gray-500">
-              Footer Text
-            </label>
-            <input
-              type="text"
-              value={config.footerText}
-              onChange={(e) => updateConfig({ footerText: e.target.value })}
-              placeholder="\u00A9 2025 Company | Lusaka, Zambia"
-              className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
-            />
-          </div>
-        </div>
-
-        {/* Preview Mode */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Preview Mode
-          </label>
+    <StickyCanvasLayout
+      canvasRef={canvasRef}
+      displayWidth={config.width}
+      displayHeight={400}
+      label={`Email — ${config.width}px (${config.template} / ${config.theme})`}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.1, 2))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.1, 0.3))}
+      onZoomFit={() => setZoom(0.85)}
+      mobileTabs={["Canvas", "Settings", "Content"]}
+      toolbar={
+        <div className="flex items-center gap-3 text-xs text-gray-500">
+          <IconMail className="size-4 text-primary-500" />
+          <span className="font-semibold text-gray-300">{config.template}</span>
           <div className="flex gap-1">
-            {(["desktop", "mobile", "both"] as const).map((mode) => (
+            {(["desktop", "mobile"] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setPreviewMode(mode)}
-                className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[0.5625rem] font-semibold capitalize transition-all ${
-                  previewMode === mode
-                    ? "bg-primary-500 text-white"
-                    : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-                }`}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[0.5625rem] font-semibold transition-all ${previewMode === mode ? "bg-primary-500/10 text-primary-500" : "text-gray-500 hover:bg-gray-700/50"}`}
               >
-                {mode === "desktop" && <IconMonitor className="size-3" />}
-                {mode === "mobile" && <IconSmartphone className="size-3" />}
-                {mode === "both" && (
-                  <>
-                    <IconMonitor className="size-2.5" />
-                    <IconSmartphone className="size-2.5" />
-                  </>
-                )}
-                {mode}
+                {mode === "desktop" ? <IconMonitor className="size-3" /> : <IconSmartphone className="size-3" />}
               </button>
             ))}
           </div>
         </div>
-
-        {/* Export */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-1.5">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Export
-          </label>
+      }
+      actionsBar={
+        <>
           <button
             onClick={exportEmail}
-            className="w-full flex items-center justify-center gap-2 h-8 rounded-lg bg-linear-to-r from-primary-500 to-secondary-500 text-white text-[0.625rem] font-bold hover:from-primary-400 hover:to-secondary-400 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-linear-to-r from-primary-500 to-secondary-500 text-white text-xs font-bold hover:from-primary-400 hover:to-secondary-400 transition-colors"
           >
-            <IconDownload className="size-3" /> Export PNG
+            <IconDownload className="size-3.5" /> Export PNG
           </button>
           <button
             onClick={copyHtmlToClipboard}
-            className="w-full flex items-center justify-center gap-2 h-8 rounded-lg bg-linear-to-r from-secondary-500 to-primary-500 text-white text-[0.625rem] font-bold hover:from-secondary-400 hover:to-primary-400 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-linear-to-r from-secondary-500 to-primary-500 text-white text-xs font-bold hover:from-secondary-400 hover:to-primary-400 transition-colors"
           >
-            {copiedHtml ? (
-              <><IconCheck className="size-3" /> Copied!</>
-            ) : (
-              <><IconCopy className="size-3" /> Copy HTML</>
-            )}
+            {copiedHtml ? <><IconCheck className="size-3.5" /> Copied!</> : <><IconCopy className="size-3.5" /> Copy HTML</>}
           </button>
           <button
             onClick={downloadHtml}
-            className="w-full flex items-center justify-center gap-2 h-8 rounded-lg border border-primary-500 text-primary-500 text-[0.625rem] font-bold hover:bg-primary-500/10 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-600 text-gray-300 text-xs font-semibold hover:bg-gray-700/50 transition-colors"
           >
-            <IconDownload className="size-3" /> Download HTML
+            <IconDownload className="size-3.5" /> .HTML
           </button>
           <button
             onClick={copyPlainText}
-            className="w-full flex items-center justify-center gap-2 h-8 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-[0.625rem] font-bold hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-600 text-gray-300 text-xs font-semibold hover:bg-gray-700/50 transition-colors"
           >
-            {copiedPlain ? (
-              <><IconCheck className="size-3" /> Copied!</>
-            ) : (
-              <><IconClipboard className="size-3" /> Copy Plain Text</>
-            )}
+            {copiedPlain ? <><IconCheck className="size-3.5" /> Copied!</> : <><IconClipboard className="size-3.5" /> Plain Text</>}
           </button>
+        </>
+      }
+      leftPanel={
+        <div className="space-y-3">
+          {/* AI Director */}
+          <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-3">
+            <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-secondary-500 mb-2">
+              <IconSparkles className="size-3" />
+              AI Email Director
+            </label>
+            <textarea
+              rows={3}
+              placeholder="Describe your email: purpose, audience, key message, CTA..."
+              value={config.description}
+              onChange={(e) => updateConfig({ description: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl border border-secondary-500/20 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-secondary-500/50 focus:ring-2 focus:ring-secondary-500/20 transition-all resize-none mb-2"
+            />
+            <button
+              onClick={generateEmail}
+              disabled={!config.description.trim() || isGenerating}
+              className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-linear-to-r from-secondary-500 to-primary-500 text-white text-[0.625rem] font-bold hover:from-secondary-400 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isGenerating ? (
+                <><IconLoader className="size-3 animate-spin" /> Generating...</>
+              ) : (
+                <><IconWand className="size-3" /> Generate Email</>
+              )}
+            </button>
+          </div>
+
+          {/* Template Slider */}
+          <TemplateSlider
+            templates={templatePreviews}
+            activeId={config.template}
+            onSelect={(id) => updateConfig({ template: id as EmailTemplate })}
+            thumbWidth={120}
+            thumbHeight={86}
+            label="Templates"
+          />
+
+          {/* Theme */}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+            <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">Theme</label>
+            <div className="grid grid-cols-3 gap-1">
+              {THEMES.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => updateConfig({ theme: t.id })}
+                  className={`py-1.5 rounded-lg text-[0.625rem] font-semibold transition-all ${config.theme === t.id ? "bg-primary-500 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Color */}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+            <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+              <IconDroplet className="size-3" /> Brand Color
+            </label>
+            <div className="flex gap-1.5 flex-wrap">
+              {COLOR_PRESETS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => updateConfig({ primaryColor: c })}
+                  className={`size-6 rounded-full transition-all ${config.primaryColor === c ? "ring-2 ring-offset-2 ring-primary-500 dark:ring-offset-gray-900" : "hover:scale-110"}`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+              <input type="color" value={config.primaryColor} onChange={(e) => updateConfig({ primaryColor: e.target.value })} className="size-6 rounded-full cursor-pointer border-0" />
+            </div>
+          </div>
+
+          {/* Width */}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+            <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+              Width: {config.width}px
+            </label>
+            <input type="range" min={400} max={700} value={config.width} onChange={(e) => updateConfig({ width: parseInt(e.target.value) })} className="w-full h-1 accent-primary-500" />
+          </div>
+
+          {/* Header/Footer */}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+            <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">Header & Footer</label>
+            <div>
+              <label className="text-[0.5625rem] text-gray-500">Header / Brand Name</label>
+              <input type="text" value={config.headerText} onChange={(e) => updateConfig({ headerText: e.target.value })} placeholder="Your Brand" className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all" />
+            </div>
+            <div>
+              <label className="text-[0.5625rem] text-gray-500">Preheader Text</label>
+              <input type="text" value={config.preheader} onChange={(e) => updateConfig({ preheader: e.target.value })} placeholder="Preview text in inbox..." className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all" />
+            </div>
+            <div>
+              <label className="text-[0.5625rem] text-gray-500">Footer Text</label>
+              <input type="text" value={config.footerText} onChange={(e) => updateConfig({ footerText: e.target.value })} placeholder="© 2025 Company | Lusaka, Zambia" className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all" />
+            </div>
+          </div>
+        </div>
+      }
+      rightPanel={
+        <div className="space-y-3">
+          {/* Mobile Preview (inline iframe) */}
+          {previewMode === "mobile" && (
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3">
+              <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500 mb-2">
+                <IconSmartphone className="size-3" /> Mobile Preview (320px)
+              </label>
+              <div className="mx-auto rounded-2xl border-4 border-gray-700 dark:border-gray-600 overflow-hidden bg-white" style={{ width: 240 }}>
+                <iframe srcDoc={generateEmailHtml()} title="Mobile email preview" className="w-full border-0" style={{ height: 400, pointerEvents: "none" }} />
+              </div>
+            </div>
+          )}
+
+          {/* HTML Source Toggle */}
           <button
             onClick={() => setShowHtmlPanel((p) => !p)}
-            className={`w-full flex items-center justify-center gap-2 h-8 rounded-lg text-[0.625rem] font-bold transition-colors ${
-              showHtmlPanel
-                ? "bg-primary-500/10 text-primary-500 border border-primary-500/30"
-                : "border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-            }`}
+            className={`w-full flex items-center justify-center gap-2 h-8 rounded-xl text-[0.625rem] font-bold transition-colors ${showHtmlPanel ? "bg-primary-500/10 text-primary-500 border border-primary-500/30" : "border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
           >
-            {showHtmlPanel ? "Hide HTML Preview" : "Show HTML Preview"}
+            {showHtmlPanel ? "Hide HTML Source" : "Show HTML Source"}
           </button>
-        </div>
-      </div>
-
-      {/* ── Center: Canvas + HTML Preview ── */}
-      <div className="flex-1 flex flex-col gap-3 min-w-0 overflow-hidden">
-        {/* Canvas Preview */}
-        <div className="flex-1 flex items-start justify-center bg-gray-100 dark:bg-gray-950/50 rounded-xl border border-gray-200 dark:border-gray-800 overflow-auto p-4 gap-6">
-          {(previewMode === "desktop" || previewMode === "both") && (
-            <div className="flex flex-col items-center gap-2 shrink-0">
-              <span className="text-[0.5625rem] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                <IconMonitor className="size-3" /> Desktop ({config.width}px)
-              </span>
-              <canvas
-                ref={canvasRef}
-                className="shadow-2xl rounded-lg"
-                style={{ maxWidth: "100%", width: config.width }}
-              />
-            </div>
-          )}
-          {(previewMode === "mobile" || previewMode === "both") && (
-            <div className="flex flex-col items-center gap-2 shrink-0">
-              <span className="text-[0.5625rem] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                <IconSmartphone className="size-3" /> Mobile (320px)
-              </span>
-              <div
-                className="shadow-2xl rounded-2xl border-4 border-gray-700 dark:border-gray-600 overflow-hidden bg-white"
-                style={{ width: 320 }}
-              >
-                <iframe
-                  srcDoc={generateEmailHtml()}
-                  title="Mobile email preview"
-                  className="w-full border-0"
-                  style={{ height: 560, pointerEvents: "none" }}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* HTML Source Preview Panel */}
-        {showHtmlPanel && (
-          <div className="h-56 shrink-0 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
-              <span className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-                HTML Source
-              </span>
-              <div className="flex gap-1.5">
-                <button
-                  onClick={copyHtmlToClipboard}
-                  className="flex items-center gap-1 px-2 py-1 rounded text-[0.5625rem] font-semibold bg-primary-500/10 text-primary-500 hover:bg-primary-500/20 transition-colors"
-                >
+          {showHtmlPanel && (
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+                <span className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">HTML</span>
+                <button onClick={copyHtmlToClipboard} className="flex items-center gap-1 px-2 py-1 rounded text-[0.5625rem] font-semibold bg-primary-500/10 text-primary-500 hover:bg-primary-500/20 transition-colors">
                   {copiedHtml ? <><IconCheck className="size-2.5" /> Copied!</> : <><IconCopy className="size-2.5" /> Copy</>}
                 </button>
+              </div>
+              <pre className="max-h-48 overflow-auto p-3 text-[0.5625rem] leading-relaxed text-gray-600 dark:text-gray-400 font-mono whitespace-pre-wrap break-all">
+                {generateEmailHtml()}
+              </pre>
+            </div>
+          )}
+
+          {/* Content Blocks header + merge tags */}
+          <div className="flex items-center justify-between px-1">
+            <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+              <IconMail className="size-3 inline mr-1" /> Content Blocks
+            </label>
+            <div className="flex items-center gap-2">
+              <div className="relative">
                 <button
-                  onClick={downloadHtml}
-                  className="flex items-center gap-1 px-2 py-1 rounded text-[0.5625rem] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                  onClick={() => setMergeTagOpen((p) => !p)}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[0.5625rem] font-semibold transition-colors ${mergeTagOpen ? "bg-primary-500/10 text-primary-500" : "bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
                 >
-                  <IconDownload className="size-2.5" /> Download
+                  <IconTag className="size-3" /> Tags
+                </button>
+                {mergeTagOpen && (
+                  <div className="absolute right-0 top-full mt-1 z-20 w-44 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl py-1">
+                    <div className="px-3 py-1.5 border-b border-gray-100 dark:border-gray-700">
+                      <span className="text-[0.5rem] font-semibold uppercase tracking-wider text-gray-400">
+                        {activeBlockIndex !== null ? "Insert into active block" : "Select a block first"}
+                      </span>
+                    </div>
+                    {MERGE_TAGS.map((mt) => (
+                      <button
+                        key={mt.tag}
+                        onClick={() => insertMergeTag(mt.tag)}
+                        disabled={activeBlockIndex === null}
+                        className="w-full flex items-center justify-between px-3 py-1.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <span className="text-[0.625rem] text-gray-700 dark:text-gray-300">{mt.label}</span>
+                        <code className="text-[0.5rem] font-mono bg-gray-100 dark:bg-gray-900 text-primary-500 px-1.5 py-0.5 rounded">{mt.tag}</code>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <span className="text-[0.5rem] text-gray-400">{blocks.length}</span>
+            </div>
+          </div>
+
+          {/* Block editors */}
+          {blocks.map((block, i) => (
+            <div key={block.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-[0.5rem] font-semibold text-gray-400 uppercase">{block.type}</span>
+                  <select
+                    value={block.type}
+                    onChange={(e) => setBlocks((p) => p.map((b, j) => j === i ? { ...b, type: e.target.value as ContentBlock["type"] } : b))}
+                    className="text-[0.5625rem] bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-1 py-0.5 text-gray-600 dark:text-gray-400"
+                  >
+                    <option value="heading">Heading</option>
+                    <option value="text">Text</option>
+                    <option value="button">Button</option>
+                    <option value="divider">Divider</option>
+                    <option value="image">Image</option>
+                    <option value="spacer">Spacer</option>
+                  </select>
+                </div>
+                <button onClick={() => setBlocks((p) => p.filter((_, j) => j !== i))} disabled={blocks.length <= 1} className="text-gray-400 hover:text-red-500 disabled:opacity-30 transition-colors">
+                  <IconTrash className="size-3" />
                 </button>
               </div>
-            </div>
-            <pre className="flex-1 overflow-auto p-3 text-[0.625rem] leading-relaxed text-gray-600 dark:text-gray-400 font-mono whitespace-pre-wrap break-all">
-              {generateEmailHtml()}
-            </pre>
-          </div>
-        )}
-      </div>
-
-      {/* ── Right Panel: Content Blocks ── */}
-      <div className="w-80 shrink-0 overflow-y-auto space-y-3 pl-1">
-        <div className="flex items-center justify-between px-1">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            <IconMail className="size-3 inline mr-1" />
-            Content Blocks
-          </label>
-          <div className="flex items-center gap-2">
-            {/* Merge Tag Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setMergeTagOpen((p) => !p)}
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[0.5625rem] font-semibold transition-colors ${
-                  mergeTagOpen
-                    ? "bg-primary-500/10 text-primary-500"
-                    : "bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"
-                }`}
-              >
-                <IconTag className="size-3" />
-                Merge Tags
-              </button>
-              {mergeTagOpen && (
-                <div className="absolute right-0 top-full mt-1 z-20 w-44 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl py-1">
-                  <div className="px-3 py-1.5 border-b border-gray-100 dark:border-gray-700">
-                    <span className="text-[0.5rem] font-semibold uppercase tracking-wider text-gray-400">
-                      {activeBlockIndex !== null ? "Insert into active block" : "Select a block first"}
-                    </span>
+              {block.type !== "divider" && block.type !== "spacer" && (
+                <>
+                  {block.type === "text" || block.type === "heading" ? (
+                    <textarea
+                      ref={(el) => { if (el) blockTextRefs.current.set(i, el); else blockTextRefs.current.delete(i); }}
+                      rows={block.type === "heading" ? 2 : 3}
+                      value={block.content}
+                      onFocus={() => setActiveBlockIndex(i)}
+                      onChange={(e) => setBlocks((p) => p.map((b, j) => j === i ? { ...b, content: e.target.value } : b))}
+                      placeholder={block.type === "heading" ? "Heading text..." : "Body text..."}
+                      className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 resize-none"
+                    />
+                  ) : (
+                    <input
+                      ref={(el) => { if (el) blockTextRefs.current.set(i, el); else blockTextRefs.current.delete(i); }}
+                      type="text"
+                      value={block.content}
+                      onFocus={() => setActiveBlockIndex(i)}
+                      onChange={(e) => setBlocks((p) => p.map((b, j) => j === i ? { ...b, content: e.target.value } : b))}
+                      placeholder={block.type === "button" ? "Button label..." : "Image URL or description..."}
+                      className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50"
+                    />
+                  )}
+                  <div className="flex gap-1">
+                    {(["left", "center", "right"] as const).map((a) => (
+                      <button
+                        key={a}
+                        onClick={() => setBlocks((p) => p.map((b, j) => j === i ? { ...b, align: a } : b))}
+                        className={`flex-1 py-0.5 rounded text-[0.5rem] font-semibold capitalize transition-all ${block.align === a ? "bg-primary-500/10 text-primary-500" : "bg-gray-50 dark:bg-gray-800 text-gray-400"}`}
+                      >
+                        {a}
+                      </button>
+                    ))}
                   </div>
-                  {MERGE_TAGS.map((mt) => (
-                    <button
-                      key={mt.tag}
-                      onClick={() => insertMergeTag(mt.tag)}
-                      disabled={activeBlockIndex === null}
-                      className="w-full flex items-center justify-between px-3 py-1.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <span className="text-[0.625rem] text-gray-700 dark:text-gray-300">{mt.label}</span>
-                      <code className="text-[0.5rem] font-mono bg-gray-100 dark:bg-gray-900 text-primary-500 px-1.5 py-0.5 rounded">{mt.tag}</code>
-                    </button>
-                  ))}
-                </div>
+                </>
               )}
             </div>
-            <span className="text-[0.5rem] text-gray-400">
-              {blocks.length} blocks
-            </span>
-          </div>
-        </div>
-
-        {blocks.map((block, i) => (
-          <div
-            key={block.id}
-            className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-1.5"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-[0.5rem] font-semibold text-gray-400 uppercase">
-                  {block.type}
-                </span>
-                <select
-                  value={block.type}
-                  onChange={(e) =>
-                    setBlocks((p) =>
-                      p.map((b, j) =>
-                        j === i
-                          ? {
-                              ...b,
-                              type: e.target.value as ContentBlock["type"],
-                            }
-                          : b,
-                      ),
-                    )
-                  }
-                  className="text-[0.5625rem] bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-1 py-0.5 text-gray-600 dark:text-gray-400"
-                >
-                  <option value="heading">Heading</option>
-                  <option value="text">Text</option>
-                  <option value="button">Button</option>
-                  <option value="divider">Divider</option>
-                  <option value="image">Image</option>
-                  <option value="spacer">Spacer</option>
-                </select>
-              </div>
-              <button
-                onClick={() =>
-                  setBlocks((p) => p.filter((_, j) => j !== i))
-                }
-                disabled={blocks.length <= 1}
-                className="text-gray-400 hover:text-red-500 disabled:opacity-30 transition-colors"
-              >
-                <IconTrash className="size-3" />
-              </button>
-            </div>
-
-            {block.type !== "divider" && block.type !== "spacer" && (
-              <>
-                {block.type === "text" || block.type === "heading" ? (
-                  <textarea
-                    ref={(el) => { if (el) blockTextRefs.current.set(i, el); else blockTextRefs.current.delete(i); }}
-                    rows={block.type === "heading" ? 2 : 3}
-                    value={block.content}
-                    onFocus={() => setActiveBlockIndex(i)}
-                    onChange={(e) =>
-                      setBlocks((p) =>
-                        p.map((b, j) =>
-                          j === i
-                            ? { ...b, content: e.target.value }
-                            : b,
-                        ),
-                      )
-                    }
-                    placeholder={
-                      block.type === "heading"
-                        ? "Heading text..."
-                        : "Body text..."
-                    }
-                    className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 resize-none"
-                  />
-                ) : (
-                  <input
-                    ref={(el) => { if (el) blockTextRefs.current.set(i, el); else blockTextRefs.current.delete(i); }}
-                    type="text"
-                    value={block.content}
-                    onFocus={() => setActiveBlockIndex(i)}
-                    onChange={(e) =>
-                      setBlocks((p) =>
-                        p.map((b, j) =>
-                          j === i
-                            ? { ...b, content: e.target.value }
-                            : b,
-                        ),
-                      )
-                    }
-                    placeholder={
-                      block.type === "button"
-                        ? "Button label..."
-                        : "Image URL or description..."
-                    }
-                    className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50"
-                  />
-                )}
-                {/* Alignment */}
-                <div className="flex gap-1">
-                  {(["left", "center", "right"] as const).map((a) => (
-                    <button
-                      key={a}
-                      onClick={() =>
-                        setBlocks((p) =>
-                          p.map((b, j) =>
-                            j === i ? { ...b, align: a } : b,
-                          ),
-                        )
-                      }
-                      className={`flex-1 py-0.5 rounded text-[0.5rem] font-semibold capitalize transition-all ${block.align === a ? "bg-primary-500/10 text-primary-500" : "bg-gray-50 dark:bg-gray-800 text-gray-400"}`}
-                    >
-                      {a}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        ))}
-
-        {/* Add block */}
-        <div className="grid grid-cols-3 gap-1.5">
-          {(
-            [
-              "heading",
-              "text",
-              "button",
-              "divider",
-              "image",
-              "spacer",
-            ] as const
-          ).map((type) => (
-            <button
-              key={type}
-              onClick={() =>
-                setBlocks((p) => [
-                  ...p,
-                  { id: uid(), type, content: "", align: "center" },
-                ])
-              }
-              className="py-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 text-[0.5625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors capitalize"
-            >
-              + {type}
-            </button>
           ))}
+
+          {/* Add block */}
+          <div className="grid grid-cols-3 gap-1.5">
+            {(["heading", "text", "button", "divider", "image", "spacer"] as const).map((type) => (
+              <button
+                key={type}
+                onClick={() => setBlocks((p) => [...p, { id: uid(), type, content: "", align: "center" }])}
+                className="py-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 text-[0.5625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors capitalize"
+              >
+                + {type}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
-    </div>
+      }
+    />
   );
 }

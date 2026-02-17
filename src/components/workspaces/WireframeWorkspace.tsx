@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   IconSparkles,
   IconWand,
@@ -10,8 +10,10 @@ import {
   IconTrash,
   IconCheck,
   IconMonitor,
+  IconCopy,
 } from "@/components/icons";
 import { cleanAIText } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -82,8 +84,6 @@ function uid() {
 export default function WireframeWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"content" | "settings">("content");
-  const [copied, setCopied] = useState(false);
 
   const [config, setConfig] = useState<WireframeConfig>({
     pageType: "landing",
@@ -96,6 +96,20 @@ export default function WireframeWorkspace() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const deviceInfo = DEVICE_FRAMES.find((d) => d.id === config.device) ?? DEVICE_FRAMES[0];
+
+  const totalHeight = elements.reduce((sum, el) => sum + (ELEMENT_HEIGHTS[el.type] ?? 100), 0) + 40;
+  const [zoom, setZoom] = useState(0.65);
+  const displayWidth = deviceInfo.width * zoom;
+  const displayHeight = Math.max(600, totalHeight) * zoom;
+
+  const handleCopy = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    });
+  }, []);
 
   /* ── Element management ─────────────────────────────────── */
   const addElement = (type: string) => {
@@ -295,226 +309,242 @@ export default function WireframeWorkspace() {
     link.download = `wireframe-${config.pageType}-${config.device}.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   /* ── UI ──────────────────────────────────────────────────── */
-  return (
-    <div>
-      {/* Mobile Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 lg:hidden">
-        {(["content", "settings"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setMobileTab(t)}
-            className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* ── Settings Panel ──────────────────────────────── */}
-        <div
-          className={`w-full lg:w-80 shrink-0 space-y-4 overflow-y-auto ${mobileTab !== "settings" ? "hidden lg:block" : ""}`}
-        >
-          {/* Page Type */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <IconMonitor className="size-4 text-primary-500" />
-              Page Settings
-            </h3>
+  /* ── Left Panel ── */
+  const leftPanel = useMemo(
+    () => (
+      <>
+        {/* Page Type */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <IconMonitor className="size-4 text-primary-500" />
+            Page Settings
+          </h3>
 
-            <label className="block text-xs text-gray-400">Page Type</label>
-            <div className="grid grid-cols-2 gap-1.5">
-              {PAGE_TYPES.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => setConfig((prev) => ({ ...prev, pageType: p.id }))}
-                  className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${config.pageType === p.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
+          <label className="block text-xs text-gray-400">Page Type</label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {PAGE_TYPES.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setConfig((prev) => ({ ...prev, pageType: p.id }))}
+                className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${config.pageType === p.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+              >
+                {p.label}
+              </button>
+            ))}
           </div>
+        </div>
 
-          {/* Device Frame */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <label className="block text-xs text-gray-400">Device Frame</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {DEVICE_FRAMES.map((d) => (
-                <button
-                  key={d.id}
-                  onClick={() => setConfig((prev) => ({ ...prev, device: d.id }))}
-                  className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors text-center ${config.device === d.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
-                >
-                  <div>{d.label}</div>
-                  <div className="text-[10px] opacity-70">{d.width}px</div>
-                </button>
-              ))}
-            </div>
+        {/* Device Frame */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+          <label className="block text-xs text-gray-400">Device Frame</label>
+          <div className="grid grid-cols-3 gap-1.5">
+            {DEVICE_FRAMES.map((d) => (
+              <button
+                key={d.id}
+                onClick={() => setConfig((prev) => ({ ...prev, device: d.id }))}
+                className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors text-center ${config.device === d.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+              >
+                <div>{d.label}</div>
+                <div className="text-[10px] opacity-70">{d.width}px</div>
+              </button>
+            ))}
           </div>
+        </div>
 
-          {/* Grid & Guides */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <label className="block text-xs text-gray-400">Canvas Options</label>
-            <div className="flex gap-3">
-              <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={config.showGrid}
-                  onChange={(e) => setConfig((p) => ({ ...p, showGrid: e.target.checked }))}
-                  className="accent-primary-500"
-                />
-                Grid
-              </label>
-              <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={config.showGuides}
-                  onChange={(e) => setConfig((p) => ({ ...p, showGuides: e.target.checked }))}
-                  className="accent-primary-500"
-                />
-                Guides
-              </label>
-            </div>
-          </div>
-
-          {/* Element Palette */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Element Palette</h3>
-            <div className="grid grid-cols-2 gap-1.5">
-              {ELEMENT_PALETTE.map((el) => (
-                <button
-                  key={el}
-                  onClick={() => addElement(el)}
-                  className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <IconPlus className="size-3 text-primary-500" />
-                  {el}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Selected Elements */}
-          {elements.length > 0 && (
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                Layout Order ({elements.length})
-              </h3>
-              <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                {elements.map((el, i) => (
-                  <div
-                    key={el.id}
-                    onClick={() => setSelectedId(el.id === selectedId ? null : el.id)}
-                    className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs cursor-pointer transition-colors ${el.id === selectedId ? "bg-primary-500/10 text-primary-500 ring-1 ring-primary-500/30" : "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
-                  >
-                    <span className="text-[10px] text-gray-400 w-4">{i + 1}</span>
-                    <span className="flex-1 font-medium truncate">{el.label}</span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); moveElement(el.id, -1); }}
-                      className="hover:text-primary-500 text-gray-400"
-                      title="Move up"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); moveElement(el.id, 1); }}
-                      className="hover:text-primary-500 text-gray-400"
-                      title="Move down"
-                    >
-                      ↓
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); removeElement(el.id); }}
-                      className="hover:text-red-400 text-gray-400"
-                    >
-                      <IconTrash className="size-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Annotation */}
-          {selectedId && (
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-              <label className="block text-xs text-gray-400">
-                Annotation for &quot;{elements.find((e) => e.id === selectedId)?.label}&quot;
-              </label>
+        {/* Grid & Guides */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+          <label className="block text-xs text-gray-400">Canvas Options</label>
+          <div className="flex gap-3">
+            <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
               <input
-                className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50"
-                placeholder="Add annotation…"
-                value={elements.find((e) => e.id === selectedId)?.annotation ?? ""}
-                onChange={(e) => updateAnnotation(selectedId, e.target.value)}
+                type="checkbox"
+                checked={config.showGrid}
+                onChange={(e) => setConfig((p) => ({ ...p, showGrid: e.target.checked }))}
+                className="accent-primary-500"
               />
-            </div>
-          )}
+              Grid
+            </label>
+            <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={config.showGuides}
+                onChange={(e) => setConfig((p) => ({ ...p, showGuides: e.target.checked }))}
+                className="accent-primary-500"
+              />
+              Guides
+            </label>
+          </div>
+        </div>
 
-          {/* AI & Export */}
+        {/* Element Palette */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Element Palette</h3>
+          <div className="grid grid-cols-2 gap-1.5">
+            {ELEMENT_PALETTE.map((el) => (
+              <button
+                key={el}
+                onClick={() => addElement(el)}
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <IconPlus className="size-3 text-primary-500" />
+                {el}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Layout Order */}
+        {elements.length > 0 && (
           <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <IconSparkles className="size-4 text-primary-500" />
-              AI Layout
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+              Layout Order ({elements.length})
             </h3>
-            <button
-              onClick={suggestLayout}
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors"
-            >
-              {loading ? (
-                <IconLoader className="size-4 animate-spin" />
-              ) : (
-                <IconWand className="size-4" />
-              )}
-              {loading ? "Generating…" : "Suggest Layout"}
-            </button>
-          </div>
-
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-            <button
-              onClick={exportPNG}
-              disabled={elements.length === 0}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
-            >
-              {copied ? (
-                <IconCheck className="size-4 text-green-500" />
-              ) : (
-                <IconDownload className="size-4" />
-              )}
-              {copied ? "Exported!" : "Export PNG"}
-            </button>
-          </div>
-        </div>
-
-        {/* ── Content Area ─────────────────────────────────── */}
-        <div
-          className={`flex-1 min-w-0 space-y-4 ${mobileTab !== "content" ? "hidden lg:block" : ""}`}
-        >
-          {/* Canvas */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 overflow-auto">
-            <canvas ref={canvasRef} className="mx-auto block rounded-lg" />
-          </div>
-
-          {/* Empty State */}
-          {elements.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <IconMonitor className="size-12 text-gray-300 dark:text-gray-600 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Start Your Wireframe
-              </h3>
-              <p className="text-sm text-gray-400 max-w-md">
-                Add elements from the palette in the settings panel, or use AI to suggest a layout for your page type.
-              </p>
+            <div className="space-y-1.5 max-h-60 overflow-y-auto">
+              {elements.map((el, i) => (
+                <div
+                  key={el.id}
+                  onClick={() => setSelectedId(el.id === selectedId ? null : el.id)}
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs cursor-pointer transition-colors ${el.id === selectedId ? "bg-primary-500/10 text-primary-500 ring-1 ring-primary-500/30" : "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+                >
+                  <span className="text-[10px] text-gray-400 w-4">{i + 1}</span>
+                  <span className="flex-1 font-medium truncate">{el.label}</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); moveElement(el.id, -1); }}
+                    className="hover:text-primary-500 text-gray-400"
+                    title="Move up"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); moveElement(el.id, 1); }}
+                    className="hover:text-primary-500 text-gray-400"
+                    title="Move down"
+                  >
+                    ↓
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeElement(el.id); }}
+                    className="hover:text-red-400 text-gray-400"
+                  >
+                    <IconTrash className="size-3" />
+                  </button>
+                </div>
+              ))}
             </div>
-          )}
+          </div>
+        )}
+
+        {/* Annotation */}
+        {selectedId && (
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+            <label className="block text-xs text-gray-400">
+              Annotation for &quot;{elements.find((e) => e.id === selectedId)?.label}&quot;
+            </label>
+            <input
+              className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+              placeholder="Add annotation…"
+              value={elements.find((e) => e.id === selectedId)?.annotation ?? ""}
+              onChange={(e) => updateAnnotation(selectedId, e.target.value)}
+            />
+          </div>
+        )}
+
+        {/* AI Layout */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <IconSparkles className="size-4 text-primary-500" />
+            AI Layout
+          </h3>
+          <button
+            onClick={suggestLayout}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors"
+          >
+            {loading ? (
+              <IconLoader className="size-4 animate-spin" />
+            ) : (
+              <IconWand className="size-4" />
+            )}
+            {loading ? "Generating…" : "Suggest Layout"}
+          </button>
         </div>
+      </>
+    ),
+    [config, elements, selectedId, loading]
+  );
+
+  /* ── Toolbar ── */
+  const toolbar = useMemo(
+    () => (
+      <div className="flex items-center gap-3 text-xs text-gray-400">
+        <span className="font-medium text-gray-900 dark:text-white">
+          {PAGE_TYPES.find((p) => p.id === config.pageType)?.label}
+        </span>
+        <span>·</span>
+        <span>{deviceInfo.label} ({deviceInfo.width}px)</span>
+        <span>·</span>
+        <span>{elements.length} element{elements.length !== 1 ? "s" : ""}</span>
       </div>
-    </div>
+    ),
+    [config.pageType, deviceInfo, elements.length]
+  );
+
+  /* ── Actions Bar ── */
+  const actionsBar = useMemo(
+    () => (
+      <div className="flex items-center gap-2">
+        <button
+          onClick={exportPNG}
+          disabled={elements.length === 0}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
+        >
+          <IconDownload className="size-3.5" />
+          Export PNG
+        </button>
+        <button
+          onClick={handleCopy}
+          disabled={elements.length === 0}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
+        >
+          <IconCopy className="size-3.5" />
+          Copy
+        </button>
+      </div>
+    ),
+    [elements.length, exportPNG, handleCopy]
+  );
+
+  return (
+    <StickyCanvasLayout
+      canvasRef={canvasRef}
+      displayWidth={displayWidth}
+      displayHeight={displayHeight}
+      label={`${PAGE_TYPES.find((p) => p.id === config.pageType)?.label} — ${deviceInfo.label} (${deviceInfo.width}px)`}
+      leftPanel={leftPanel}
+      toolbar={toolbar}
+      actionsBar={actionsBar}
+      mobileTabs={["Canvas", "Elements", "Settings"]}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(2, z + 0.1))}
+      onZoomOut={() => setZoom((z) => Math.max(0.2, z - 0.1))}
+      onZoomFit={() => setZoom(0.65)}
+    >
+      {/* Empty State */}
+      {elements.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <IconMonitor className="size-12 text-gray-300 dark:text-gray-600 mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            Start Your Wireframe
+          </h3>
+          <p className="text-sm text-gray-400 max-w-md">
+            Add elements from the palette in the settings panel, or use AI to suggest a layout for your page type.
+          </p>
+        </div>
+      )}
+    </StickyCanvasLayout>
   );
 }

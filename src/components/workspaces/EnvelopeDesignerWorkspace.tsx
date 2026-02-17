@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
-import { IconSparkles, IconWand, IconLoader, IconDownload, IconMail } from "@/components/icons";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { IconSparkles, IconWand, IconLoader, IconDownload, IconMail, IconCopy } from "@/components/icons";
 import { cleanAIText } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
 
 type EnvelopeSize = "dl" | "c5" | "c4" | "10" | "custom";
 type EnvelopeTemplate = "minimal" | "corporate" | "elegant" | "modern" | "bold" | "creative";
@@ -40,7 +42,6 @@ const COLOR_PRESETS = ["#1e40af", "#0f766e", "#7c3aed", "#dc2626", "#ea580c", "#
 export default function EnvelopeDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
   const [config, setConfig] = useState<EnvelopeConfig>({
     size: "dl", template: "corporate", primaryColor: "#1e40af", viewSide: "front",
     companyName: "DMSuite Solutions", returnAddress: "Plot 1234, Cairo Road\nLusaka, Zambia",
@@ -143,47 +144,130 @@ export default function EnvelopeDesignerWorkspace() {
 
   const exportPNG = () => { const c = canvasRef.current; if (!c) return; const a = document.createElement("a"); a.download = `envelope-${config.template}.png`; a.href = c.toDataURL("image/png"); a.click(); };
 
+  // ── Zoom ───────────────────────────────────────────────
+  const [zoom, setZoom] = useState(1);
+  const displayWidth = Math.min(sz.w, 650);
+  const displayHeight = displayWidth * (sz.h / sz.w);
+
+  // ── Visual Template Previews ──────────────────────────
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () =>
+      TEMPLATES.map((t) => ({
+        id: t.id,
+        label: t.name,
+        render: (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, w, h);
+          if (t.id === "corporate" || t.id === "bold") {
+            ctx.fillStyle = config.primaryColor;
+            ctx.fillRect(0, 0, w, 3);
+            ctx.fillRect(0, h - 3, w, 3);
+          }
+          if (t.id === "elegant") {
+            ctx.strokeStyle = config.primaryColor + "60";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(4, 4, w - 8, h - 8);
+          }
+          if (t.id === "modern") {
+            ctx.fillStyle = config.primaryColor;
+            ctx.fillRect(0, 0, 4, h);
+          }
+          if (t.id === "creative") {
+            ctx.fillStyle = config.primaryColor + "18";
+            ctx.fillRect(0, 0, w, h);
+          }
+          ctx.fillStyle = config.primaryColor;
+          ctx.font = "bold 7px Inter, sans-serif";
+          ctx.textAlign = "left";
+          ctx.fillText("Company", 8, 16);
+          ctx.fillStyle = "#94a3b8";
+          ctx.font = "5px Inter, sans-serif";
+          ctx.fillText("Address line", 8, 24);
+          ctx.strokeStyle = "#cbd5e1";
+          ctx.lineWidth = 0.5;
+          ctx.setLineDash([2, 2]);
+          ctx.strokeRect(w - 22, 6, 16, 12);
+          ctx.setLineDash([]);
+        },
+      })),
+    [config.primaryColor]
+  );
+
+  // ── Copy to clipboard ─────────────────────────────────
+  const handleCopy = useCallback(async () => {
+    if (!canvasRef.current) return;
+    try {
+      canvasRef.current.toBlob(async (blob) => {
+        if (!blob) return;
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob }),
+        ]);
+      }, "image/png");
+    } catch {
+      /* clipboard may not be available */
+    }
+  }, []);
+
+  // ── Left Panel ────────────────────────────────────────
+  const leftPanel = (
+    <>
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconMail className="size-4 text-primary-500" />Envelope Settings</h3>
+        <label className="block text-xs text-gray-400">Size</label>
+        <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.size} onChange={(e) => setConfig((p) => ({ ...p, size: e.target.value as EnvelopeSize }))}>{SIZES.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+        <TemplateSlider templates={templatePreviews} activeId={config.template} onSelect={(id) => setConfig((p) => ({ ...p, template: id as EnvelopeTemplate }))} label="Template" />
+        <label className="block text-xs text-gray-400">View</label>
+        <div className="flex gap-2">{(["front", "back"] as const).map((s) => (<button key={s} onClick={() => setConfig((p) => ({ ...p, viewSide: s }))} className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold capitalize ${config.viewSide === s ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-500"}`}>{s}</button>))}</div>
+        <label className="block text-xs text-gray-400">Company</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.companyName} onChange={(e) => setConfig((p) => ({ ...p, companyName: e.target.value }))} />
+        <label className="block text-xs text-gray-400">Return Address</label>
+        <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={2} value={config.returnAddress} onChange={(e) => setConfig((p) => ({ ...p, returnAddress: e.target.value }))} />
+        <label className="block text-xs text-gray-400">Recipient Name</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.recipientName} onChange={(e) => setConfig((p) => ({ ...p, recipientName: e.target.value }))} />
+        <label className="block text-xs text-gray-400">Recipient Address</label>
+        <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={2} value={config.recipientAddress} onChange={(e) => setConfig((p) => ({ ...p, recipientAddress: e.target.value }))} />
+        <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer"><input type="checkbox" checked={config.showWindow} onChange={(e) => setConfig((p) => ({ ...p, showWindow: e.target.checked }))} className="rounded" />Window envelope</label>
+        <label className="block text-xs text-gray-400">Color</label>
+        <div className="flex gap-1.5 flex-wrap">{COLOR_PRESETS.map((c) => (<button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />))}</div>
+      </div>
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Generator</h3>
+        <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={2} placeholder="Describe your business…" value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
+        <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50">{loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}{loading ? "Generating…" : "Generate"}</button>
+      </div>
+    </>
+  );
+
   return (
-    <div>
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
-        {(["canvas", "settings"] as const).map((t) => (<button key={t} onClick={() => setMobileTab(t)} className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}>{t}</button>))}
-      </div>
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconMail className="size-4 text-primary-500" />Envelope Settings</h3>
-            <label className="block text-xs text-gray-400">Size</label>
-            <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.size} onChange={(e) => setConfig((p) => ({ ...p, size: e.target.value as EnvelopeSize }))}>{SIZES.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
-            <label className="block text-xs text-gray-400">Template</label>
-            <div className="grid grid-cols-3 gap-1.5">{TEMPLATES.map((t) => (<button key={t.id} onClick={() => setConfig((p) => ({ ...p, template: t.id }))} className={`px-2 py-1.5 rounded-lg text-xs font-medium ${config.template === t.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"}`}>{t.name}</button>))}</div>
-            <label className="block text-xs text-gray-400">View</label>
-            <div className="flex gap-2">{(["front", "back"] as const).map((s) => (<button key={s} onClick={() => setConfig((p) => ({ ...p, viewSide: s }))} className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold capitalize ${config.viewSide === s ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-500"}`}>{s}</button>))}</div>
-            <label className="block text-xs text-gray-400">Company</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.companyName} onChange={(e) => setConfig((p) => ({ ...p, companyName: e.target.value }))} />
-            <label className="block text-xs text-gray-400">Return Address</label>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={2} value={config.returnAddress} onChange={(e) => setConfig((p) => ({ ...p, returnAddress: e.target.value }))} />
-            <label className="block text-xs text-gray-400">Recipient Name</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.recipientName} onChange={(e) => setConfig((p) => ({ ...p, recipientName: e.target.value }))} />
-            <label className="block text-xs text-gray-400">Recipient Address</label>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={2} value={config.recipientAddress} onChange={(e) => setConfig((p) => ({ ...p, recipientAddress: e.target.value }))} />
-            <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer"><input type="checkbox" checked={config.showWindow} onChange={(e) => setConfig((p) => ({ ...p, showWindow: e.target.checked }))} className="rounded" />Window envelope</label>
-            <label className="block text-xs text-gray-400">Color</label>
-            <div className="flex gap-1.5 flex-wrap">{COLOR_PRESETS.map((c) => (<button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />))}</div>
-          </div>
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Generator</h3>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={2} placeholder="Describe your business…" value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
-            <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50">{loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}{loading ? "Generating…" : "Generate"}</button>
-          </div>
-          <button onClick={exportPNG} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"><IconDownload className="size-4" />Export PNG</button>
+    <StickyCanvasLayout
+      leftPanel={leftPanel}
+      canvasRef={canvasRef}
+      displayWidth={displayWidth}
+      displayHeight={displayHeight}
+      label={`${config.viewSide} — ${sz.w}×${sz.h}px`}
+      mobileTabs={["Canvas", "Settings"]}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
+      onZoomFit={() => setZoom(1)}
+      actionsBar={
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportPNG}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors"
+          >
+            <IconDownload className="size-3" />
+            Export PNG
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors"
+          >
+            <IconCopy className="size-3" />
+            Copy
+          </button>
         </div>
-        <div className={`flex-1 min-w-0 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-          <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
-            <canvas ref={canvasRef} style={{ width: Math.min(sz.w, 650), height: Math.min(sz.w, 650) * (sz.h / sz.w) }} className="rounded-lg shadow-lg" />
-          </div>
-          <p className="text-xs text-gray-400 text-center mt-2">{config.viewSide} — {sz.w}×{sz.h}px</p>
-        </div>
-      </div>
-    </div>
+      }
+    />
   );
 }

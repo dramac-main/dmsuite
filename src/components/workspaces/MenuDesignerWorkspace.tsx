@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   IconSparkles,
   IconWand,
@@ -9,8 +9,25 @@ import {
   IconUtensils,
   IconPlus,
   IconTrash,
+  IconCopy,
+  IconDroplet,
+  IconType,
+  IconLayout,
+  IconPrinter,
 } from "@/components/icons";
-import { cleanAIText, hexToRgba, getContrastColor } from "@/lib/canvas-utils";
+import { cleanAIText, hexToRgba, getContrastColor, roundRect } from "@/lib/canvas-utils";
+import {
+  drawPattern,
+  drawDivider,
+  drawAccentCircle,
+  drawGradient,
+  drawTextWithShadow,
+  drawSeal,
+} from "@/lib/graphics-engine";
+import { drawMenuThumbnail } from "@/lib/template-renderers";
+import StickyCanvasLayout from "./StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
+import { jsPDF } from "jspdf";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -39,6 +56,7 @@ interface MenuConfig {
   template: MenuTemplate;
   primaryColor: string;
   accentColor: string;
+  bgColor: string;
   restaurantName: string;
   tagline: string;
   currency: string;
@@ -46,6 +64,8 @@ interface MenuConfig {
   sections: MenuSection[];
   cuisineDescription: string;
   fontStyle: "modern" | "classic" | "bold" | "elegant";
+  patternType: string;
+  showDietaryLegend: boolean;
 }
 
 /* ── Constants ─────────────────────────────────────────────── */
@@ -62,13 +82,13 @@ const PAGE_SIZES: { id: PageSize; label: string; w: number; h: number }[] = [
   { id: "letter", label: "Letter", w: 612, h: 792 },
 ];
 
-const TEMPLATES: { id: MenuTemplate; label: string }[] = [
-  { id: "elegant", label: "Elegant" },
-  { id: "rustic", label: "Rustic" },
-  { id: "modern", label: "Modern" },
-  { id: "bistro", label: "Bistro" },
-  { id: "fine-dining", label: "Fine Dining" },
-  { id: "casual", label: "Casual" },
+const TEMPLATES: { id: MenuTemplate; label: string; desc: string }[] = [
+  { id: "elegant", label: "Elegant", desc: "Refined serif" },
+  { id: "rustic", label: "Rustic", desc: "Warm earthy" },
+  { id: "modern", label: "Modern", desc: "Clean sans" },
+  { id: "bistro", label: "Bistro", desc: "Bold casual" },
+  { id: "fine-dining", label: "Fine Dining", desc: "Luxe minimal" },
+  { id: "casual", label: "Casual", desc: "Fun colorful" },
 ];
 
 const SECTION_LABELS: Record<MenuSectionId, string> = {
@@ -86,9 +106,27 @@ const DIETARY_LABELS: Record<DietaryTag, { label: string; color: string }> = {
   DF: { label: "Dairy Free", color: "#2563eb" },
 };
 
-const COLOR_PRESETS = [
-  "#1e293b", "#7c2d12", "#14532d", "#1e3a5f",
-  "#4a1d96", "#831843", "#713f12", "#0f766e",
+const colorPresets = [
+  { name: "Dark", primary: "#1e293b", accent: "#c09c2c", bg: "#fffef8" },
+  { name: "Rustic", primary: "#7c2d12", accent: "#d97706", bg: "#faf7f0" },
+  { name: "Forest", primary: "#14532d", accent: "#16a34a", bg: "#f0fdf4" },
+  { name: "Ocean", primary: "#1e3a5f", accent: "#0ea5e9", bg: "#f0f9ff" },
+  { name: "Purple", primary: "#4a1d96", accent: "#8b5cf6", bg: "#faf5ff" },
+  { name: "Rose", primary: "#831843", accent: "#f43f5e", bg: "#fff1f2" },
+  { name: "Gold", primary: "#713f12", accent: "#eab308", bg: "#fefce8" },
+  { name: "Teal", primary: "#0f766e", accent: "#14b8a6", bg: "#f0fdfa" },
+  { name: "Dark Mode", primary: "#f8fafc", accent: "#c09c2c", bg: "#0f172a" },
+  { name: "Charcoal", primary: "#ffffff", accent: "#8ae600", bg: "#18181b" },
+];
+
+const patternOptions = [
+  { id: "none", label: "None" },
+  { id: "dots", label: "Dots" },
+  { id: "lines", label: "Lines" },
+  { id: "diagonal-lines", label: "Diagonal" },
+  { id: "crosshatch", label: "Crosshatch" },
+  { id: "waves", label: "Waves" },
+  { id: "diamond", label: "Diamond" },
 ];
 
 const CURRENCIES = [
@@ -154,13 +192,31 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number): st
   return lines;
 }
 
+/* ── Collapsible Section ─────────────────────────────────── */
+
+function Section({ icon, label, id, open, toggle, children }: {
+  icon: React.ReactNode; label: string; id: string;
+  open: boolean; toggle: (id: string) => void; children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
+      <button onClick={() => toggle(id)}
+        className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors w-full">
+        {icon}{label}
+        <svg className={`size-3 ml-auto transition-transform ${open ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><polyline points="6 9 12 15 18 9" /></svg>
+      </button>
+      {open && <div className="mt-2.5">{children}</div>}
+    </div>
+  );
+}
+
 /* ── Component ─────────────────────────────────────────────── */
 
 export default function MenuDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
   const [editSection, setEditSection] = useState<number>(0);
+  const [zoom, setZoom] = useState(1);
 
   const [config, setConfig] = useState<MenuConfig>({
     foldType: "single",
@@ -168,6 +224,7 @@ export default function MenuDesignerWorkspace() {
     template: "elegant",
     primaryColor: "#1e293b",
     accentColor: "#c09c2c",
+    bgColor: "#fffef8",
     restaurantName: "The Lusaka Kitchen",
     tagline: "A Taste of Zambia",
     currency: "ZMW",
@@ -175,13 +232,51 @@ export default function MenuDesignerWorkspace() {
     sections: defaultSections(),
     cuisineDescription: "",
     fontStyle: "elegant",
+    patternType: "none",
+    showDietaryLegend: true,
   });
+
+  const [openSections, setOpenSections] = useState<Set<string>>(
+    new Set(["templates", "details", "items"])
+  );
+  const toggleSection = (id: string) => {
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const ps = PAGE_SIZES.find((p) => p.id === config.pageSize)!;
   const fold = FOLD_TYPES.find((f) => f.id === config.foldType)!;
+  const upd = useCallback((patch: Partial<MenuConfig>) => setConfig((p) => ({ ...p, ...patch })), []);
+
+  // ── Visual Template Previews ──────────────────────────
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () => TEMPLATES.map((t) => ({
+      id: t.id,
+      label: t.label,
+      render: (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+        const styles: Record<string, "elegant" | "rustic" | "modern" | "bistro"> = {
+          "elegant": "elegant",
+          "rustic": "rustic",
+          "modern": "modern",
+          "bistro": "bistro",
+          "fine-dining": "elegant",
+          "casual": "modern",
+        };
+        drawMenuThumbnail(ctx, w, h, {
+          primaryColor: config.primaryColor,
+          style: styles[t.id] || "elegant",
+        });
+      },
+    })),
+    [config.primaryColor, config.accentColor, config.bgColor]
+  );
 
   /* ── Render ─────────────────────────────────────────────── */
-  const render = useCallback(() => {
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
@@ -196,22 +291,26 @@ export default function MenuDesignerWorkspace() {
     const pc = config.primaryColor;
     const ac = config.accentColor;
     const fs = config.fontStyle;
+    const isDark = config.bgColor.startsWith("#0") || config.bgColor.startsWith("#1");
     const isRustic = config.template === "rustic" || config.template === "bistro";
     const isFine = config.template === "fine-dining" || config.template === "elegant";
     const isModern = config.template === "modern" || config.template === "casual";
 
     // ─── Background ──────────────────────────────────────
-    if (isRustic) {
-      ctx.fillStyle = "#faf7f0";
-    } else if (isFine) {
-      ctx.fillStyle = "#fffef8";
-    } else {
-      ctx.fillStyle = "#ffffff";
-    }
+    ctx.fillStyle = config.bgColor;
     ctx.fillRect(0, 0, totalW, H);
 
-    // Rustic texture dots
-    if (isRustic) {
+    // Pattern overlay
+    if (config.patternType && config.patternType !== "none") {
+      drawPattern(
+        ctx, 0, 0, totalW, H,
+        config.patternType as Parameters<typeof drawPattern>[5],
+        pc, 0.025, 30
+      );
+    }
+
+    // Rustic texture
+    if (isRustic && config.patternType === "none") {
       ctx.fillStyle = hexToRgba("#8b7355", 0.03);
       for (let x = 0; x < totalW; x += 20) {
         for (let y = 0; y < H; y += 20) {
@@ -222,13 +321,19 @@ export default function MenuDesignerWorkspace() {
       }
     }
 
+    // Decorative circles
+    if (isFine) {
+      drawAccentCircle(ctx, totalW * 0.9, H * 0.05, totalW * 0.08, ac, 0.04);
+      drawAccentCircle(ctx, totalW * 0.05, H * 0.95, totalW * 0.06, ac, 0.03);
+    }
+
     // ─── Panel fold lines ────────────────────────────────
     if (fold.panels > 1) {
       for (let i = 1; i < fold.panels; i++) {
         const fx = i * ps.w;
         ctx.save();
         ctx.setLineDash([6, 4]);
-        ctx.strokeStyle = "#d1d5db";
+        ctx.strokeStyle = hexToRgba(pc, 0.15);
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(fx, 0);
@@ -246,56 +351,64 @@ export default function MenuDesignerWorkspace() {
       ctx.strokeStyle = hexToRgba(ac, 0.2);
       ctx.lineWidth = 0.5;
       ctx.strokeRect(20, 20, totalW - 40, H - 40);
+      // Corner ornaments
+      const corners = [[22, 22], [totalW - 22, 22], [22, H - 22], [totalW - 22, H - 22]];
+      corners.forEach(([cx, cy]) => {
+        ctx.fillStyle = ac;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
     }
     if (isModern) {
-      ctx.fillStyle = pc;
+      const topGrad = ctx.createLinearGradient(0, 0, totalW, 0);
+      topGrad.addColorStop(0, pc);
+      topGrad.addColorStop(1, ac);
+      ctx.fillStyle = topGrad;
       ctx.fillRect(0, 0, totalW, 6);
     }
 
-    // ─── Header area (first panel or top) ────────────────
+    // ─── Header area ────────────────────────────────────
     const headerW = config.foldType === "single" ? totalW : ps.w;
-    const headerPanel = 0;
-    const hx = headerPanel * ps.w;
+    const hx = 0;
     let curY = 40;
 
-    if (config.template === "modern" || config.template === "casual") {
-      // Color block header
-      ctx.fillStyle = pc;
-      ctx.fillRect(hx, 0, headerW, 120);
+    if (isModern) {
+      // Color block header with gradient
+      drawGradient(ctx, hx, 0, headerW, 120, 135, [
+        { offset: 0, color: pc },
+        { offset: 1, color: hexToRgba(ac, 0.8) },
+      ]);
+      drawPattern(ctx, hx, 0, headerW, 120, "dots", getContrastColor(pc), 0.04, 20);
+
       ctx.font = getFont(800, 28, fs);
       ctx.fillStyle = getContrastColor(pc);
       ctx.textAlign = "center";
-      ctx.fillText(config.restaurantName.toUpperCase(), hx + headerW / 2, 55);
+      drawTextWithShadow(ctx, config.restaurantName.toUpperCase(), hx + headerW / 2, 55, { shadowBlur: 4, shadowColor: "rgba(0,0,0,0.3)" });
+
       ctx.font = getFont(400, 13, fs);
       ctx.fillStyle = hexToRgba(getContrastColor(pc), 0.7);
       ctx.fillText(config.tagline, hx + headerW / 2, 80);
+
+      // Divider below header
+      drawDivider(ctx, hx + headerW * 0.3, 105, headerW * 0.4, "gradient", getContrastColor(pc), 0.3);
       curY = 140;
     } else if (config.template === "bistro") {
       ctx.font = getFont(700, 30, "bold");
       ctx.fillStyle = pc;
       ctx.textAlign = "center";
-      ctx.fillText(config.restaurantName, hx + headerW / 2, curY + 25);
-      // Ornamental divider
-      ctx.strokeStyle = hexToRgba(ac, 0.5);
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(hx + headerW * 0.25, curY + 40);
-      ctx.lineTo(hx + headerW * 0.75, curY + 40);
-      ctx.stroke();
+      drawTextWithShadow(ctx, config.restaurantName, hx + headerW / 2, curY + 25);
+
+      drawDivider(ctx, hx + headerW * 0.25, curY + 40, headerW * 0.5, "ornate", ac, 0.5);
+
       ctx.font = getFont(400, 12, "classic");
-      ctx.fillStyle = "#6b7280";
+      ctx.fillStyle = isDark ? hexToRgba(pc, 0.6) : "#6b7280";
       ctx.fillText(config.tagline, hx + headerW / 2, curY + 60);
       curY += 80;
     } else {
       // Elegant / Fine Dining / Rustic
       if (isFine) {
-        // Decorative line above
-        ctx.strokeStyle = hexToRgba(ac, 0.3);
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(hx + headerW * 0.2, curY);
-        ctx.lineTo(hx + headerW * 0.8, curY);
-        ctx.stroke();
+        drawDivider(ctx, hx + headerW * 0.2, curY, headerW * 0.6, "diamond", ac, 0.3);
         curY += 15;
       }
       ctx.font = getFont(400, 11, fs);
@@ -303,19 +416,14 @@ export default function MenuDesignerWorkspace() {
       ctx.textAlign = "center";
       ctx.fillText(config.tagline, hx + headerW / 2, curY + 5);
       curY += 20;
+
       ctx.font = getFont(700, 28, fs);
       ctx.fillStyle = pc;
-      ctx.fillText(config.restaurantName, hx + headerW / 2, curY + 18);
+      drawTextWithShadow(ctx, config.restaurantName, hx + headerW / 2, curY + 18);
       curY += 30;
-      // Decorative divider
-      ctx.fillStyle = ac;
-      ctx.fillRect(hx + headerW / 2 - 40, curY + 5, 80, 1.5);
-      // Diamond
-      ctx.save();
-      ctx.translate(hx + headerW / 2, curY + 6);
-      ctx.rotate(Math.PI / 4);
-      ctx.fillRect(-3, -3, 6, 6);
-      ctx.restore();
+
+      // Ornate divider with diamond
+      drawDivider(ctx, hx + headerW / 2 - 40, curY + 5, 80, "diamond", ac, 0.5);
       curY += 25;
     }
 
@@ -324,11 +432,12 @@ export default function MenuDesignerWorkspace() {
     let panelIdx = 0;
     let panelY = curY;
     const maxY = H - 60;
+    const textColor = isDark ? hexToRgba(pc, 0.85) : "#1e293b";
+    const subTextColor = isDark ? hexToRgba(pc, 0.5) : "#6b7280";
 
     for (const section of config.sections) {
       if (section.items.length === 0) continue;
 
-      // Check if we need to move to next panel
       const estHeight = 40 + section.items.length * 55;
       if (panelY + estHeight > maxY && panelIdx < fold.panels - 1) {
         panelIdx++;
@@ -348,8 +457,11 @@ export default function MenuDesignerWorkspace() {
         ctx.fillStyle = pc;
         ctx.textAlign = "left";
         ctx.fillText(section.label.toUpperCase(), px, panelY + 12);
-        ctx.fillStyle = pc;
-        ctx.fillRect(px, panelY + 18, 30, 3);
+        // Accent underline
+        const labelW = ctx.measureText(section.label.toUpperCase()).width;
+        ctx.fillStyle = ac;
+        roundRect(ctx, px, panelY + 18, Math.min(labelW, 30), 3, 1.5);
+        ctx.fill();
       } else {
         ctx.font = getFont(700, 15, fs);
         ctx.fillStyle = pc;
@@ -362,20 +474,19 @@ export default function MenuDesignerWorkspace() {
       for (const item of section.items) {
         if (panelY > maxY) break;
 
-        // Name + Price
+        // Name + dot leader + Price
         ctx.font = getFont(600, 12, fs);
-        ctx.fillStyle = "#1e293b";
+        ctx.fillStyle = textColor;
         ctx.textAlign = "left";
-        const nameText = item.name;
-        ctx.fillText(nameText, px, panelY + 5, contentW * 0.65);
+        ctx.fillText(item.name, px, panelY + 5, contentW * 0.65);
 
-        // Dot leader
-        const nameW = ctx.measureText(nameText).width;
+        const nameW = ctx.measureText(item.name).width;
         const priceText = `${config.currencySymbol}${item.price}`;
         ctx.font = getFont(600, 12, fs);
         const priceW = ctx.measureText(priceText).width;
 
-        ctx.fillStyle = "#d1d5db";
+        // Dot leader
+        ctx.fillStyle = hexToRgba(pc, 0.15);
         ctx.font = "400 10px Inter, sans-serif";
         const dotsStart = px + nameW + 8;
         const dotsEnd = px + contentW - priceW - 8;
@@ -396,7 +507,7 @@ export default function MenuDesignerWorkspace() {
         // Description
         if (item.description) {
           ctx.font = getFont(400, 10, fs);
-          ctx.fillStyle = "#6b7280";
+          ctx.fillStyle = subTextColor;
           ctx.textAlign = "left";
           const descLines = wrapText(ctx, item.description, contentW * 0.75);
           descLines.forEach((line, li) => {
@@ -408,9 +519,10 @@ export default function MenuDesignerWorkspace() {
         // Dietary tags
         if (item.dietary.length > 0) {
           let tagX = px;
-          if (item.description) tagX = px + ctx.measureText(item.description).width + 10;
-          else tagX = px;
-
+          if (item.description) {
+            ctx.font = getFont(400, 10, fs);
+            tagX = px + Math.min(ctx.measureText(item.description).width + 10, contentW * 0.5);
+          }
           ctx.font = "600 8px Inter, sans-serif";
           for (const tag of item.dietary) {
             const dc = DIETARY_LABELS[tag];
@@ -429,21 +541,33 @@ export default function MenuDesignerWorkspace() {
         panelY += 45;
       }
 
+      // Section divider
+      if (isFine) {
+        drawDivider(ctx, px + contentW * 0.2, panelY - 8, contentW * 0.6, "diamond", ac, 0.15);
+      }
       panelY += 15;
     }
 
     // ─── Footer ──────────────────────────────────────────
+    if (config.showDietaryLegend) {
+      ctx.font = "400 8px Inter, sans-serif";
+      ctx.fillStyle = subTextColor;
+      ctx.textAlign = "center";
+      ctx.fillText("V = Vegetarian  |  VG = Vegan  |  GF = Gluten Free  |  DF = Dairy Free", totalW / 2, H - 25);
+    }
     ctx.font = "400 8px Inter, sans-serif";
-    ctx.fillStyle = "#9ca3af";
+    ctx.fillStyle = hexToRgba(subTextColor, 0.6);
     ctx.textAlign = "center";
-    ctx.fillText("V = Vegetarian  |  VG = Vegan  |  GF = Gluten Free  |  DF = Dairy Free", totalW / 2, H - 25);
     ctx.fillText("All prices in " + config.currency + ". Service charge not included.", totalW / 2, H - 12);
+
+    // ─── Decorative footer element ───────────────────────
+    if (isFine) {
+      drawDivider(ctx, totalW * 0.35, H - 38, totalW * 0.3, "ornate", ac, 0.2);
+    }
   }, [config, ps, fold]);
 
-  useEffect(() => { render(); }, [render]);
-
   /* ── AI Generate ────────────────────────────────────────── */
-  const generateAI = async () => {
+  const generateAI = useCallback(async () => {
     if (!config.cuisineDescription.trim()) return;
     setLoading(true);
     try {
@@ -453,7 +577,38 @@ export default function MenuDesignerWorkspace() {
         body: JSON.stringify({
           messages: [{
             role: "user",
-            content: `Generate a restaurant menu for: "${config.cuisineDescription}". Restaurant: "${config.restaurantName}" in Lusaka, Zambia. Currency: ${config.currency} (symbol: ${config.currencySymbol}). Return JSON only: { "restaurantName": "...", "tagline": "...", "sections": [{ "id": "appetizers|mains|desserts|drinks|specials", "label": "...", "items": [{ "name": "...", "description": "...", "price": "number only", "dietary": ["V"|"VG"|"GF"|"DF"] }] }] }. Include 4-5 sections with 2-4 items each. Use realistic Zambian prices (K15-K250). Include some traditional Zambian dishes.`,
+            content: `You are an expert restaurant consultant and menu designer. Generate a premium restaurant menu.
+
+Restaurant: "${config.restaurantName}" in Lusaka, Zambia.
+Cuisine Description: "${config.cuisineDescription}"
+Currency: ${config.currency} (symbol: ${config.currencySymbol})
+
+Return ONLY valid JSON:
+{
+  "restaurantName": "...",
+  "tagline": "...",
+  "template": "elegant|rustic|modern|bistro|fine-dining|casual",
+  "primaryColor": "#hex",
+  "accentColor": "#hex",
+  "fontStyle": "modern|classic|bold|elegant",
+  "pattern": "none|dots|lines|diagonal-lines|crosshatch|waves|diamond",
+  "sections": [
+    {
+      "id": "appetizers|mains|desserts|drinks|specials",
+      "label": "Section Name",
+      "items": [
+        {
+          "name": "Dish Name",
+          "description": "Brief appetizing description",
+          "price": "number only",
+          "dietary": ["V","VG","GF","DF"]
+        }
+      ]
+    }
+  ]
+}
+
+Include 4-5 sections with 2-4 items each. Use realistic Zambian prices (K15-K250). Include traditional Zambian dishes where appropriate. Pick the template and colors that best match the cuisine style.`,
           }],
         }),
       });
@@ -462,189 +617,358 @@ export default function MenuDesignerWorkspace() {
       const match = clean.match(/\{[\s\S]*\}/);
       if (match) {
         const data = JSON.parse(match[0]);
+        const updates: Partial<MenuConfig> = {};
         if (data.sections) {
-          setConfig((p) => ({
-            ...p,
-            restaurantName: data.restaurantName || p.restaurantName,
-            tagline: data.tagline || p.tagline,
-            sections: data.sections.map((s: Partial<MenuSection>) => ({
-              id: s.id || "mains",
-              label: s.label || SECTION_LABELS[(s.id as MenuSectionId) || "mains"],
-              items: (s.items || []).map((it: Partial<MenuItem>) => ({
-                name: it?.name || "",
-                description: it?.description || "",
-                price: String(it?.price || "0"),
-                dietary: (it?.dietary || []) as DietaryTag[],
-              })),
+          updates.sections = data.sections.map((s: Partial<MenuSection>) => ({
+            id: s.id || "mains",
+            label: s.label || SECTION_LABELS[(s.id as MenuSectionId) || "mains"],
+            items: (s.items || []).map((it: Partial<MenuItem>) => ({
+              name: it?.name || "",
+              description: it?.description || "",
+              price: String(it?.price || "0"),
+              dietary: (it?.dietary || []) as DietaryTag[],
             })),
           }));
         }
+        if (data.restaurantName) updates.restaurantName = data.restaurantName;
+        if (data.tagline) updates.tagline = data.tagline;
+        if (data.template && TEMPLATES.some((t) => t.id === data.template)) updates.template = data.template;
+        if (data.primaryColor?.match(/^#[0-9a-fA-F]{6}$/)) updates.primaryColor = data.primaryColor;
+        if (data.accentColor?.match(/^#[0-9a-fA-F]{6}$/)) updates.accentColor = data.accentColor;
+        if (data.fontStyle && ["modern", "classic", "bold", "elegant"].includes(data.fontStyle)) updates.fontStyle = data.fontStyle;
+        if (data.pattern && patternOptions.some((p) => p.id === data.pattern)) updates.patternType = data.pattern;
+        upd(updates);
       }
     } catch { /* ignore */ }
     setLoading(false);
-  };
+  }, [config, upd]);
 
   /* ── Export ──────────────────────────────────────────────── */
-  const exportPNG = () => {
+  const exportPNG = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const link = document.createElement("a");
-    link.download = `menu-${config.restaurantName.replace(/\s+/g, "-").toLowerCase()}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  };
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `menu-${config.restaurantName.replace(/\s+/g, "-").toLowerCase()}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }, "image/png");
+  }, [config.restaurantName]);
 
-  const upd = (patch: Partial<MenuConfig>) => setConfig((p) => ({ ...p, ...patch }));
+  const handleCopy = useCallback(async () => {
+    if (!canvasRef.current) return;
+    try {
+      canvasRef.current.toBlob(async (blob) => {
+        if (!blob) return;
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      }, "image/png");
+    } catch { /* ignore */ }
+  }, []);
 
-  const addItem = (secIdx: number) => {
+  const handleExportPdf = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const totalW = config.foldType === "single" ? ps.w : ps.w * fold.panels;
+    const wMm = totalW / (595 / 210);
+    const hMm = ps.h / (842 / 297);
+    const pdf = new jsPDF({
+      orientation: wMm > hMm ? "l" : "p",
+      unit: "mm",
+      format: [wMm, hMm],
+    });
+    const imgData = canvas.toDataURL("image/png");
+    pdf.addImage(imgData, "PNG", 0, 0, wMm, hMm);
+    pdf.save(`menu-${config.restaurantName.replace(/\s+/g, "-").toLowerCase()}.pdf`);
+  }, [config, ps, fold]);
+
+  const addItem = useCallback((secIdx: number) => {
     const sections = [...config.sections];
     sections[secIdx] = {
       ...sections[secIdx],
       items: [...sections[secIdx].items, { name: "New Item", description: "", price: "0", dietary: [] }],
     };
     upd({ sections });
-  };
+  }, [config.sections, upd]);
 
-  const removeItem = (secIdx: number, itemIdx: number) => {
+  const removeItem = useCallback((secIdx: number, itemIdx: number) => {
     const sections = [...config.sections];
     sections[secIdx] = {
       ...sections[secIdx],
       items: sections[secIdx].items.filter((_, i) => i !== itemIdx),
     };
     upd({ sections });
-  };
+  }, [config.sections, upd]);
 
-  const updateItem = (secIdx: number, itemIdx: number, patch: Partial<MenuItem>) => {
+  const updateItem = useCallback((secIdx: number, itemIdx: number, patch: Partial<MenuItem>) => {
     const sections = [...config.sections];
     const items = [...sections[secIdx].items];
     items[itemIdx] = { ...items[itemIdx], ...patch };
     sections[secIdx] = { ...sections[secIdx], items };
     upd({ sections });
-  };
+  }, [config.sections, upd]);
 
-  const toggleDietary = (secIdx: number, itemIdx: number, tag: DietaryTag) => {
+  const toggleDietary = useCallback((secIdx: number, itemIdx: number, tag: DietaryTag) => {
     const item = config.sections[secIdx].items[itemIdx];
     const dietary = item.dietary.includes(tag)
       ? item.dietary.filter((d) => d !== tag)
       : [...item.dietary, tag];
     updateItem(secIdx, itemIdx, { dietary });
-  };
+  }, [config.sections, updateItem]);
 
-  const displayW = config.foldType === "single" ? ps.w : ps.w * fold.panels;
+  const displayW = config.foldType === "single" ? Math.min(ps.w, 500) : Math.min(ps.w * fold.panels, 700);
+  const displayH = displayW * (ps.h / (config.foldType === "single" ? ps.w : ps.w * fold.panels));
+  const totalItems = config.sections.reduce((a, s) => a + s.items.length, 0);
 
-  /* ── UI ──────────────────────────────────────────────────── */
-  return (
-    <div>
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
-        {(["canvas", "settings"] as const).map((t) => (
-          <button key={t} onClick={() => setMobileTab(t)} className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}>{t}</button>
-        ))}
-      </div>
+  /* ── Left Panel ─────────────────────────────────────────── */
+  const leftPanel = (
+    <div className="space-y-3">
+      {/* Template Slider */}
+      <Section icon={<IconLayout className="size-3.5" />} label="Templates" id="templates" open={openSections.has("templates")} toggle={toggleSection}>
+        <TemplateSlider
+          templates={templatePreviews}
+          activeId={config.template}
+          onSelect={(id) => upd({ template: id as MenuTemplate })}
+          thumbWidth={110}
+          thumbHeight={150}
+          label=""
+        />
+      </Section>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Settings */}
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
-          {/* General */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconUtensils className="size-4 text-primary-500" />Menu Settings</h3>
+      {/* Restaurant Details */}
+      <Section icon={<IconUtensils className="size-3.5" />} label="Restaurant Details" id="details" open={openSections.has("details")} toggle={toggleSection}>
+        <div className="space-y-2">
+          <input placeholder="Restaurant Name" value={config.restaurantName} onChange={(e) => upd({ restaurantName: e.target.value })}
+            className="w-full h-10 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-sm placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
+          <input placeholder="Tagline" value={config.tagline} onChange={(e) => upd({ tagline: e.target.value })}
+            className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
 
-            <label className="block text-xs text-gray-400">Restaurant Name</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.restaurantName} onChange={(e) => upd({ restaurantName: e.target.value })} />
-
-            <label className="block text-xs text-gray-400">Tagline</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.tagline} onChange={(e) => upd({ tagline: e.target.value })} />
-
-            <label className="block text-xs text-gray-400">Fold Type</label>
-            <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.foldType} onChange={(e) => upd({ foldType: e.target.value as FoldType })}>
-              {FOLD_TYPES.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
-            </select>
-
-            <label className="block text-xs text-gray-400">Page Size</label>
-            <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.pageSize} onChange={(e) => upd({ pageSize: e.target.value as PageSize })}>
-              {PAGE_SIZES.map((s) => <option key={s.id} value={s.id}>{s.label} ({s.w}×{s.h})</option>)}
-            </select>
-
-            <label className="block text-xs text-gray-400">Template</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {TEMPLATES.map((t) => (
-                <button key={t.id} onClick={() => upd({ template: t.id })} className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${config.template === t.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{t.label}</button>
-              ))}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 mb-1 block">Fold Type</label>
+              <select value={config.foldType} onChange={(e) => upd({ foldType: e.target.value as FoldType })}
+                className="w-full h-9 px-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs">
+                {FOLD_TYPES.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </select>
             </div>
+            <div>
+              <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 mb-1 block">Page Size</label>
+              <select value={config.pageSize} onChange={(e) => upd({ pageSize: e.target.value as PageSize })}
+                className="w-full h-9 px-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs">
+                {PAGE_SIZES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+            </div>
+          </div>
 
-            <label className="block text-xs text-gray-400">Currency</label>
-            <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.currency} onChange={(e) => { const c = CURRENCIES.find((x) => x.code === e.target.value); if (c) upd({ currency: c.code, currencySymbol: c.symbol }); }}>
+          <div>
+            <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 mb-1 block">Currency</label>
+            <select value={config.currency} onChange={(e) => { const c = CURRENCIES.find((x) => x.code === e.target.value); if (c) upd({ currency: c.code, currencySymbol: c.symbol }); }}
+              className="w-full h-9 px-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs">
               {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.symbol} — {c.label}</option>)}
             </select>
-
-            <label className="block text-xs text-gray-400">Colors</label>
-            <div className="flex gap-1.5 flex-wrap">
-              {COLOR_PRESETS.map((c) => (
-                <button key={c} onClick={() => upd({ primaryColor: c })} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <div className="flex-1"><label className="block text-xs text-gray-400 mb-1">Primary</label><input type="color" value={config.primaryColor} onChange={(e) => upd({ primaryColor: e.target.value })} className="w-full h-7 rounded cursor-pointer" /></div>
-              <div className="flex-1"><label className="block text-xs text-gray-400 mb-1">Accent</label><input type="color" value={config.accentColor} onChange={(e) => upd({ accentColor: e.target.value })} className="w-full h-7 rounded cursor-pointer" /></div>
-            </div>
-          </div>
-
-          {/* Menu Items */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Menu Items</h3>
-            {/* Section tabs */}
-            <div className="flex gap-1 flex-wrap">
-              {config.sections.map((sec, i) => (
-                <button key={sec.id} onClick={() => setEditSection(i)} className={`px-2 py-1 rounded-lg text-xs font-medium ${editSection === i ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-500"}`}>{sec.label} ({sec.items.length})</button>
-              ))}
-            </div>
-
-            {/* Items for selected section */}
-            {config.sections[editSection] && (
-              <div className="space-y-2 max-h-56 overflow-y-auto">
-                {config.sections[editSection].items.map((item, ii) => (
-                  <div key={ii} className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800 space-y-1.5">
-                    <div className="flex gap-1.5">
-                      <input className="flex-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-xs text-gray-900 dark:text-white" placeholder="Name" value={item.name} onChange={(e) => updateItem(editSection, ii, { name: e.target.value })} />
-                      <input className="w-16 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-xs text-gray-900 dark:text-white" placeholder="Price" value={item.price} onChange={(e) => updateItem(editSection, ii, { price: e.target.value })} />
-                      <button onClick={() => removeItem(editSection, ii)} className="text-gray-500 hover:text-red-400"><IconTrash className="size-3" /></button>
-                    </div>
-                    <input className="w-full rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-xs text-gray-900 dark:text-white" placeholder="Description" value={item.description} onChange={(e) => updateItem(editSection, ii, { description: e.target.value })} />
-                    <div className="flex gap-1">
-                      {(["V", "VG", "GF", "DF"] as DietaryTag[]).map((tag) => (
-                        <button key={tag} onClick={() => toggleDietary(editSection, ii, tag)} className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${item.dietary.includes(tag) ? "text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-500"}`} style={item.dietary.includes(tag) ? { backgroundColor: DIETARY_LABELS[tag].color } : {}}>{tag}</button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                <button onClick={() => addItem(editSection)} className="flex items-center gap-1 text-xs text-primary-500 hover:text-primary-400"><IconPlus className="size-3" />Add Item</button>
-              </div>
-            )}
-          </div>
-
-          {/* AI */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Menu Generator</h3>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the cuisine type and restaurant concept (e.g., 'Upscale Zambian fusion restaurant with traditional and modern dishes')..." value={config.cuisineDescription} onChange={(e) => upd({ cuisineDescription: e.target.value })} />
-            <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
-              {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
-              {loading ? "Generating…" : "Generate Menu"}
-            </button>
-          </div>
-
-          {/* Export */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-            <button onClick={exportPNG} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"><IconDownload className="size-4" />Export PNG</button>
           </div>
         </div>
+      </Section>
 
-        {/* Canvas */}
-        <div className={`flex-1 min-w-0 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-          <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
-            <canvas ref={canvasRef} style={{ width: Math.min(displayW, 700), height: Math.min(displayW, 700) * (ps.h / displayW) }} className="rounded-lg shadow-lg" />
+      {/* Menu Items Editor */}
+      <Section icon={<IconType className="size-3.5" />} label={`Menu Items (${totalItems})`} id="items" open={openSections.has("items")} toggle={toggleSection}>
+        <div className="space-y-2">
+          {/* Section tabs */}
+          <div className="flex gap-1 flex-wrap">
+            {config.sections.map((sec, i) => (
+              <button key={sec.id} onClick={() => setEditSection(i)}
+                className={`px-2 py-1 rounded-lg text-[0.625rem] font-medium transition-all ${editSection === i ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
+                {sec.label} ({sec.items.length})
+              </button>
+            ))}
           </div>
-          <p className="text-xs text-gray-400 text-center mt-2">{config.template} — {fold.label} — {ps.label} — {config.sections.reduce((a, s) => a + s.items.length, 0)} items</p>
+
+          {/* Items */}
+          {config.sections[editSection] && (
+            <div className="space-y-1.5 max-h-48 overflow-y-auto">
+              {config.sections[editSection].items.map((item, ii) => (
+                <div key={ii} className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 space-y-1">
+                  <div className="flex gap-1.5">
+                    <input className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-xs text-gray-900 dark:text-white" placeholder="Name" value={item.name} onChange={(e) => updateItem(editSection, ii, { name: e.target.value })} />
+                    <input className="w-14 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-xs text-gray-900 dark:text-white text-center" placeholder="Price" value={item.price} onChange={(e) => updateItem(editSection, ii, { price: e.target.value })} />
+                    <button onClick={() => removeItem(editSection, ii)} className="text-gray-400 hover:text-error-400 transition-colors"><IconTrash className="size-3" /></button>
+                  </div>
+                  <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-xs text-gray-900 dark:text-white" placeholder="Description" value={item.description} onChange={(e) => updateItem(editSection, ii, { description: e.target.value })} />
+                  <div className="flex gap-1">
+                    {(["V", "VG", "GF", "DF"] as DietaryTag[]).map((tag) => (
+                      <button key={tag} onClick={() => toggleDietary(editSection, ii, tag)}
+                        className={`px-1.5 py-0.5 rounded text-[0.5625rem] font-bold transition-colors ${item.dietary.includes(tag) ? "text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-500"}`}
+                        style={item.dietary.includes(tag) ? { backgroundColor: DIETARY_LABELS[tag].color } : {}}>
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <button onClick={() => addItem(editSection)} className="flex items-center gap-1 text-xs text-primary-500 hover:text-primary-400 transition-colors">
+                <IconPlus className="size-3" />Add Item
+              </button>
+            </div>
+          )}
+        </div>
+      </Section>
+
+      {/* Style */}
+      <Section icon={<IconDroplet className="size-3.5" />} label="Style" id="style" open={openSections.has("style")} toggle={toggleSection}>
+        <div className="space-y-3">
+          <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400">Color Theme</p>
+          <div className="grid grid-cols-5 gap-1.5">
+            {colorPresets.map((theme) => (
+              <button key={theme.name} onClick={() => upd({ primaryColor: theme.primary, accentColor: theme.accent, bgColor: theme.bg })}
+                className={`p-1.5 rounded-lg border text-center transition-all ${config.primaryColor === theme.primary && config.bgColor === theme.bg ? "border-primary-500 ring-1 ring-primary-500/30" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"}`}>
+                <div className="flex gap-0.5 justify-center mb-0.5">
+                  <div className="size-3 rounded-full" style={{ backgroundColor: theme.primary }} />
+                  <div className="size-3 rounded-full" style={{ backgroundColor: theme.accent }} />
+                </div>
+                <span className="text-[0.5rem] text-gray-400">{theme.name}</span>
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            {([{ key: "primaryColor", label: "Primary" }, { key: "accentColor", label: "Accent" }, { key: "bgColor", label: "BG" }] as const).map(({ key, label }) => (
+              <label key={key} className="flex items-center gap-1 cursor-pointer">
+                <input type="color" value={config[key]} onChange={(e) => upd({ [key]: e.target.value })} className="size-6 rounded border border-gray-200 dark:border-gray-700 cursor-pointer bg-transparent" />
+                <span className="text-[0.5625rem] text-gray-400">{label}</span>
+              </label>
+            ))}
+          </div>
+
+          <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 pt-1">Typography</p>
+          <div className="flex flex-wrap gap-1.5">
+            {(["modern", "classic", "bold", "elegant"] as const).map((style) => (
+              <button key={style} onClick={() => upd({ fontStyle: style })}
+                className={`px-3 py-1.5 rounded-xl border text-xs font-semibold capitalize transition-all ${config.fontStyle === style ? "border-primary-500 bg-primary-500/5 text-primary-500 ring-1 ring-primary-500/30" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"}`}
+                style={{ fontFamily: getFontFamily(style) }}>
+                {style}
+              </button>
+            ))}
+          </div>
+
+          <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 pt-1">Pattern</p>
+          <div className="flex flex-wrap gap-1">
+            {patternOptions.map((p) => (
+              <button key={p.id} onClick={() => upd({ patternType: p.id })}
+                className={`px-2 py-1 rounded-lg border text-[0.625rem] font-medium transition-all ${config.patternType === p.id ? "border-primary-500 bg-primary-500/5 text-primary-500" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400"}`}>
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          <label className="flex items-center gap-2 cursor-pointer pt-1">
+            <input type="checkbox" checked={config.showDietaryLegend} onChange={(e) => upd({ showDietaryLegend: e.target.checked })}
+              className="size-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-500 focus:ring-primary-500/30" />
+            <span className="text-xs text-gray-600 dark:text-gray-300">Show dietary legend</span>
+          </label>
+        </div>
+      </Section>
+
+      {/* AI */}
+      <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-3">
+        <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-secondary-500 mb-2.5">
+          <IconSparkles className="size-3.5" />AI Menu Director
+        </label>
+        <textarea
+          className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 px-3 py-2 text-xs text-gray-900 dark:text-white resize-none placeholder:text-gray-400 focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-500/20"
+          rows={3} placeholder="Describe cuisine type and concept (e.g., 'Upscale Zambian fusion with traditional and modern dishes')..."
+          value={config.cuisineDescription} onChange={(e) => upd({ cuisineDescription: e.target.value })}
+        />
+        <button onClick={generateAI} disabled={loading || !config.cuisineDescription.trim()}
+          className="w-full mt-2 flex items-center justify-center gap-2 h-10 rounded-xl bg-secondary-500 text-white text-xs font-bold hover:bg-secondary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+          {loading ? <><IconLoader className="size-3.5 animate-spin" />Designing…</> : <><IconWand className="size-3.5" />Generate Menu</>}
+        </button>
+        <p className="text-[0.5625rem] text-gray-400 text-center mt-1.5">AI suggests items, colors, template & typography</p>
+      </div>
+    </div>
+  );
+
+  /* ── Right Panel ────────────────────────────────────────── */
+  const rightPanel = (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2.5">Export</h3>
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={exportPNG} className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-primary-500/30 bg-primary-500/5 text-primary-500 transition-colors hover:bg-primary-500/10">
+            <IconDownload className="size-4" /><span className="text-xs font-semibold">.png</span>
+          </button>
+          <button onClick={handleCopy} className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-secondary-500/30 bg-secondary-500/5 text-secondary-500 transition-colors hover:bg-secondary-500/10">
+            <IconCopy className="size-4" /><span className="text-xs font-semibold">Clipboard</span>
+          </button>
+          <button onClick={handleExportPdf} className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-info-500/30 bg-info-500/5 text-info-500 transition-colors hover:bg-info-500/10">
+            <IconPrinter className="size-4" /><span className="text-xs font-semibold">.pdf</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Menu Info</h3>
+        <div className="space-y-1 text-xs text-gray-400">
+          <p>Template: <span className="text-gray-300 capitalize">{config.template}</span></p>
+          <p>Format: <span className="text-gray-300">{fold.label} · {ps.label}</span></p>
+          <p>Items: <span className="text-gray-300">{totalItems}</span></p>
+          <p>Sections: <span className="text-gray-300">{config.sections.filter((s) => s.items.length > 0).length}</span></p>
+          <p>Font: <span className="text-gray-300 capitalize">{config.fontStyle}</span></p>
+          <p>Pattern: <span className="text-gray-300 capitalize">{config.patternType}</span></p>
+          <p>Currency: <span className="text-gray-300">{config.currencySymbol} ({config.currency})</span></p>
+        </div>
+      </div>
+
+      {/* Dietary Legend */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Dietary Tags</h3>
+        <div className="space-y-1">
+          {(Object.entries(DIETARY_LABELS) as [DietaryTag, { label: string; color: string }][]).map(([tag, info]) => (
+            <div key={tag} className="flex items-center gap-2">
+              <span className="px-1.5 py-0.5 rounded text-[0.5625rem] font-bold text-white" style={{ backgroundColor: info.color }}>{tag}</span>
+              <span className="text-xs text-gray-400">{info.label}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
+  );
+
+  const toolbar = (
+    <div className="flex items-center gap-1.5">
+      <span className="text-xs font-semibold text-gray-400 capitalize">{config.template}</span>
+      <span className="text-gray-600">·</span>
+      <span className="text-xs text-gray-500">{fold.label} · {ps.label}</span>
+    </div>
+  );
+
+  return (
+    <StickyCanvasLayout
+      leftPanel={leftPanel}
+      rightPanel={rightPanel}
+      canvasRef={canvasRef}
+      displayWidth={displayW}
+      displayHeight={displayH}
+      label={`${config.template} — ${fold.label} — ${ps.label} — ${totalItems} items`}
+      toolbar={toolbar}
+      mobileTabs={["Canvas", "Settings"]}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
+      onZoomFit={() => setZoom(1)}
+      actionsBar={
+        <div className="flex items-center gap-2">
+          <button onClick={exportPNG} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors">
+            <IconDownload className="size-3" />Download PNG
+          </button>
+          <button onClick={handleExportPdf} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors">
+            <IconPrinter className="size-3" />PDF
+          </button>
+          <button onClick={handleCopy} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors">
+            <IconCopy className="size-3" />Copy
+          </button>
+        </div>
+      }
+    />
   );
 }

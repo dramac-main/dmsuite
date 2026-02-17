@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   IconMonitor,
   IconSparkles,
   IconWand,
   IconLoader,
   IconDownload,
+  IconCopy,
 } from "@/components/icons";
 import { cleanAIText, roundRect } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -64,7 +67,6 @@ const CONTENT_COLORS = ["#1e40af", "#0f766e", "#7c3aed", "#dc2626", "#ea580c", "
 export default function MockupGeneratorWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
 
   const [config, setConfig] = useState<MockupConfig>({
     scene: "phone",
@@ -350,95 +352,154 @@ export default function MockupGeneratorWorkspace() {
   const devices = SCENES.filter((s) => s.group === "device");
   const products = SCENES.filter((s) => s.group === "product");
 
-  /* ── UI ──────────────────────────────────────────────────── */
+  /* ── Zoom / Display ─────────────────────────────────────── */
+  const [zoom, setZoom] = useState(0.75);
+  const displayWidth = Math.min(550, scene.width) * zoom;
+  const displayHeight = displayWidth * (scene.height / scene.width);
+
+  /* ── Template Previews ──────────────────────────────────── */
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () => SCENES.map((s) => ({
+      id: s.id,
+      label: s.name,
+      render: (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+        ctx.fillStyle = config.bgColor;
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = config.deviceColor;
+        const sx = (s.screenX / s.width) * w;
+        const sy = (s.screenY / s.height) * h;
+        const sw = (s.screenW / s.width) * w;
+        const sh = (s.screenH / s.height) * h;
+        roundRect(ctx, sx, sy, sw, sh, 3);
+        ctx.fill();
+        ctx.fillStyle = config.contentColor;
+        ctx.fillRect(sx + 2, sy + 2, sw - 4, sh - 4);
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 7px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(s.name, w / 2, h - 4);
+      },
+    })),
+    [config.bgColor, config.deviceColor, config.contentColor]
+  );
+
+  /* ── Copy to Clipboard ──────────────────────────────────── */
+  const handleCopy = useCallback(async () => {
+    if (!canvasRef.current) return;
+    try {
+      canvasRef.current.toBlob(async (blob) => {
+        if (!blob) return;
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      }, "image/png");
+    } catch { /* ignore */ }
+  }, []);
+
+  /* ── Panel Definitions for StickyCanvasLayout ───────────── */
+  const leftPanel = (
+    <>
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconMonitor className="size-4 text-primary-500" />Mockup Settings</h3>
+
+        <label className="block text-xs text-gray-400">Device Mockups</label>
+        <div className="grid grid-cols-4 gap-1.5">
+          {devices.map((s) => (
+            <button key={s.id} onClick={() => setConfig((p) => ({ ...p, scene: s.id }))} className={`px-1 py-1.5 rounded-lg text-[10px] font-medium transition-colors ${config.scene === s.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{s.name}</button>
+          ))}
+        </div>
+
+        <label className="block text-xs text-gray-400">Product Mockups</label>
+        <div className="grid grid-cols-4 gap-1.5">
+          {products.map((s) => (
+            <button key={s.id} onClick={() => setConfig((p) => ({ ...p, scene: s.id }))} className={`px-1 py-1.5 rounded-lg text-[10px] font-medium transition-colors ${config.scene === s.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{s.name}</button>
+          ))}
+        </div>
+
+        <label className="block text-xs text-gray-400">Content Text</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.contentText} onChange={(e) => setConfig((p) => ({ ...p, contentText: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Subtext</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.contentSubtext} onChange={(e) => setConfig((p) => ({ ...p, contentSubtext: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Brand Name</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.brandName} onChange={(e) => setConfig((p) => ({ ...p, brandName: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Background</label>
+        <div className="flex gap-1.5 flex-wrap">
+          {BG_PRESETS.map((c) => (
+            <button key={c} onClick={() => setConfig((p) => ({ ...p, bgColor: c }))} className={`size-7 rounded-full border-2 ${config.bgColor === c ? "border-primary-500 scale-110" : "border-gray-300 dark:border-gray-600"}`} style={{ backgroundColor: c }} />
+          ))}
+        </div>
+
+        <label className="block text-xs text-gray-400">Device Color</label>
+        <div className="flex gap-1.5 flex-wrap">
+          {DEVICE_COLORS.map((c) => (
+            <button key={c} onClick={() => setConfig((p) => ({ ...p, deviceColor: c }))} className={`size-7 rounded-full border-2 ${config.deviceColor === c ? "border-primary-500 scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
+          ))}
+        </div>
+
+        <label className="block text-xs text-gray-400">Content Color</label>
+        <div className="flex gap-1.5 flex-wrap">
+          {CONTENT_COLORS.map((c) => (
+            <button key={c} onClick={() => setConfig((p) => ({ ...p, contentColor: c }))} className={`size-7 rounded-full border-2 ${config.contentColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input type="checkbox" checked={config.shadowEnabled} onChange={(e) => setConfig((p) => ({ ...p, shadowEnabled: e.target.checked }))} className="rounded" />
+          <label className="text-xs text-gray-400">Drop shadow</label>
+        </div>
+      </div>
+
+      {/* AI Generation */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Mockup Content</h3>
+        <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the brand/product to preview (e.g. 'Fitness app for Zambian market')..." value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
+        <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
+          {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
+          {loading ? "Generating…" : "Generate Content"}
+        </button>
+      </div>
+
+      {/* Template Slider */}
+      <TemplateSlider
+        templates={templatePreviews}
+        activeId={config.scene}
+        onSelect={(id) => setConfig((p) => ({ ...p, scene: id as MockupType }))}
+        label="Scene Presets"
+      />
+    </>
+  );
+
   return (
-    <div>
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
-        {(["canvas", "settings"] as const).map((t) => (
-          <button key={t} onClick={() => setMobileTab(t)} className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}>{t}</button>
-        ))}
-      </div>
-
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Settings */}
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconMonitor className="size-4 text-primary-500" />Mockup Settings</h3>
-
-            <label className="block text-xs text-gray-400">Device Mockups</label>
-            <div className="grid grid-cols-4 gap-1.5">
-              {devices.map((s) => (
-                <button key={s.id} onClick={() => setConfig((p) => ({ ...p, scene: s.id }))} className={`px-1 py-1.5 rounded-lg text-[10px] font-medium transition-colors ${config.scene === s.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{s.name}</button>
-              ))}
-            </div>
-
-            <label className="block text-xs text-gray-400">Product Mockups</label>
-            <div className="grid grid-cols-4 gap-1.5">
-              {products.map((s) => (
-                <button key={s.id} onClick={() => setConfig((p) => ({ ...p, scene: s.id }))} className={`px-1 py-1.5 rounded-lg text-[10px] font-medium transition-colors ${config.scene === s.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{s.name}</button>
-              ))}
-            </div>
-
-            <label className="block text-xs text-gray-400">Content Text</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.contentText} onChange={(e) => setConfig((p) => ({ ...p, contentText: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Subtext</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.contentSubtext} onChange={(e) => setConfig((p) => ({ ...p, contentSubtext: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Brand Name</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.brandName} onChange={(e) => setConfig((p) => ({ ...p, brandName: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Background</label>
-            <div className="flex gap-1.5 flex-wrap">
-              {BG_PRESETS.map((c) => (
-                <button key={c} onClick={() => setConfig((p) => ({ ...p, bgColor: c }))} className={`size-7 rounded-full border-2 ${config.bgColor === c ? "border-primary-500 scale-110" : "border-gray-300 dark:border-gray-600"}`} style={{ backgroundColor: c }} />
-              ))}
-            </div>
-
-            <label className="block text-xs text-gray-400">Device Color</label>
-            <div className="flex gap-1.5 flex-wrap">
-              {DEVICE_COLORS.map((c) => (
-                <button key={c} onClick={() => setConfig((p) => ({ ...p, deviceColor: c }))} className={`size-7 rounded-full border-2 ${config.deviceColor === c ? "border-primary-500 scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
-              ))}
-            </div>
-
-            <label className="block text-xs text-gray-400">Content Color</label>
-            <div className="flex gap-1.5 flex-wrap">
-              {CONTENT_COLORS.map((c) => (
-                <button key={c} onClick={() => setConfig((p) => ({ ...p, contentColor: c }))} className={`size-7 rounded-full border-2 ${config.contentColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
-              ))}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input type="checkbox" checked={config.shadowEnabled} onChange={(e) => setConfig((p) => ({ ...p, shadowEnabled: e.target.checked }))} className="rounded" />
-              <label className="text-xs text-gray-400">Drop shadow</label>
-            </div>
-          </div>
-
-          {/* AI Generation */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Mockup Content</h3>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the brand/product to preview (e.g. 'Fitness app for Zambian market')..." value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
-            <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
-              {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
-              {loading ? "Generating…" : "Generate Content"}
-            </button>
-          </div>
-
-          {/* Export */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-            <button onClick={exportPNG} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"><IconDownload className="size-4" />Export PNG</button>
-          </div>
+    <StickyCanvasLayout
+      canvasRef={canvasRef}
+      displayWidth={displayWidth}
+      displayHeight={displayHeight}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
+      onZoomFit={() => setZoom(0.75)}
+      label={`${scene.name} Mockup — ${scene.width}×${scene.height}px`}
+      mobileTabs={["Canvas", "Settings"]}
+      leftPanel={leftPanel}
+      actionsBar={
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportPNG}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors"
+          >
+            <IconDownload className="size-3" />
+            PNG
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors"
+          >
+            <IconCopy className="size-3" />
+            Copy
+          </button>
         </div>
-
-        {/* Canvas */}
-        <div className={`flex-1 min-w-0 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-          <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
-            <canvas ref={canvasRef} style={{ width: Math.min(scene.width, 550), height: Math.min(scene.width, 550) * (scene.height / scene.width) }} className="rounded-lg shadow-lg" />
-          </div>
-          <p className="text-xs text-gray-400 text-center mt-2">{scene.name} Mockup — {scene.width}×{scene.height}px</p>
-        </div>
-      </div>
-    </div>
+      }
+    />
   );
 }

@@ -1,14 +1,31 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   IconSparkles,
   IconWand,
   IconLoader,
   IconDownload,
   IconAward,
+  IconCopy,
+  IconDroplet,
+  IconType,
+  IconLayout,
+  IconPrinter,
 } from "@/components/icons";
-import { cleanAIText, hexToRgba } from "@/lib/canvas-utils";
+import { cleanAIText, hexToRgba, roundRect } from "@/lib/canvas-utils";
+import {
+  drawPattern,
+  drawDivider,
+  drawAccentCircle,
+  drawGradient,
+  drawTextWithShadow,
+  drawSeal,
+} from "@/lib/graphics-engine";
+import { drawCertificateThumbnail } from "@/lib/template-renderers";
+import StickyCanvasLayout from "./StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
+import { jsPDF } from "jspdf";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -36,6 +53,7 @@ interface CertificateConfig {
   showSignatureLine: boolean;
   eventName: string;
   organizationName: string;
+  patternType: string;
 }
 
 /* ── Constants ─────────────────────────────────────────────── */
@@ -75,9 +93,27 @@ const TEMPLATES: { id: CertificateTemplate; label: string }[] = [
   { id: "creative", label: "Creative" },
 ];
 
-const COLOR_PRESETS = [
-  "#1e3a5f", "#0f766e", "#7c3aed", "#8b5e3c", "#b91c1c",
-  "#1e40af", "#059669", "#c09c2c",
+const colorPresets = [
+  { name: "Navy", primary: "#1e3a5f", accent: "#c09c2c" },
+  { name: "Teal", primary: "#0f766e", accent: "#14b8a6" },
+  { name: "Purple", primary: "#7c3aed", accent: "#a78bfa" },
+  { name: "Brown", primary: "#8b5e3c", accent: "#d2a679" },
+  { name: "Red", primary: "#b91c1c", accent: "#fca5a5" },
+  { name: "Blue", primary: "#1e40af", accent: "#60a5fa" },
+  { name: "Green", primary: "#059669", accent: "#6ee7b7" },
+  { name: "Gold", primary: "#c09c2c", accent: "#fef3c7" },
+  { name: "Slate", primary: "#334155", accent: "#94a3b8" },
+  { name: "Rose", primary: "#9f1239", accent: "#fda4af" },
+];
+
+const patternOptions = [
+  { id: "none", label: "None" },
+  { id: "dots", label: "Dots" },
+  { id: "lines", label: "Lines" },
+  { id: "diagonal-lines", label: "Diagonal" },
+  { id: "crosshatch", label: "Crosshatch" },
+  { id: "waves", label: "Waves" },
+  { id: "diamond", label: "Diamond" },
 ];
 
 const BORDER_COLORS: Record<BorderStyle, { outer: string; inner: string; accent: string }> = {
@@ -115,12 +151,30 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number): st
   return lines;
 }
 
+/* ── Collapsible Section ─────────────────────────────────── */
+
+function Section({ icon, label, id, open, toggle, children }: {
+  icon: React.ReactNode; label: string; id: string;
+  open: boolean; toggle: (id: string) => void; children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
+      <button onClick={() => toggle(id)}
+        className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors w-full">
+        {icon}{label}
+        <svg className={`size-3 ml-auto transition-transform ${open ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><polyline points="6 9 12 15 18 9" /></svg>
+      </button>
+      {open && <div className="mt-2.5">{children}</div>}
+    </div>
+  );
+}
+
 /* ── Component ─────────────────────────────────────────────── */
 
 export default function CertificateDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
+  const [zoom, setZoom] = useState(1);
 
   const [config, setConfig] = useState<CertificateConfig>({
     type: "achievement",
@@ -141,13 +195,53 @@ export default function CertificateDesignerWorkspace() {
     showSignatureLine: true,
     eventName: "",
     organizationName: "DMSuite Academy — Lusaka, Zambia",
+    patternType: "none",
   });
+
+  const [openSections, setOpenSections] = useState<Set<string>>(
+    new Set(["templates", "content"])
+  );
+  const toggleSection = (id: string) => {
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const sz = SIZES.find((s) => s.id === config.size)!;
   const bc = BORDER_COLORS[config.border];
+  const upd = useCallback((patch: Partial<CertificateConfig>) => setConfig((p) => ({ ...p, ...patch })), []);
+
+  // ── Visual Template Previews ──────────────────────────
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () => TEMPLATES.map((t) => ({
+      id: t.id,
+      label: t.label,
+      render: (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+        const borders: Record<string, "gold" | "silver" | "ornate" | "modern" | "minimal" | "bronze"> = {
+          "academic": "gold",
+          "corporate": "modern",
+          "elegant": "ornate",
+          "modern": "minimal",
+          "achievement": "gold",
+          "training": "modern",
+          "sports": "bronze",
+          "creative": "silver",
+        };
+        drawCertificateThumbnail(ctx, w, h, {
+          primaryColor: config.primaryColor,
+          borderStyle: borders[t.id] || "gold",
+          showSeal: true,
+        });
+      },
+    })),
+    [config.primaryColor, config.accentColor]
+  );
 
   /* ── Render ─────────────────────────────────────────────── */
-  const render = useCallback(() => {
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
@@ -165,61 +259,56 @@ export default function CertificateDesignerWorkspace() {
 
     // ─── Background ──────────────────────────────────────
     if (isModern) {
-      const grad = ctx.createLinearGradient(0, 0, W, H);
-      grad.addColorStop(0, "#ffffff");
-      grad.addColorStop(1, "#f8fafc");
-      ctx.fillStyle = grad;
+      drawGradient(ctx, 0, 0, W, H, 135, [
+        { offset: 0, color: "#ffffff" },
+        { offset: 1, color: "#f8fafc" },
+      ]);
     } else {
       ctx.fillStyle = "#fffef5";
+      ctx.fillRect(0, 0, W, H);
     }
-    ctx.fillRect(0, 0, W, H);
 
-    // ─── Decorative Background Pattern ───────────────────
-    if (config.template === "elegant" || config.template === "academic") {
-      ctx.fillStyle = hexToRgba(ac, 0.03);
-      for (let x = 0; x < W; x += 30) {
-        for (let y = 0; y < H; y += 30) {
-          ctx.beginPath();
-          ctx.arc(x, y, 1, 0, Math.PI * 2);
-          ctx.fill();
-        }
+    // ─── Pattern Overlay ─────────────────────────────────
+    if (config.patternType && config.patternType !== "none") {
+      drawPattern(
+        ctx, 0, 0, W, H,
+        config.patternType as Parameters<typeof drawPattern>[5],
+        ac, 0.02, 30
+      );
+    } else {
+      // Default template patterns
+      if (isElegant) {
+        drawPattern(ctx, 0, 0, W, H, "dots", ac, 0.025, 30);
+      }
+      if (config.template === "creative") {
+        drawAccentCircle(ctx, W * 0.85, H * 0.15, 120, pc, 0.04);
+        drawAccentCircle(ctx, W * 0.1, H * 0.85, 80, pc, 0.04);
+      }
+      if (config.template === "sports") {
+        drawPattern(ctx, 0, 0, W, H, "diagonal-lines", ac, 0.04, 60);
       }
     }
-    if (config.template === "creative") {
-      ctx.fillStyle = hexToRgba(pc, 0.04);
-      ctx.beginPath();
-      ctx.arc(W * 0.85, H * 0.15, 120, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(W * 0.1, H * 0.85, 80, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    if (config.template === "sports") {
-      // diagonal stripes
-      ctx.strokeStyle = hexToRgba(ac, 0.05);
-      ctx.lineWidth = 20;
-      for (let i = -H; i < W + H; i += 60) {
-        ctx.beginPath();
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i + H, H);
-        ctx.stroke();
-      }
+
+    // ─── Decorative accents ──────────────────────────────
+    if (config.template === "achievement") {
+      drawAccentCircle(ctx, W * 0.08, H * 0.08, W * 0.06, ac, 0.06);
+      drawAccentCircle(ctx, W * 0.92, H * 0.08, W * 0.04, ac, 0.04);
+      drawAccentCircle(ctx, W * 0.08, H * 0.92, W * 0.04, ac, 0.04);
+      drawAccentCircle(ctx, W * 0.92, H * 0.92, W * 0.06, ac, 0.06);
     }
 
     // ─── Border ──────────────────────────────────────────
     const bw = config.border === "minimal" ? 2 : config.border === "modern" ? 4 : 8;
-    // Outer border
     ctx.strokeStyle = bc.outer;
     ctx.lineWidth = bw;
     ctx.strokeRect(bw / 2, bw / 2, W - bw, H - bw);
-    // Inner border
+
     const inset = bw + 8;
     ctx.strokeStyle = bc.inner;
     ctx.lineWidth = 1.5;
     ctx.strokeRect(inset, inset, W - inset * 2, H - inset * 2);
 
     if (config.border === "ornate") {
-      // corner flourishes
       const fl = 40;
       const corners = [
         { x: inset + 4, y: inset + 4, sx: 1, sy: 1 },
@@ -239,23 +328,35 @@ export default function CertificateDesignerWorkspace() {
         ctx.quadraticCurveTo(c.x, c.y, c.x + (fl * 0.5) * c.sx, c.y);
         ctx.stroke();
       }
+      // Corner dots
+      for (const c of corners) {
+        ctx.fillStyle = bc.accent;
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
-    // ─── Template-specific header elements ───────────────
+    // ─── Template-specific header ────────────────────────
     const cx = W / 2;
     let curY = 0;
 
     if (config.template === "corporate") {
-      // top color bar
-      ctx.fillStyle = pc;
-      ctx.fillRect(inset + 2, inset + 2, W - (inset + 2) * 2, 50);
+      drawGradient(ctx, inset + 2, inset + 2, W - (inset + 2) * 2, 50, 90, [
+        { offset: 0, color: pc },
+        { offset: 1, color: hexToRgba(ac, 0.7) },
+      ]);
       ctx.fillStyle = "#ffffff";
       ctx.font = "bold 11px Inter, Helvetica, sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(config.organizationName.toUpperCase(), cx, inset + 32);
       curY = inset + 70;
     } else if (config.template === "training") {
-      ctx.fillStyle = pc;
+      // Side bars with gradient
+      const barGrad = ctx.createLinearGradient(0, 0, 0, H);
+      barGrad.addColorStop(0, pc);
+      barGrad.addColorStop(1, ac);
+      ctx.fillStyle = barGrad;
       ctx.fillRect(inset + 2, inset + 2, 8, H - (inset + 2) * 2);
       ctx.fillRect(W - inset - 10, inset + 2, 8, H - (inset + 2) * 2);
       curY = inset + 50;
@@ -265,19 +366,7 @@ export default function CertificateDesignerWorkspace() {
 
     // ─── Decorative line above title ─────────────────────
     if (isElegant) {
-      ctx.strokeStyle = hexToRgba(ac, 0.4);
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(cx - 100, curY);
-      ctx.lineTo(cx + 100, curY);
-      ctx.stroke();
-      // small diamond center
-      ctx.fillStyle = ac;
-      ctx.save();
-      ctx.translate(cx, curY);
-      ctx.rotate(Math.PI / 4);
-      ctx.fillRect(-3, -3, 6, 6);
-      ctx.restore();
+      drawDivider(ctx, cx - 100, curY, 200, "diamond", ac, 0.4);
       curY += 20;
     }
 
@@ -292,16 +381,11 @@ export default function CertificateDesignerWorkspace() {
       ctx.font = "700 30px Georgia, 'Times New Roman', serif";
       ctx.fillStyle = pc;
     }
-    ctx.fillText(config.title.toUpperCase(), cx, curY + 20);
+    drawTextWithShadow(ctx, config.title.toUpperCase(), cx, curY + 20, { shadowBlur: 3, shadowColor: hexToRgba(ac, 0.15) });
     curY += 50;
 
-    // ─── Decorative divider ──────────────────────────────
-    ctx.strokeStyle = ac;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(cx - 80, curY);
-    ctx.lineTo(cx + 80, curY);
-    ctx.stroke();
+    // ─── Ornate divider ──────────────────────────────────
+    drawDivider(ctx, cx - 80, curY, 160, "ornate", ac, 0.5);
     curY += 20;
 
     // ─── Subtitle ────────────────────────────────────────
@@ -317,17 +401,12 @@ export default function CertificateDesignerWorkspace() {
       ctx.font = "italic 38px Georgia, 'Palatino Linotype', serif";
     }
     ctx.fillStyle = pc;
-    ctx.fillText(config.recipientName || "Recipient Name", cx, curY + 18);
+    drawTextWithShadow(ctx, config.recipientName || "Recipient Name", cx, curY + 18, { shadowBlur: 4, shadowColor: hexToRgba(ac, 0.1) });
     curY += 42;
 
     // Name underline
     const nameW = Math.min(ctx.measureText(config.recipientName || "Recipient Name").width + 40, W * 0.5);
-    ctx.strokeStyle = hexToRgba(ac, 0.5);
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(cx - nameW / 2, curY);
-    ctx.lineTo(cx + nameW / 2, curY);
-    ctx.stroke();
+    drawDivider(ctx, cx - nameW / 2, curY, nameW, "gradient", ac, 0.5);
     curY += 25;
 
     // ─── Description ─────────────────────────────────────
@@ -353,12 +432,7 @@ export default function CertificateDesignerWorkspace() {
       const rightX = W * 0.72;
 
       // Left signature
-      ctx.strokeStyle = "#9ca3af";
-      ctx.lineWidth = 0.8;
-      ctx.beginPath();
-      ctx.moveTo(leftX - 60, sigY);
-      ctx.lineTo(leftX + 60, sigY);
-      ctx.stroke();
+      drawDivider(ctx, leftX - 60, sigY, 120, "line", "#9ca3af", 0.6);
       ctx.font = "500 10px Inter, sans-serif";
       ctx.fillStyle = "#374151";
       ctx.fillText(config.issuerName, leftX, sigY + 16);
@@ -367,11 +441,7 @@ export default function CertificateDesignerWorkspace() {
       ctx.fillText(config.issuerTitle, leftX, sigY + 30);
 
       // Right signature
-      ctx.strokeStyle = "#9ca3af";
-      ctx.beginPath();
-      ctx.moveTo(rightX - 60, sigY);
-      ctx.lineTo(rightX + 60, sigY);
-      ctx.stroke();
+      drawDivider(ctx, rightX - 60, sigY, 120, "line", "#9ca3af", 0.6);
       ctx.font = "500 10px Inter, sans-serif";
       ctx.fillStyle = "#374151";
       ctx.fillText("Authorized Signatory", rightX, sigY + 16);
@@ -381,50 +451,14 @@ export default function CertificateDesignerWorkspace() {
     if (config.showSeal) {
       const sealX = W * 0.5;
       const sealY = Math.max(curY - 5, H - inset - 130);
-      const sealR = 32;
-
-      // Serrated edge
-      ctx.fillStyle = hexToRgba(ac, 0.15);
-      ctx.beginPath();
-      const teeth = 24;
-      for (let i = 0; i < teeth; i++) {
-        const angle = (i / teeth) * Math.PI * 2;
-        const r = i % 2 === 0 ? sealR + 4 : sealR - 2;
-        const px = sealX + Math.cos(angle) * r;
-        const py = sealY + Math.sin(angle) * r;
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      }
-      ctx.closePath();
-      ctx.fill();
-
-      // Inner circle
-      ctx.beginPath();
-      ctx.arc(sealX, sealY, sealR - 6, 0, Math.PI * 2);
-      ctx.strokeStyle = ac;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      // Star in center
-      ctx.fillStyle = ac;
-      const starR = 8;
-      ctx.beginPath();
-      for (let i = 0; i < 10; i++) {
-        const angle = (i / 10) * Math.PI * 2 - Math.PI / 2;
-        const r = i % 2 === 0 ? starR : starR * 0.4;
-        const px = sealX + Math.cos(angle) * r;
-        const py = sealY + Math.sin(angle) * r;
-        if (i === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
-      }
-      ctx.closePath();
-      ctx.fill();
+      drawSeal(ctx, sealX, sealY, 32, ac, "★");
     }
 
     // ─── Serial Number ───────────────────────────────────
     ctx.font = "400 8px 'Courier New', monospace";
     ctx.fillStyle = "#9ca3af";
     ctx.textAlign = "right";
+    ctx.textBaseline = "alphabetic";
     ctx.fillText(config.serialNumber, W - inset - 10, H - inset - 8);
 
     // ─── Organization (footer) ───────────────────────────
@@ -434,12 +468,13 @@ export default function CertificateDesignerWorkspace() {
       ctx.fillStyle = "#9ca3af";
       ctx.fillText(config.organizationName, cx, H - inset - 8);
     }
+
+    // ─── Bottom decorative divider ───────────────────────
+    drawDivider(ctx, W * 0.3, H - inset - 20, W * 0.4, "diamond", ac, 0.15);
   }, [config, sz, bc]);
 
-  useEffect(() => { render(); }, [render]);
-
   /* ── AI Generate ────────────────────────────────────────── */
-  const generateAI = async () => {
+  const generateAI = useCallback(async () => {
     if (!config.eventName.trim()) return;
     setLoading(true);
     try {
@@ -449,7 +484,28 @@ export default function CertificateDesignerWorkspace() {
         body: JSON.stringify({
           messages: [{
             role: "user",
-            content: `Generate certificate text for a "${config.type}" certificate. Event/course: "${config.eventName}". Organization based in Lusaka, Zambia. Return JSON only: { "title": "Certificate of ...", "subtitle": "This is proudly presented to", "recipientName": "Participant Name", "description": "For successfully completing... (2 sentences max)", "issuerName": "Director Name", "issuerTitle": "Position, Organization", "organizationName": "Organization — Lusaka, Zambia" }`,
+            content: `You are a professional certificate designer. Generate certificate text for a "${config.type}" certificate.
+
+Event/Course: "${config.eventName}"
+Organization based in Lusaka, Zambia.
+
+Also recommend design settings.
+
+Return ONLY valid JSON:
+{
+  "title": "Certificate of ...",
+  "subtitle": "This is proudly presented to",
+  "recipientName": "Participant Name",
+  "description": "For successfully completing... (2 sentences max)",
+  "issuerName": "Director Name",
+  "issuerTitle": "Position, Organization",
+  "organizationName": "Organization — Lusaka, Zambia",
+  "template": "academic|corporate|elegant|modern|achievement|training|sports|creative",
+  "border": "gold|silver|bronze|ornate|modern|minimal",
+  "primaryColor": "#hex",
+  "accentColor": "#hex",
+  "pattern": "none|dots|lines|diagonal-lines|crosshatch|waves|diamond"
+}`,
           }],
         }),
       });
@@ -458,151 +514,278 @@ export default function CertificateDesignerWorkspace() {
       const match = clean.match(/\{[\s\S]*\}/);
       if (match) {
         const data = JSON.parse(match[0]);
-        setConfig((p) => ({
-          ...p,
-          title: data.title || p.title,
-          subtitle: data.subtitle || p.subtitle,
-          recipientName: data.recipientName || p.recipientName,
-          description: data.description || p.description,
-          issuerName: data.issuerName || p.issuerName,
-          issuerTitle: data.issuerTitle || p.issuerTitle,
-          organizationName: data.organizationName || p.organizationName,
-        }));
+        const updates: Partial<CertificateConfig> = {};
+        if (data.title) updates.title = data.title;
+        if (data.subtitle) updates.subtitle = data.subtitle;
+        if (data.recipientName) updates.recipientName = data.recipientName;
+        if (data.description) updates.description = data.description;
+        if (data.issuerName) updates.issuerName = data.issuerName;
+        if (data.issuerTitle) updates.issuerTitle = data.issuerTitle;
+        if (data.organizationName) updates.organizationName = data.organizationName;
+        if (data.template && TEMPLATES.some((t) => t.id === data.template)) updates.template = data.template;
+        if (data.border && BORDERS.some((b) => b.id === data.border)) updates.border = data.border;
+        if (data.primaryColor?.match(/^#[0-9a-fA-F]{6}$/)) updates.primaryColor = data.primaryColor;
+        if (data.accentColor?.match(/^#[0-9a-fA-F]{6}$/)) updates.accentColor = data.accentColor;
+        if (data.pattern && patternOptions.some((p) => p.id === data.pattern)) updates.patternType = data.pattern;
+        upd(updates);
       }
     } catch { /* ignore */ }
     setLoading(false);
-  };
+  }, [config, upd]);
 
   /* ── Export ──────────────────────────────────────────────── */
-  const exportPNG = () => {
+  const exportPNG = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const link = document.createElement("a");
-    link.download = `certificate-${config.type}-${Date.now()}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  };
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `certificate-${config.type}-${Date.now()}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }, "image/png");
+  }, [config.type]);
 
-  const upd = (patch: Partial<CertificateConfig>) => setConfig((p) => ({ ...p, ...patch }));
+  const handleCopy = useCallback(async () => {
+    if (!canvasRef.current) return;
+    try {
+      canvasRef.current.toBlob(async (blob) => {
+        if (!blob) return;
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      }, "image/png");
+    } catch { /* ignore */ }
+  }, []);
 
-  /* ── UI ──────────────────────────────────────────────────── */
-  return (
-    <div>
-      {/* Mobile Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
-        {(["canvas", "settings"] as const).map((t) => (
-          <button key={t} onClick={() => setMobileTab(t)} className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}>{t}</button>
-        ))}
-      </div>
+  const handleExportPdf = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const isLandscape = sz.w > sz.h;
+    const wMm = isLandscape ? 297 : 210;
+    const hMm = isLandscape ? 210 : 297;
+    const pdf = new jsPDF({
+      orientation: isLandscape ? "l" : "p",
+      unit: "mm",
+      format: "a4",
+    });
+    const imgData = canvas.toDataURL("image/png");
+    pdf.addImage(imgData, "PNG", 0, 0, wMm, hMm);
+    pdf.save(`certificate-${config.type}-${Date.now()}.pdf`);
+  }, [config.type, sz]);
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* ── Settings Panel ───────────────────────────── */}
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
-          {/* General */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconAward className="size-4 text-primary-500" />Certificate Settings</h3>
+  const displayW = Math.min(500, sz.w);
+  const displayH = displayW * (sz.h / sz.w);
 
-            <label className="block text-xs text-gray-400">Type</label>
-            <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.type} onChange={(e) => upd({ type: e.target.value as CertificateType })}>
-              {CERT_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
-            </select>
+  /* ── Left Panel ─────────────────────────────────────────── */
+  const leftPanel = (
+    <div className="space-y-3">
+      {/* Template Slider */}
+      <Section icon={<IconLayout className="size-3.5" />} label="Templates" id="templates" open={openSections.has("templates")} toggle={toggleSection}>
+        <TemplateSlider
+          templates={templatePreviews}
+          activeId={config.template}
+          onSelect={(id) => upd({ template: id as CertificateTemplate })}
+          thumbWidth={140}
+          thumbHeight={100}
+          label=""
+        />
+      </Section>
 
-            <label className="block text-xs text-gray-400">Size</label>
-            <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.size} onChange={(e) => upd({ size: e.target.value as CertificateSize })}>
-              {SIZES.map((s) => <option key={s.id} value={s.id}>{s.label} ({s.w}×{s.h})</option>)}
-            </select>
-
-            <label className="block text-xs text-gray-400">Border Style</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {BORDERS.map((b) => (
-                <button key={b.id} onClick={() => upd({ border: b.id })} className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${config.border === b.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{b.label}</button>
-              ))}
-            </div>
-
-            <label className="block text-xs text-gray-400">Template</label>
-            <div className="grid grid-cols-2 gap-1.5">
-              {TEMPLATES.map((t) => (
-                <button key={t.id} onClick={() => upd({ template: t.id })} className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${config.template === t.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{t.label}</button>
-              ))}
-            </div>
-
-            <label className="block text-xs text-gray-400">Colors</label>
-            <div className="flex gap-1.5 flex-wrap">
-              {COLOR_PRESETS.map((c) => (
-                <button key={c} onClick={() => upd({ primaryColor: c })} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="block text-xs text-gray-400 mb-1">Primary</label>
-                <input type="color" value={config.primaryColor} onChange={(e) => upd({ primaryColor: e.target.value })} className="w-full h-8 rounded cursor-pointer" />
-              </div>
-              <div className="flex-1">
-                <label className="block text-xs text-gray-400 mb-1">Accent</label>
-                <input type="color" value={config.accentColor} onChange={(e) => upd({ accentColor: e.target.value })} className="w-full h-8 rounded cursor-pointer" />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-                <input type="checkbox" checked={config.showSeal} onChange={(e) => upd({ showSeal: e.target.checked })} className="accent-primary-500" /> Show Seal
-              </label>
-              <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-                <input type="checkbox" checked={config.showSignatureLine} onChange={(e) => upd({ showSignatureLine: e.target.checked })} className="accent-primary-500" /> Signature Lines
-              </label>
-            </div>
+      {/* Content */}
+      <Section icon={<IconType className="size-3.5" />} label="Content" id="content" open={openSections.has("content")} toggle={toggleSection}>
+        <div className="space-y-2">
+          <input placeholder="Certificate Title" value={config.title} onChange={(e) => upd({ title: e.target.value })}
+            className="w-full h-10 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-sm placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
+          <input placeholder="Subtitle" value={config.subtitle} onChange={(e) => upd({ subtitle: e.target.value })}
+            className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
+          <input placeholder="Recipient Name" value={config.recipientName} onChange={(e) => upd({ recipientName: e.target.value })}
+            className="w-full h-10 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-sm placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all font-semibold" />
+          <textarea placeholder="Description" value={config.description} onChange={(e) => upd({ description: e.target.value })} rows={3}
+            className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all resize-none" />
+          <input placeholder="Date" value={config.date} onChange={(e) => upd({ date: e.target.value })}
+            className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
+          <div className="grid grid-cols-2 gap-2">
+            <input placeholder="Issuer Name" value={config.issuerName} onChange={(e) => upd({ issuerName: e.target.value })}
+              className="h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
+            <input placeholder="Issuer Title" value={config.issuerTitle} onChange={(e) => upd({ issuerTitle: e.target.value })}
+              className="h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
           </div>
-
-          {/* Content */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3 max-h-72 overflow-y-auto">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Content</h3>
-            <label className="block text-xs text-gray-400">Title</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.title} onChange={(e) => upd({ title: e.target.value })} />
-            <label className="block text-xs text-gray-400">Subtitle</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.subtitle} onChange={(e) => upd({ subtitle: e.target.value })} />
-            <label className="block text-xs text-gray-400">Recipient Name</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.recipientName} onChange={(e) => upd({ recipientName: e.target.value })} />
-            <label className="block text-xs text-gray-400">Description</label>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} value={config.description} onChange={(e) => upd({ description: e.target.value })} />
-            <label className="block text-xs text-gray-400">Date</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.date} onChange={(e) => upd({ date: e.target.value })} />
-            <label className="block text-xs text-gray-400">Issuer Name</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.issuerName} onChange={(e) => upd({ issuerName: e.target.value })} />
-            <label className="block text-xs text-gray-400">Issuer Title</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.issuerTitle} onChange={(e) => upd({ issuerTitle: e.target.value })} />
-            <label className="block text-xs text-gray-400">Organization</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.organizationName} onChange={(e) => upd({ organizationName: e.target.value })} />
-            <label className="block text-xs text-gray-400">Serial Number</label>
-            <div className="flex gap-2">
-              <input className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white font-mono" value={config.serialNumber} onChange={(e) => upd({ serialNumber: e.target.value })} />
-              <button onClick={() => upd({ serialNumber: generateSerial() })} className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-xs text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">New</button>
-            </div>
-          </div>
-
-          {/* AI */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Certificate Generator</h3>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the event or course (e.g., 'Advanced Data Science Bootcamp, 3-month programme')..." value={config.eventName} onChange={(e) => upd({ eventName: e.target.value })} />
-            <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
-              {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
-              {loading ? "Generating…" : "Generate Certificate Text"}
-            </button>
-          </div>
-
-          {/* Export */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-            <button onClick={exportPNG} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"><IconDownload className="size-4" />Export PNG</button>
+          <input placeholder="Organization" value={config.organizationName} onChange={(e) => upd({ organizationName: e.target.value })}
+            className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
+          <div className="flex gap-2 items-center">
+            <input className="flex-1 h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs font-mono" placeholder="Serial" value={config.serialNumber} onChange={(e) => upd({ serialNumber: e.target.value })} />
+            <button onClick={() => upd({ serialNumber: generateSerial() })} className="px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-[0.625rem] font-medium text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">New</button>
           </div>
         </div>
+      </Section>
 
-        {/* ── Canvas ────────────────────────────────────── */}
-        <div className={`flex-1 min-w-0 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-          <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
-            <canvas ref={canvasRef} style={{ width: Math.min(sz.w, 700), height: Math.min(sz.w, 700) * (sz.h / sz.w) }} className="rounded-lg shadow-lg" />
+      {/* Style */}
+      <Section icon={<IconDroplet className="size-3.5" />} label="Style" id="style" open={openSections.has("style")} toggle={toggleSection}>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 mb-1 block">Type</label>
+              <select value={config.type} onChange={(e) => upd({ type: e.target.value as CertificateType })}
+                className="w-full h-9 px-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs">
+                {CERT_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 mb-1 block">Size</label>
+              <select value={config.size} onChange={(e) => upd({ size: e.target.value as CertificateSize })}
+                className="w-full h-9 px-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs">
+                {SIZES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+            </div>
           </div>
-          <p className="text-xs text-gray-400 text-center mt-2">{config.template} — {sz.label} — {sz.w}×{sz.h}px — {config.serialNumber}</p>
+
+          <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400">Border Style</p>
+          <div className="grid grid-cols-3 gap-1.5">
+            {BORDERS.map((b) => (
+              <button key={b.id} onClick={() => upd({ border: b.id })}
+                className={`px-2 py-1.5 rounded-xl border text-xs font-medium transition-all ${config.border === b.id ? "border-primary-500 bg-primary-500/5 text-primary-500 ring-1 ring-primary-500/30" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"}`}>
+                {b.label}
+              </button>
+            ))}
+          </div>
+
+          <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400">Color Theme</p>
+          <div className="grid grid-cols-5 gap-1.5">
+            {colorPresets.map((theme) => (
+              <button key={theme.name} onClick={() => upd({ primaryColor: theme.primary, accentColor: theme.accent })}
+                className={`p-1.5 rounded-lg border text-center transition-all ${config.primaryColor === theme.primary ? "border-primary-500 ring-1 ring-primary-500/30" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"}`}>
+                <div className="flex gap-0.5 justify-center mb-0.5">
+                  <div className="size-3 rounded-full" style={{ backgroundColor: theme.primary }} />
+                  <div className="size-3 rounded-full" style={{ backgroundColor: theme.accent }} />
+                </div>
+                <span className="text-[0.5rem] text-gray-400">{theme.name}</span>
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-1 cursor-pointer">
+              <input type="color" value={config.primaryColor} onChange={(e) => upd({ primaryColor: e.target.value })} className="size-6 rounded border border-gray-200 dark:border-gray-700 cursor-pointer bg-transparent" />
+              <span className="text-[0.5625rem] text-gray-400">Primary</span>
+            </label>
+            <label className="flex items-center gap-1 cursor-pointer">
+              <input type="color" value={config.accentColor} onChange={(e) => upd({ accentColor: e.target.value })} className="size-6 rounded border border-gray-200 dark:border-gray-700 cursor-pointer bg-transparent" />
+              <span className="text-[0.5625rem] text-gray-400">Accent</span>
+            </label>
+          </div>
+
+          <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 pt-1">Pattern</p>
+          <div className="flex flex-wrap gap-1">
+            {patternOptions.map((p) => (
+              <button key={p.id} onClick={() => upd({ patternType: p.id })}
+                className={`px-2 py-1 rounded-lg border text-[0.625rem] font-medium transition-all ${config.patternType === p.id ? "border-primary-500 bg-primary-500/5 text-primary-500" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400"}`}>
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-4 pt-1">
+            <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+              <input type="checkbox" checked={config.showSeal} onChange={(e) => upd({ showSeal: e.target.checked })} className="size-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-500 focus:ring-primary-500/30" />
+              Show Seal
+            </label>
+            <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+              <input type="checkbox" checked={config.showSignatureLine} onChange={(e) => upd({ showSignatureLine: e.target.checked })} className="size-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-500 focus:ring-primary-500/30" />
+              Signature Lines
+            </label>
+          </div>
+        </div>
+      </Section>
+
+      {/* AI */}
+      <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-3">
+        <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-secondary-500 mb-2.5">
+          <IconSparkles className="size-3.5" />AI Certificate Director
+        </label>
+        <textarea
+          className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 px-3 py-2 text-xs text-gray-900 dark:text-white resize-none placeholder:text-gray-400 focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-500/20"
+          rows={3} placeholder="Describe the event or course (e.g., 'Advanced Data Science Bootcamp, 3-month programme')..."
+          value={config.eventName} onChange={(e) => upd({ eventName: e.target.value })}
+        />
+        <button onClick={generateAI} disabled={loading || !config.eventName.trim()}
+          className="w-full mt-2 flex items-center justify-center gap-2 h-10 rounded-xl bg-secondary-500 text-white text-xs font-bold hover:bg-secondary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+          {loading ? <><IconLoader className="size-3.5 animate-spin" />Generating…</> : <><IconWand className="size-3.5" />Generate Certificate</>}
+        </button>
+        <p className="text-[0.5625rem] text-gray-400 text-center mt-1.5">AI suggests text, template, border & colors</p>
+      </div>
+    </div>
+  );
+
+  /* ── Right Panel ────────────────────────────────────────── */
+  const rightPanel = (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2.5">Export</h3>
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={exportPNG} className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-primary-500/30 bg-primary-500/5 text-primary-500 transition-colors hover:bg-primary-500/10">
+            <IconDownload className="size-4" /><span className="text-xs font-semibold">.png</span>
+          </button>
+          <button onClick={handleCopy} className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-secondary-500/30 bg-secondary-500/5 text-secondary-500 transition-colors hover:bg-secondary-500/10">
+            <IconCopy className="size-4" /><span className="text-xs font-semibold">Clipboard</span>
+          </button>
+          <button onClick={handleExportPdf} className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-info-500/30 bg-info-500/5 text-info-500 transition-colors hover:bg-info-500/10">
+            <IconPrinter className="size-4" /><span className="text-xs font-semibold">.pdf</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Certificate Info</h3>
+        <div className="space-y-1 text-xs text-gray-400">
+          <p>Type: <span className="text-gray-300 capitalize">{config.type}</span></p>
+          <p>Template: <span className="text-gray-300 capitalize">{config.template}</span></p>
+          <p>Size: <span className="text-gray-300">{sz.label}</span></p>
+          <p>Border: <span className="text-gray-300 capitalize">{config.border}</span></p>
+          <p>Pattern: <span className="text-gray-300 capitalize">{config.patternType}</span></p>
+          <p>Seal: <span className="text-gray-300">{config.showSeal ? "Yes" : "No"}</span></p>
+          <p>Resolution: <span className="text-gray-300">{sz.w}×{sz.h}px</span></p>
+          <p>Serial: <span className="text-gray-300 font-mono">{config.serialNumber}</span></p>
         </div>
       </div>
     </div>
+  );
+
+  const toolbar = (
+    <div className="flex items-center gap-1.5">
+      <IconAward className="size-3.5 text-primary-500" />
+      <span className="text-xs font-semibold text-gray-400 capitalize">{config.template}</span>
+      <span className="text-gray-600">·</span>
+      <span className="text-xs text-gray-500">{sz.label}</span>
+    </div>
+  );
+
+  return (
+    <StickyCanvasLayout
+      leftPanel={leftPanel}
+      rightPanel={rightPanel}
+      canvasRef={canvasRef}
+      displayWidth={displayW}
+      displayHeight={displayH}
+      label={`${config.template} — ${sz.label} — ${sz.w}×${sz.h}px — ${config.serialNumber}`}
+      toolbar={toolbar}
+      mobileTabs={["Canvas", "Settings"]}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
+      onZoomFit={() => setZoom(1)}
+      actionsBar={
+        <div className="flex items-center gap-2">
+          <button onClick={exportPNG} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors">
+            <IconDownload className="size-3" />Download PNG
+          </button>
+          <button onClick={handleExportPdf} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors">
+            <IconPrinter className="size-3" />PDF
+          </button>
+          <button onClick={handleCopy} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors">
+            <IconCopy className="size-3" />Copy
+          </button>
+        </div>
+      }
+    />
   );
 }

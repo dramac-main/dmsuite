@@ -71,6 +71,8 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   "gif-converter": dynamic(() => import("@/components/workspaces/GifMakerWorkspace")),
   "thumbnail-generator": dynamic(() => import("@/components/workspaces/ThumbnailWorkspace")),
   "motion-graphics": dynamic(() => import("@/components/workspaces/MotionGraphicsWorkspace")),
+  "video-compressor": dynamic(() => import("@/components/workspaces/VideoCompressorWorkspace")),
+  "video-script": dynamic(() => import("@/components/workspaces/BlogWriterWorkspace")),
 
   // ── Phase 4: Audio ──
   "text-to-speech": dynamic(() => import("@/components/workspaces/TextToSpeechWorkspace")),

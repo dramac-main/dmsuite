@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   IconTag,
   IconSparkles,
   IconWand,
   IconLoader,
   IconDownload,
+  IconCopy,
 } from "@/components/icons";
 import { cleanAIText } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -60,7 +63,6 @@ function generateCode(): string {
 export default function CouponDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
 
   const [config, setConfig] = useState<CouponConfig>({
     type: "discount",
@@ -325,102 +327,193 @@ export default function CouponDesignerWorkspace() {
     link.click();
   };
 
+  /* ── Zoom & Display ─────────────────────────────────────── */
+  const [zoom, setZoom] = useState(1);
+  const displayW = Math.min(700, COUPON_W);
+  const displayH = displayW * (COUPON_H / COUPON_W);
+
+  /* ── Template Previews ──────────────────────────────────── */
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () =>
+      TEMPLATES.map((t) => ({
+        id: t.id,
+        label: t.name,
+        render: (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, w, h);
+          const tearX = w * 0.68;
+          const pc = config.primaryColor;
+          if (t.id === "modern") {
+            ctx.fillStyle = pc;
+            ctx.fillRect(0, 0, tearX, h);
+          } else if (t.id === "classic") {
+            ctx.fillStyle = "#fefce8";
+            ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = pc;
+            ctx.fillRect(0, 0, w, 3);
+            ctx.fillRect(0, h - 3, w, 3);
+          } else if (t.id === "bold") {
+            const grad = ctx.createLinearGradient(0, 0, tearX, h);
+            grad.addColorStop(0, pc);
+            grad.addColorStop(1, "#111827");
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, tearX, h);
+          } else if (t.id === "elegant") {
+            ctx.fillStyle = "#1e1b4b";
+            ctx.fillRect(0, 0, tearX, h);
+          } else if (t.id === "festive") {
+            ctx.fillStyle = pc;
+            ctx.fillRect(0, 0, tearX, h);
+          } else {
+            ctx.fillStyle = "#f8fafc";
+            ctx.fillRect(0, 0, tearX, h);
+          }
+          /* tear line */
+          ctx.save();
+          ctx.setLineDash([3, 3]);
+          ctx.strokeStyle = "#94a3b860";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(tearX, 0);
+          ctx.lineTo(tearX, h);
+          ctx.stroke();
+          ctx.restore();
+          /* right side */
+          ctx.fillStyle = "#f1f5f9";
+          ctx.fillRect(tearX + 1, 0, w - tearX - 1, h);
+          /* border */
+          ctx.strokeStyle = "#d1d5db";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(0, 0, w, h);
+        },
+      })),
+    [config.primaryColor]
+  );
+
+  /* ── Copy to Clipboard ──────────────────────────────────── */
+  const handleCopy = useCallback(async () => {
+    if (!canvasRef.current) return;
+    try {
+      canvasRef.current.toBlob(async (blob) => {
+        if (!blob) return;
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob }),
+        ]);
+      }, "image/png");
+    } catch {
+      /* clipboard may not be available */
+    }
+  }, []);
+
   /* ── UI ──────────────────────────────────────────────────── */
-  return (
-    <div>
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
-        {(["canvas", "settings"] as const).map((t) => (
-          <button key={t} onClick={() => setMobileTab(t)} className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}>{t}</button>
-        ))}
+  /* ── Panel Definitions for StickyCanvasLayout ───────────── */
+  const leftPanel = (
+    <div className="space-y-4">
+      {/* Template Slider */}
+      <TemplateSlider
+        templates={templatePreviews}
+        activeId={config.template}
+        onSelect={(id) => setConfig((p) => ({ ...p, template: id as CouponTemplate }))}
+        thumbWidth={140}
+        thumbHeight={62}
+        label="Templates"
+      />
+
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconTag className="size-4 text-primary-500" />Coupon Settings</h3>
+
+        <label className="block text-xs text-gray-400">Business Name</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.businessName} onChange={(e) => setConfig((p) => ({ ...p, businessName: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Coupon Type</label>
+        <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.type} onChange={(e) => setConfig((p) => ({ ...p, type: e.target.value as CouponType }))}>
+          {TYPES.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+
+        <label className="block text-xs text-gray-400">Headline</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.headline} onChange={(e) => setConfig((p) => ({ ...p, headline: e.target.value }))} />
+
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs text-gray-400">Value</label>
+            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.discountValue} onChange={(e) => setConfig((p) => ({ ...p, discountValue: e.target.value }))} />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400">Label</label>
+            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.discountLabel} onChange={(e) => setConfig((p) => ({ ...p, discountLabel: e.target.value }))} />
+          </div>
+        </div>
+
+        <label className="block text-xs text-gray-400">Description</label>
+        <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={2} value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Terms & Conditions</label>
+        <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={2} value={config.termsText} onChange={(e) => setConfig((p) => ({ ...p, termsText: e.target.value }))} />
+
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs text-gray-400">Coupon Code</label>
+            <div className="flex gap-1">
+              <input className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white font-mono" value={config.couponCode} onChange={(e) => setConfig((p) => ({ ...p, couponCode: e.target.value }))} />
+              <button onClick={() => setConfig((p) => ({ ...p, couponCode: generateCode() }))} className="px-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700">↻</button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400">Expiry</label>
+            <input type="date" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.expiryDate} onChange={(e) => setConfig((p) => ({ ...p, expiryDate: e.target.value }))} />
+          </div>
+        </div>
+
+        <label className="block text-xs text-gray-400">Primary Color</label>
+        <div className="flex gap-1.5 flex-wrap">
+          {COLOR_PRESETS.map((c) => (
+            <button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
+          ))}
+        </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Settings */}
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconTag className="size-4 text-primary-500" />Coupon Settings</h3>
-
-            <label className="block text-xs text-gray-400">Business Name</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.businessName} onChange={(e) => setConfig((p) => ({ ...p, businessName: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Coupon Type</label>
-            <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.type} onChange={(e) => setConfig((p) => ({ ...p, type: e.target.value as CouponType }))}>
-              {TYPES.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-
-            <label className="block text-xs text-gray-400">Headline</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.headline} onChange={(e) => setConfig((p) => ({ ...p, headline: e.target.value }))} />
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs text-gray-400">Value</label>
-                <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.discountValue} onChange={(e) => setConfig((p) => ({ ...p, discountValue: e.target.value }))} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400">Label</label>
-                <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.discountLabel} onChange={(e) => setConfig((p) => ({ ...p, discountLabel: e.target.value }))} />
-              </div>
-            </div>
-
-            <label className="block text-xs text-gray-400">Description</label>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={2} value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Terms & Conditions</label>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={2} value={config.termsText} onChange={(e) => setConfig((p) => ({ ...p, termsText: e.target.value }))} />
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs text-gray-400">Coupon Code</label>
-                <div className="flex gap-1">
-                  <input className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white font-mono" value={config.couponCode} onChange={(e) => setConfig((p) => ({ ...p, couponCode: e.target.value }))} />
-                  <button onClick={() => setConfig((p) => ({ ...p, couponCode: generateCode() }))} className="px-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700">↻</button>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400">Expiry</label>
-                <input type="date" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.expiryDate} onChange={(e) => setConfig((p) => ({ ...p, expiryDate: e.target.value }))} />
-              </div>
-            </div>
-
-            <label className="block text-xs text-gray-400">Template</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {TEMPLATES.map((t) => (
-                <button key={t.id} onClick={() => setConfig((p) => ({ ...p, template: t.id }))} className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${config.template === t.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{t.name}</button>
-              ))}
-            </div>
-
-            <label className="block text-xs text-gray-400">Primary Color</label>
-            <div className="flex gap-1.5 flex-wrap">
-              {COLOR_PRESETS.map((c) => (
-                <button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
-              ))}
-            </div>
-          </div>
-
-          {/* AI Generation */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Content Generator</h3>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the promotion (e.g. 'Holiday sale for a Lusaka electronics shop')..." value={config.aiPrompt} onChange={(e) => setConfig((p) => ({ ...p, aiPrompt: e.target.value }))} />
-            <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
-              {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
-              {loading ? "Generating…" : "Generate Content"}
-            </button>
-          </div>
-
-          {/* Export */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-            <button onClick={exportPNG} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"><IconDownload className="size-4" />Export PNG</button>
-          </div>
-        </div>
-
-        {/* Canvas */}
-        <div className={`flex-1 min-w-0 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-          <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
-            <canvas ref={canvasRef} style={{ width: Math.min(COUPON_W, 700), height: Math.min(COUPON_W, 700) * (COUPON_H / COUPON_W) }} className="rounded-lg shadow-lg" />
-          </div>
-          <p className="text-xs text-gray-400 text-center mt-2">{TYPES.find((t) => t.id === config.type)?.name} — {COUPON_W}×{COUPON_H}px</p>
-        </div>
+      {/* AI Generation */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Content Generator</h3>
+        <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the promotion (e.g. 'Holiday sale for a Lusaka electronics shop')..." value={config.aiPrompt} onChange={(e) => setConfig((p) => ({ ...p, aiPrompt: e.target.value }))} />
+        <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
+          {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
+          {loading ? "Generating…" : "Generate Content"}
+        </button>
       </div>
     </div>
+  );
+
+  return (
+    <StickyCanvasLayout
+      leftPanel={leftPanel}
+      canvasRef={canvasRef}
+      displayWidth={displayW}
+      displayHeight={displayH}
+      label={`${TYPES.find((t) => t.id === config.type)?.name} — ${COUPON_W}×${COUPON_H}px`}
+      mobileTabs={["Canvas", "Settings"]}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
+      onZoomFit={() => setZoom(1)}
+      actionsBar={
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportPNG}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors"
+          >
+            <IconDownload className="size-3" />
+            Download PNG
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors"
+          >
+            <IconCopy className="size-3" />
+            Copy
+          </button>
+        </div>
+      }
+    />
   );
 }

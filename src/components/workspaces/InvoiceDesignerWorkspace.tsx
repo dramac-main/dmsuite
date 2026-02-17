@@ -14,8 +14,14 @@ import {
   IconChevronDown,
   IconCreditCard,
   IconFileText,
+  IconCopy,
+  IconLayout,
+  IconDroplet,
 } from "@/components/icons";
 import { cleanAIText, roundRect, lighten } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "./StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
+import { drawDocumentThumbnail } from "@/lib/template-renderers";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -197,6 +203,47 @@ export default function InvoiceDesignerWorkspace() {
     const ps = PAGE_SIZES.find((p) => p.id === config.pageSize) || PAGE_SIZES[0];
     return { w: ps.w, h: ps.h };
   }, [config.pageSize]);
+
+  /* ── Zoom ──────────────────────────────────────────────── */
+  const [zoom, setZoom] = useState(0.72);
+  const displayWidth = pageDims.w * zoom;
+  const displayHeight = pageDims.h * zoom;
+
+  /* ── Visual Template Previews ──────────────────────────── */
+  const HEADER_MAP: Record<InvoiceTemplate, "bar" | "strip" | "minimal" | "gradient" | "centered" | "sidebar"> = {
+    modern: "gradient",
+    classic: "centered",
+    minimal: "minimal",
+    bold: "strip",
+    elegant: "sidebar",
+    corporate: "bar",
+  };
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () =>
+      TEMPLATES.map((t) => ({
+        id: t.id,
+        label: t.name,
+        render: (ctx: CanvasRenderingContext2D, w: number, h: number) =>
+          drawDocumentThumbnail(ctx, w, h, {
+            primaryColor: config.primaryColor,
+            headerStyle: HEADER_MAP[t.id],
+            showTable: true,
+            showSections: 2,
+          }),
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [config.primaryColor],
+  );
+
+  /* ── Clipboard Copy ────────────────────────────────────── */
+  const handleCopy = useCallback(async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    try {
+      const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
+      if (blob) await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    } catch { /* silent */ }
+  }, []);
 
   const subtotal = items.reduce((s, it) => s + calcLineItemTotal(it), 0);
   const taxAmount = subtotal * (config.taxRate / 100);
@@ -1139,632 +1186,464 @@ Rules:
 
   /* ── Render ─────────────────────────────────────────────── */
   return (
-    <div className="flex gap-4 h-[calc(100vh-12rem)]">
-      {/* ── Left Panel ── */}
-      <div className="w-72 shrink-0 overflow-y-auto space-y-3 pr-1">
-        {/* AI Director */}
-        <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-3">
-          <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-secondary-500 mb-2">
-            <IconSparkles className="size-3" />
-            AI Invoice Director
-          </label>
-          <textarea
-            rows={3}
-            placeholder="Describe the invoice: services provided, client industry, payment terms..."
-            value={config.description}
-            onChange={(e) => updateConfig({ description: e.target.value })}
-            className="w-full px-3 py-2 rounded-xl border border-secondary-500/20 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-secondary-500/50 focus:ring-2 focus:ring-secondary-500/20 transition-all resize-none mb-2"
-          />
-          <button
-            onClick={generateInvoice}
-            disabled={!config.description.trim() || isGenerating}
-            className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-linear-to-r from-secondary-500 to-primary-500 text-white text-[0.625rem] font-bold hover:from-secondary-400 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isGenerating ? (
-              <>
-                <IconLoader className="size-3 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <IconWand className="size-3" /> Generate Invoice
-              </>
-            )}
-          </button>
+    <StickyCanvasLayout
+      canvasRef={canvasRef}
+      displayWidth={displayWidth}
+      displayHeight={displayHeight}
+      label={`Invoice — ${pageDims.w}×${pageDims.h} (${config.template})`}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.1, 2))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.1, 0.3))}
+      onZoomFit={() => setZoom(0.72)}
+      mobileTabs={["Canvas", "Settings", "Content"]}
+      toolbar={
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <IconReceipt className="size-4 text-primary-500" />
+          <span className="font-semibold text-gray-300">{config.invoiceNumber || "INV-001"}</span>
+          <span className="text-gray-600">|</span>
+          <span>{fmtMoney(total, sym)} {config.currency}</span>
         </div>
-
-        {/* Page Size */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Page Size
-          </label>
-          <div className="grid grid-cols-3 gap-1.5">
-            {PAGE_SIZES.map((ps) => (
-              <button
-                key={ps.id}
-                onClick={() => updateConfig({ pageSize: ps.id })}
-                className={`py-1.5 rounded-lg text-[0.625rem] font-semibold transition-all ${config.pageSize === ps.id ? "bg-primary-500 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
-              >
-                {ps.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Template */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Template
-          </label>
-          <div className="grid grid-cols-2 gap-1.5">
-            {TEMPLATES.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => updateConfig({ template: t.id })}
-                className={`flex flex-col items-start p-2 rounded-lg text-left transition-all ${config.template === t.id ? "ring-2 ring-primary-500 bg-primary-500/10" : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
-              >
-                <span className="text-[0.625rem] font-semibold text-gray-700 dark:text-gray-300">
-                  {t.name}
-                </span>
-                <span className="text-[0.5rem] text-gray-400">{t.desc}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Color */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Accent Color
-          </label>
-          <div className="flex gap-1.5 flex-wrap">
-            {COLOR_PRESETS.map((c) => (
-              <button
-                key={c}
-                onClick={() => updateConfig({ primaryColor: c })}
-                className={`size-6 rounded-full transition-all ${config.primaryColor === c ? "ring-2 ring-offset-2 ring-primary-500 dark:ring-offset-gray-900" : "hover:scale-110"}`}
-                style={{ backgroundColor: c }}
-              />
-            ))}
-            <input
-              type="color"
-              value={config.primaryColor}
-              onChange={(e) => updateConfig({ primaryColor: e.target.value })}
-              className="size-6 rounded-full cursor-pointer border-0"
-            />
-          </div>
-        </div>
-
-        {/* Currency */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Currency
-          </label>
-          <div className="grid grid-cols-2 gap-1">
-            {CURRENCIES.map((c) => (
-              <button
-                key={c.code}
-                onClick={() =>
-                  updateConfig({ currency: c.code, currencySymbol: c.symbol })
-                }
-                className={`py-1.5 px-2 rounded-lg text-left transition-all ${config.currency === c.code ? "ring-2 ring-primary-500 bg-primary-500/10" : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
-              >
-                <span className="text-[0.625rem] font-semibold text-gray-700 dark:text-gray-300">
-                  {c.symbol} {c.code}
-                </span>
-                <span className="block text-[0.5rem] text-gray-400">
-                  {c.name}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Export */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+      }
+      actionsBar={
+        <>
           <button
             onClick={handleDownloadPdf}
-            className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-linear-to-r from-primary-500 to-secondary-500 text-white text-[0.625rem] font-bold hover:from-primary-400 hover:to-secondary-400 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-linear-to-r from-primary-500 to-secondary-500 text-white text-xs font-bold hover:from-primary-400 hover:to-secondary-400 transition-colors"
           >
-            <IconFileText className="size-3" /> Download PDF
+            <IconFileText className="size-3.5" /> Download PDF
           </button>
           <button
             onClick={exportInvoice}
-            className="w-full flex items-center justify-center gap-2 h-9 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[0.625rem] font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-600 text-gray-300 text-xs font-semibold hover:bg-gray-700/50 transition-colors"
           >
-            <IconDownload className="size-3" /> Export PNG
+            <IconDownload className="size-3.5" /> Export PNG
           </button>
-        </div>
-      </div>
-
-      {/* ── Center: Canvas ── */}
-      <div className="flex-1 flex items-center justify-center bg-gray-100 dark:bg-gray-950/50 rounded-xl border border-gray-200 dark:border-gray-800 overflow-auto p-4">
-        <canvas
-          ref={canvasRef}
-          className="shadow-2xl rounded-sm bg-white"
-          style={{
-            maxWidth: "100%",
-            maxHeight: "100%",
-            width: "auto",
-            height: "auto",
-          }}
-        />
-      </div>
-
-      {/* ── Right Panel ── */}
-      <div className="w-80 shrink-0 overflow-y-auto space-y-3 pl-1">
-        {/* Tabs */}
-        <div className="flex rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-          {(
-            [
-              { id: "business" as const, label: "Business" },
-              { id: "client" as const, label: "Client" },
-              { id: "items" as const, label: "Items" },
-              { id: "details" as const, label: "Details" },
-              { id: "payment" as const, label: "Payment" },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-2 text-[0.5625rem] font-semibold transition-all ${activeTab === tab.id ? "bg-primary-500/10 text-primary-500" : "bg-white dark:bg-gray-900 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"}`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Business */}
-        {activeTab === "business" && (
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-            <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-              Your Business
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-600 text-gray-300 text-xs font-semibold hover:bg-gray-700/50 transition-colors"
+          >
+            <IconCopy className="size-3.5" /> Copy
+          </button>
+        </>
+      }
+      leftPanel={
+        <div className="space-y-3">
+          {/* AI Director */}
+          <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-3">
+            <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-secondary-500 mb-2">
+              <IconSparkles className="size-3" />
+              AI Invoice Director
             </label>
-            {(
-              [
-                {
-                  key: "businessName",
-                  label: "Business Name",
-                  ph: "Acme Ltd",
-                },
-                {
-                  key: "businessAddress",
-                  label: "Address",
-                  ph: "Plot 123, Cairo Road, Lusaka",
-                },
-                {
-                  key: "businessEmail",
-                  label: "Email",
-                  ph: "info@acme.co.zm",
-                },
-                {
-                  key: "businessPhone",
-                  label: "Phone",
-                  ph: "+260 211 123 456",
-                },
-                {
-                  key: "businessWebsite",
-                  label: "Website",
-                  ph: "www.acme.co.zm",
-                },
-              ] as const
-            ).map(({ key, label, ph }) => (
-              <div key={key}>
-                <label className="text-[0.5625rem] text-gray-500">
-                  {label}
-                </label>
-                <input
-                  type="text"
-                  value={config[key]}
-                  onChange={(e) => updateConfig({ [key]: e.target.value })}
-                  placeholder={ph}
-                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
-                />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Client */}
-        {activeTab === "client" && (
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-            <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-              Bill To
-            </label>
-            {(
-              [
-                { key: "clientName", label: "Client Name", ph: "Client Co." },
-                {
-                  key: "clientAddress",
-                  label: "Address",
-                  ph: "456 Independence Ave, Lusaka",
-                },
-                {
-                  key: "clientEmail",
-                  label: "Email",
-                  ph: "client@email.com",
-                },
-              ] as const
-            ).map(({ key, label, ph }) => (
-              <div key={key}>
-                <label className="text-[0.5625rem] text-gray-500">
-                  {label}
-                </label>
-                <input
-                  type="text"
-                  value={config[key]}
-                  onChange={(e) => updateConfig({ [key]: e.target.value })}
-                  placeholder={ph}
-                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
-                />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Line Items */}
-        {activeTab === "items" && (
-          <div className="space-y-2">
-            {items.map((item, i) => (
-              <div
-                key={item.id}
-                className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-1.5"
-              >
-                <div className="flex items-center justify-between">
-                  <label className="text-[0.625rem] font-semibold text-gray-500">
-                    Item {i + 1}
-                  </label>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => moveItemUp(i)}
-                      disabled={i === 0}
-                      title="Move Up"
-                      className="text-gray-400 hover:text-primary-500 disabled:opacity-30 transition-colors"
-                    >
-                      <IconChevronUp className="size-3" />
-                    </button>
-                    <button
-                      onClick={() => moveItemDown(i)}
-                      disabled={i === items.length - 1}
-                      title="Move Down"
-                      className="text-gray-400 hover:text-primary-500 disabled:opacity-30 transition-colors"
-                    >
-                      <IconChevronDown className="size-3" />
-                    </button>
-                    <button
-                      onClick={() =>
-                        setItems((p) => p.filter((_, j) => j !== i))
-                      }
-                      disabled={items.length <= 1}
-                      className="text-gray-400 hover:text-red-500 disabled:opacity-30 transition-colors"
-                    >
-                      <IconTrash className="size-3" />
-                    </button>
-                  </div>
-                </div>
-                <input
-                  type="text"
-                  value={item.description}
-                  onChange={(e) =>
-                    setItems((p) =>
-                      p.map((x, j) =>
-                        j === i
-                          ? { ...x, description: e.target.value }
-                          : x,
-                      ),
-                    )
-                  }
-                  placeholder="Description"
-                  className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50"
-                />
-                <div className="flex gap-1.5">
-                  <div className="flex-1">
-                    <label className="text-[0.5rem] text-gray-400">Qty</label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={item.quantity}
-                      onChange={(e) =>
-                        setItems((p) =>
-                          p.map((x, j) =>
-                            j === i
-                              ? {
-                                  ...x,
-                                  quantity: parseInt(e.target.value) || 1,
-                                }
-                              : x,
-                          ),
-                        )
-                      }
-                      className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="text-[0.5rem] text-gray-400">
-                      Rate ({sym})
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={item.rate}
-                      onChange={(e) =>
-                        setItems((p) =>
-                          p.map((x, j) =>
-                            j === i
-                              ? {
-                                  ...x,
-                                  rate: parseFloat(e.target.value) || 0,
-                                }
-                              : x,
-                          ),
-                        )
-                      }
-                      className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50"
-                    />
-                  </div>
-                  <div className="w-20">
-                    <label className="text-[0.5rem] text-gray-400">
-                      Amount
-                    </label>
-                    <div className="px-2 py-1 rounded bg-gray-50 dark:bg-gray-800 text-[0.625rem] font-semibold text-gray-700 dark:text-gray-300">
-                      {fmtMoney(calcLineItemTotal(item), sym)}
-                    </div>
-                  </div>
-                </div>
-                {/* Discount row */}
-                <div className="flex gap-1.5 items-end">
-                  <div className="w-20">
-                    <label className="text-[0.5rem] text-gray-400">Discount Type</label>
-                    <select
-                      value={item.discountType}
-                      onChange={(e) =>
-                        setItems((p) =>
-                          p.map((x, j) =>
-                            j === i ? { ...x, discountType: e.target.value as "percent" | "fixed" } : x,
-                          ),
-                        )
-                      }
-                      className="w-full px-1.5 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50"
-                    >
-                      <option value="percent">%</option>
-                      <option value="fixed">{sym} Fixed</option>
-                    </select>
-                  </div>
-                  <div className="flex-1">
-                    <label className="text-[0.5rem] text-gray-400">Discount</label>
-                    <input
-                      type="number"
-                      min={0}
-                      step={item.discountType === "percent" ? 1 : 0.01}
-                      max={item.discountType === "percent" ? 100 : undefined}
-                      value={item.discountValue}
-                      onChange={(e) =>
-                        setItems((p) =>
-                          p.map((x, j) =>
-                            j === i ? { ...x, discountValue: parseFloat(e.target.value) || 0 } : x,
-                          ),
-                        )
-                      }
-                      placeholder="0"
-                      className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50"
-                    />
-                  </div>
-                  {item.discountValue > 0 && (
-                    <div className="text-[0.5rem] text-red-500 pb-1">
-                      −{item.discountType === "percent" ? `${item.discountValue}%` : fmtMoney(item.discountValue, sym)}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+            <textarea
+              rows={3}
+              placeholder="Describe the invoice: services provided, client industry, payment terms..."
+              value={config.description}
+              onChange={(e) => updateConfig({ description: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl border border-secondary-500/20 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-secondary-500/50 focus:ring-2 focus:ring-secondary-500/20 transition-all resize-none mb-2"
+            />
             <button
-              onClick={() =>
-                setItems((p) => [
-                  ...p,
-                  { id: uid(), description: "", quantity: 1, rate: 0, discountType: "percent" as const, discountValue: 0 },
-                ])
-              }
-              className="w-full py-2 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 text-[0.625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors"
+              onClick={generateInvoice}
+              disabled={!config.description.trim() || isGenerating}
+              className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-linear-to-r from-secondary-500 to-primary-500 text-white text-[0.625rem] font-bold hover:from-secondary-400 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <IconPlus className="size-3 inline mr-1" /> Add Item
+              {isGenerating ? (
+                <>
+                  <IconLoader className="size-3 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <IconWand className="size-3" /> Generate Invoice
+                </>
+              )}
             </button>
+          </div>
 
-            {/* Totals summary */}
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-1.5">
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>Subtotal</span>
-                <span>{fmtMoney(subtotal, sym)}</span>
-              </div>
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>
-                  {config.taxLabel} ({config.taxRate}%)
-                </span>
-                <span>{fmtMoney(taxAmount, sym)}</span>
-              </div>
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-1.5 flex justify-between text-sm font-bold text-gray-900 dark:text-white">
-                <span>Total</span>
-                <span>
-                  {fmtMoney(total, sym)} {config.currency}
-                </span>
-              </div>
+          {/* Template Slider */}
+          <TemplateSlider
+            templates={templatePreviews}
+            activeId={config.template}
+            onSelect={(id) => updateConfig({ template: id as InvoiceTemplate })}
+            thumbWidth={120}
+            thumbHeight={86}
+            label="Templates"
+          />
+
+          {/* Page Size */}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+            <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+              <IconLayout className="size-3" /> Page Size
+            </label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {PAGE_SIZES.map((ps) => (
+                <button
+                  key={ps.id}
+                  onClick={() => updateConfig({ pageSize: ps.id })}
+                  className={`py-1.5 rounded-lg text-[0.625rem] font-semibold transition-all ${config.pageSize === ps.id ? "bg-primary-500 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+                >
+                  {ps.name}
+                </button>
+              ))}
             </div>
           </div>
-        )}
 
-        {/* Payment */}
-        {activeTab === "payment" && (
-          <div className="space-y-3">
+          {/* Color */}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+            <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+              <IconDroplet className="size-3" /> Accent Color
+            </label>
+            <div className="flex gap-1.5 flex-wrap">
+              {COLOR_PRESETS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => updateConfig({ primaryColor: c })}
+                  className={`size-6 rounded-full transition-all ${config.primaryColor === c ? "ring-2 ring-offset-2 ring-primary-500 dark:ring-offset-gray-900" : "hover:scale-110"}`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+              <input
+                type="color"
+                value={config.primaryColor}
+                onChange={(e) => updateConfig({ primaryColor: e.target.value })}
+                className="size-6 rounded-full cursor-pointer border-0"
+              />
+            </div>
+          </div>
+
+          {/* Currency */}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+            <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+              Currency
+            </label>
+            <div className="grid grid-cols-2 gap-1">
+              {CURRENCIES.map((c) => (
+                <button
+                  key={c.code}
+                  onClick={() =>
+                    updateConfig({ currency: c.code, currencySymbol: c.symbol })
+                  }
+                  className={`py-1.5 px-2 rounded-lg text-left transition-all ${config.currency === c.code ? "ring-2 ring-primary-500 bg-primary-500/10" : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+                >
+                  <span className="text-[0.625rem] font-semibold text-gray-700 dark:text-gray-300">
+                    {c.symbol} {c.code}
+                  </span>
+                  <span className="block text-[0.5rem] text-gray-400">
+                    {c.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      }
+      rightPanel={
+        <div className="space-y-3">
+          {/* Tabs */}
+          <div className="flex rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+            {(
+              [
+                { id: "business" as const, label: "Biz" },
+                { id: "client" as const, label: "Client" },
+                { id: "items" as const, label: "Items" },
+                { id: "details" as const, label: "Details" },
+                { id: "payment" as const, label: "Pay" },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 py-2 text-[0.5625rem] font-semibold transition-all ${activeTab === tab.id ? "bg-primary-500/10 text-primary-500" : "bg-white dark:bg-gray-900 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Business */}
+          {activeTab === "business" && (
             <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-              <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-                <IconCreditCard className="size-3" />
-                Bank Details
+              <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+                Your Business
               </label>
-              {([
-                { key: "bankName" as const, label: "Bank Name", ph: "Zanaco / Stanbic / FNB" },
-                { key: "accountNumber" as const, label: "Account Number", ph: "00123456789" },
-                { key: "routingNumber" as const, label: "Routing / Sort Code", ph: "00-12-34" },
-              ]).map(({ key, label, ph }) => (
+              {(
+                [
+                  { key: "businessName", label: "Business Name", ph: "Acme Ltd" },
+                  { key: "businessAddress", label: "Address", ph: "Plot 123, Cairo Road, Lusaka" },
+                  { key: "businessEmail", label: "Email", ph: "info@acme.co.zm" },
+                  { key: "businessPhone", label: "Phone", ph: "+260 211 123 456" },
+                  { key: "businessWebsite", label: "Website", ph: "www.acme.co.zm" },
+                ] as const
+              ).map(({ key, label, ph }) => (
                 <div key={key}>
                   <label className="text-[0.5625rem] text-gray-500">{label}</label>
                   <input
                     type="text"
-                    value={paymentDetails[key]}
-                    onChange={(e) => setPaymentDetails((p) => ({ ...p, [key]: e.target.value }))}
+                    value={config[key]}
+                    onChange={(e) => updateConfig({ [key]: e.target.value })}
                     placeholder={ph}
                     className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
                   />
                 </div>
               ))}
             </div>
+          )}
+
+          {/* Client */}
+          {activeTab === "client" && (
             <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
               <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-                Digital Payments (Optional)
+                Bill To
               </label>
-              <div>
-                <label className="text-[0.5625rem] text-gray-500">PayPal Email</label>
-                <input
-                  type="email"
-                  value={paymentDetails.paypalEmail}
-                  onChange={(e) => setPaymentDetails((p) => ({ ...p, paypalEmail: e.target.value }))}
-                  placeholder="payments@company.co.zm"
-                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
-                />
-              </div>
-              <div>
-                <label className="text-[0.5625rem] text-gray-500">Venmo Handle</label>
-                <input
-                  type="text"
-                  value={paymentDetails.venmoHandle}
-                  onChange={(e) => setPaymentDetails((p) => ({ ...p, venmoHandle: e.target.value }))}
-                  placeholder="@your-handle"
-                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
-                />
-              </div>
+              {(
+                [
+                  { key: "clientName", label: "Client Name", ph: "Client Co." },
+                  { key: "clientAddress", label: "Address", ph: "456 Independence Ave, Lusaka" },
+                  { key: "clientEmail", label: "Email", ph: "client@email.com" },
+                ] as const
+              ).map(({ key, label, ph }) => (
+                <div key={key}>
+                  <label className="text-[0.5625rem] text-gray-500">{label}</label>
+                  <input
+                    type="text"
+                    value={config[key]}
+                    onChange={(e) => updateConfig({ [key]: e.target.value })}
+                    placeholder={ph}
+                    className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
+                  />
+                </div>
+              ))}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Details */}
-        {activeTab === "details" && (
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-            <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-              Invoice Details
-            </label>
-            <div>
-              <label className="text-[0.5625rem] text-gray-500">
-                Invoice #
+          {/* Line Items */}
+          {activeTab === "items" && (
+            <div className="space-y-2">
+              {items.map((item, i) => (
+                <div
+                  key={item.id}
+                  className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-1.5"
+                >
+                  <div className="flex items-center justify-between">
+                    <label className="text-[0.625rem] font-semibold text-gray-500">
+                      Item {i + 1}
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => moveItemUp(i)} disabled={i === 0} title="Move Up" className="text-gray-400 hover:text-primary-500 disabled:opacity-30 transition-colors">
+                        <IconChevronUp className="size-3" />
+                      </button>
+                      <button onClick={() => moveItemDown(i)} disabled={i === items.length - 1} title="Move Down" className="text-gray-400 hover:text-primary-500 disabled:opacity-30 transition-colors">
+                        <IconChevronDown className="size-3" />
+                      </button>
+                      <button onClick={() => setItems((p) => p.filter((_, j) => j !== i))} disabled={items.length <= 1} className="text-gray-400 hover:text-red-500 disabled:opacity-30 transition-colors">
+                        <IconTrash className="size-3" />
+                      </button>
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    value={item.description}
+                    onChange={(e) => setItems((p) => p.map((x, j) => j === i ? { ...x, description: e.target.value } : x))}
+                    placeholder="Description"
+                    className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50"
+                  />
+                  <div className="flex gap-1.5">
+                    <div className="flex-1">
+                      <label className="text-[0.5rem] text-gray-400">Qty</label>
+                      <input type="number" min={1} value={item.quantity} onChange={(e) => setItems((p) => p.map((x, j) => j === i ? { ...x, quantity: parseInt(e.target.value) || 1 } : x))} className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[0.5rem] text-gray-400">Rate ({sym})</label>
+                      <input type="number" min={0} step={0.01} value={item.rate} onChange={(e) => setItems((p) => p.map((x, j) => j === i ? { ...x, rate: parseFloat(e.target.value) || 0 } : x))} className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50" />
+                    </div>
+                    <div className="w-16">
+                      <label className="text-[0.5rem] text-gray-400">Amount</label>
+                      <div className="px-2 py-1 rounded bg-gray-50 dark:bg-gray-800 text-[0.625rem] font-semibold text-gray-700 dark:text-gray-300">
+                        {fmtMoney(calcLineItemTotal(item), sym)}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Discount row */}
+                  <div className="flex gap-1.5 items-end">
+                    <div className="w-16">
+                      <label className="text-[0.5rem] text-gray-400">Disc Type</label>
+                      <select
+                        value={item.discountType}
+                        onChange={(e) => setItems((p) => p.map((x, j) => j === i ? { ...x, discountType: e.target.value as "percent" | "fixed" } : x))}
+                        className="w-full px-1 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50"
+                      >
+                        <option value="percent">%</option>
+                        <option value="fixed">{sym}</option>
+                      </select>
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[0.5rem] text-gray-400">Discount</label>
+                      <input
+                        type="number"
+                        min={0}
+                        step={item.discountType === "percent" ? 1 : 0.01}
+                        max={item.discountType === "percent" ? 100 : undefined}
+                        value={item.discountValue}
+                        onChange={(e) => setItems((p) => p.map((x, j) => j === i ? { ...x, discountValue: parseFloat(e.target.value) || 0 } : x))}
+                        placeholder="0"
+                        className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50"
+                      />
+                    </div>
+                    {item.discountValue > 0 && (
+                      <div className="text-[0.5rem] text-red-500 pb-1">
+                        −{item.discountType === "percent" ? `${item.discountValue}%` : fmtMoney(item.discountValue, sym)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={() => setItems((p) => [...p, { id: uid(), description: "", quantity: 1, rate: 0, discountType: "percent" as const, discountValue: 0 }])}
+                className="w-full py-2 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 text-[0.625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors"
+              >
+                <IconPlus className="size-3 inline mr-1" /> Add Item
+              </button>
+
+              {/* Totals summary */}
+              <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-1.5">
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Subtotal</span>
+                  <span>{fmtMoney(subtotal, sym)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>{config.taxLabel} ({config.taxRate}%)</span>
+                  <span>{fmtMoney(taxAmount, sym)}</span>
+                </div>
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-1.5 flex justify-between text-sm font-bold text-gray-900 dark:text-white">
+                  <span>Total</span>
+                  <span>{fmtMoney(total, sym)} {config.currency}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Payment */}
+          {activeTab === "payment" && (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+                <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+                  <IconCreditCard className="size-3" />
+                  Bank Details
+                </label>
+                {([
+                  { key: "bankName" as const, label: "Bank Name", ph: "Zanaco / Stanbic / FNB" },
+                  { key: "accountNumber" as const, label: "Account Number", ph: "00123456789" },
+                  { key: "routingNumber" as const, label: "Routing / Sort Code", ph: "00-12-34" },
+                ]).map(({ key, label, ph }) => (
+                  <div key={key}>
+                    <label className="text-[0.5625rem] text-gray-500">{label}</label>
+                    <input
+                      type="text"
+                      value={paymentDetails[key]}
+                      onChange={(e) => setPaymentDetails((p) => ({ ...p, [key]: e.target.value }))}
+                      placeholder={ph}
+                      className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+                <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+                  Digital Payments (Optional)
+                </label>
+                <div>
+                  <label className="text-[0.5625rem] text-gray-500">PayPal Email</label>
+                  <input
+                    type="email"
+                    value={paymentDetails.paypalEmail}
+                    onChange={(e) => setPaymentDetails((p) => ({ ...p, paypalEmail: e.target.value }))}
+                    placeholder="payments@company.co.zm"
+                    className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="text-[0.5625rem] text-gray-500">Venmo Handle</label>
+                  <input
+                    type="text"
+                    value={paymentDetails.venmoHandle}
+                    onChange={(e) => setPaymentDetails((p) => ({ ...p, venmoHandle: e.target.value }))}
+                    placeholder="@your-handle"
+                    className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Details */}
+          {activeTab === "details" && (
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+              <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+                Invoice Details
               </label>
-              <input
-                type="text"
-                value={config.invoiceNumber}
-                onChange={(e) =>
-                  updateConfig({ invoiceNumber: e.target.value })
-                }
-                className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
-              />
-            </div>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="text-[0.5625rem] text-gray-500">
-                  Invoice Date
-                </label>
-                <input
-                  type="date"
-                  value={config.invoiceDate}
-                  onChange={(e) =>
-                    updateConfig({ invoiceDate: e.target.value })
-                  }
-                  className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50 transition-all"
-                />
-              </div>
-              <div className="flex-1">
-                <label className="text-[0.5625rem] text-gray-500">
-                  Due Date
-                </label>
-                <input
-                  type="date"
-                  value={config.dueDate}
-                  onChange={(e) =>
-                    updateConfig({ dueDate: e.target.value })
-                  }
-                  className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50 transition-all"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="text-[0.5625rem] text-gray-500">
-                  Tax Label
-                </label>
+              <div>
+                <label className="text-[0.5625rem] text-gray-500">Invoice #</label>
                 <input
                   type="text"
-                  value={config.taxLabel}
-                  onChange={(e) =>
-                    updateConfig({ taxLabel: e.target.value })
-                  }
-                  placeholder="VAT"
-                  className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
+                  value={config.invoiceNumber}
+                  onChange={(e) => updateConfig({ invoiceNumber: e.target.value })}
+                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
                 />
               </div>
-              <div className="flex-1">
-                <label className="text-[0.5625rem] text-gray-500">
-                  Tax Rate %
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={config.taxRate}
-                  onChange={(e) =>
-                    updateConfig({
-                      taxRate: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-[0.5625rem] text-gray-500">Invoice Date</label>
+                  <input type="date" value={config.invoiceDate} onChange={(e) => updateConfig({ invoiceDate: e.target.value })} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50 transition-all" />
+                </div>
+                <div className="flex-1">
+                  <label className="text-[0.5625rem] text-gray-500">Due Date</label>
+                  <input type="date" value={config.dueDate} onChange={(e) => updateConfig({ dueDate: e.target.value })} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50 transition-all" />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-[0.5625rem] text-gray-500">Tax Label</label>
+                  <input type="text" value={config.taxLabel} onChange={(e) => updateConfig({ taxLabel: e.target.value })} placeholder="VAT" className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all" />
+                </div>
+                <div className="flex-1">
+                  <label className="text-[0.5625rem] text-gray-500">Tax Rate %</label>
+                  <input type="number" min={0} max={100} value={config.taxRate} onChange={(e) => updateConfig({ taxRate: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all" />
+                </div>
+              </div>
+              <div>
+                <label className="text-[0.5625rem] text-gray-500">Payment Terms</label>
+                <select
+                  value={paymentTerms}
+                  onChange={(e) => {
+                    const val = e.target.value as PaymentTermsOption;
+                    setPaymentTerms(val);
+                    if (val !== "custom") updateConfig({ paymentTerms: val });
+                  }}
+                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
+                >
+                  {PAYMENT_TERMS.map((pt) => (
+                    <option key={pt.id} value={pt.id}>{pt.label}</option>
+                  ))}
+                </select>
+                {paymentTerms !== "custom" && paymentTerms !== "receipt" && config.dueDate && (
+                  <p className="text-[0.5rem] text-gray-400 mt-0.5">
+                    Due date auto-calculated: {config.dueDate}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="text-[0.5625rem] text-gray-500">Notes / Terms</label>
+                <textarea
+                  rows={3}
+                  value={config.notes}
+                  onChange={(e) => updateConfig({ notes: e.target.value })}
+                  placeholder="Payment terms, bank details, thank you note..."
+                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all resize-none"
                 />
               </div>
             </div>
-            <div>
-              <label className="text-[0.5625rem] text-gray-500">
-                Payment Terms
-              </label>
-              <select
-                value={paymentTerms}
-                onChange={(e) => {
-                  const val = e.target.value as PaymentTermsOption;
-                  setPaymentTerms(val);
-                  if (val !== "custom") {
-                    updateConfig({ paymentTerms: val });
-                  }
-                }}
-                className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
-              >
-                {PAYMENT_TERMS.map((pt) => (
-                  <option key={pt.id} value={pt.id}>{pt.label}</option>
-                ))}
-              </select>
-              {paymentTerms !== "custom" && paymentTerms !== "receipt" && config.dueDate && (
-                <p className="text-[0.5rem] text-gray-400 mt-0.5">
-                  Due date auto-calculated: {config.dueDate}
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="text-[0.5625rem] text-gray-500">
-                Notes / Terms
-              </label>
-              <textarea
-                rows={3}
-                value={config.notes}
-                onChange={(e) => updateConfig({ notes: e.target.value })}
-                placeholder="Payment terms, bank details, thank you note..."
-                className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all resize-none"
-              />
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+          )}
+        </div>
+      }
+    />
   );
 }

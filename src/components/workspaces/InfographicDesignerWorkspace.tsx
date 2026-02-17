@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   IconSparkles,
   IconWand,
@@ -9,8 +9,11 @@ import {
   IconChart,
   IconPlus,
   IconTrash,
+  IconCopy,
 } from "@/components/icons";
 import { cleanAIText, hexToRgba, getContrastColor } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -126,7 +129,6 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number): st
 export default function InfographicDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
   const [editIdx, setEditIdx] = useState<number | null>(null);
 
   const [config, setConfig] = useState<InfographicConfig>({
@@ -652,18 +654,110 @@ export default function InfographicDesignerWorkspace() {
     setEditIdx(null);
   };
 
-  /* ── UI ──────────────────────────────────────────────────── */
-  return (
-    <div>
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
-        {(["canvas", "settings"] as const).map((t) => (
-          <button key={t} onClick={() => setMobileTab(t)} className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}>{t}</button>
-        ))}
-      </div>
+  /* ── Zoom & Display ─────────────────────────────────────── */
+  const [zoom, setZoom] = useState(1);
+  const displayWidth = Math.min(700, sz.w);
+  const displayHeight = displayWidth * (sz.h / sz.w);
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Settings */}
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
+  /* ── Template Previews ──────────────────────────────────── */
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () =>
+      TEMPLATES.map((t) => ({
+        id: t.id,
+        label: t.label,
+        render: (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+          const pc = config.primaryColor;
+          const sc = config.secondaryColor;
+          // Background
+          ctx.fillStyle = config.bgColor;
+          ctx.fillRect(0, 0, w, h);
+          // Template-specific accent
+          if (t.id === "statistical") {
+            ctx.fillStyle = pc;
+            ctx.fillRect(0, 0, w, h * 0.25);
+            for (let i = 0; i < 3; i++) {
+              ctx.fillStyle = hexToRgba(pc, 0.15);
+              ctx.fillRect(4 + i * (w / 3 - 2), h * 0.35, w / 3 - 6, h * 0.2);
+            }
+          } else if (t.id === "timeline") {
+            const grad = ctx.createLinearGradient(0, 0, w, 0);
+            grad.addColorStop(0, pc);
+            grad.addColorStop(1, sc);
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h * 0.2);
+            ctx.fillStyle = hexToRgba(pc, 0.3);
+            ctx.fillRect(w * 0.15, h * 0.3, 2, h * 0.6);
+            for (let i = 0; i < 3; i++) {
+              ctx.beginPath();
+              ctx.arc(w * 0.15, h * 0.4 + i * h * 0.18, 3, 0, Math.PI * 2);
+              ctx.fillStyle = pc;
+              ctx.fill();
+            }
+          } else if (t.id === "process") {
+            ctx.fillStyle = pc;
+            ctx.fillRect(0, 0, w, h * 0.2);
+            for (let i = 0; i < 3; i++) {
+              ctx.beginPath();
+              ctx.arc(w * 0.18, h * 0.38 + i * h * 0.18, 5, 0, Math.PI * 2);
+              ctx.fillStyle = pc;
+              ctx.fill();
+            }
+          } else {
+            // comparison
+            ctx.fillStyle = pc;
+            ctx.fillRect(0, 0, w, h * 0.2);
+            for (let i = 0; i < 3; i++) {
+              ctx.fillStyle = hexToRgba(pc, 0.2);
+              ctx.fillRect(w * 0.3, h * 0.35 + i * h * 0.15, w * 0.6, h * 0.08);
+              ctx.fillStyle = pc;
+              ctx.fillRect(w * 0.3, h * 0.35 + i * h * 0.15, w * (0.2 + i * 0.12), h * 0.08);
+            }
+          }
+          // Border
+          ctx.strokeStyle = "#d1d5db";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(0, 0, w, h);
+        },
+      })),
+    [config.primaryColor, config.secondaryColor, config.bgColor]
+  );
+
+  /* ── Copy to Clipboard ──────────────────────────────────── */
+  const handleCopy = useCallback(async () => {
+    if (!canvasRef.current) return;
+    try {
+      canvasRef.current.toBlob(async (blob) => {
+        if (!blob) return;
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob }),
+        ]);
+      }, "image/png");
+    } catch {
+      /* clipboard may not be available */
+    }
+  }, []);
+
+  /* ── UI ──────────────────────────────────────────────────── */
+  const leftPanel = (
+    <div className="space-y-4">
+      {/* Template Slider */}
+      <TemplateSlider
+        templates={templatePreviews}
+        activeId={config.template}
+        onSelect={(id) => upd({ template: id as InfographicTemplate })}
+        thumbWidth={140}
+        thumbHeight={100}
+        label="Templates"
+      />
+    </div>
+  );
+
+  return (
+    <StickyCanvasLayout
+      leftPanel={
+        <>
+          {leftPanel.props.children}
+
           {/* General */}
           <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconChart className="size-4 text-primary-500" />Infographic Settings</h3>
@@ -672,13 +766,6 @@ export default function InfographicDesignerWorkspace() {
             <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.size} onChange={(e) => upd({ size: e.target.value as CanvasSize })}>
               {CANVAS_SIZES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
             </select>
-
-            <label className="block text-xs text-gray-400">Template</label>
-            <div className="grid grid-cols-2 gap-1.5">
-              {TEMPLATES.map((t) => (
-                <button key={t.id} onClick={() => upd({ template: t.id })} className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${config.template === t.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{t.label}</button>
-              ))}
-            </div>
 
             <label className="block text-xs text-gray-400">Color Preset</label>
             <div className="grid grid-cols-4 gap-1.5">
@@ -752,21 +839,35 @@ export default function InfographicDesignerWorkspace() {
               {loading ? "Generating…" : "Generate Infographic Data"}
             </button>
           </div>
-
-          {/* Export */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-            <button onClick={exportPNG} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"><IconDownload className="size-4" />Export PNG</button>
-          </div>
+        </>
+      }
+      canvasRef={canvasRef}
+      displayWidth={displayWidth}
+      displayHeight={displayHeight}
+      label={`${config.template} — ${sz.label} — ${config.sections.length} sections`}
+      mobileTabs={["Canvas", "Settings"]}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
+      onZoomFit={() => setZoom(1)}
+      actionsBar={
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportPNG}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors"
+          >
+            <IconDownload className="size-3" />
+            Download PNG
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors"
+          >
+            <IconCopy className="size-3" />
+            Copy
+          </button>
         </div>
-
-        {/* Canvas */}
-        <div className={`flex-1 min-w-0 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-          <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
-            <canvas ref={canvasRef} style={{ width: Math.min(sz.w, 700), height: Math.min(sz.w, 700) * (sz.h / sz.w) }} className="rounded-lg shadow-lg" />
-          </div>
-          <p className="text-xs text-gray-400 text-center mt-2">{config.template} — {sz.label} — {config.sections.length} sections</p>
-        </div>
-      </div>
-    </div>
+      }
+    />
   );
 }

@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
-  IconSparkles, IconWand, IconLoader, IconDownload, IconFileText,
+  IconSparkles, IconWand, IconLoader, IconDownload, IconFileText, IconCopy,
 } from "@/components/icons";
 import { cleanAIText, roundRect } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -47,7 +49,6 @@ const COLOR_PRESETS = ["#1e40af", "#0f766e", "#7c3aed", "#dc2626", "#ea580c", "#
 export default function LetterheadDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
 
   const [config, setConfig] = useState<LetterheadConfig>({
     template: "corporate",
@@ -200,67 +201,167 @@ export default function LetterheadDesignerWorkspace() {
     link.click();
   };
 
-  return (
-    <div>
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
-        {(["canvas", "settings"] as const).map((t) => (
-          <button key={t} onClick={() => setMobileTab(t)} className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}>{t}</button>
+  /* ── Zoom & Display ─────────────────────────────────────── */
+  const [zoom, setZoom] = useState(1);
+  const displayW = Math.min(500, ps.w);
+  const displayH = displayW * (ps.h / ps.w);
+
+  /* ── Template Previews ──────────────────────────────────── */
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () =>
+      TEMPLATES.map((t) => ({
+        id: t.id,
+        label: t.name,
+        render: (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, w, h);
+          const pc = config.primaryColor;
+          const headerH = h * 0.2;
+          if (t.id === "corporate" || t.id === "bold") {
+            ctx.fillStyle = pc;
+            ctx.fillRect(0, 0, w, headerH);
+            ctx.fillStyle = pc;
+            ctx.fillRect(0, h - 2, w, 2);
+          } else if (t.id === "modern") {
+            ctx.fillStyle = pc;
+            ctx.fillRect(0, 0, 3, h);
+          } else if (t.id === "elegant") {
+            ctx.strokeStyle = pc;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(4, 4, w - 8, h - 8);
+          } else if (t.id === "creative") {
+            ctx.fillStyle = pc + "20";
+            ctx.beginPath();
+            ctx.arc(w - 10, 10, 18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = pc + "15";
+            ctx.beginPath();
+            ctx.arc(10, h - 8, 12, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            /* minimal */
+            ctx.fillStyle = pc;
+            ctx.fillRect(w * 0.3, 6, w * 0.4, 1.5);
+          }
+          /* lines */
+          ctx.strokeStyle = "#e2e8f0";
+          ctx.lineWidth = 0.5;
+          for (let y = headerH + 8; y < h - 10; y += 6) {
+            ctx.beginPath();
+            ctx.moveTo(8, y);
+            ctx.lineTo(w - 8, y);
+            ctx.stroke();
+          }
+          /* border */
+          ctx.strokeStyle = "#d1d5db";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(0, 0, w, h);
+        },
+      })),
+    [config.primaryColor]
+  );
+
+  /* ── Copy to Clipboard ──────────────────────────────────── */
+  const handleCopy = useCallback(async () => {
+    if (!canvasRef.current) return;
+    try {
+      canvasRef.current.toBlob(async (blob) => {
+        if (!blob) return;
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob }),
+        ]);
+      }, "image/png");
+    } catch {
+      /* clipboard may not be available */
+    }
+  }, []);
+
+  /* ── Panel Definitions for StickyCanvasLayout ───────────── */
+  const leftPanel = (
+    <div className="space-y-4">
+      {/* Template Slider */}
+      <TemplateSlider
+        templates={templatePreviews}
+        activeId={config.template}
+        onSelect={(id) => setConfig((p) => ({ ...p, template: id as LetterheadTemplate }))}
+        thumbWidth={140}
+        thumbHeight={100}
+        label="Templates"
+      />
+
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconFileText className="size-4 text-primary-500" />Letterhead Settings</h3>
+        {[
+          { label: "Company Name", key: "companyName" as const },
+          { label: "Tagline", key: "tagline" as const },
+          { label: "Address", key: "address" as const },
+          { label: "Phone", key: "phone" as const },
+          { label: "Email", key: "email" as const },
+          { label: "Website", key: "website" as const },
+        ].map(({ label, key }) => (
+          <div key={key}>
+            <label className="block text-xs text-gray-400 mb-1">{label}</label>
+            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config[key]} onChange={(e) => setConfig((p) => ({ ...p, [key]: e.target.value }))} />
+          </div>
         ))}
+        <label className="block text-xs text-gray-400">Page Size</label>
+        <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.pageSize} onChange={(e) => setConfig((p) => ({ ...p, pageSize: e.target.value as PageSize }))}>
+          {PAGE_SIZES.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+        <label className="block text-xs text-gray-400">Color</label>
+        <div className="flex gap-1.5 flex-wrap">
+          {COLOR_PRESETS.map((c) => (
+            <button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
+          ))}
+        </div>
+        <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+          <input type="checkbox" checked={config.showWatermark} onChange={(e) => setConfig((p) => ({ ...p, showWatermark: e.target.checked }))} className="rounded" />
+          Show watermark
+        </label>
       </div>
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconFileText className="size-4 text-primary-500" />Letterhead Settings</h3>
-            {[
-              { label: "Company Name", key: "companyName" as const },
-              { label: "Tagline", key: "tagline" as const },
-              { label: "Address", key: "address" as const },
-              { label: "Phone", key: "phone" as const },
-              { label: "Email", key: "email" as const },
-              { label: "Website", key: "website" as const },
-            ].map(({ label, key }) => (
-              <div key={key}>
-                <label className="block text-xs text-gray-400 mb-1">{label}</label>
-                <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config[key]} onChange={(e) => setConfig((p) => ({ ...p, [key]: e.target.value }))} />
-              </div>
-            ))}
-            <label className="block text-xs text-gray-400">Template</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {TEMPLATES.map((t) => (
-                <button key={t.id} onClick={() => setConfig((p) => ({ ...p, template: t.id }))} className={`px-2 py-1.5 rounded-lg text-xs font-medium ${config.template === t.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"}`}>{t.name}</button>
-              ))}
-            </div>
-            <label className="block text-xs text-gray-400">Page Size</label>
-            <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.pageSize} onChange={(e) => setConfig((p) => ({ ...p, pageSize: e.target.value as PageSize }))}>
-              {PAGE_SIZES.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-            <label className="block text-xs text-gray-400">Color</label>
-            <div className="flex gap-1.5 flex-wrap">
-              {COLOR_PRESETS.map((c) => (
-                <button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
-              ))}
-            </div>
-            <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
-              <input type="checkbox" checked={config.showWatermark} onChange={(e) => setConfig((p) => ({ ...p, showWatermark: e.target.checked }))} className="rounded" />
-              Show watermark
-            </label>
-          </div>
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Generator</h3>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe your business…" value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
-            <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50">
-              {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}{loading ? "Generating…" : "Generate"}
-            </button>
-          </div>
-          <button onClick={exportPNG} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"><IconDownload className="size-4" />Export PNG</button>
-        </div>
-        <div className={`flex-1 min-w-0 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-          <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
-            <canvas ref={canvasRef} style={{ width: Math.min(ps.w, 500), height: Math.min(ps.w, 500) * (ps.h / ps.w) }} className="rounded-lg shadow-lg" />
-          </div>
-          <p className="text-xs text-gray-400 text-center mt-2">{config.template} — {ps.w}×{ps.h}px</p>
-        </div>
+
+      {/* AI Generation */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Generator</h3>
+        <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe your business…" value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
+        <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
+          {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
+          {loading ? "Generating…" : "Generate"}
+        </button>
       </div>
     </div>
+  );
+
+  return (
+    <StickyCanvasLayout
+      leftPanel={leftPanel}
+      canvasRef={canvasRef}
+      displayWidth={displayW}
+      displayHeight={displayH}
+      label={`${config.template} — ${ps.w}×${ps.h}px`}
+      mobileTabs={["Canvas", "Settings"]}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
+      onZoomFit={() => setZoom(1)}
+      actionsBar={
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportPNG}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors"
+          >
+            <IconDownload className="size-3" />
+            Download PNG
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors"
+          >
+            <IconCopy className="size-3" />
+            Copy
+          </button>
+        </div>
+      }
+    />
   );
 }

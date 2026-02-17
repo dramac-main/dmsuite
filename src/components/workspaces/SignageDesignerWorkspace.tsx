@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   IconMaximize,
   IconSparkles,
   IconWand,
   IconLoader,
   IconDownload,
+  IconCopy,
 } from "@/components/icons";
 import { cleanAIText } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -62,7 +65,6 @@ const COLOR_PRESETS = ["#1e40af", "#0f766e", "#7c3aed", "#dc2626", "#ea580c", "#
 export default function SignageDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
 
   const [config, setConfig] = useState<SignageConfig>({
     template: "retail",
@@ -84,6 +86,43 @@ export default function SignageDesignerWorkspace() {
   const SW = sizePreset.w;
   const SH = sizePreset.h;
   const viewDist = VIEWING_DISTANCES.find((v) => v.id === config.viewingDistance) || VIEWING_DISTANCES[1];
+
+  const [zoom, setZoom] = useState(0.55);
+  const displayWidth = SW * zoom;
+  const displayHeight = SH * zoom;
+
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () =>
+      TEMPLATES.map((t) => ({
+        id: t.id,
+        label: t.name,
+        render(ctx: CanvasRenderingContext2D, w: number, h: number) {
+          const pc = config.primaryColor;
+          ctx.fillStyle = t.id === "retail" || t.id === "construction" ? pc : "#ffffff";
+          ctx.fillRect(0, 0, w, h);
+          if (t.id !== "retail" && t.id !== "construction") {
+            ctx.fillStyle = pc;
+            ctx.fillRect(0, 0, w, h * 0.35);
+          }
+          ctx.fillStyle = t.id === "retail" || t.id === "construction" ? "#ffffff" : "#1e293b";
+          ctx.font = "bold 7px Inter, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(t.name, w / 2, h * 0.55, w - 6);
+          ctx.fillStyle = pc + "44";
+          ctx.fillRect(w * 0.15, h * 0.68, w * 0.7, 2);
+        },
+      })),
+    [config.primaryColor],
+  );
+
+  const handleCopy = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    });
+  }, []);
 
   /* ── Render ─────────────────────────────────────────────── */
   const render = useCallback(() => {
@@ -321,99 +360,130 @@ export default function SignageDesignerWorkspace() {
     link.click();
   };
 
-  /* ── UI ──────────────────────────────────────────────────── */
-  return (
-    <div>
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
-        {(["canvas", "settings"] as const).map((t) => (
-          <button key={t} onClick={() => setMobileTab(t)} className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}>{t}</button>
-        ))}
+  /* ── Panels ─────────────────────────────────────────────── */
+  const leftPanel = (
+    <div className="space-y-4">
+      {/* AI Content Generator */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Content Generator</h3>
+        <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the signage purpose (e.g. 'Grand opening banner for a Lusaka restaurant')..." value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
+        <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
+          {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
+          {loading ? "Generating…" : "Generate Content"}
+        </button>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Settings */}
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconMaximize className="size-4 text-primary-500" />Signage Settings</h3>
+      {/* Template Slider */}
+      <TemplateSlider
+        templates={templatePreviews}
+        activeId={config.template}
+        onSelect={(id) => setConfig((p) => ({ ...p, template: id as SignageTemplate }))}
+        label="Template"
+      />
 
-            <label className="block text-xs text-gray-400">Business Name</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.businessName} onChange={(e) => setConfig((p) => ({ ...p, businessName: e.target.value }))} />
+      {/* Size Preset */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconMaximize className="size-4 text-primary-500" />Size Preset</h3>
+        <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.sizePreset} onChange={(e) => setConfig((p) => ({ ...p, sizePreset: e.target.value }))}>
+          {SIZE_PRESETS.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.desc})</option>)}
+        </select>
+      </div>
 
-            <label className="block text-xs text-gray-400">Size</label>
-            <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.sizePreset} onChange={(e) => setConfig((p) => ({ ...p, sizePreset: e.target.value }))}>
-              {SIZE_PRESETS.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.desc})</option>)}
-            </select>
+      {/* Viewing Distance */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <label className="block text-xs font-semibold text-gray-900 dark:text-white">Viewing Distance</label>
+        <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.viewingDistance} onChange={(e) => setConfig((p) => ({ ...p, viewingDistance: e.target.value }))}>
+          {VIEWING_DISTANCES.map((v) => <option key={v.id} value={v.id}>{v.label}</option>)}
+        </select>
+      </div>
 
-            <label className="block text-xs text-gray-400">Viewing Distance</label>
-            <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.viewingDistance} onChange={(e) => setConfig((p) => ({ ...p, viewingDistance: e.target.value }))}>
-              {VIEWING_DISTANCES.map((v) => <option key={v.id} value={v.id}>{v.label}</option>)}
-            </select>
-
-            <label className="block text-xs text-gray-400">Headline</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.headline} onChange={(e) => setConfig((p) => ({ ...p, headline: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Subheadline</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.subheadline} onChange={(e) => setConfig((p) => ({ ...p, subheadline: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Body Text</label>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={2} value={config.bodyText} onChange={(e) => setConfig((p) => ({ ...p, bodyText: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">CTA Button Text</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.ctaText} onChange={(e) => setConfig((p) => ({ ...p, ctaText: e.target.value }))} />
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs text-gray-400">Phone</label>
-                <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.phone} onChange={(e) => setConfig((p) => ({ ...p, phone: e.target.value }))} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400">Website</label>
-                <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.website} onChange={(e) => setConfig((p) => ({ ...p, website: e.target.value }))} />
-              </div>
-            </div>
-
-            <label className="block text-xs text-gray-400">Address</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.address} onChange={(e) => setConfig((p) => ({ ...p, address: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Template</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {TEMPLATES.map((t) => (
-                <button key={t.id} onClick={() => setConfig((p) => ({ ...p, template: t.id }))} className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${config.template === t.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{t.name}</button>
-              ))}
-            </div>
-
-            <label className="block text-xs text-gray-400">Primary Color</label>
-            <div className="flex gap-1.5 flex-wrap">
-              {COLOR_PRESETS.map((c) => (
-                <button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
-              ))}
-            </div>
-          </div>
-
-          {/* AI Generation */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Content Generator</h3>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the signage purpose (e.g. 'Grand opening banner for a Lusaka restaurant')..." value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
-            <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
-              {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
-              {loading ? "Generating…" : "Generate Content"}
-            </button>
-          </div>
-
-          {/* Export */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-            <button onClick={exportPNG} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"><IconDownload className="size-4" />Export PNG</button>
-          </div>
+      {/* Primary Color */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <label className="block text-xs font-semibold text-gray-900 dark:text-white">Primary Color</label>
+        <div className="flex gap-1.5 flex-wrap">
+          {COLOR_PRESETS.map((c) => (
+            <button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 transition-transform ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
+          ))}
         </div>
-
-        {/* Canvas */}
-        <div className={`flex-1 min-w-0 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-          <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
-            <canvas ref={canvasRef} style={{ width: Math.min(SW, 700), height: Math.min(SW, 700) * (SH / SW) }} className="rounded-lg shadow-lg" />
-          </div>
-          <p className="text-xs text-gray-400 text-center mt-2">{sizePreset.name} — {sizePreset.desc} — {SW}×{SH}px</p>
-        </div>
+        <input type="color" value={config.primaryColor} onChange={(e) => setConfig((p) => ({ ...p, primaryColor: e.target.value }))} className="w-full h-8 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer" />
       </div>
     </div>
+  );
+
+  const rightPanel = (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Content</h3>
+
+        <label className="block text-xs text-gray-400">Business Name</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.businessName} onChange={(e) => setConfig((p) => ({ ...p, businessName: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Headline</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.headline} onChange={(e) => setConfig((p) => ({ ...p, headline: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Subheadline</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.subheadline} onChange={(e) => setConfig((p) => ({ ...p, subheadline: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Body Text</label>
+        <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={2} value={config.bodyText} onChange={(e) => setConfig((p) => ({ ...p, bodyText: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">CTA Button Text</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.ctaText} onChange={(e) => setConfig((p) => ({ ...p, ctaText: e.target.value }))} />
+
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs text-gray-400">Phone</label>
+            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.phone} onChange={(e) => setConfig((p) => ({ ...p, phone: e.target.value }))} />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400">Website</label>
+            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.website} onChange={(e) => setConfig((p) => ({ ...p, website: e.target.value }))} />
+          </div>
+        </div>
+
+        <label className="block text-xs text-gray-400">Address</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.address} onChange={(e) => setConfig((p) => ({ ...p, address: e.target.value }))} />
+      </div>
+    </div>
+  );
+
+  /* ── UI ──────────────────────────────────────────────────── */
+  return (
+    <StickyCanvasLayout
+      leftPanel={leftPanel}
+      rightPanel={rightPanel}
+      canvasRef={canvasRef}
+      displayWidth={displayWidth}
+      displayHeight={displayHeight}
+      label={`${sizePreset.name} — ${sizePreset.desc} — ${SW}×${SH}px`}
+      toolbar={
+        <span className="text-xs text-gray-400">
+          {sizePreset.name} · {SW}×{SH}
+        </span>
+      }
+      mobileTabs={["Canvas", "Design", "Content"]}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.15, 2))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.15, 0.15))}
+      onZoomFit={() => setZoom(0.55)}
+      actionsBar={
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportPNG}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors"
+          >
+            <IconDownload className="size-3" />
+            Download PNG
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors"
+          >
+            <IconCopy className="size-3" />
+            Copy
+          </button>
+        </div>
+      }
+    />
   );
 }

@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   IconSparkles,
   IconWand,
   IconLoader,
   IconDownload,
   IconTag,
+  IconCopy,
 } from "@/components/icons";
 import { cleanAIText, hexToRgba, getContrastColor } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -566,146 +569,198 @@ export default function StickerDesignerWorkspace() {
     ? config.sheetRows * (config.height + 20) + 20
     : config.height + 80;
 
-  /* ── UI ──────────────────────────────────────────────────── */
-  return (
-    <div>
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
-        {(["canvas", "settings"] as const).map((t) => (
-          <button key={t} onClick={() => setMobileTab(t)} className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}>{t}</button>
-        ))}
+  const [zoom, setZoom] = useState(0.85);
+  const scaledW = displayW * zoom;
+  const scaledH = displayH * zoom;
+
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () =>
+      TEMPLATES.map((t) => ({
+        id: t.id,
+        label: t.label,
+        render(ctx: CanvasRenderingContext2D, w: number, h: number) {
+          ctx.fillStyle = "#f8fafc";
+          ctx.fillRect(0, 0, w, h);
+          ctx.fillStyle = config.primaryColor;
+          ctx.fillRect(0, 0, w, h * 0.22);
+          ctx.fillStyle = "#1e293b";
+          ctx.font = "bold 8px Inter, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(t.label, w / 2, h * 0.6, w - 8);
+          ctx.fillStyle = config.primaryColor + "33";
+          ctx.fillRect(w * 0.2, h * 0.7, w * 0.6, 3);
+        },
+      })),
+    [config.primaryColor],
+  );
+
+  const handleCopy = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    });
+  }, []);
+
+  /* ── Panel Definitions ─────────────────────────────────── */
+  const leftPanel = (
+    <div className="space-y-4">
+      {/* AI Sticker Generator */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Sticker Generator</h3>
+        <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the product or event (e.g., 'Organic honey jar label for a Zambian honey brand')..." value={config.productDescription} onChange={(e) => upd({ productDescription: e.target.value })} />
+        <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
+          {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
+          {loading ? "Generating…" : "Generate Sticker Design"}
+        </button>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Settings */}
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
-          {/* Shape & Size */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconTag className="size-4 text-primary-500" />Sticker Settings</h3>
+      {/* Template Slider */}
+      <TemplateSlider
+        templates={templatePreviews}
+        activeId={config.template}
+        onSelect={(id) => upd({ template: id as StickerTemplate })}
+        thumbWidth={120}
+        thumbHeight={120}
+        label="Templates"
+      />
 
-            <label className="block text-xs text-gray-400">Shape</label>
-            <div className="grid grid-cols-4 gap-1.5">
-              {SHAPES.map((s) => (
-                <button key={s.id} onClick={() => upd({ shape: s.id })} className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${config.shape === s.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{s.label}</button>
-              ))}
-            </div>
+      {/* Shape & Size */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconTag className="size-4 text-primary-500" />Sticker Settings</h3>
 
-            <label className="block text-xs text-gray-400">Preset Size</label>
-            <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" onChange={(e) => { const idx = parseInt(e.target.value); if (SIZES[idx]) upd({ width: SIZES[idx].w, height: SIZES[idx].h }); }}>
-              {SIZES.map((s, i) => <option key={i} value={i}>{s.label}</option>)}
-            </select>
+        <label className="block text-xs text-gray-400">Shape</label>
+        <div className="grid grid-cols-4 gap-1.5">
+          {SHAPES.map((s) => (
+            <button key={s.id} onClick={() => upd({ shape: s.id })} className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${config.shape === s.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{s.label}</button>
+          ))}
+        </div>
 
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="block text-xs text-gray-400 mb-1">Width (px)</label>
-                <input type="number" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.width} onChange={(e) => upd({ width: Math.max(50, parseInt(e.target.value) || 200) })} />
-              </div>
-              <div className="flex-1">
-                <label className="block text-xs text-gray-400 mb-1">Height (px)</label>
-                <input type="number" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.height} onChange={(e) => upd({ height: Math.max(50, parseInt(e.target.value) || 200) })} />
-              </div>
-            </div>
+        <label className="block text-xs text-gray-400">Preset Size</label>
+        <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" onChange={(e) => { const idx = parseInt(e.target.value); if (SIZES[idx]) upd({ width: SIZES[idx].w, height: SIZES[idx].h }); }}>
+          {SIZES.map((s, i) => <option key={i} value={i}>{s.label}</option>)}
+        </select>
 
-            {(config.shape === "rounded-rect") && (
-              <>
-                <label className="block text-xs text-gray-400">Border Radius: {config.borderRadius}px</label>
-                <input type="range" min={0} max={80} value={config.borderRadius} onChange={(e) => upd({ borderRadius: parseInt(e.target.value) })} className="w-full accent-primary-500" />
-              </>
-            )}
-
-            <label className="block text-xs text-gray-400">Template</label>
-            <div className="grid grid-cols-2 gap-1.5">
-              {TEMPLATES.map((t) => (
-                <button key={t.id} onClick={() => upd({ template: t.id })} className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${config.template === t.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{t.label}</button>
-              ))}
-            </div>
-
-            <label className="block text-xs text-gray-400">Color Preset</label>
-            <div className="grid grid-cols-4 gap-1.5">
-              {COLOR_PRESETS.map((cp) => (
-                <button key={cp.name} onClick={() => upd({ primaryColor: cp.primary, secondaryColor: cp.secondary, bgColor: cp.bg, textColor: cp.text })} className="flex flex-col items-center gap-1">
-                  <div className="flex gap-0.5">
-                    <span className="size-3 rounded-full" style={{ backgroundColor: cp.primary }} />
-                    <span className="size-3 rounded-full" style={{ backgroundColor: cp.bg }} />
-                  </div>
-                  <span className="text-[9px] text-gray-400">{cp.name}</span>
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <div className="flex-1"><label className="block text-xs text-gray-400 mb-1">Primary</label><input type="color" value={config.primaryColor} onChange={(e) => upd({ primaryColor: e.target.value })} className="w-full h-7 rounded cursor-pointer" /></div>
-              <div className="flex-1"><label className="block text-xs text-gray-400 mb-1">BG</label><input type="color" value={config.bgColor} onChange={(e) => upd({ bgColor: e.target.value })} className="w-full h-7 rounded cursor-pointer" /></div>
-              <div className="flex-1"><label className="block text-xs text-gray-400 mb-1">Text</label><input type="color" value={config.textColor} onChange={(e) => upd({ textColor: e.target.value })} className="w-full h-7 rounded cursor-pointer" /></div>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer"><input type="checkbox" checked={config.showCutLine} onChange={(e) => upd({ showCutLine: e.target.checked })} className="accent-primary-500" />Cut Line</label>
-              <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer"><input type="checkbox" checked={config.showSafeZone} onChange={(e) => upd({ showSafeZone: e.target.checked })} className="accent-primary-500" />Safe Zone</label>
-            </div>
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <label className="block text-xs text-gray-400 mb-1">Width (px)</label>
+            <input type="number" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.width} onChange={(e) => upd({ width: Math.max(50, parseInt(e.target.value) || 200) })} />
           </div>
+          <div className="flex-1">
+            <label className="block text-xs text-gray-400 mb-1">Height (px)</label>
+            <input type="number" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.height} onChange={(e) => upd({ height: Math.max(50, parseInt(e.target.value) || 200) })} />
+          </div>
+        </div>
 
-          {/* Sheet Layout */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white cursor-pointer">
-              <input type="checkbox" checked={config.sheetMode} onChange={(e) => upd({ sheetMode: e.target.checked })} className="accent-primary-500" />Sheet Layout
-            </label>
-            {config.sheetMode && (
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <label className="block text-xs text-gray-400 mb-1">Columns</label>
-                  <input type="number" min={1} max={8} className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.sheetCols} onChange={(e) => upd({ sheetCols: Math.max(1, parseInt(e.target.value) || 1) })} />
-                </div>
-                <div className="flex-1">
-                  <label className="block text-xs text-gray-400 mb-1">Rows</label>
-                  <input type="number" min={1} max={10} className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.sheetRows} onChange={(e) => upd({ sheetRows: Math.max(1, parseInt(e.target.value) || 1) })} />
-                </div>
+        {(config.shape === "rounded-rect") && (
+          <>
+            <label className="block text-xs text-gray-400">Border Radius: {config.borderRadius}px</label>
+            <input type="range" min={0} max={80} value={config.borderRadius} onChange={(e) => upd({ borderRadius: parseInt(e.target.value) })} className="w-full accent-primary-500" />
+          </>
+        )}
+
+        <label className="block text-xs text-gray-400">Color Preset</label>
+        <div className="grid grid-cols-4 gap-1.5">
+          {COLOR_PRESETS.map((cp) => (
+            <button key={cp.name} onClick={() => upd({ primaryColor: cp.primary, secondaryColor: cp.secondary, bgColor: cp.bg, textColor: cp.text })} className="flex flex-col items-center gap-1">
+              <div className="flex gap-0.5">
+                <span className="size-3 rounded-full" style={{ backgroundColor: cp.primary }} />
+                <span className="size-3 rounded-full" style={{ backgroundColor: cp.bg }} />
               </div>
-            )}
-          </div>
-
-          {/* Content */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Content</h3>
-            <label className="block text-xs text-gray-400">Title / Brand</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.title} onChange={(e) => upd({ title: e.target.value })} />
-            <label className="block text-xs text-gray-400">Subtitle</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.subtitle} onChange={(e) => upd({ subtitle: e.target.value })} />
-            <label className="block text-xs text-gray-400">Line 1</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.line1} onChange={(e) => upd({ line1: e.target.value })} />
-            <label className="block text-xs text-gray-400">Line 2</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.line2} onChange={(e) => upd({ line2: e.target.value })} />
-            <label className="block text-xs text-gray-400">Line 3 / Contact</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.line3} onChange={(e) => upd({ line3: e.target.value })} />
-            <label className="block text-xs text-gray-400">Price (for price-tag / promo)</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.price} onChange={(e) => upd({ price: e.target.value })} />
-          </div>
-
-          {/* AI */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Sticker Generator</h3>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the product or event (e.g., 'Organic honey jar label for a Zambian honey brand')..." value={config.productDescription} onChange={(e) => upd({ productDescription: e.target.value })} />
-            <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
-              {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
-              {loading ? "Generating…" : "Generate Sticker Design"}
+              <span className="text-[9px] text-gray-400">{cp.name}</span>
             </button>
-          </div>
-
-          {/* Export */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-            <button onClick={exportPNG} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"><IconDownload className="size-4" />Export PNG</button>
-          </div>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <div className="flex-1"><label className="block text-xs text-gray-400 mb-1">Primary</label><input type="color" value={config.primaryColor} onChange={(e) => upd({ primaryColor: e.target.value })} className="w-full h-7 rounded cursor-pointer" /></div>
+          <div className="flex-1"><label className="block text-xs text-gray-400 mb-1">BG</label><input type="color" value={config.bgColor} onChange={(e) => upd({ bgColor: e.target.value })} className="w-full h-7 rounded cursor-pointer" /></div>
+          <div className="flex-1"><label className="block text-xs text-gray-400 mb-1">Text</label><input type="color" value={config.textColor} onChange={(e) => upd({ textColor: e.target.value })} className="w-full h-7 rounded cursor-pointer" /></div>
         </div>
 
-        {/* Canvas */}
-        <div className={`flex-1 min-w-0 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-          <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
-            <canvas ref={canvasRef} style={{ width: Math.min(displayW, 700), height: Math.min(displayW, 700) * (displayH / displayW) }} className="rounded-lg shadow-lg" />
-          </div>
-          <p className="text-xs text-gray-400 text-center mt-2">
-            {config.template} — {config.shape} — {config.width}×{config.height}px
-            {config.sheetMode && ` — ${config.sheetCols}×${config.sheetRows} sheet (${config.sheetCols * config.sheetRows} stickers)`}
-          </p>
+        <div className="flex flex-wrap gap-3">
+          <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer"><input type="checkbox" checked={config.showCutLine} onChange={(e) => upd({ showCutLine: e.target.checked })} className="accent-primary-500" />Cut Line</label>
+          <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer"><input type="checkbox" checked={config.showSafeZone} onChange={(e) => upd({ showSafeZone: e.target.checked })} className="accent-primary-500" />Safe Zone</label>
         </div>
+      </div>
+
+      {/* Sheet Layout */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white cursor-pointer">
+          <input type="checkbox" checked={config.sheetMode} onChange={(e) => upd({ sheetMode: e.target.checked })} className="accent-primary-500" />Sheet Layout
+        </label>
+        {config.sheetMode && (
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="block text-xs text-gray-400 mb-1">Columns</label>
+              <input type="number" min={1} max={8} className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.sheetCols} onChange={(e) => upd({ sheetCols: Math.max(1, parseInt(e.target.value) || 1) })} />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs text-gray-400 mb-1">Rows</label>
+              <input type="number" min={1} max={10} className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.sheetRows} onChange={(e) => upd({ sheetRows: Math.max(1, parseInt(e.target.value) || 1) })} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
+  );
+
+  const rightPanel = (
+    <div className="space-y-4">
+      {/* Content */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Content</h3>
+        <label className="block text-xs text-gray-400">Title / Brand</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.title} onChange={(e) => upd({ title: e.target.value })} />
+        <label className="block text-xs text-gray-400">Subtitle</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.subtitle} onChange={(e) => upd({ subtitle: e.target.value })} />
+        <label className="block text-xs text-gray-400">Line 1</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.line1} onChange={(e) => upd({ line1: e.target.value })} />
+        <label className="block text-xs text-gray-400">Line 2</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.line2} onChange={(e) => upd({ line2: e.target.value })} />
+        <label className="block text-xs text-gray-400">Line 3 / Contact</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.line3} onChange={(e) => upd({ line3: e.target.value })} />
+        <label className="block text-xs text-gray-400">Price (for price-tag / promo)</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.price} onChange={(e) => upd({ price: e.target.value })} />
+      </div>
+    </div>
+  );
+
+  /* ── UI ──────────────────────────────────────────────────── */
+  return (
+    <StickyCanvasLayout
+      leftPanel={leftPanel}
+      rightPanel={rightPanel}
+      canvasRef={canvasRef}
+      displayWidth={scaledW}
+      displayHeight={scaledH}
+      label={
+        `${TEMPLATES.find((t) => t.id === config.template)?.label} — ${config.shape} — ${config.width}×${config.height}px` +
+        (config.sheetMode ? ` — ${config.sheetCols}×${config.sheetRows} sheet (${config.sheetCols * config.sheetRows} stickers)` : "")
+      }
+      mobileTabs={["Canvas", "Design", "Content"]}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
+      onZoomFit={() => setZoom(0.85)}
+      actionsBar={
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportPNG}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors"
+          >
+            <IconDownload className="size-3" />
+            Download PNG
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors"
+          >
+            <IconCopy className="size-3" />
+            Copy
+          </button>
+        </div>
+      }
+    />
   );
 }

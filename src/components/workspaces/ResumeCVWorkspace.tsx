@@ -17,8 +17,16 @@ import {
   IconChevronDown,
   IconShield,
   IconFileText,
+  IconCopy,
+  IconPrinter,
+  IconDroplet,
+  IconLayout,
+  IconType,
 } from "@/components/icons";
 import { cleanAIText, roundRect, lighten } from "@/lib/canvas-utils";
+import { drawDocumentThumbnail } from "@/lib/template-renderers";
+import StickyCanvasLayout from "./StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -156,6 +164,7 @@ export default function ResumeCVWorkspace() {
     "personal" | "experience" | "education" | "skills" | "sections"
   >("personal");
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [zoom, setZoom] = useState(1);
 
   /* ── Section Reordering ── */
   const [sectionOrder, setSectionOrder] = useState<string[]>([
@@ -211,6 +220,41 @@ export default function ResumeCVWorkspace() {
     const ps = PAGE_SIZES.find((p) => p.id === config.pageSize) || PAGE_SIZES[0];
     return { w: ps.w, h: ps.h };
   }, [config.pageSize]);
+
+  /* ── Template Previews ──────────────────────────────────── */
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () => TEMPLATES.map((t) => ({
+      id: t.id,
+      label: t.name,
+      render: (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+        const headers: Record<string, "bar" | "strip" | "minimal" | "gradient" | "centered" | "sidebar"> = {
+          "clean": "minimal",
+          "sidebar": "sidebar",
+          "executive": "centered",
+          "creative": "gradient",
+          "compact": "strip",
+          "infographic": "sidebar",
+        };
+        drawDocumentThumbnail(ctx, w, h, {
+          primaryColor: config.primaryColor,
+          headerStyle: headers[t.id] || "bar",
+          showSections: 3,
+        });
+      },
+    })),
+    [config.primaryColor]
+  );
+
+  /* ── Clipboard Copy ─────────────────────────────────────── */
+  const handleCopy = useCallback(async () => {
+    if (!canvasRef.current) return;
+    try {
+      canvasRef.current.toBlob(async (blob) => {
+        if (!blob) return;
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      }, "image/png");
+    } catch { /* ignore */ }
+  }, []);
 
   /* ── Canvas Render ──────────────────────────────────────── */
   useEffect(() => {
@@ -1360,714 +1404,393 @@ Rules:
     doc.save(`${personal.fullName || "resume"}.pdf`);
   }, [personal, experience, education, skills, sectionOrder, customSections]);
 
+  const displayW = Math.min(420, pageDims.w);
+  const displayH = displayW * (pageDims.h / pageDims.w);
+
   /* ── Render ─────────────────────────────────────────────── */
-  return (
-    <div className="flex gap-4 h-[calc(100vh-12rem)]">
-      {/* ── Left Panel ── */}
-      <div className="w-72 shrink-0 overflow-y-auto space-y-3 pr-1">
-        {/* AI Director */}
-        <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-3">
-          <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-secondary-500 mb-2">
-            <IconSparkles className="size-3" />
-            AI Resume Director
-          </label>
-          <textarea
-            rows={3}
-            placeholder="Describe the role you're applying for, your experience level, industry..."
-            value={config.description}
-            onChange={(e) => updateConfig({ description: e.target.value })}
-            className="w-full px-3 py-2 rounded-xl border border-secondary-500/20 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-secondary-500/50 focus:ring-2 focus:ring-secondary-500/20 transition-all resize-none mb-2"
-          />
-          <button
-            onClick={() => generateResume("fresh")}
-            disabled={!config.description.trim() || isGenerating}
-            className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-linear-to-r from-secondary-500 to-primary-500 text-white text-[0.625rem] font-bold hover:from-secondary-400 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isGenerating ? (
-              <>
-                <IconLoader className="size-3 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <IconWand className="size-3" />
-                {hasContent ? "Regenerate" : "Generate Resume"}
-              </>
-            )}
-          </button>
-          {hasContent && (
-            <div className="mt-2 space-y-1.5">
-              <input
-                type="text"
-                placeholder="e.g. Add more metrics, emphasize leadership..."
-                value={revisionRequest}
-                onChange={(e) => setRevisionRequest(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && revisionRequest.trim())
-                    generateResume("revise");
-                }}
-                className="w-full px-3 py-1.5 rounded-lg border border-secondary-500/20 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-secondary-500/50 focus:ring-2 focus:ring-secondary-500/20 transition-all"
-              />
-              <button
-                onClick={() => generateResume("revise")}
-                disabled={!revisionRequest.trim() || isGenerating}
-                className="w-full flex items-center justify-center gap-2 h-8 rounded-lg border border-secondary-500/30 text-secondary-400 text-[0.625rem] font-semibold hover:bg-secondary-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <IconWand className="size-3" /> Revise
-              </button>
-            </div>
+
+  const leftPanel = (
+    <div className="space-y-3">
+      {/* AI Director */}
+      <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-3">
+        <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-secondary-500 mb-2">
+          <IconSparkles className="size-3" />
+          AI Resume Director
+        </label>
+        <textarea
+          rows={3}
+          placeholder="Describe the role you're applying for, your experience level, industry..."
+          value={config.description}
+          onChange={(e) => updateConfig({ description: e.target.value })}
+          className="w-full px-3 py-2 rounded-xl border border-secondary-500/20 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-secondary-500/50 focus:ring-2 focus:ring-secondary-500/20 transition-all resize-none mb-2"
+        />
+        <button
+          onClick={() => generateResume("fresh")}
+          disabled={!config.description.trim() || isGenerating}
+          className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-linear-to-r from-secondary-500 to-primary-500 text-white text-[0.625rem] font-bold hover:from-secondary-400 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {isGenerating ? (
+            <><IconLoader className="size-3 animate-spin" />Generating...</>
+          ) : (
+            <><IconWand className="size-3" />{hasContent ? "Regenerate" : "Generate Resume"}</>
           )}
-        </div>
-
-        {/* Page Size */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Page Size
-          </label>
-          <div className="grid grid-cols-4 gap-1.5">
-            {PAGE_SIZES.map((ps) => (
-              <button
-                key={ps.id}
-                onClick={() => updateConfig({ pageSize: ps.id })}
-                className={`py-1.5 rounded-lg text-[0.625rem] font-semibold transition-all ${config.pageSize === ps.id ? "bg-primary-500 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
-              >
-                {ps.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Template */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Template
-          </label>
-          <div className="grid grid-cols-2 gap-1.5">
-            {TEMPLATES.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => updateConfig({ template: t.id })}
-                className={`flex flex-col items-start p-2 rounded-lg text-left transition-all ${config.template === t.id ? "ring-2 ring-primary-500 bg-primary-500/10" : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
-              >
-                <span className="text-[0.625rem] font-semibold text-gray-700 dark:text-gray-300">
-                  {t.name}
-                </span>
-                <span className="text-[0.5rem] text-gray-400">{t.desc}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Color + Font */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Accent Color
-          </label>
-          <div className="flex gap-1.5 flex-wrap">
-            {COLOR_PRESETS.map((c) => (
-              <button
-                key={c}
-                onClick={() => updateConfig({ primaryColor: c })}
-                className={`size-6 rounded-full transition-all ${config.primaryColor === c ? "ring-2 ring-offset-2 ring-primary-500 dark:ring-offset-gray-900" : "hover:scale-110"}`}
-                style={{ backgroundColor: c }}
-              />
-            ))}
+        </button>
+        {hasContent && (
+          <div className="mt-2 space-y-1.5">
             <input
-              type="color"
-              value={config.primaryColor}
-              onChange={(e) => updateConfig({ primaryColor: e.target.value })}
-              className="size-6 rounded-full cursor-pointer border-0"
+              type="text"
+              placeholder="e.g. Add more metrics, emphasize leadership..."
+              value={revisionRequest}
+              onChange={(e) => setRevisionRequest(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && revisionRequest.trim()) generateResume("revise"); }}
+              className="w-full px-3 py-1.5 rounded-lg border border-secondary-500/20 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-secondary-500/50 focus:ring-2 focus:ring-secondary-500/20 transition-all"
             />
+            <button onClick={() => generateResume("revise")} disabled={!revisionRequest.trim() || isGenerating}
+              className="w-full flex items-center justify-center gap-2 h-8 rounded-lg border border-secondary-500/30 text-secondary-400 text-[0.625rem] font-semibold hover:bg-secondary-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+              <IconWand className="size-3" /> Revise
+            </button>
           </div>
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500 pt-1">
-            Font
-          </label>
-          <div className="grid grid-cols-4 gap-1">
-            {(["modern", "classic", "minimal", "bold"] as const).map((fs) => (
-              <button
-                key={fs}
-                onClick={() => updateConfig({ fontStyle: fs })}
-                className={`py-1 rounded-lg text-[0.5625rem] font-semibold capitalize transition-all ${config.fontStyle === fs ? "bg-primary-500 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"}`}
-              >
-                {fs}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Export */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <button
-            onClick={exportResume}
-            className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-linear-to-r from-primary-500 to-secondary-500 text-white text-[0.625rem] font-bold hover:from-primary-400 hover:to-secondary-400 transition-colors"
-          >
-            <IconDownload className="size-3" /> Export Resume (PNG)
-          </button>
-          <button
-            onClick={handleDownloadPdf}
-            className="w-full flex items-center justify-center gap-2 h-9 rounded-xl border border-primary-500/30 text-primary-400 text-[0.625rem] font-bold hover:bg-primary-500/10 transition-colors"
-          >
-            <IconFileText className="size-3" /> Download PDF
-          </button>
-        </div>
+        )}
       </div>
 
-      {/* ── Center: Canvas ── */}
-      <div className="flex-1 flex flex-col bg-gray-100 dark:bg-gray-950/50 rounded-xl border border-gray-200 dark:border-gray-800 overflow-auto p-4">
-        {/* ATS Score Badge */}
-        <div className="flex items-center justify-center gap-2 mb-3">
-          <div
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[0.625rem] font-bold ${atsColor}`}
-          >
-            <IconShield className="size-3" />
-            ATS Score: {atsScore}/100
-          </div>
-        </div>
-        <div className="flex-1 flex items-center justify-center">
-          <canvas
-            ref={canvasRef}
-            className="shadow-2xl rounded-sm bg-white"
-            style={{
-              maxWidth: "100%",
-              maxHeight: "100%",
-              width: "auto",
-              height: "auto",
-            }}
-          />
-        </div>
+      {/* Template Slider */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
+        <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+          <IconLayout className="size-3.5" />Templates
+        </label>
+        <TemplateSlider
+          templates={templatePreviews}
+          activeId={config.template}
+          onSelect={(id) => updateConfig({ template: id as ResumeTemplate })}
+          thumbWidth={100}
+          thumbHeight={140}
+          label=""
+        />
       </div>
 
-      {/* ── Right Panel: Content Editor ── */}
-      <div className="w-80 shrink-0 overflow-y-auto space-y-3 pl-1">
-        {/* Section Tabs */}
-        <div className="flex rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-          {(
-            [
-              { id: "personal" as const, label: "Personal", Icon: IconUser },
-              { id: "experience" as const, label: "Work", Icon: IconBriefcase },
-              { id: "education" as const, label: "Education", Icon: IconBookOpen },
-              { id: "skills" as const, label: "Skills", Icon: IconAward },
-              { id: "sections" as const, label: "Sections", Icon: IconFileText },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveSection(tab.id)}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[0.5625rem] transition-all ${activeSection === tab.id ? "bg-primary-500/10 text-primary-500 font-semibold" : "bg-white dark:bg-gray-900 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"}`}
-            >
-              <tab.Icon className="size-3.5" />
-              {tab.label}
+      {/* Page Size */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+        <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">Page Size</label>
+        <div className="grid grid-cols-4 gap-1.5">
+          {PAGE_SIZES.map((ps) => (
+            <button key={ps.id} onClick={() => updateConfig({ pageSize: ps.id })}
+              className={`py-1.5 rounded-lg text-[0.625rem] font-semibold transition-all ${config.pageSize === ps.id ? "bg-primary-500 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
+              {ps.name}
             </button>
           ))}
         </div>
+      </div>
 
-        {/* Personal */}
-        {activeSection === "personal" && (
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-            <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-              Personal Information
-            </label>
-            {(
-              [
-                { key: "fullName", label: "Full Name", ph: "John Mwanza" },
-                {
-                  key: "jobTitle",
-                  label: "Job Title",
-                  ph: "Senior Software Engineer",
-                },
-                { key: "email", label: "Email", ph: "john@example.com" },
-                { key: "phone", label: "Phone", ph: "+260 97 123 4567" },
-                { key: "location", label: "Location", ph: "Lusaka, Zambia" },
-                { key: "website", label: "Website", ph: "portfolio.com" },
-                {
-                  key: "linkedin",
-                  label: "LinkedIn",
-                  ph: "linkedin.com/in/name",
-                },
-              ] as const
-            ).map(({ key, label, ph }) => (
-              <div key={key}>
-                <label className="text-[0.5625rem] text-gray-500">
-                  {label}
-                </label>
-                <input
-                  type="text"
-                  value={personal[key]}
-                  onChange={(e) =>
-                    setPersonal((p) => ({ ...p, [key]: e.target.value }))
-                  }
-                  placeholder={ph}
-                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
-                />
-              </div>
-            ))}
-            <div>
-              <label className="text-[0.5625rem] text-gray-500">
-                Professional Summary
-              </label>
-              <textarea
-                rows={3}
-                value={personal.summary}
-                onChange={(e) =>
-                  setPersonal((p) => ({ ...p, summary: e.target.value }))
-                }
-                placeholder="Brief professional summary..."
-                className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all resize-none"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Experience */}
-        {activeSection === "experience" && (
-          <div className="space-y-2">
-            {experience.map((exp, i) => (
-              <div
-                key={exp.id}
-                className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-1.5"
-              >
-                <div className="flex items-center justify-between">
-                  <label className="text-[0.625rem] font-semibold text-gray-500">
-                    Experience {i + 1}
-                  </label>
-                  <button
-                    onClick={() =>
-                      setExperience((p) => p.filter((_, j) => j !== i))
-                    }
-                    disabled={experience.length <= 1}
-                    className="text-gray-400 hover:text-red-500 disabled:opacity-30 transition-colors"
-                  >
-                    <IconTrash className="size-3" />
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  value={exp.role}
-                  onChange={(e) =>
-                    setExperience((p) =>
-                      p.map((x, j) =>
-                        j === i ? { ...x, role: e.target.value } : x,
-                      ),
-                    )
-                  }
-                  placeholder="Job Title"
-                  className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50"
-                />
-                <input
-                  type="text"
-                  value={exp.company}
-                  onChange={(e) =>
-                    setExperience((p) =>
-                      p.map((x, j) =>
-                        j === i ? { ...x, company: e.target.value } : x,
-                      ),
-                    )
-                  }
-                  placeholder="Company"
-                  className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50"
-                />
-                <div className="flex gap-1.5">
-                  <input
-                    type="text"
-                    value={exp.startDate}
-                    onChange={(e) =>
-                      setExperience((p) =>
-                        p.map((x, j) =>
-                          j === i ? { ...x, startDate: e.target.value } : x,
-                        ),
-                      )
-                    }
-                    placeholder="Start"
-                    className="flex-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50"
-                  />
-                  <input
-                    type="text"
-                    value={exp.endDate}
-                    onChange={(e) =>
-                      setExperience((p) =>
-                        p.map((x, j) =>
-                          j === i ? { ...x, endDate: e.target.value } : x,
-                        ),
-                      )
-                    }
-                    placeholder="End"
-                    className="flex-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50"
-                  />
-                </div>
-                <label className="text-[0.5rem] text-gray-400">
-                  Highlights
-                </label>
-                {exp.highlights.map((hl, hi) => (
-                  <div key={hi} className="flex gap-1">
-                    <input
-                      type="text"
-                      value={hl}
-                      onChange={(e) => {
-                        const newH = [...exp.highlights];
-                        newH[hi] = e.target.value;
-                        setExperience((p) =>
-                          p.map((x, j) =>
-                            j === i ? { ...x, highlights: newH } : x,
-                          ),
-                        );
-                      }}
-                      placeholder="Achievement..."
-                      className="flex-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50"
-                    />
-                    <button
-                      onClick={() => {
-                        const newH = exp.highlights.filter(
-                          (_, k) => k !== hi,
-                        );
-                        setExperience((p) =>
-                          p.map((x, j) =>
-                            j === i
-                              ? { ...x, highlights: newH.length ? newH : [""] }
-                              : x,
-                          ),
-                        );
-                      }}
-                      className="text-gray-400 hover:text-red-500 text-xs"
-                    >
-                      x
-                    </button>
-                  </div>
-                ))}
-                <button
-                  onClick={() => {
-                    const newH = [...exp.highlights, ""];
-                    setExperience((p) =>
-                      p.map((x, j) =>
-                        j === i ? { ...x, highlights: newH } : x,
-                      ),
-                    );
-                  }}
-                  className="w-full py-0.5 text-[0.5rem] text-gray-400 hover:text-primary-500"
-                >
-                  + Highlight
-                </button>
-              </div>
-            ))}
-            <button
-              onClick={() =>
-                setExperience((p) => [
-                  ...p,
-                  {
-                    id: uid(),
-                    company: "",
-                    role: "",
-                    startDate: "",
-                    endDate: "",
-                    highlights: [""],
-                  },
-                ])
-              }
-              className="w-full py-2 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 text-[0.625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors"
-            >
-              <IconPlus className="size-3 inline mr-1" /> Add Experience
+      {/* Color + Font */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+        <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+          <IconDroplet className="size-3.5" />Accent Color
+        </label>
+        <div className="flex gap-1.5 flex-wrap">
+          {COLOR_PRESETS.map((c) => (
+            <button key={c} onClick={() => updateConfig({ primaryColor: c })}
+              className={`size-6 rounded-full transition-all ${config.primaryColor === c ? "ring-2 ring-offset-2 ring-primary-500 dark:ring-offset-gray-900" : "hover:scale-110"}`}
+              style={{ backgroundColor: c }} />
+          ))}
+          <input type="color" value={config.primaryColor} onChange={(e) => updateConfig({ primaryColor: e.target.value })} className="size-6 rounded-full cursor-pointer border-0" />
+        </div>
+        <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500 pt-1">
+          <IconType className="size-3.5" />Font
+        </label>
+        <div className="grid grid-cols-4 gap-1">
+          {(["modern", "classic", "minimal", "bold"] as const).map((fs) => (
+            <button key={fs} onClick={() => updateConfig({ fontStyle: fs })}
+              className={`py-1 rounded-lg text-[0.5625rem] font-semibold capitalize transition-all ${config.fontStyle === fs ? "bg-primary-500 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"}`}>
+              {fs}
             </button>
-          </div>
-        )}
-
-        {/* Education */}
-        {activeSection === "education" && (
-          <div className="space-y-2">
-            {education.map((edu, i) => (
-              <div
-                key={edu.id}
-                className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-1.5"
-              >
-                <div className="flex items-center justify-between">
-                  <label className="text-[0.625rem] font-semibold text-gray-500">
-                    Education {i + 1}
-                  </label>
-                  <button
-                    onClick={() =>
-                      setEducation((p) => p.filter((_, j) => j !== i))
-                    }
-                    disabled={education.length <= 1}
-                    className="text-gray-400 hover:text-red-500 disabled:opacity-30 transition-colors"
-                  >
-                    <IconTrash className="size-3" />
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  value={edu.institution}
-                  onChange={(e) =>
-                    setEducation((p) =>
-                      p.map((x, j) =>
-                        j === i ? { ...x, institution: e.target.value } : x,
-                      ),
-                    )
-                  }
-                  placeholder="University / Institution"
-                  className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50"
-                />
-                <div className="flex gap-1.5">
-                  <input
-                    type="text"
-                    value={edu.degree}
-                    onChange={(e) =>
-                      setEducation((p) =>
-                        p.map((x, j) =>
-                          j === i ? { ...x, degree: e.target.value } : x,
-                        ),
-                      )
-                    }
-                    placeholder="Degree"
-                    className="flex-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50"
-                  />
-                  <input
-                    type="text"
-                    value={edu.field}
-                    onChange={(e) =>
-                      setEducation((p) =>
-                        p.map((x, j) =>
-                          j === i ? { ...x, field: e.target.value } : x,
-                        ),
-                      )
-                    }
-                    placeholder="Field"
-                    className="flex-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50"
-                  />
-                </div>
-                <input
-                  type="text"
-                  value={edu.year}
-                  onChange={(e) =>
-                    setEducation((p) =>
-                      p.map((x, j) =>
-                        j === i ? { ...x, year: e.target.value } : x,
-                      ),
-                    )
-                  }
-                  placeholder="Year"
-                  className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50"
-                />
-              </div>
-            ))}
-            <button
-              onClick={() =>
-                setEducation((p) => [
-                  ...p,
-                  {
-                    id: uid(),
-                    institution: "",
-                    degree: "",
-                    field: "",
-                    year: "",
-                  },
-                ])
-              }
-              className="w-full py-2 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 text-[0.625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors"
-            >
-              <IconPlus className="size-3 inline mr-1" /> Add Education
-            </button>
-          </div>
-        )}
-
-        {/* Skills with levels */}
-        {activeSection === "skills" && (
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-            <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-              Skills & Proficiency
-            </label>
-            {skills.map((sk, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={sk.name}
-                  onChange={(e) =>
-                    setSkills((p) =>
-                      p.map((s, j) =>
-                        j === i ? { ...s, name: e.target.value } : s,
-                      ),
-                    )
-                  }
-                  placeholder="Skill name"
-                  className="flex-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50"
-                />
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={sk.level}
-                  onChange={(e) =>
-                    setSkills((p) =>
-                      p.map((s, j) =>
-                        j === i
-                          ? { ...s, level: parseInt(e.target.value) }
-                          : s,
-                      ),
-                    )
-                  }
-                  className="w-16 h-1 accent-primary-500"
-                />
-                <span className="text-[0.5rem] text-gray-400 w-7 text-right">
-                  {sk.level}%
-                </span>
-                <button
-                  onClick={() =>
-                    setSkills((p) => p.filter((_, j) => j !== i))
-                  }
-                  className="text-gray-400 hover:text-red-500 text-xs"
-                >
-                  x
-                </button>
-              </div>
-            ))}
-            <button
-              onClick={() => setSkills((p) => [...p, { name: "", level: 75 }])}
-              className="w-full py-1.5 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 text-[0.5625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors"
-            >
-              <IconPlus className="size-3 inline mr-1" /> Add Skill
-            </button>
-          </div>
-        )}
-
-        {/* Sections — Reordering & Custom */}
-        {activeSection === "sections" && (
-          <div className="space-y-3">
-            {/* Section Order */}
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-              <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-                Section Order
-              </label>
-              <p className="text-[0.5rem] text-gray-400">
-                Drag order affects the Clean template canvas & PDF export.
-              </p>
-              {sectionOrder.map((sec, idx) => {
-                const builtIn = ["summary", "experience", "education", "skills"];
-                const label = builtIn.includes(sec)
-                  ? sec.charAt(0).toUpperCase() + sec.slice(1)
-                  : customSections.find((c) => c.id === sec)?.title || sec;
-                return (
-                  <div
-                    key={sec}
-                    className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700"
-                  >
-                    <span className="flex-1 text-[0.625rem] font-medium text-gray-700 dark:text-gray-300 truncate">
-                      {label}
-                    </span>
-                    <button
-                      onClick={() => moveSectionUp(idx)}
-                      disabled={idx === 0}
-                      className="p-0.5 text-gray-400 hover:text-primary-500 disabled:opacity-30 transition-colors"
-                    >
-                      <IconChevronUp className="size-3" />
-                    </button>
-                    <button
-                      onClick={() => moveSectionDown(idx)}
-                      disabled={idx === sectionOrder.length - 1}
-                      className="p-0.5 text-gray-400 hover:text-primary-500 disabled:opacity-30 transition-colors"
-                    >
-                      <IconChevronDown className="size-3" />
-                    </button>
-                    {sec.startsWith("custom-") && (
-                      <button
-                        onClick={() => removeCustomSection(sec)}
-                        className="p-0.5 text-gray-400 hover:text-red-500 transition-colors"
-                      >
-                        <IconTrash className="size-3" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-              <button
-                onClick={addCustomSection}
-                className="w-full py-1.5 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 text-[0.5625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors"
-              >
-                <IconPlus className="size-3 inline mr-1" /> Add Custom Section
-              </button>
-            </div>
-
-            {/* Custom Section Editors */}
-            {customSections.map((cs) => (
-              <div
-                key={cs.id}
-                className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2"
-              >
-                <div className="flex items-center justify-between">
-                  <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-                    Custom Section
-                  </label>
-                  <button
-                    onClick={() => removeCustomSection(cs.id)}
-                    className="text-gray-400 hover:text-red-500 transition-colors"
-                  >
-                    <IconTrash className="size-3" />
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  value={cs.title}
-                  onChange={(e) =>
-                    setCustomSections((prev) =>
-                      prev.map((s) =>
-                        s.id === cs.id ? { ...s, title: e.target.value } : s,
-                      ),
-                    )
-                  }
-                  placeholder="Section title (e.g. Certifications)"
-                  className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50"
-                />
-                <label className="text-[0.5rem] text-gray-400">
-                  Items
-                </label>
-                {cs.items.map((item, ii) => (
-                  <div key={ii} className="flex gap-1">
-                    <input
-                      type="text"
-                      value={item}
-                      onChange={(e) => {
-                        const newItems = [...cs.items];
-                        newItems[ii] = e.target.value;
-                        setCustomSections((prev) =>
-                          prev.map((s) =>
-                            s.id === cs.id ? { ...s, items: newItems } : s,
-                          ),
-                        );
-                      }}
-                      placeholder="Bullet point..."
-                      className="flex-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50"
-                    />
-                    <button
-                      onClick={() => {
-                        const newItems = cs.items.filter((_, k) => k !== ii);
-                        setCustomSections((prev) =>
-                          prev.map((s) =>
-                            s.id === cs.id
-                              ? { ...s, items: newItems.length ? newItems : [""] }
-                              : s,
-                          ),
-                        );
-                      }}
-                      className="text-gray-400 hover:text-red-500 text-xs"
-                    >
-                      x
-                    </button>
-                  </div>
-                ))}
-                <button
-                  onClick={() => {
-                    const newItems = [...cs.items, ""];
-                    setCustomSections((prev) =>
-                      prev.map((s) =>
-                        s.id === cs.id ? { ...s, items: newItems } : s,
-                      ),
-                    );
-                  }}
-                  className="w-full py-0.5 text-[0.5rem] text-gray-400 hover:text-primary-500"
-                >
-                  + Add Item
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+          ))}
+        </div>
       </div>
     </div>
+  );
+
+  const rightPanel = (
+    <div className="space-y-3">
+      {/* ATS Score Badge */}
+      <div className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold ${atsColor}`}>
+        <IconShield className="size-3.5" />ATS Score: {atsScore}/100
+      </div>
+
+      {/* Section Tabs */}
+      <div className="flex rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+        {([
+          { id: "personal" as const, label: "Personal", Icon: IconUser },
+          { id: "experience" as const, label: "Work", Icon: IconBriefcase },
+          { id: "education" as const, label: "Edu", Icon: IconBookOpen },
+          { id: "skills" as const, label: "Skills", Icon: IconAward },
+          { id: "sections" as const, label: "Sections", Icon: IconFileText },
+        ] as const).map((tab) => (
+          <button key={tab.id} onClick={() => setActiveSection(tab.id)}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[0.5625rem] transition-all ${activeSection === tab.id ? "bg-primary-500/10 text-primary-500 font-semibold" : "bg-white dark:bg-gray-900 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+            <tab.Icon className="size-3.5" />{tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Personal */}
+      {activeSection === "personal" && (
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">Personal Information</label>
+          {([
+            { key: "fullName", label: "Full Name", ph: "John Mwanza" },
+            { key: "jobTitle", label: "Job Title", ph: "Senior Software Engineer" },
+            { key: "email", label: "Email", ph: "john@example.com" },
+            { key: "phone", label: "Phone", ph: "+260 97 123 4567" },
+            { key: "location", label: "Location", ph: "Lusaka, Zambia" },
+            { key: "website", label: "Website", ph: "portfolio.com" },
+            { key: "linkedin", label: "LinkedIn", ph: "linkedin.com/in/name" },
+          ] as const).map(({ key, label, ph }) => (
+            <div key={key}>
+              <label className="text-[0.5625rem] text-gray-500">{label}</label>
+              <input type="text" value={personal[key]}
+                onChange={(e) => setPersonal((p) => ({ ...p, [key]: e.target.value }))}
+                placeholder={ph}
+                className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all" />
+            </div>
+          ))}
+          <div>
+            <label className="text-[0.5625rem] text-gray-500">Professional Summary</label>
+            <textarea rows={3} value={personal.summary}
+              onChange={(e) => setPersonal((p) => ({ ...p, summary: e.target.value }))}
+              placeholder="Brief professional summary..."
+              className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all resize-none" />
+          </div>
+        </div>
+      )}
+
+      {/* Experience */}
+      {activeSection === "experience" && (
+        <div className="space-y-2">
+          {experience.map((exp, i) => (
+            <div key={exp.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[0.625rem] font-semibold text-gray-500">Experience {i + 1}</label>
+                <button onClick={() => setExperience((p) => p.filter((_, j) => j !== i))} disabled={experience.length <= 1}
+                  className="text-gray-400 hover:text-red-500 disabled:opacity-30 transition-colors"><IconTrash className="size-3" /></button>
+              </div>
+              <input type="text" value={exp.role}
+                onChange={(e) => setExperience((p) => p.map((x, j) => j === i ? { ...x, role: e.target.value } : x))}
+                placeholder="Job Title"
+                className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50" />
+              <input type="text" value={exp.company}
+                onChange={(e) => setExperience((p) => p.map((x, j) => j === i ? { ...x, company: e.target.value } : x))}
+                placeholder="Company"
+                className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50" />
+              <div className="flex gap-1.5">
+                <input type="text" value={exp.startDate}
+                  onChange={(e) => setExperience((p) => p.map((x, j) => j === i ? { ...x, startDate: e.target.value } : x))}
+                  placeholder="Start"
+                  className="flex-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50" />
+                <input type="text" value={exp.endDate}
+                  onChange={(e) => setExperience((p) => p.map((x, j) => j === i ? { ...x, endDate: e.target.value } : x))}
+                  placeholder="End"
+                  className="flex-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50" />
+              </div>
+              <label className="text-[0.5rem] text-gray-400">Highlights</label>
+              {exp.highlights.map((hl, hi) => (
+                <div key={hi} className="flex gap-1">
+                  <input type="text" value={hl}
+                    onChange={(e) => {
+                      const newH = [...exp.highlights]; newH[hi] = e.target.value;
+                      setExperience((p) => p.map((x, j) => j === i ? { ...x, highlights: newH } : x));
+                    }}
+                    placeholder="Achievement..."
+                    className="flex-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50" />
+                  <button onClick={() => {
+                    const newH = exp.highlights.filter((_, k) => k !== hi);
+                    setExperience((p) => p.map((x, j) => j === i ? { ...x, highlights: newH.length ? newH : [""] } : x));
+                  }} className="text-gray-400 hover:text-red-500 text-xs">x</button>
+                </div>
+              ))}
+              <button onClick={() => {
+                const newH = [...exp.highlights, ""];
+                setExperience((p) => p.map((x, j) => j === i ? { ...x, highlights: newH } : x));
+              }} className="w-full py-0.5 text-[0.5rem] text-gray-400 hover:text-primary-500">+ Highlight</button>
+            </div>
+          ))}
+          <button onClick={() => setExperience((p) => [...p, { id: uid(), company: "", role: "", startDate: "", endDate: "", highlights: [""] }])}
+            className="w-full py-2 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 text-[0.625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors">
+            <IconPlus className="size-3 inline mr-1" /> Add Experience
+          </button>
+        </div>
+      )}
+
+      {/* Education */}
+      {activeSection === "education" && (
+        <div className="space-y-2">
+          {education.map((edu, i) => (
+            <div key={edu.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[0.625rem] font-semibold text-gray-500">Education {i + 1}</label>
+                <button onClick={() => setEducation((p) => p.filter((_, j) => j !== i))} disabled={education.length <= 1}
+                  className="text-gray-400 hover:text-red-500 disabled:opacity-30 transition-colors"><IconTrash className="size-3" /></button>
+              </div>
+              <input type="text" value={edu.institution}
+                onChange={(e) => setEducation((p) => p.map((x, j) => j === i ? { ...x, institution: e.target.value } : x))}
+                placeholder="University / Institution"
+                className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50" />
+              <div className="flex gap-1.5">
+                <input type="text" value={edu.degree}
+                  onChange={(e) => setEducation((p) => p.map((x, j) => j === i ? { ...x, degree: e.target.value } : x))}
+                  placeholder="Degree"
+                  className="flex-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50" />
+                <input type="text" value={edu.field}
+                  onChange={(e) => setEducation((p) => p.map((x, j) => j === i ? { ...x, field: e.target.value } : x))}
+                  placeholder="Field"
+                  className="flex-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50" />
+              </div>
+              <input type="text" value={edu.year}
+                onChange={(e) => setEducation((p) => p.map((x, j) => j === i ? { ...x, year: e.target.value } : x))}
+                placeholder="Year"
+                className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50" />
+            </div>
+          ))}
+          <button onClick={() => setEducation((p) => [...p, { id: uid(), institution: "", degree: "", field: "", year: "" }])}
+            className="w-full py-2 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 text-[0.625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors">
+            <IconPlus className="size-3 inline mr-1" /> Add Education
+          </button>
+        </div>
+      )}
+
+      {/* Skills */}
+      {activeSection === "skills" && (
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">Skills & Proficiency</label>
+          {skills.map((sk, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input type="text" value={sk.name}
+                onChange={(e) => setSkills((p) => p.map((s, j) => j === i ? { ...s, name: e.target.value } : s))}
+                placeholder="Skill name"
+                className="flex-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50" />
+              <input type="range" min={0} max={100} value={sk.level}
+                onChange={(e) => setSkills((p) => p.map((s, j) => j === i ? { ...s, level: parseInt(e.target.value) } : s))}
+                className="w-16 h-1 accent-primary-500" />
+              <span className="text-[0.5rem] text-gray-400 w-7 text-right">{sk.level}%</span>
+              <button onClick={() => setSkills((p) => p.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-500 text-xs">x</button>
+            </div>
+          ))}
+          <button onClick={() => setSkills((p) => [...p, { name: "", level: 75 }])}
+            className="w-full py-1.5 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 text-[0.5625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors">
+            <IconPlus className="size-3 inline mr-1" /> Add Skill
+          </button>
+        </div>
+      )}
+
+      {/* Sections — Reordering & Custom */}
+      {activeSection === "sections" && (
+        <div className="space-y-3">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+            <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">Section Order</label>
+            <p className="text-[0.5rem] text-gray-400">Drag order affects the Clean template canvas & PDF export.</p>
+            {sectionOrder.map((sec, idx) => {
+              const builtIn = ["summary", "experience", "education", "skills"];
+              const label = builtIn.includes(sec) ? sec.charAt(0).toUpperCase() + sec.slice(1) : customSections.find((c) => c.id === sec)?.title || sec;
+              return (
+                <div key={sec} className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+                  <span className="flex-1 text-[0.625rem] font-medium text-gray-700 dark:text-gray-300 truncate">{label}</span>
+                  <button onClick={() => moveSectionUp(idx)} disabled={idx === 0} className="p-0.5 text-gray-400 hover:text-primary-500 disabled:opacity-30 transition-colors"><IconChevronUp className="size-3" /></button>
+                  <button onClick={() => moveSectionDown(idx)} disabled={idx === sectionOrder.length - 1} className="p-0.5 text-gray-400 hover:text-primary-500 disabled:opacity-30 transition-colors"><IconChevronDown className="size-3" /></button>
+                  {sec.startsWith("custom-") && (
+                    <button onClick={() => removeCustomSection(sec)} className="p-0.5 text-gray-400 hover:text-red-500 transition-colors"><IconTrash className="size-3" /></button>
+                  )}
+                </div>
+              );
+            })}
+            <button onClick={addCustomSection}
+              className="w-full py-1.5 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 text-[0.5625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors">
+              <IconPlus className="size-3 inline mr-1" /> Add Custom Section
+            </button>
+          </div>
+
+          {customSections.map((cs) => (
+            <div key={cs.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">Custom Section</label>
+                <button onClick={() => removeCustomSection(cs.id)} className="text-gray-400 hover:text-red-500 transition-colors"><IconTrash className="size-3" /></button>
+              </div>
+              <input type="text" value={cs.title}
+                onChange={(e) => setCustomSections((prev) => prev.map((s) => s.id === cs.id ? { ...s, title: e.target.value } : s))}
+                placeholder="Section title (e.g. Certifications)"
+                className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50" />
+              <label className="text-[0.5rem] text-gray-400">Items</label>
+              {cs.items.map((item, ii) => (
+                <div key={ii} className="flex gap-1">
+                  <input type="text" value={item}
+                    onChange={(e) => { const newItems = [...cs.items]; newItems[ii] = e.target.value; setCustomSections((prev) => prev.map((s) => s.id === cs.id ? { ...s, items: newItems } : s)); }}
+                    placeholder="Bullet point..."
+                    className="flex-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50" />
+                  <button onClick={() => { const newItems = cs.items.filter((_, k) => k !== ii); setCustomSections((prev) => prev.map((s) => s.id === cs.id ? { ...s, items: newItems.length ? newItems : [""] } : s)); }}
+                    className="text-gray-400 hover:text-red-500 text-xs">x</button>
+                </div>
+              ))}
+              <button onClick={() => { const newItems = [...cs.items, ""]; setCustomSections((prev) => prev.map((s) => s.id === cs.id ? { ...s, items: newItems } : s)); }}
+                className="w-full py-0.5 text-[0.5rem] text-gray-400 hover:text-primary-500">+ Add Item</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Export */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2.5">Export</h3>
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={exportResume} className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-primary-500/30 bg-primary-500/5 text-primary-500 transition-colors hover:bg-primary-500/10">
+            <IconDownload className="size-4" /><span className="text-xs font-semibold">.png</span>
+          </button>
+          <button onClick={handleDownloadPdf} className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-info-500/30 bg-info-500/5 text-info-500 transition-colors hover:bg-info-500/10">
+            <IconPrinter className="size-4" /><span className="text-xs font-semibold">.pdf</span>
+          </button>
+          <button onClick={handleCopy} className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-secondary-500/30 bg-secondary-500/5 text-secondary-500 transition-colors hover:bg-secondary-500/10">
+            <IconCopy className="size-4" /><span className="text-xs font-semibold">Clipboard</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const toolbar = (
+    <div className="flex items-center gap-1.5">
+      <IconFileText className="size-3.5 text-primary-500" />
+      <span className="text-xs font-semibold text-gray-400 capitalize">{config.template}</span>
+      <span className="text-gray-600">·</span>
+      <span className="text-xs text-gray-500">{config.pageSize.toUpperCase()}</span>
+      <span className="text-gray-600">·</span>
+      <span className={`text-xs font-bold ${atsScore >= 80 ? "text-green-400" : atsScore >= 60 ? "text-yellow-400" : "text-red-400"}`}>ATS {atsScore}%</span>
+    </div>
+  );
+
+  return (
+    <StickyCanvasLayout
+      leftPanel={leftPanel}
+      rightPanel={rightPanel}
+      canvasRef={canvasRef}
+      displayWidth={displayW}
+      displayHeight={displayH}
+      label={`${config.template} — ${config.pageSize.toUpperCase()} — ${pageDims.w}×${pageDims.h}px`}
+      toolbar={toolbar}
+      mobileTabs={["Canvas", "Design", "Content"]}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
+      onZoomFit={() => setZoom(1)}
+      actionsBar={
+        <div className="flex items-center gap-2">
+          <button onClick={exportResume} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors">
+            <IconDownload className="size-3" />PNG
+          </button>
+          <button onClick={handleDownloadPdf} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors">
+            <IconPrinter className="size-3" />PDF
+          </button>
+          <button onClick={handleCopy} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors">
+            <IconCopy className="size-3" />Copy
+          </button>
+        </div>
+      }
+    />
   );
 }

@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   IconChart,
   IconSparkles,
   IconWand,
   IconLoader,
   IconDownload,
+  IconCopy,
 } from "@/components/icons";
 import { cleanAIText } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -84,7 +87,6 @@ function defaultSections(): ReportSection[] {
 export default function ReportWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
 
   const [config, setConfig] = useState<ReportConfig>({
     template: "corporate",
@@ -440,6 +442,97 @@ export default function ReportWorkspace() {
 
   useEffect(() => { render(); }, [render]);
 
+  /* ── Zoom & Display ─────────────────────────────────────── */
+  const [zoom, setZoom] = useState(1);
+  const displayW = Math.min(500, PAGE_W);
+  const displayH = displayW * (PAGE_H / PAGE_W);
+
+  /* ── Template Previews ──────────────────────────────────── */
+  const templatePreviews: TemplatePreview[] = useMemo(
+    () =>
+      TEMPLATES.map((t) => ({
+        id: t.id,
+        label: t.name,
+        render: (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+          const pc = config.primaryColor;
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, w, h);
+
+          if (t.id === "corporate" || t.id === "executive") {
+            ctx.fillStyle = pc;
+            ctx.fillRect(0, 0, w, h * 0.4);
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 8px sans-serif";
+            ctx.fillText(t.name, 8, h * 0.25);
+          } else if (t.id === "research") {
+            ctx.fillStyle = "#0f172a";
+            ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = pc + "40";
+            for (let i = 0; i < 4; i++) ctx.fillRect(8 + i * 30, h * 0.5, 20, 3);
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 8px sans-serif";
+            ctx.fillText(t.name, 8, h * 0.3);
+          } else if (t.id === "financial") {
+            ctx.fillStyle = pc;
+            ctx.fillRect(0, 0, w, 4);
+            ctx.fillStyle = pc + "15";
+            ctx.fillRect(0, h - 16, w, 16);
+            ctx.fillStyle = "#1e293b";
+            ctx.font = "bold 8px sans-serif";
+            ctx.fillText(t.name, 8, 18);
+          } else if (t.id === "marketing") {
+            ctx.fillStyle = pc;
+            ctx.fillRect(0, 0, w, 4);
+            ctx.fillStyle = pc + "10";
+            ctx.beginPath();
+            ctx.arc(w - 12, h * 0.3, 16, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "#1e293b";
+            ctx.font = "bold 8px sans-serif";
+            ctx.fillText(t.name, 8, 18);
+          } else {
+            /* technical / other */
+            ctx.fillStyle = pc;
+            ctx.fillRect(0, 0, w, 4);
+            ctx.fillStyle = "#1e293b";
+            ctx.font = "bold 8px sans-serif";
+            ctx.fillText(t.name, 8, 18);
+          }
+
+          /* body lines */
+          ctx.strokeStyle = "#e2e8f0";
+          ctx.lineWidth = 0.5;
+          for (let y = h * 0.55; y < h - 8; y += 5) {
+            ctx.beginPath();
+            ctx.moveTo(8, y);
+            ctx.lineTo(w - 8, y);
+            ctx.stroke();
+          }
+
+          /* border */
+          ctx.strokeStyle = "#d1d5db";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(0, 0, w, h);
+        },
+      })),
+    [config.primaryColor]
+  );
+
+  /* ── Copy to Clipboard ──────────────────────────────────── */
+  const handleCopy = useCallback(async () => {
+    if (!canvasRef.current) return;
+    try {
+      canvasRef.current.toBlob(async (blob) => {
+        if (!blob) return;
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob }),
+        ]);
+      }, "image/png");
+    } catch {
+      /* clipboard may not be available */
+    }
+  }, []);
+
   /* ── AI Generate ────────────────────────────────────────── */
   const generateAI = async () => {
     if (!config.description.trim()) return;
@@ -500,95 +593,106 @@ export default function ReportWorkspace() {
     link.click();
   };
 
-  /* ── UI ──────────────────────────────────────────────────── */
-  return (
-    <div>
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
-        {(["canvas", "settings"] as const).map((t) => (
-          <button key={t} onClick={() => setMobileTab(t)} className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}>{t}</button>
+  /* ── Panel Definitions for StickyCanvasLayout ───────────── */
+  const leftPanel = (
+    <div className="space-y-4">
+      {/* Template Slider */}
+      <TemplateSlider
+        templates={templatePreviews}
+        activeId={config.template}
+        onSelect={(id) => setConfig((p) => ({ ...p, template: id as ReportTemplate }))}
+        thumbWidth={140}
+        thumbHeight={100}
+        label="Templates"
+      />
+
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconChart className="size-4 text-primary-500" />Report Settings</h3>
+
+        <label className="block text-xs text-gray-400">Report Title</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.reportTitle} onChange={(e) => setConfig((p) => ({ ...p, reportTitle: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Subtitle</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.subtitle} onChange={(e) => setConfig((p) => ({ ...p, subtitle: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Company</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.companyName} onChange={(e) => setConfig((p) => ({ ...p, companyName: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Author</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.author} onChange={(e) => setConfig((p) => ({ ...p, author: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Primary Color</label>
+        <div className="flex gap-1.5 flex-wrap">
+          {COLOR_PRESETS.map((c) => (
+            <button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
+          ))}
+        </div>
+      </div>
+
+      {/* Sections / Pages */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2 max-h-48 overflow-y-auto">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Pages</h3>
+        {sections.map((sec, i) => (
+          <button key={sec.id} onClick={() => setConfig((p) => ({ ...p, activeSection: i }))} className={`w-full text-left px-3 py-1.5 rounded-lg text-xs ${config.activeSection === i ? "bg-primary-500/10 text-primary-500 font-semibold" : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
+            {i + 1}. {sec.title} <span className="text-gray-400 text-[10px]">({sec.type})</span>
+          </button>
         ))}
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Settings */}
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconChart className="size-4 text-primary-500" />Report Settings</h3>
-
-            <label className="block text-xs text-gray-400">Report Title</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.reportTitle} onChange={(e) => setConfig((p) => ({ ...p, reportTitle: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Subtitle</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.subtitle} onChange={(e) => setConfig((p) => ({ ...p, subtitle: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Company</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.companyName} onChange={(e) => setConfig((p) => ({ ...p, companyName: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Author</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.author} onChange={(e) => setConfig((p) => ({ ...p, author: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Template</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {TEMPLATES.map((t) => (
-                <button key={t.id} onClick={() => setConfig((p) => ({ ...p, template: t.id }))} className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${config.template === t.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{t.name}</button>
-              ))}
-            </div>
-
-            <label className="block text-xs text-gray-400">Primary Color</label>
-            <div className="flex gap-1.5 flex-wrap">
-              {COLOR_PRESETS.map((c) => (
-                <button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
-              ))}
-            </div>
-          </div>
-
-          {/* Sections */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2 max-h-48 overflow-y-auto">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Pages</h3>
-            {sections.map((sec, i) => (
-              <button key={sec.id} onClick={() => setConfig((p) => ({ ...p, activeSection: i }))} className={`w-full text-left px-3 py-1.5 rounded-lg text-xs ${config.activeSection === i ? "bg-primary-500/10 text-primary-500 font-semibold" : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"}`}>
-                {i + 1}. {sec.title} <span className="text-gray-400 text-[10px]">({sec.type})</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Section Content Editor */}
-          {sections[config.activeSection] && !["cover", "toc"].includes(sections[config.activeSection].type) && (
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-              <label className="block text-xs text-gray-400">{sections[config.activeSection].title}</label>
-              <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={4} value={sections[config.activeSection].content} onChange={(e) => { const s = [...sections]; s[config.activeSection] = { ...s[config.activeSection], content: e.target.value }; setSections(s); }} />
-            </div>
-          )}
-
-          {/* AI Generation */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Report Generator</h3>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the report topic and data points (e.g. 'Q4 sales analysis for our Lusaka branches')..." value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
-            <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
-              {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
-              {loading ? "Generating…" : "Generate Report"}
-            </button>
-          </div>
-
-          {/* Export */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-            <button onClick={exportPNG} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"><IconDownload className="size-4" />Export PNG</button>
-          </div>
+      {/* Section Content Editor */}
+      {sections[config.activeSection] && !["cover", "toc"].includes(sections[config.activeSection].type) && (
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
+          <label className="block text-xs text-gray-400">{sections[config.activeSection].title}</label>
+          <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={4} value={sections[config.activeSection].content} onChange={(e) => { const s = [...sections]; s[config.activeSection] = { ...s[config.activeSection], content: e.target.value }; setSections(s); }} />
         </div>
+      )}
 
-        {/* Canvas */}
-        <div className={`flex-1 min-w-0 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-          <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
-            <canvas ref={canvasRef} style={{ width: Math.min(PAGE_W, 500), height: Math.min(PAGE_W, 500) * (PAGE_H / PAGE_W) }} className="rounded-lg shadow-lg" />
-          </div>
-          <div className="flex items-center justify-center gap-2 mt-3">
-            {sections.map((s, i) => (
-              <button key={s.id} onClick={() => setConfig((p) => ({ ...p, activeSection: i }))} className={`px-3 py-1 rounded-lg text-xs font-medium ${config.activeSection === i ? "bg-primary-500 text-gray-950" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"}`}>{i + 1}</button>
-            ))}
-          </div>
-          <p className="text-xs text-gray-400 text-center mt-2">Report — {sections[config.activeSection]?.title} — {PAGE_W}×{PAGE_H}px</p>
-        </div>
+      {/* AI Generation */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Report Generator</h3>
+        <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the report topic and data points (e.g. 'Q4 sales analysis for our Lusaka branches')..." value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
+        <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
+          {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
+          {loading ? "Generating…" : "Generate Report"}
+        </button>
       </div>
     </div>
+  );
+
+  return (
+    <StickyCanvasLayout
+      leftPanel={leftPanel}
+      canvasRef={canvasRef}
+      displayWidth={displayW}
+      displayHeight={displayH}
+      label={`Report — ${sections[config.activeSection]?.title} — ${PAGE_W}×${PAGE_H}px`}
+      mobileTabs={["Canvas", "Settings"]}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
+      onZoomFit={() => setZoom(1)}
+      actionsBar={
+        <div className="flex items-center gap-2">
+          {sections.map((s, i) => (
+            <button key={s.id} onClick={() => setConfig((p) => ({ ...p, activeSection: i }))} className={`px-3 py-1 rounded-lg text-xs font-medium ${config.activeSection === i ? "bg-primary-500 text-gray-950" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"}`}>{i + 1}</button>
+          ))}
+          <div className="mx-1 h-4 w-px bg-gray-700" />
+          <button
+            onClick={exportPNG}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors"
+          >
+            <IconDownload className="size-3" />
+            Download PNG
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors"
+          >
+            <IconCopy className="size-3" />
+            Copy
+          </button>
+        </div>
+      }
+    />
   );
 }

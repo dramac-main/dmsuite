@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   IconImage,
   IconSparkles,
   IconWand,
   IconLoader,
   IconDownload,
+  IconCopy,
 } from "@/components/icons";
 import { cleanAIText } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -67,7 +70,6 @@ const FONT_MAP: Record<string, string> = {
 export default function ThumbnailWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
 
   const [config, setConfig] = useState<ThumbnailConfig>({
     platform: "youtube",
@@ -82,6 +84,46 @@ export default function ThumbnailWorkspace() {
   });
 
   const currentPlatform = PLATFORMS.find((p) => p.id === config.platform) ?? PLATFORMS[0];
+
+  const [zoom, setZoom] = useState(0.5);
+  const displayWidth = currentPlatform.width * zoom;
+  const displayHeight = currentPlatform.height * zoom;
+
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () =>
+      TEMPLATES.map((t) => ({
+        id: t.id,
+        label: t.label,
+        render(ctx: CanvasRenderingContext2D, w: number, h: number) {
+          ctx.fillStyle = t.bgColor;
+          ctx.fillRect(0, 0, w, h);
+          ctx.fillStyle = t.accent;
+          ctx.fillRect(0, h - 3, w, 3);
+          ctx.globalAlpha = 0.12;
+          ctx.fillStyle = t.accent;
+          ctx.beginPath();
+          ctx.arc(w * 0.82, h * 0.2, w * 0.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = t.textColor;
+          ctx.font = "bold 8px Inter, sans-serif";
+          ctx.textAlign = "left";
+          ctx.fillText(t.label, 6, h * 0.55, w - 12);
+          ctx.fillStyle = t.textColor + "88";
+          ctx.fillRect(6, h * 0.65, w * 0.4, 2);
+        },
+      })),
+    [],
+  );
+
+  const handleCopy = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    });
+  }, []);
 
   /* ── Render Canvas ──────────────────────────────────────── */
   const render = useCallback(() => {
@@ -290,127 +332,144 @@ export default function ThumbnailWorkspace() {
     link.click();
   };
 
-  /* ── UI ──────────────────────────────────────────────────── */
-  return (
-    <div>
-      {/* Mobile tab toggle */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
-        {(["canvas", "settings"] as const).map((t) => (
-          <button key={t} onClick={() => setMobileTab(t)} className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}>{t}</button>
-        ))}
+  /* ── Panels ─────────────────────────────────────────────── */
+  const leftPanel = (
+    <div className="space-y-4">
+      {/* AI Title Generator */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+          <IconSparkles className="size-4 text-primary-500" />AI Title Generator
+        </h3>
+        <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={2} placeholder="Describe your video (e.g. 'React tutorial for Zambian devs')…" value={config.aiPrompt} onChange={(e) => setConfig((p) => ({ ...p, aiPrompt: e.target.value }))} />
+        <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
+          {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
+          {loading ? "Generating…" : "Generate Title"}
+        </button>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* ── Settings Panel ──────────────────────────────── */}
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
-          {/* Platform */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <IconImage className="size-4 text-primary-500" />Platform
-            </h3>
-            <div className="grid grid-cols-2 gap-1.5">
-              {PLATFORMS.map((p) => (
-                <button key={p.id} onClick={() => setConfig((c) => ({ ...c, platform: p.id }))} className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${config.platform === p.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
-                  <span className="block">{p.label}</span>
-                  <span className="text-[10px] opacity-70">{p.width}×{p.height}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+      {/* Template Slider */}
+      <TemplateSlider
+        templates={templatePreviews}
+        activeId={config.template}
+        onSelect={(id) => {
+          const t = TEMPLATES.find((tpl) => tpl.id === id);
+          if (t) applyTemplate(t);
+        }}
+        label="Templates"
+      />
 
-          {/* Content */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Content</h3>
-
-            <label className="block text-xs text-gray-400">Headline</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.headline} onChange={(e) => setConfig((p) => ({ ...p, headline: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Subtext</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.subtext} onChange={(e) => setConfig((p) => ({ ...p, subtext: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Font Style</label>
-            <div className="grid grid-cols-4 gap-1.5">
-              {(["sans", "serif", "mono", "display"] as const).map((f) => (
-                <button key={f} onClick={() => setConfig((p) => ({ ...p, fontStyle: f }))} className={`px-2 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${config.fontStyle === f ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{f}</button>
-              ))}
-            </div>
-          </div>
-
-          {/* Colors */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Colors</h3>
-
-            <label className="block text-xs text-gray-400">Background</label>
-            <div className="flex gap-1.5 flex-wrap">
-              {COLOR_PRESETS.map((c) => (
-                <button key={c} onClick={() => setConfig((p) => ({ ...p, bgColor: c }))} className={`size-7 rounded-full border-2 transition-transform ${config.bgColor === c ? "border-primary-500 scale-110" : "border-gray-300 dark:border-gray-600"}`} style={{ backgroundColor: c }} />
-              ))}
-              <input type="color" value={config.bgColor} onChange={(e) => setConfig((p) => ({ ...p, bgColor: e.target.value }))} className="size-7 rounded-full cursor-pointer" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Text</label>
-                <input type="color" value={config.textColor} onChange={(e) => setConfig((p) => ({ ...p, textColor: e.target.value }))} className="size-8 rounded-lg cursor-pointer" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Accent</label>
-                <input type="color" value={config.accentColor} onChange={(e) => setConfig((p) => ({ ...p, accentColor: e.target.value }))} className="size-8 rounded-lg cursor-pointer" />
-              </div>
-            </div>
-          </div>
-
-          {/* Templates */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Templates</h3>
-            <div className="grid grid-cols-4 gap-1.5">
-              {TEMPLATES.map((t) => (
-                <button key={t.id} onClick={() => applyTemplate(t)} className={`flex flex-col items-center gap-1 px-2 py-2 rounded-lg text-xs font-medium transition-colors ${config.template === t.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
-                  <span className="size-4 rounded-full" style={{ backgroundColor: t.accent }} />
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* AI */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <IconSparkles className="size-4 text-primary-500" />AI Title Generator
-            </h3>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={2} placeholder="Describe your video (e.g. 'React tutorial for Zambian devs')…" value={config.aiPrompt} onChange={(e) => setConfig((p) => ({ ...p, aiPrompt: e.target.value }))} />
-            <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
-              {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
-              {loading ? "Generating…" : "Generate Title"}
+      {/* Platform */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+          <IconImage className="size-4 text-primary-500" />Platform
+        </h3>
+        <div className="grid grid-cols-2 gap-1.5">
+          {PLATFORMS.map((p) => (
+            <button key={p.id} onClick={() => setConfig((c) => ({ ...c, platform: p.id }))} className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${config.platform === p.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
+              <span className="block">{p.label}</span>
+              <span className="text-[10px] opacity-70">{p.width}×{p.height}</span>
             </button>
-          </div>
-
-          {/* Export */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Export</h3>
-            <button onClick={() => exportImage("png")} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-              <IconDownload className="size-4" />Export PNG
-            </button>
-            <button onClick={() => exportImage("jpeg")} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-              <IconDownload className="size-4" />Export JPEG
-            </button>
-          </div>
+          ))}
         </div>
+      </div>
 
-        {/* ── Canvas Area ─────────────────────────────────── */}
-        <div className={`flex-1 min-w-0 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-          <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
-            <canvas
-              ref={canvasRef}
-              style={{ width: "100%", maxWidth: 700, aspectRatio: `${currentPlatform.width}/${currentPlatform.height}` }}
-              className="rounded-lg shadow-lg"
-            />
-          </div>
-          <p className="text-xs text-gray-400 text-center mt-2">
-            {currentPlatform.label} — {currentPlatform.width}×{currentPlatform.height}px • {config.template} template
-          </p>
+      {/* Font Style */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Font Style</h3>
+        <div className="grid grid-cols-4 gap-1.5">
+          {(["sans", "serif", "mono", "display"] as const).map((f) => (
+            <button key={f} onClick={() => setConfig((p) => ({ ...p, fontStyle: f }))} className={`px-2 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${config.fontStyle === f ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{f}</button>
+          ))}
         </div>
       </div>
     </div>
+  );
+
+  const rightPanel = (
+    <div className="space-y-4">
+      {/* Content */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Content</h3>
+
+        <label className="block text-xs text-gray-400">Headline</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.headline} onChange={(e) => setConfig((p) => ({ ...p, headline: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Subtext</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.subtext} onChange={(e) => setConfig((p) => ({ ...p, subtext: e.target.value }))} />
+      </div>
+
+      {/* Colors */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Colors</h3>
+
+        <label className="block text-xs text-gray-400">Background</label>
+        <div className="flex gap-1.5 flex-wrap">
+          {COLOR_PRESETS.map((c) => (
+            <button key={c} onClick={() => setConfig((p) => ({ ...p, bgColor: c }))} className={`size-7 rounded-full border-2 transition-transform ${config.bgColor === c ? "border-primary-500 scale-110" : "border-gray-300 dark:border-gray-600"}`} style={{ backgroundColor: c }} />
+          ))}
+          <input type="color" value={config.bgColor} onChange={(e) => setConfig((p) => ({ ...p, bgColor: e.target.value }))} className="size-7 rounded-full cursor-pointer" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Text</label>
+            <input type="color" value={config.textColor} onChange={(e) => setConfig((p) => ({ ...p, textColor: e.target.value }))} className="size-8 rounded-lg cursor-pointer" />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Accent</label>
+            <input type="color" value={config.accentColor} onChange={(e) => setConfig((p) => ({ ...p, accentColor: e.target.value }))} className="size-8 rounded-lg cursor-pointer" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  /* ── UI ──────────────────────────────────────────────────── */
+  return (
+    <StickyCanvasLayout
+      leftPanel={leftPanel}
+      rightPanel={rightPanel}
+      canvasRef={canvasRef}
+      displayWidth={displayWidth}
+      displayHeight={displayHeight}
+      label={`${currentPlatform.label} — ${currentPlatform.width}×${currentPlatform.height}px • ${config.template} template`}
+      mobileTabs={["Canvas", "Design", "Content"]}
+      toolbar={
+        <div className="flex items-center gap-2 text-xs text-gray-400">
+          <IconImage className="size-3.5" />
+          <span className="font-medium text-gray-200">{currentPlatform.label}</span>
+          <span>{currentPlatform.width}×{currentPlatform.height}</span>
+        </div>
+      }
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.1, 2))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.1, 0.1))}
+      onZoomFit={() => setZoom(0.5)}
+      actionsBar={
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportImage("png")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors"
+          >
+            <IconDownload className="size-3" />
+            Export PNG
+          </button>
+          <button
+            onClick={() => exportImage("jpeg")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors"
+          >
+            <IconDownload className="size-3" />
+            Export JPEG
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors"
+          >
+            <IconCopy className="size-3" />
+            Copy
+          </button>
+        </div>
+      }
+    />
   );
 }

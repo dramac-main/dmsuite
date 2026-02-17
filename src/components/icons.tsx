@@ -216,6 +216,14 @@ export function IconPlay(props: IconProps) {
   );
 }
 
+export function IconPause(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" />
+    </svg>
+  );
+}
+
 export function IconLayers(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -728,6 +736,67 @@ export function IconHeart(props: IconProps) {
   );
 }
 
+export function IconZoomIn(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="11" cy="11" r="8" />
+      <path d="M21 21l-4.35-4.35M11 8v6M8 11h6" />
+    </svg>
+  );
+}
+
+export function IconZoomOut(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="11" cy="11" r="8" />
+      <path d="M21 21l-4.35-4.35M8 11h6" />
+    </svg>
+  );
+}
+
+export function IconUndo(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M3 7v6h6M3 13a9 9 0 016.88-8.56A9 9 0 0121 12a9 9 0 01-9 9 9 9 0 01-6.63-2.91" />
+    </svg>
+  );
+}
+
+export function IconRedo(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M21 7v6h-6M21 13a9 9 0 01-6.88-8.56A9 9 0 003 12a9 9 0 009 9 9 9 0 006.63-2.91" />
+    </svg>
+  );
+}
+
+export function IconCrop(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M6.13 1L6 16a2 2 0 002 2h15M1 6.13L16 6a2 2 0 012 2v15" />
+    </svg>
+  );
+}
+
+export function IconCamera(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </svg>
+  );
+}
+
+export function IconPrinter(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polyline points="6,9 6,2 18,2 18,9" />
+      <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2" />
+      <rect x="6" y="14" width="12" height="8" />
+    </svg>
+  );
+}
+
 // ── Icon Map ────────────────────────────────────────────────
 
 export const iconMap: Record<string, React.FC<IconProps>> = {
@@ -758,4 +827,6 @@ export const iconMap: Record<string, React.FC<IconProps>> = {
   download: IconDownload, refresh: IconRefresh, arrowRight: IconArrowRight, externalLink: IconExternalLink,
   truck: IconTruck, send: IconSend, plus: IconPlus, trash: IconTrash,
   loader: IconLoader, copy: IconCopy, check: IconCheck, heart: IconHeart,
+  zoomIn: IconZoomIn, zoomOut: IconZoomOut, undo: IconUndo, redo: IconRedo,
+  crop: IconCrop, camera: IconCamera, printer: IconPrinter,
 };

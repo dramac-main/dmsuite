@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
-  IconSparkles, IconWand, IconLoader, IconDownload, IconFileText,
+  IconSparkles, IconWand, IconLoader, IconDownload, IconFileText, IconCopy,
 } from "@/components/icons";
 import { cleanAIText, roundRect } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -70,7 +72,7 @@ function defaultPanels(count: number): PanelContent[] {
 export default function BrochureDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
+  const [zoom, setZoom] = useState(0.75);
 
   const [config, setConfig] = useState<BrochureConfig>({
     foldType: "tri-fold",
@@ -235,92 +237,158 @@ export default function BrochureDesignerWorkspace() {
     link.click();
   };
 
+  /* ── Zoom / Display ─────────────────────────────────────── */
+  const displayWidth = Math.min(600, ps.w) * zoom;
+  const displayHeight = displayWidth * (ps.h / ps.w);
+
+  /* ── Template Previews ──────────────────────────────────── */
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () => TEMPLATES.map((t) => ({
+      id: t.id,
+      label: t.name,
+      render: (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+        ctx.fillStyle = "#f8fafc";
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = config.primaryColor;
+        ctx.fillRect(0, 0, w * 0.35, h);
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 9px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(t.name, w * 0.175, h / 2 + 3);
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "7px Inter, sans-serif";
+        ctx.fillText("Brochure", w * 0.67, h / 2 + 3);
+      },
+    })),
+    [config.primaryColor]
+  );
+
+  /* ── Copy to Clipboard ──────────────────────────────────── */
+  const handleCopy = useCallback(async () => {
+    if (!canvasRef.current) return;
+    try {
+      canvasRef.current.toBlob(async (blob) => {
+        if (!blob) return;
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      }, "image/png");
+    } catch { /* ignore */ }
+  }, []);
+
   /* ── UI ──────────────────────────────────────────────────── */
-  return (
-    <div>
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
-        {(["canvas", "settings"] as const).map((t) => (
-          <button key={t} onClick={() => setMobileTab(t)} className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}>{t}</button>
-        ))}
+  /* ── Left Panel ─────────────────────────────────────────── */
+  const leftPanel = (
+    <div className="space-y-3">
+      {/* AI Content Generator */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Content Generator</h3>
+        <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe your business for AI brochure content..." value={config.businessDescription} onChange={(e) => setConfig((p) => ({ ...p, businessDescription: e.target.value }))} />
+        <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
+          {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
+          {loading ? "Generating…" : "Generate Content"}
+        </button>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Settings */}
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconFileText className="size-4 text-primary-500" />Brochure Settings</h3>
+      {/* Template Slider */}
+      <TemplateSlider
+        templates={templatePreviews}
+        activeId={config.template}
+        onSelect={(id) => setConfig((p) => ({ ...p, template: id as BrochureTemplate }))}
+        thumbWidth={130}
+        thumbHeight={80}
+        label="Templates"
+      />
 
-            <label className="block text-xs text-gray-400">Company Name</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.businessName} onChange={(e) => setConfig((p) => ({ ...p, businessName: e.target.value }))} />
+      {/* Brochure Settings */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconFileText className="size-4 text-primary-500" />Brochure Settings</h3>
 
-            <label className="block text-xs text-gray-400">Fold Type</label>
-            <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.foldType} onChange={(e) => { const ft = e.target.value as FoldType; const f = FOLD_TYPES.find((x) => x.id === ft)!; setConfig((p) => ({ ...p, foldType: ft, panels: defaultPanels(f.panels) })); }}>
-              {FOLD_TYPES.map((f) => <option key={f.id} value={f.id}>{f.name} ({f.panels} panels)</option>)}
-            </select>
+        <label className="block text-xs text-gray-400">Company Name</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.businessName} onChange={(e) => setConfig((p) => ({ ...p, businessName: e.target.value }))} />
 
-            <label className="block text-xs text-gray-400">Page Size</label>
-            <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.pageSize} onChange={(e) => setConfig((p) => ({ ...p, pageSize: e.target.value as PageSize }))}>
-              {PAGE_SIZES.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+        <label className="block text-xs text-gray-400">Fold Type</label>
+        <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.foldType} onChange={(e) => { const ft = e.target.value as FoldType; const f = FOLD_TYPES.find((x) => x.id === ft)!; setConfig((p) => ({ ...p, foldType: ft, panels: defaultPanels(f.panels) })); }}>
+          {FOLD_TYPES.map((f) => <option key={f.id} value={f.id}>{f.name} ({f.panels} panels)</option>)}
+        </select>
 
-            <label className="block text-xs text-gray-400">Template</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {TEMPLATES.map((t) => (
-                <button key={t.id} onClick={() => setConfig((p) => ({ ...p, template: t.id }))} className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${config.template === t.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{t.name}</button>
-              ))}
-            </div>
+        <label className="block text-xs text-gray-400">Page Size</label>
+        <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.pageSize} onChange={(e) => setConfig((p) => ({ ...p, pageSize: e.target.value as PageSize }))}>
+          {PAGE_SIZES.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
 
-            <label className="block text-xs text-gray-400">View Side</label>
-            <div className="flex gap-2">
-              {(["outside", "inside"] as const).map((s) => (
-                <button key={s} onClick={() => setConfig((p) => ({ ...p, viewSide: s }))} className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold capitalize ${config.viewSide === s ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-500"}`}>{s}</button>
-              ))}
-            </div>
-
-            <label className="block text-xs text-gray-400">Primary Color</label>
-            <div className="flex gap-1.5 flex-wrap">
-              {COLOR_PRESETS.map((c) => (
-                <button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
-              ))}
-            </div>
-          </div>
-
-          {/* Panel Content Editor */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3 max-h-64 overflow-y-auto">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Panel Content</h3>
-            {config.panels.map((panel, i) => (
-              <div key={i} className="space-y-1">
-                <label className="text-xs text-gray-400">Panel {i + 1}</label>
-                <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 py-1 text-xs text-gray-900 dark:text-white" placeholder="Heading" value={panel.heading} onChange={(e) => { const p = [...config.panels]; p[i] = { ...p[i], heading: e.target.value }; setConfig((pr) => ({ ...pr, panels: p })); }} />
-                <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 py-1 text-xs text-gray-900 dark:text-white resize-none" rows={2} placeholder="Body text" value={panel.body} onChange={(e) => { const p = [...config.panels]; p[i] = { ...p[i], body: e.target.value }; setConfig((pr) => ({ ...pr, panels: p })); }} />
-              </div>
-            ))}
-          </div>
-
-          {/* AI Generation */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Content Generator</h3>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe your business for AI brochure content..." value={config.businessDescription} onChange={(e) => setConfig((p) => ({ ...p, businessDescription: e.target.value }))} />
-            <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
-              {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
-              {loading ? "Generating…" : "Generate Content"}
-            </button>
-          </div>
-
-          {/* Export */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-            <button onClick={exportPNG} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"><IconDownload className="size-4" />Export PNG</button>
-          </div>
+        <label className="block text-xs text-gray-400">View Side</label>
+        <div className="flex gap-2">
+          {(["outside", "inside"] as const).map((s) => (
+            <button key={s} onClick={() => setConfig((p) => ({ ...p, viewSide: s }))} className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold capitalize ${config.viewSide === s ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-500"}`}>{s}</button>
+          ))}
         </div>
 
-        {/* Canvas */}
-        <div className={`flex-1 min-w-0 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-          <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
-            <canvas ref={canvasRef} style={{ width: Math.min(ps.w, 700), height: Math.min(ps.w, 700) * (ps.h / ps.w) }} className="rounded-lg shadow-lg" />
-          </div>
-          <p className="text-xs text-gray-400 text-center mt-2">{FOLD_TYPES.find((f) => f.id === config.foldType)?.name} — {config.viewSide} view — {ps.w}×{ps.h}px</p>
+        <label className="block text-xs text-gray-400">Primary Color</label>
+        <div className="flex gap-1.5 flex-wrap">
+          {COLOR_PRESETS.map((c) => (
+            <button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
+          ))}
         </div>
       </div>
     </div>
+  );
+
+  /* ── Right Panel (Panel Content Editor) ──────────────────── */
+  const rightPanel = (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3 max-h-[70vh] overflow-y-auto">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Panel Content</h3>
+        {config.panels.map((panel, i) => (
+          <div key={i} className="space-y-1">
+            <label className="text-xs text-gray-400">Panel {i + 1}</label>
+            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 py-1 text-xs text-gray-900 dark:text-white" placeholder="Heading" value={panel.heading} onChange={(e) => { const p = [...config.panels]; p[i] = { ...p[i], heading: e.target.value }; setConfig((pr) => ({ ...pr, panels: p })); }} />
+            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 py-1 text-xs text-gray-900 dark:text-white resize-none" rows={2} placeholder="Body text" value={panel.body} onChange={(e) => { const p = [...config.panels]; p[i] = { ...p[i], body: e.target.value }; setConfig((pr) => ({ ...pr, panels: p })); }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  /* ── Toolbar ─────────────────────────────────────────────── */
+  const toolbar = (
+    <div className="flex items-center gap-1.5">
+      <span className="text-xs font-semibold text-gray-400 capitalize">{config.viewSide} view</span>
+      <span className="text-gray-600 dark:text-gray-600">·</span>
+      <span className="text-xs text-gray-500">{fold.name} — {fold.panels} panels</span>
+    </div>
+  );
+
+  return (
+    <StickyCanvasLayout
+      canvasRef={canvasRef}
+      displayWidth={displayWidth}
+      displayHeight={displayHeight}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
+      onZoomFit={() => setZoom(0.75)}
+      label={`${fold.name} Brochure — ${ps.w}×${ps.h}px`}
+      mobileTabs={["Canvas", "Settings"]}
+      toolbar={toolbar}
+      leftPanel={leftPanel}
+      rightPanel={rightPanel}
+      actionsBar={
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportPNG}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors"
+          >
+            <IconDownload className="size-3" />
+            Download PNG
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors"
+          >
+            <IconCopy className="size-3" />
+            Copy
+          </button>
+        </div>
+      }
+    />
   );
 }

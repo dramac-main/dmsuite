@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   IconShield,
   IconSparkles,
   IconWand,
   IconLoader,
   IconDownload,
+  IconCopy,
 } from "@/components/icons";
 import { cleanAIText } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "./StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -75,7 +78,6 @@ function defaultClauses(): ContractClause[] {
 export default function ContractWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
 
   const [config, setConfig] = useState<ContractConfig>({
     template: "standard",
@@ -376,108 +378,221 @@ export default function ContractWorkspace() {
     link.click();
   };
 
-  /* ── UI ──────────────────────────────────────────────────── */
-  return (
-    <div>
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
-        {(["canvas", "settings"] as const).map((t) => (
-          <button key={t} onClick={() => setMobileTab(t)} className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}>{t}</button>
-        ))}
+  const handleCopy = useCallback(async () => {
+    if (!canvasRef.current) return;
+    try {
+      canvasRef.current.toBlob(async (blob) => {
+        if (!blob) return;
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      }, "image/png");
+    } catch { /* ignore */ }
+  }, []);
+
+  /* ── Zoom & Display ─────────────────────────────────────── */
+  const [zoom, setZoom] = useState(0.75);
+  const displayWidth = PAGE_W * zoom;
+  const displayHeight = PAGE_H * zoom;
+
+  /* ── Template Previews ──────────────────────────────────── */
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () => TEMPLATES.map((t) => ({
+      id: t.id,
+      label: t.name,
+      render: (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, w, h);
+
+        /* Top accent bar */
+        ctx.fillStyle = config.primaryColor;
+        ctx.fillRect(0, 0, w, 3);
+        ctx.fillRect(0, h - 3, w, 3);
+
+        /* Title */
+        ctx.fillStyle = config.primaryColor;
+        ctx.font = "bold 8px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(t.name.toUpperCase(), w / 2, h * 0.35);
+
+        /* Lines to simulate text */
+        ctx.fillStyle = "#e2e8f0";
+        for (let i = 0; i < 3; i++) {
+          const lw = w * (0.5 + Math.random() * 0.3);
+          ctx.fillRect((w - lw) / 2, h * 0.48 + i * 8, lw, 3);
+        }
+
+        /* Signature line */
+        ctx.strokeStyle = "#94a3b8";
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(w * 0.25, h * 0.82);
+        ctx.lineTo(w * 0.75, h * 0.82);
+        ctx.stroke();
+      },
+    })),
+    [config.primaryColor]
+  );
+
+  /* ── Left Panel ─────────────────────────────────────────── */
+  const leftPanel = (
+    <div className="space-y-3">
+      {/* AI Contract Generator */}
+      <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-3">
+        <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-secondary-500 mb-2.5">
+          <IconSparkles className="size-3.5" />AI Contract Generator
+        </label>
+        <textarea
+          className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 px-3 py-2 text-xs text-gray-900 dark:text-white resize-none placeholder:text-gray-400 focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-500/20"
+          rows={3} placeholder="Describe the deal (e.g. 'NDA between two Lusaka tech companies')..."
+          value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))}
+        />
+        <button onClick={generateAI} disabled={loading || !config.description.trim()}
+          className="w-full mt-2 flex items-center justify-center gap-2 h-10 rounded-xl bg-secondary-500 text-white text-xs font-bold hover:bg-secondary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+          {loading ? <><IconLoader className="size-3.5 animate-spin" />Generating…</> : <><IconWand className="size-3.5" />Generate Clauses</>}
+        </button>
+        <p className="text-[0.5625rem] text-gray-400 text-center mt-1.5">⚠ AI-generated clauses are templates only. Consult a qualified legal professional.</p>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Settings */}
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconShield className="size-4 text-primary-500" />Contract Settings</h3>
+      {/* Template Slider */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
+        <h3 className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Templates</h3>
+        <TemplateSlider
+          templates={templatePreviews}
+          activeId={config.template}
+          onSelect={(id) => setConfig((p) => ({ ...p, template: id as ContractTemplate }))}
+          thumbWidth={140}
+          thumbHeight={100}
+          label=""
+        />
+      </div>
 
-            <label className="block text-xs text-gray-400">Contract Title</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.contractTitle} onChange={(e) => setConfig((p) => ({ ...p, contractTitle: e.target.value }))} />
+      {/* Contract Settings */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3 space-y-2">
+        <h3 className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5"><IconShield className="size-3.5 text-primary-500" />Contract Settings</h3>
 
-            <label className="block text-xs text-gray-400">Effective Date</label>
-            <input type="date" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.effectiveDate} onChange={(e) => setConfig((p) => ({ ...p, effectiveDate: e.target.value }))} />
+        <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 block">Contract Title</label>
+        <input className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-sm placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" value={config.contractTitle} onChange={(e) => setConfig((p) => ({ ...p, contractTitle: e.target.value }))} />
 
-            <label className="block text-xs text-gray-400 mt-2">Party A</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 text-xs text-gray-900 dark:text-white" placeholder="Company name" value={config.partyA.name} onChange={(e) => setConfig((p) => ({ ...p, partyA: { ...p.partyA, name: e.target.value } }))} />
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 text-xs text-gray-900 dark:text-white" placeholder="Address" value={config.partyA.address} onChange={(e) => setConfig((p) => ({ ...p, partyA: { ...p.partyA, address: e.target.value } }))} />
+        <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 block">Effective Date</label>
+        <input type="date" className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-sm focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" value={config.effectiveDate} onChange={(e) => setConfig((p) => ({ ...p, effectiveDate: e.target.value }))} />
 
-            <label className="block text-xs text-gray-400 mt-2">Party B</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 text-xs text-gray-900 dark:text-white" placeholder="Company name" value={config.partyB.name} onChange={(e) => setConfig((p) => ({ ...p, partyB: { ...p.partyB, name: e.target.value } }))} />
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 text-xs text-gray-900 dark:text-white" placeholder="Address" value={config.partyB.address} onChange={(e) => setConfig((p) => ({ ...p, partyB: { ...p.partyB, address: e.target.value } }))} />
-
-            <label className="block text-xs text-gray-400">Template</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {TEMPLATES.map((t) => (
-                <button key={t.id} onClick={() => setConfig((p) => ({ ...p, template: t.id }))} className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${config.template === t.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{t.name}</button>
-              ))}
-            </div>
-
-            <label className="block text-xs text-gray-400">Primary Color</label>
-            <div className="flex gap-1.5 flex-wrap">
-              {COLOR_PRESETS.map((c) => (
-                <button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
-              ))}
-            </div>
-          </div>
-
-          {/* Clause Library */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2 max-h-64 overflow-y-auto">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Clause Library</h3>
-            {clauses.map((clause, i) => (
-              <div key={clause.id} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
-                <input type="checkbox" checked={clause.enabled} onChange={(e) => { const c = [...clauses]; c[i] = { ...c[i], enabled: e.target.checked }; setClauses(c); }} className="rounded" />
-                <span className="text-xs text-gray-700 dark:text-gray-300 flex-1">{clause.title}</span>
-                <span className="text-[10px] text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{clause.category}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Clause Editor */}
-          {clauses[0] && (
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2 max-h-48 overflow-y-auto">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Edit Clauses</h3>
-              {clauses.filter((c) => c.enabled).map((clause) => {
-                const idx = clauses.indexOf(clause);
-                return (
-                  <div key={clause.id} className="space-y-1">
-                    <label className="text-xs text-gray-400 font-medium">{clause.title}</label>
-                    <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 py-1 text-xs text-gray-900 dark:text-white resize-none" rows={2} value={clause.content} onChange={(e) => { const c = [...clauses]; c[idx] = { ...c[idx], content: e.target.value }; setClauses(c); }} />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* AI Generation */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Contract Generator</h3>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the deal (e.g. 'NDA between two Lusaka tech companies')..." value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
-            <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
-              {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
-              {loading ? "Generating…" : "Generate Clauses"}
-            </button>
-            <p className="text-[10px] text-gray-400">⚠ AI-generated clauses are templates only. Always consult a qualified legal professional.</p>
-          </div>
-
-          {/* Export */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-            <button onClick={exportPNG} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"><IconDownload className="size-4" />Export PNG</button>
-          </div>
+        <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 block mt-1">Primary Color</label>
+        <div className="flex gap-1.5 flex-wrap">
+          {COLOR_PRESETS.map((c) => (
+            <button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 transition-all ${config.primaryColor === c ? "border-white scale-110 ring-1 ring-primary-500/30" : "border-transparent"}`} style={{ backgroundColor: c }} />
+          ))}
         </div>
+      </div>
 
-        {/* Canvas */}
-        <div className={`flex-1 min-w-0 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-          <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
-            <canvas ref={canvasRef} style={{ width: Math.min(PAGE_W, 500), height: Math.min(PAGE_W, 500) * (PAGE_H / PAGE_W) }} className="rounded-lg shadow-lg" />
+      {/* Clause Library */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3 space-y-2 max-h-64 overflow-y-auto">
+        <h3 className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Clause Library</h3>
+        {clauses.map((clause, i) => (
+          <div key={clause.id} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+            <input type="checkbox" checked={clause.enabled} onChange={(e) => { const c = [...clauses]; c[i] = { ...c[i], enabled: e.target.checked }; setClauses(c); }} className="size-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-500 focus:ring-primary-500/30" />
+            <span className="text-xs text-gray-700 dark:text-gray-300 flex-1">{clause.title}</span>
+            <span className="text-[0.5625rem] text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{clause.category}</span>
           </div>
-          <div className="flex items-center justify-center gap-2 mt-3">
-            {Array.from({ length: pageCount }, (_, i) => (
-              <button key={i} onClick={() => setConfig((p) => ({ ...p, activeSection: i }))} className={`px-3 py-1 rounded-lg text-xs font-medium ${config.activeSection === i ? "bg-primary-500 text-gray-950" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"}`}>{i + 1}</button>
-            ))}
-          </div>
-          <p className="text-xs text-gray-400 text-center mt-2">Contract — Page {config.activeSection + 1} of {pageCount} — {PAGE_W}×{PAGE_H}px</p>
+        ))}
+      </div>
+    </div>
+  );
+
+  /* ── Right Panel ────────────────────────────────────────── */
+  const rightPanel = (
+    <div className="space-y-4">
+      {/* Party Details */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3 space-y-2">
+        <h3 className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Party A</h3>
+        <input className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" placeholder="Company name" value={config.partyA.name} onChange={(e) => setConfig((p) => ({ ...p, partyA: { ...p.partyA, name: e.target.value } }))} />
+        <input className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" placeholder="Address" value={config.partyA.address} onChange={(e) => setConfig((p) => ({ ...p, partyA: { ...p.partyA, address: e.target.value } }))} />
+
+        <h3 className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mt-2">Party B</h3>
+        <input className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" placeholder="Company name" value={config.partyB.name} onChange={(e) => setConfig((p) => ({ ...p, partyB: { ...p.partyB, name: e.target.value } }))} />
+        <input className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" placeholder="Address" value={config.partyB.address} onChange={(e) => setConfig((p) => ({ ...p, partyB: { ...p.partyB, address: e.target.value } }))} />
+      </div>
+
+      {/* Clause Editor */}
+      {clauses[0] && (
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3 space-y-2 max-h-64 overflow-y-auto">
+          <h3 className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Edit Clauses</h3>
+          {clauses.filter((c) => c.enabled).map((clause) => {
+            const idx = clauses.indexOf(clause);
+            return (
+              <div key={clause.id} className="space-y-1">
+                <label className="text-[0.5625rem] font-semibold uppercase tracking-wider text-gray-400">{clause.title}</label>
+                <textarea className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-xs text-gray-900 dark:text-white resize-none placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" rows={2} value={clause.content} onChange={(e) => { const c = [...clauses]; c[idx] = { ...c[idx], content: e.target.value }; setClauses(c); }} />
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Export */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2.5">Export</h3>
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={exportPNG} className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-primary-500/30 bg-primary-500/5 text-primary-500 transition-colors hover:bg-primary-500/10">
+            <IconDownload className="size-4" /><span className="text-xs font-semibold">.png</span>
+          </button>
+          <button onClick={handleCopy} className="flex flex-col items-center gap-1 p-2.5 rounded-xl border border-secondary-500/30 bg-secondary-500/5 text-secondary-500 transition-colors hover:bg-secondary-500/10">
+            <IconCopy className="size-4" /><span className="text-xs font-semibold">Clipboard</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Info */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Contract Info</h3>
+        <div className="space-y-1 text-xs text-gray-400">
+          <p>Template: <span className="text-gray-300 capitalize">{config.template}</span></p>
+          <p>Pages: <span className="text-gray-300">{pageCount}</span></p>
+          <p>Jurisdiction: <span className="text-gray-300">{config.jurisdiction}</span></p>
+          <p>Resolution: <span className="text-gray-300">{PAGE_W}×{PAGE_H}px</span></p>
         </div>
       </div>
     </div>
+  );
+
+  /* ── Toolbar ────────────────────────────────────────────── */
+  const toolbar = (
+    <div className="flex items-center gap-2">
+      <IconShield className="size-3.5 text-primary-500" />
+      <span className="text-xs font-semibold text-gray-400 capitalize">{config.template}</span>
+      <span className="text-gray-600">·</span>
+      <span className="text-xs text-gray-500">Page {config.activeSection + 1}/{pageCount}</span>
+      <span className="text-gray-600">·</span>
+      <div className="flex items-center gap-1">
+        {Array.from({ length: pageCount }, (_, i) => (
+          <button key={i} onClick={() => setConfig((p) => ({ ...p, activeSection: i }))} className={`px-2 py-0.5 rounded text-[0.625rem] font-medium transition-colors ${config.activeSection === i ? "bg-primary-500 text-gray-950" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"}`}>{i + 1}</button>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <StickyCanvasLayout
+      leftPanel={leftPanel}
+      rightPanel={rightPanel}
+      canvasRef={canvasRef}
+      displayWidth={displayWidth}
+      displayHeight={displayHeight}
+      label={`Contract — ${config.template} — Page ${config.activeSection + 1}/${pageCount} — ${PAGE_W}×${PAGE_H}px`}
+      toolbar={toolbar}
+      mobileTabs={["Canvas", "Settings"]}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
+      onZoomFit={() => setZoom(0.75)}
+      actionsBar={
+        <div className="flex items-center gap-2">
+          <button onClick={exportPNG} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors">
+            <IconDownload className="size-3" />Download PNG
+          </button>
+          <button onClick={handleCopy} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors">
+            <IconCopy className="size-3" />Copy
+          </button>
+        </div>
+      }
+    />
   );
 }

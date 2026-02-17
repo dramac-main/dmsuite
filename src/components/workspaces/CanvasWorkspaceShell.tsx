@@ -21,6 +21,10 @@ import {
   IconEye,
   IconDownload,
   IconLock,
+  IconZoomIn,
+  IconZoomOut,
+  IconUndo,
+  IconRedo,
 } from "@/components/icons";
 
 // ---------------------------------------------------------------------------
@@ -61,6 +65,8 @@ interface CanvasWorkspaceShellProps {
   exportFormats?: { id: string; label: string; ext: string }[];
   /** Called when user clicks Export with the chosen format */
   onExport?: (format: string) => void;
+  /** Whether the canvas should be sticky (fixed position while panels scroll) */
+  stickyCanvas?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -103,17 +109,25 @@ export default function CanvasWorkspaceShell({
     { id: "jpg", label: "JPG", ext: "jpg" },
   ],
   onExport,
+  stickyCanvas = true,
 }: CanvasWorkspaceShellProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [interaction, setInteraction] = useState<InteractionState>(initialInteraction);
   const [rightTab, setRightTab] = useState<"layers" | "export">("layers");
   const [mobileTab, setMobileTab] = useState<"canvas" | "settings" | "layers">("canvas");
+  const [zoom, setZoom] = useState(1);
 
   // ── Scale for display ──────────────────────────────────
   const maxDisplayW = 560;
-  const scale = Math.min(1, maxDisplayW / canvasConfig.width);
+  const baseScale = Math.min(1, maxDisplayW / canvasConfig.width);
+  const scale = baseScale * zoom;
   const displayW = canvasConfig.width * scale;
   const displayH = canvasConfig.height * scale;
+
+  // ── Zoom Controls ──────────────────────────────────────
+  const handleZoomIn = () => setZoom((z) => Math.min(3, z + 0.25));
+  const handleZoomOut = () => setZoom((z) => Math.max(0.25, z - 0.25));
+  const handleZoomFit = () => setZoom(1);
 
   // ── Redraw ─────────────────────────────────────────────
   const redraw = useCallback(() => {
@@ -299,21 +313,58 @@ export default function CanvasWorkspaceShell({
         ))}
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4">
+      <div className="flex flex-col lg:flex-row gap-4" style={{ minHeight: stickyCanvas ? "calc(100vh - 220px)" : undefined }}>
         {/* ── Left Panel (Settings) ────────────────────────── */}
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 order-2 lg:order-1 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
+        <div className={`w-full lg:w-80 shrink-0 space-y-4 order-2 lg:order-1 overflow-y-auto ${mobileTab !== "settings" ? "hidden md:block" : ""}`} style={{ maxHeight: stickyCanvas ? "calc(100vh - 220px)" : undefined }}>
           {leftPanel}
         </div>
 
-        {/* ── Canvas Area ──────────────────────────────────── */}
+        {/* ── Canvas Area (Sticky) ─────────────────────────── */}
         <div className={`flex-1 min-w-0 order-1 lg:order-2 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-        {toolbarExtra && (
-          <div className="mb-3 flex items-center gap-2 flex-wrap">
-            {toolbarExtra}
-          </div>
-        )}
+          <div className={stickyCanvas ? "lg:sticky lg:top-4" : ""}>
+            {/* Toolbar row: extra tools + zoom controls */}
+            <div className="mb-3 flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                {toolbarExtra}
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleZoomOut}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors"
+                  aria-label="Zoom out"
+                  title="Zoom out"
+                >
+                  <IconZoomOut className="size-4" />
+                </button>
+                <button
+                  onClick={handleZoomFit}
+                  className="px-2 py-1 rounded-lg text-xs font-mono text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors min-w-12 text-center"
+                  title="Fit to view"
+                >
+                  {Math.round(zoom * 100)}%
+                </button>
+                <button
+                  onClick={handleZoomIn}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors"
+                  aria-label="Zoom in"
+                  title="Zoom in"
+                >
+                  <IconZoomIn className="size-4" />
+                </button>
+              </div>
+            </div>
 
-        <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
+            {/* Canvas container — checkerboard bg for transparency */}
+            <div
+              className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto"
+              style={{ maxHeight: stickyCanvas ? "calc(100vh - 290px)" : undefined }}
+              onWheel={(e) => {
+                if (e.ctrlKey || e.metaKey) {
+                  e.preventDefault();
+                  setZoom((z) => Math.max(0.25, Math.min(3, z + (e.deltaY < 0 ? 0.1 : -0.1))));
+                }
+              }}
+            >
           <canvas
             ref={canvasRef}
             style={{ width: displayW, height: displayH }}
@@ -333,10 +384,11 @@ export default function CanvasWorkspaceShell({
             {canvasConfig.label} — {canvasConfig.width}×{canvasConfig.height}
           </p>
         )}
+          </div> {/* end sticky wrapper */}
       </div>
 
       {/* ── Right Panel (Layers / Export) ─────────────────── */}
-      <div className={`w-full lg:w-72 shrink-0 order-3 ${mobileTab !== "layers" ? "hidden md:block" : ""}`}>
+      <div className={`w-full lg:w-72 shrink-0 order-3 overflow-y-auto ${mobileTab !== "layers" ? "hidden md:block" : ""}`} style={{ maxHeight: stickyCanvas ? "calc(100vh - 220px)" : undefined }}>
         {/* Tabs */}
         <div className="flex border-b border-gray-200 dark:border-gray-700 mb-3">
           <button

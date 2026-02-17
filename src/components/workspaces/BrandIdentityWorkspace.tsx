@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { jsPDF } from "jspdf";
 import {
   IconSparkles,
@@ -19,6 +19,8 @@ import {
   IconPlus,
   IconTrash,
 } from "@/components/icons";
+import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -1084,334 +1086,374 @@ Return ONLY valid JSON, no markdown.`;
     setTimeout(() => setSavedFeedback(null), 2000);
   }, []);
 
+  /* ── Zoom / Display ─────────────────────────────────────── */
+  const [zoom, setZoom] = useState(0.75);
+  const displayWidth = Math.min(500, 1600) * zoom;
+  const displayHeight = displayWidth * (1200 / 1600);
+
+  /* ── Template Previews ──────────────────────────────────── */
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () => palettePresets.map((preset) => ({
+      id: preset.name,
+      label: preset.name,
+      render: (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+        ctx.fillStyle = preset.background;
+        ctx.fillRect(0, 0, w, h);
+        // Top accent bar
+        ctx.fillStyle = preset.primary;
+        ctx.fillRect(0, 0, w, 3);
+        // Color swatches
+        const colors = [preset.primary, preset.secondary, preset.accent, preset.neutral];
+        const swW = (w - 20) / 4;
+        colors.forEach((c, i) => {
+          ctx.fillStyle = c;
+          ctx.fillRect(8 + i * (swW + 2), h * 0.3, swW, h * 0.25);
+        });
+        // Label
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 7px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(preset.name, w / 2, h - 6);
+      },
+    })),
+    []
+  );
+
+  /* ── Copy to Clipboard ──────────────────────────────────── */
+  const handleCopy = useCallback(async () => {
+    if (!canvasRef.current) return;
+    try {
+      canvasRef.current.toBlob(async (blob) => {
+        if (!blob) return;
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      }, "image/png");
+    } catch { /* ignore */ }
+  }, []);
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-      {/* ── Left Panel ──────────────────────────────────────── */}
-      <div className="lg:col-span-2 space-y-4">
-
-        {/* Basics */}
-        <Section icon={<IconLayers className="size-3.5" />} label="Brand Basics" id="basics" open={openSections.has("basics")} toggle={toggleSection}>
-          <div className="space-y-2.5">
-            <input type="text" placeholder="Brand Name" value={config.brandName}
-              onChange={(e) => updateConfig({ brandName: e.target.value })}
-              className="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-sm placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
-            <input type="text" placeholder="Tagline (optional)" value={config.tagline}
-              onChange={(e) => updateConfig({ tagline: e.target.value })}
-              className="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-sm placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
-
-            <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 pt-1">Industry</p>
-            <div className="flex flex-wrap gap-1.5">
-              {industryPresets.map((ind) => (
-                <button key={ind} onClick={() => updateConfig({ industry: ind })}
-                  className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all ${config.industry === ind ? "border-primary-500 bg-primary-500/5 text-primary-500" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}>{ind}</button>
-              ))}
-            </div>
-
-            <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 pt-1">Brand Personality</p>
-            <div className="flex flex-wrap gap-1.5">
-              {personalityPresets.map((p) => (
-                <button key={p} onClick={() => updateConfig({ personality: p })}
-                  className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all ${config.personality === p ? "border-primary-500 bg-primary-500/5 text-primary-500" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}>{p}</button>
-              ))}
-            </div>
+    <StickyCanvasLayout
+      canvasRef={canvasRef}
+      displayWidth={displayWidth}
+      displayHeight={displayHeight}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
+      onZoomFit={() => setZoom(0.75)}
+      label={`Brand Identity Kit — 1600×1200px · ${config.palette.name}`}
+      mobileTabs={["Canvas", "Settings", "Content"]}
+      toolbar={
+        <div className="flex items-center gap-2 text-xs text-gray-400">
+          <span className="font-semibold text-gray-200">{config.brandName || "Untitled Brand"}</span>
+          {config.industry && <span className="text-gray-500">• {config.industry}</span>}
+          {config.personality && <span className="text-gray-500">• {config.personality}</span>}
+        </div>
+      }
+      leftPanel={
+        <div className="space-y-3">
+          {/* AI Brand Generator */}
+          <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-3">
+            <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-secondary-500 mb-2">
+              <IconSparkles className="size-3" />
+              AI Brand Generator
+            </label>
+            <button onClick={generateWithAI} disabled={!config.brandName.trim() || isGenerating}
+              className="w-full flex items-center justify-center gap-2 h-8 rounded-xl bg-linear-to-r from-secondary-500 to-primary-500 text-white text-[0.625rem] font-bold hover:from-secondary-400 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+              {isGenerating ? <><IconLoader className="size-3 animate-spin" />Generating Identity…</> : <><IconWand className="size-3" />Generate Brand Identity with AI</>}
+            </button>
+            <p className="text-[0.5rem] text-gray-400 text-center mt-1">AI will suggest colors, fonts &amp; pattern</p>
           </div>
-        </Section>
 
-        {/* Color Palette */}
-        <Section icon={<IconDroplet className="size-3.5" />} label="Color Palette" id="palette" open={openSections.has("palette")} toggle={toggleSection}>
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-1.5">
-              {palettePresets.map((preset) => (
-                <button key={preset.name} onClick={() => updateConfig({ palette: preset, pattern: { ...config.pattern, color: preset.primary } })}
-                  className={`p-2 rounded-xl border text-left transition-all ${config.palette.name === preset.name ? "border-primary-500 bg-primary-500/5 ring-1 ring-primary-500/30" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"}`}>
-                  <div className="flex gap-0.5 mb-1">
-                    {[preset.primary, preset.secondary, preset.accent, preset.neutral].map((c, i) => (
-                      <div key={i} className="size-4 rounded-full border border-gray-200/30 dark:border-gray-600/30" style={{ backgroundColor: c }} />
-                    ))}
-                  </div>
-                  <p className="text-[0.625rem] text-gray-500 dark:text-gray-400 font-medium">{preset.name}</p>
+          {/* Template Slider — Palette Presets */}
+          <TemplateSlider
+            templates={templatePreviews}
+            activeId={config.palette.name}
+            onSelect={(id) => {
+              const preset = palettePresets.find((p) => p.name === id);
+              if (preset) updateConfig({ palette: preset, pattern: { ...config.pattern, color: preset.primary } });
+            }}
+            label="Palette Presets"
+          />
+
+          {/* Brand Basics */}
+          <Section icon={<IconLayers className="size-3.5" />} label="Brand Basics" id="basics" open={openSections.has("basics")} toggle={toggleSection}>
+            <div className="space-y-2.5">
+              <input type="text" placeholder="Brand Name" value={config.brandName}
+                onChange={(e) => updateConfig({ brandName: e.target.value })}
+                className="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-sm placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
+              <input type="text" placeholder="Tagline (optional)" value={config.tagline}
+                onChange={(e) => updateConfig({ tagline: e.target.value })}
+                className="w-full h-11 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-sm placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
+
+              <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 pt-1">Industry</p>
+              <div className="flex flex-wrap gap-1.5">
+                {industryPresets.map((ind) => (
+                  <button key={ind} onClick={() => updateConfig({ industry: ind })}
+                    className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all ${config.industry === ind ? "border-primary-500 bg-primary-500/5 text-primary-500" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}>{ind}</button>
+                ))}
+              </div>
+
+              <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 pt-1">Brand Personality</p>
+              <div className="flex flex-wrap gap-1.5">
+                {personalityPresets.map((p) => (
+                  <button key={p} onClick={() => updateConfig({ personality: p })}
+                    className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all ${config.personality === p ? "border-primary-500 bg-primary-500/5 text-primary-500" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}>{p}</button>
+                ))}
+              </div>
+            </div>
+          </Section>
+
+          {/* Color Palette */}
+          <Section icon={<IconDroplet className="size-3.5" />} label="Color Palette" id="palette" open={openSections.has("palette")} toggle={toggleSection}>
+            <div className="space-y-3">
+              <div className="grid grid-cols-5 gap-2 pt-1">
+                {[
+                  { key: "primary" as const, label: "Primary" },
+                  { key: "secondary" as const, label: "Secondary" },
+                  { key: "accent" as const, label: "Accent" },
+                  { key: "neutral" as const, label: "Neutral" },
+                  { key: "background" as const, label: "BG" },
+                ].map(({ key, label }) => (
+                  <label key={key} className="flex flex-col items-center gap-1 cursor-pointer">
+                    <input type="color" value={config.palette[key]}
+                      onChange={(e) => updateConfig({ palette: { ...config.palette, [key]: e.target.value } })}
+                      className="size-7 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer bg-transparent" />
+                    <span className="text-[0.5rem] text-gray-400">{label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </Section>
+
+          {/* Typography */}
+          <Section icon={<IconType className="size-3.5" />} label="Typography" id="typography" open={openSections.has("typography")} toggle={toggleSection}>
+            <div className="grid grid-cols-2 gap-2">
+              {fontPairings.map((fp, i) => (
+                <button key={i} onClick={() => updateConfig({ fontPairing: fp })}
+                  className={`p-3 rounded-xl border text-left transition-all ${config.fontPairing.label === fp.label ? "border-primary-500 bg-primary-500/5 ring-1 ring-primary-500/30" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"}`}>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white mb-0.5" style={{ fontFamily: fp.heading }}>Heading</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400" style={{ fontFamily: fp.body }}>Body text sample</p>
+                  <p className="text-[0.5rem] text-gray-400 mt-1">{fp.label}</p>
                 </button>
               ))}
             </div>
-            <div className="grid grid-cols-5 gap-2 pt-1">
+          </Section>
+
+          {/* Pattern */}
+          <Section icon={<IconLayers className="size-3.5" />} label="Brand Pattern" id="pattern" open={openSections.has("pattern")} toggle={toggleSection}>
+            <div className="space-y-2.5">
+              <div className="grid grid-cols-3 gap-1.5">
+                {patternTypes.map((type) => (
+                  <button key={type} onClick={() => updateConfig({ pattern: { ...config.pattern, type } })}
+                    className={`p-2.5 rounded-xl border text-center text-xs font-semibold capitalize transition-all ${config.pattern.type === type ? "border-primary-500 bg-primary-500/5 text-primary-500 ring-1 ring-primary-500/30" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}>{type}</button>
+                ))}
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400">Pattern Opacity</span>
+                  <span className="text-[0.625rem] text-gray-500 tabular-nums">{Math.round(config.pattern.opacity * 100)}%</span>
+                </div>
+                <input type="range" min="3" max="40" value={Math.round(config.pattern.opacity * 100)}
+                  onChange={(e) => updateConfig({ pattern: { ...config.pattern, opacity: parseInt(e.target.value) / 100 } })}
+                  className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-primary-500" />
+              </div>
+            </div>
+          </Section>
+
+          {/* Save / Load Brand Kit */}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/30 p-4">
+            <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
+              <IconLayers className="size-3.5" />Brand Kit Storage
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={handleSaveBrandKit}
+                className="flex items-center justify-center gap-1.5 h-9 rounded-xl border border-primary-500/30 bg-primary-500/5 text-primary-500 text-xs font-semibold hover:bg-primary-500/10 transition-colors">
+                <IconDownload className="size-3" />Save Brand Kit
+              </button>
+              <button onClick={handleLoadBrandKit}
+                className="flex items-center justify-center gap-1.5 h-9 rounded-xl border border-secondary-500/30 bg-secondary-500/5 text-secondary-500 text-xs font-semibold hover:bg-secondary-500/10 transition-colors">
+                <IconRefresh className="size-3" />Load Brand Kit
+              </button>
+            </div>
+            {savedFeedback && (
+              <p className="text-[0.625rem] text-center mt-2 font-medium text-primary-500 animate-pulse">{savedFeedback}</p>
+            )}
+          </div>
+        </div>
+      }
+      rightPanel={
+        <div className="space-y-4">
+          {/* Quick Color Reference */}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/30 p-3">
+            <h3 className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 mb-2">Quick Color Reference</h3>
+            <div className="grid grid-cols-5 gap-2">
               {[
-                { key: "primary" as const, label: "Primary" },
-                { key: "secondary" as const, label: "Secondary" },
-                { key: "accent" as const, label: "Accent" },
-                { key: "neutral" as const, label: "Neutral" },
-                { key: "background" as const, label: "BG" },
-              ].map(({ key, label }) => (
-                <label key={key} className="flex flex-col items-center gap-1 cursor-pointer">
-                  <input type="color" value={config.palette[key]}
-                    onChange={(e) => updateConfig({ palette: { ...config.palette, [key]: e.target.value } })}
-                    className="size-7 rounded-lg border border-gray-200 dark:border-gray-700 cursor-pointer bg-transparent" />
-                  <span className="text-[0.5rem] text-gray-400">{label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </Section>
-
-        {/* Typography */}
-        <Section icon={<IconType className="size-3.5" />} label="Typography" id="typography" open={openSections.has("typography")} toggle={toggleSection}>
-          <div className="grid grid-cols-2 gap-2">
-            {fontPairings.map((fp, i) => (
-              <button key={i} onClick={() => updateConfig({ fontPairing: fp })}
-                className={`p-3 rounded-xl border text-left transition-all ${config.fontPairing.label === fp.label ? "border-primary-500 bg-primary-500/5 ring-1 ring-primary-500/30" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"}`}>
-                <p className="text-sm font-bold text-gray-900 dark:text-white mb-0.5" style={{ fontFamily: fp.heading }}>Heading</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400" style={{ fontFamily: fp.body }}>Body text sample</p>
-                <p className="text-[0.5rem] text-gray-400 mt-1">{fp.label}</p>
-              </button>
-            ))}
-          </div>
-        </Section>
-
-        {/* Pattern */}
-        <Section icon={<IconLayers className="size-3.5" />} label="Brand Pattern" id="pattern" open={openSections.has("pattern")} toggle={toggleSection}>
-          <div className="space-y-2.5">
-            <div className="grid grid-cols-3 gap-1.5">
-              {patternTypes.map((type) => (
-                <button key={type} onClick={() => updateConfig({ pattern: { ...config.pattern, type } })}
-                  className={`p-2.5 rounded-xl border text-center text-xs font-semibold capitalize transition-all ${config.pattern.type === type ? "border-primary-500 bg-primary-500/5 text-primary-500 ring-1 ring-primary-500/30" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}>{type}</button>
-              ))}
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400">Pattern Opacity</span>
-                <span className="text-[0.625rem] text-gray-500 tabular-nums">{Math.round(config.pattern.opacity * 100)}%</span>
-              </div>
-              <input type="range" min="3" max="40" value={Math.round(config.pattern.opacity * 100)}
-                onChange={(e) => updateConfig({ pattern: { ...config.pattern, opacity: parseInt(e.target.value) / 100 } })}
-                className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-primary-500" />
-            </div>
-          </div>
-        </Section>
-
-        {/* Tone of Voice */}
-        <Section icon={<IconBookOpen className="size-3.5" />} label="Tone of Voice" id="tone" open={openSections.has("tone")} toggle={toggleSection}>
-          <div className="space-y-3">
-            <div>
-              <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 mb-1">Voice Attributes</p>
-              <input type="text" placeholder="e.g. Professional, Friendly, Bold" value={config.toneOfVoice.attributes}
-                onChange={(e) => updateConfig({ toneOfVoice: { ...config.toneOfVoice, attributes: e.target.value } })}
-                className="w-full h-10 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-sm placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
-              <p className="text-[0.5rem] text-gray-400 mt-0.5">Comma-separated attributes</p>
-            </div>
-
-            <div>
-              <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-success mb-1">✓ Do Say (example phrases)</p>
-              {config.toneOfVoice.exampleDo.map((ex, i) => (
-                <div key={`do-${i}`} className="flex items-center gap-1.5 mb-1.5">
-                  <input type="text" placeholder={`Example phrase ${i + 1}`} value={ex}
-                    onChange={(e) => {
-                      const next = [...config.toneOfVoice.exampleDo];
-                      next[i] = e.target.value;
-                      updateConfig({ toneOfVoice: { ...config.toneOfVoice, exampleDo: next } });
-                    }}
-                    className="flex-1 h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-success focus:ring-2 focus:ring-success/20 transition-all" />
-                  {config.toneOfVoice.exampleDo.length > 1 && (
-                    <button onClick={() => {
-                      const next = config.toneOfVoice.exampleDo.filter((_, j) => j !== i);
-                      updateConfig({ toneOfVoice: { ...config.toneOfVoice, exampleDo: next } });
-                    }} className="text-gray-400 hover:text-error transition-colors"><IconTrash className="size-3" /></button>
-                  )}
+                { label: "Primary", color: config.palette.primary },
+                { label: "Secondary", color: config.palette.secondary },
+                { label: "Accent", color: config.palette.accent },
+                { label: "Neutral", color: config.palette.neutral },
+                { label: "Background", color: config.palette.background },
+              ].map(({ label, color }) => (
+                <div key={label} className="text-center">
+                  <div className="h-10 rounded-lg border border-gray-200 dark:border-gray-700 mb-1" style={{ backgroundColor: color }} />
+                  <p className="text-[0.5rem] font-semibold text-gray-700 dark:text-gray-300">{label}</p>
+                  <p className="text-[0.5rem] text-gray-400 font-mono">{color.toUpperCase()}</p>
                 </div>
               ))}
-              <button onClick={() => updateConfig({ toneOfVoice: { ...config.toneOfVoice, exampleDo: [...config.toneOfVoice.exampleDo, ""] } })}
-                className="flex items-center gap-1 text-[0.625rem] text-success hover:text-success/80 transition-colors font-medium">
-                <IconPlus className="size-2.5" />Add phrase
-              </button>
-            </div>
-
-            <div>
-              <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-error mb-1">✗ Don&apos;t Say</p>
-              {config.toneOfVoice.exampleDont.map((ex, i) => (
-                <div key={`dont-${i}`} className="flex items-center gap-1.5 mb-1.5">
-                  <input type="text" placeholder={`Avoid saying ${i + 1}`} value={ex}
-                    onChange={(e) => {
-                      const next = [...config.toneOfVoice.exampleDont];
-                      next[i] = e.target.value;
-                      updateConfig({ toneOfVoice: { ...config.toneOfVoice, exampleDont: next } });
-                    }}
-                    className="flex-1 h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-error focus:ring-2 focus:ring-error/20 transition-all" />
-                  {config.toneOfVoice.exampleDont.length > 1 && (
-                    <button onClick={() => {
-                      const next = config.toneOfVoice.exampleDont.filter((_, j) => j !== i);
-                      updateConfig({ toneOfVoice: { ...config.toneOfVoice, exampleDont: next } });
-                    }} className="text-gray-400 hover:text-error transition-colors"><IconTrash className="size-3" /></button>
-                  )}
-                </div>
-              ))}
-              <button onClick={() => updateConfig({ toneOfVoice: { ...config.toneOfVoice, exampleDont: [...config.toneOfVoice.exampleDont, ""] } })}
-                className="flex items-center gap-1 text-[0.625rem] text-error hover:text-error/80 transition-colors font-medium">
-                <IconPlus className="size-2.5" />Add phrase
-              </button>
             </div>
           </div>
-        </Section>
 
-        {/* Save / Load Brand Kit */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/30 p-4">
-          <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
-            <IconLayers className="size-3.5" />Brand Kit Storage
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            <button onClick={handleSaveBrandKit}
-              className="flex items-center justify-center gap-1.5 h-9 rounded-xl border border-primary-500/30 bg-primary-500/5 text-primary-500 text-xs font-semibold hover:bg-primary-500/10 transition-colors">
-              <IconDownload className="size-3" />Save Brand Kit
-            </button>
-            <button onClick={handleLoadBrandKit}
-              className="flex items-center justify-center gap-1.5 h-9 rounded-xl border border-secondary-500/30 bg-secondary-500/5 text-secondary-500 text-xs font-semibold hover:bg-secondary-500/10 transition-colors">
-              <IconRefresh className="size-3" />Load Brand Kit
-            </button>
-          </div>
-          {savedFeedback && (
-            <p className="text-[0.625rem] text-center mt-2 font-medium text-primary-500 animate-pulse">{savedFeedback}</p>
-          )}
-        </div>
-
-        {/* AI Generate */}
-        <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-4">
-          <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-secondary-500 mb-3">
-            <IconSparkles className="size-3.5" />AI Brand Generator
-          </label>
-          <button onClick={generateWithAI} disabled={!config.brandName.trim() || isGenerating}
-            className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-secondary-500 text-white text-xs font-bold hover:bg-secondary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-            {isGenerating ? <><IconLoader className="size-3.5 animate-spin" />Generating Identity…</> : <><IconWand className="size-3.5" />Generate Brand Identity with AI</>}
-          </button>
-          <p className="text-[0.5625rem] text-gray-400 text-center mt-1.5">AI will suggest colors, fonts, and pattern based on your brand</p>
-        </div>
-      </div>
-
-      {/* ── Right Panel: Preview ─────────────────────────── */}
-      <div className="lg:col-span-3 space-y-5">
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-800">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">Brand Board Preview</span>
-              <span className="text-xs text-gray-400">1600×1200</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <button onClick={handleCopyColors} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                {copiedColors ? <IconCheck className="size-3 text-success" /> : <IconCopy className="size-3" />}{copiedColors ? "Copied" : "Colors"}
-              </button>
-              <button onClick={handleDownloadPng} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-primary-500 text-gray-950 hover:bg-primary-400 transition-colors">
-                <IconDownload className="size-3" />PNG
-              </button>
-            </div>
-          </div>
-          <div className="flex items-center justify-center p-6 bg-[repeating-conic-gradient(#e5e7eb_0%_25%,transparent_0%_50%)] dark:bg-[repeating-conic-gradient(#1f2937_0%_25%,transparent_0%_50%)] bg-size-[24px_24px] min-h-80">
-            <div className="shadow-2xl rounded-lg overflow-hidden w-full max-w-2xl">
-              <canvas ref={canvasRef} className="w-full h-auto" style={{ aspectRatio: "1600 / 1200" }} />
-            </div>
-          </div>
-        </div>
-
-        {/* Quick color reference */}
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Quick Color Reference</h3>
-          <div className="grid grid-cols-5 gap-3">
-            {[
-              { label: "Primary", color: config.palette.primary },
-              { label: "Secondary", color: config.palette.secondary },
-              { label: "Accent", color: config.palette.accent },
-              { label: "Neutral", color: config.palette.neutral },
-              { label: "Background", color: config.palette.background },
-            ].map(({ label, color }) => (
-              <div key={label} className="text-center">
-                <div className="h-16 rounded-xl border border-gray-200 dark:border-gray-700 mb-2" style={{ backgroundColor: color }} />
-                <p className="text-[0.6875rem] font-semibold text-gray-700 dark:text-gray-300">{label}</p>
-                <p className="text-[0.5625rem] text-gray-400 font-mono">{color.toUpperCase()}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Color Accessibility Checker */}
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
-            <IconShield className="size-3.5" />Color Accessibility (WCAG)
-          </h3>
-          <div className="space-y-2">
-            {(() => {
-              const paletteColors = [
-                { label: "Primary", hex: config.palette.primary },
-                { label: "Secondary", hex: config.palette.secondary },
-                { label: "Accent", hex: config.palette.accent },
-                { label: "Neutral", hex: config.palette.neutral },
-                { label: "Background", hex: config.palette.background },
-              ];
-              const pairs: { fg: typeof paletteColors[0]; bg: typeof paletteColors[0] }[] = [];
-              for (let i = 0; i < paletteColors.length; i++) {
-                for (let j = i + 1; j < paletteColors.length; j++) {
-                  pairs.push({ fg: paletteColors[i], bg: paletteColors[j] });
+          {/* Color Accessibility Checker */}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/30 p-3">
+            <h3 className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+              <IconShield className="size-3" />WCAG Accessibility
+            </h3>
+            <div className="space-y-1.5">
+              {(() => {
+                const paletteColors = [
+                  { label: "Primary", hex: config.palette.primary },
+                  { label: "Secondary", hex: config.palette.secondary },
+                  { label: "Accent", hex: config.palette.accent },
+                  { label: "Neutral", hex: config.palette.neutral },
+                  { label: "Background", hex: config.palette.background },
+                ];
+                const pairs: { fg: typeof paletteColors[0]; bg: typeof paletteColors[0] }[] = [];
+                for (let i = 0; i < paletteColors.length; i++) {
+                  for (let j = i + 1; j < paletteColors.length; j++) {
+                    pairs.push({ fg: paletteColors[i], bg: paletteColors[j] });
+                  }
                 }
-              }
-              return pairs.map(({ fg, bg }) => {
-                const ratio = contrastRatio(fg.hex, bg.hex);
-                const level = wcagLevel(ratio);
-                return (
-                  <div key={`${fg.label}-${bg.label}`} className="flex items-center gap-3 p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                    <div className="flex items-center gap-1.5 min-w-28">
-                      <div className="size-4 rounded-full border border-gray-300 dark:border-gray-600" style={{ backgroundColor: fg.hex }} />
-                      <span className="text-[0.625rem] text-gray-500 dark:text-gray-400">on</span>
-                      <div className="size-4 rounded-full border border-gray-300 dark:border-gray-600" style={{ backgroundColor: bg.hex }} />
-                    </div>
-                    <div className="flex-1">
-                      <span className="text-[0.625rem] font-medium text-gray-700 dark:text-gray-300">
-                        {fg.label} / {bg.label}
+                return pairs.map(({ fg, bg }) => {
+                  const ratio = contrastRatio(fg.hex, bg.hex);
+                  const level = wcagLevel(ratio);
+                  return (
+                    <div key={`${fg.label}-${bg.label}`} className="flex items-center gap-2 p-1.5 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                      <div className="flex items-center gap-1 min-w-16">
+                        <div className="size-3 rounded-full border border-gray-300 dark:border-gray-600" style={{ backgroundColor: fg.hex }} />
+                        <span className="text-[0.5rem] text-gray-500 dark:text-gray-400">on</span>
+                        <div className="size-3 rounded-full border border-gray-300 dark:border-gray-600" style={{ backgroundColor: bg.hex }} />
+                      </div>
+                      <span className="text-[0.5rem] font-mono font-bold text-gray-700 dark:text-gray-300 tabular-nums">
+                        {ratio.toFixed(1)}:1
                       </span>
+                      <div className="flex items-center gap-0.5 ml-auto">
+                        <span className={`text-[0.45rem] font-bold px-1 py-0.5 rounded ${level.aa ? "bg-success/10 text-success" : "bg-error/10 text-error"}`}>
+                          AA{level.aa ? "✓" : "✗"}
+                        </span>
+                        <span className={`text-[0.45rem] font-bold px-1 py-0.5 rounded ${level.aaa ? "bg-success/10 text-success" : "bg-error/10 text-error"}`}>
+                          AAA{level.aaa ? "✓" : "✗"}
+                        </span>
+                      </div>
                     </div>
-                    <span className="text-xs font-mono font-bold text-gray-700 dark:text-gray-300 tabular-nums">
-                      {ratio.toFixed(2)}:1
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <span className={`text-[0.5rem] font-bold px-1.5 py-0.5 rounded ${level.aa ? "bg-success/10 text-success" : "bg-error/10 text-error"}`}>
-                        AA {level.aa ? "✓" : "✗"}
-                      </span>
-                      <span className={`text-[0.5rem] font-bold px-1.5 py-0.5 rounded ${level.aaa ? "bg-success/10 text-success" : "bg-error/10 text-error"}`}>
-                        AAA {level.aaa ? "✓" : "✗"}
-                      </span>
-                    </div>
-                  </div>
-                );
-              });
-            })()}
+                  );
+                });
+              })()}
+            </div>
+            <p className="text-[0.45rem] text-gray-400 mt-1.5">AA ≥ 4.5:1 • AAA ≥ 7:1</p>
           </div>
-          <p className="text-[0.5rem] text-gray-400 mt-2">AA requires ≥ 4.5:1 for normal text • AAA requires ≥ 7:1</p>
-        </div>
 
-        {/* Export */}
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Export</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            <button onClick={handleDownloadPng} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-primary-500/30 bg-primary-500/5 text-primary-500 transition-colors hover:bg-primary-500/10">
-              <IconDownload className="size-4" /><span className="text-xs font-semibold">Brand Board</span>
-              <span className="text-[0.5625rem] opacity-60">1600×1200 PNG</span>
-            </button>
-            <button onClick={handleExportSVG} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-secondary-500/30 bg-secondary-500/5 text-secondary-500 transition-colors hover:bg-secondary-500/10">
-              <IconDownload className="size-4" /><span className="text-xs font-semibold">SVG Board</span>
-              <span className="text-[0.5625rem] opacity-60">Vector export</span>
-            </button>
-            <button onClick={handleExportPDF} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-primary-500/30 bg-primary-500/5 text-primary-500 transition-colors hover:bg-primary-500/10">
-              <IconFileText className="size-4" /><span className="text-xs font-semibold">PDF Guide</span>
-              <span className="text-[0.5625rem] opacity-60">Brand guidelines</span>
-            </button>
-            <button onClick={handleCopyColors} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-secondary-500/30 bg-secondary-500/5 text-secondary-500 transition-colors hover:bg-secondary-500/10">
-              <IconCopy className="size-4" /><span className="text-xs font-semibold">Copy Colors</span>
-              <span className="text-[0.5625rem] opacity-60">All hex values</span>
-            </button>
-            <button onClick={handleSaveBrandKit} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-primary-500/30 bg-primary-500/5 text-primary-500 transition-colors hover:bg-primary-500/10">
-              <IconLayers className="size-4" /><span className="text-xs font-semibold">Save Kit</span>
-              <span className="text-[0.5625rem] opacity-60">To local storage</span>
-            </button>
-            <button onClick={() => { updateConfig({}); /* trigger re-render */ }} className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800">
-              <IconRefresh className="size-4" /><span className="text-xs font-semibold">Refresh</span>
-              <span className="text-[0.5625rem] opacity-60">Re-render board</span>
-            </button>
-          </div>
+          {/* Tone of Voice */}
+          <Section icon={<IconBookOpen className="size-3.5" />} label="Tone of Voice" id="tone" open={openSections.has("tone")} toggle={toggleSection}>
+            <div className="space-y-3">
+              <div>
+                <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 mb-1">Voice Attributes</p>
+                <input type="text" placeholder="e.g. Professional, Friendly, Bold" value={config.toneOfVoice.attributes}
+                  onChange={(e) => updateConfig({ toneOfVoice: { ...config.toneOfVoice, attributes: e.target.value } })}
+                  className="w-full h-10 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-sm placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
+                <p className="text-[0.5rem] text-gray-400 mt-0.5">Comma-separated attributes</p>
+              </div>
+
+              <div>
+                <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-success mb-1">✓ Do Say (example phrases)</p>
+                {config.toneOfVoice.exampleDo.map((ex, i) => (
+                  <div key={`do-${i}`} className="flex items-center gap-1.5 mb-1.5">
+                    <input type="text" placeholder={`Example phrase ${i + 1}`} value={ex}
+                      onChange={(e) => {
+                        const next = [...config.toneOfVoice.exampleDo];
+                        next[i] = e.target.value;
+                        updateConfig({ toneOfVoice: { ...config.toneOfVoice, exampleDo: next } });
+                      }}
+                      className="flex-1 h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-success focus:ring-2 focus:ring-success/20 transition-all" />
+                    {config.toneOfVoice.exampleDo.length > 1 && (
+                      <button onClick={() => {
+                        const next = config.toneOfVoice.exampleDo.filter((_, j) => j !== i);
+                        updateConfig({ toneOfVoice: { ...config.toneOfVoice, exampleDo: next } });
+                      }} className="text-gray-400 hover:text-error transition-colors"><IconTrash className="size-3" /></button>
+                    )}
+                  </div>
+                ))}
+                <button onClick={() => updateConfig({ toneOfVoice: { ...config.toneOfVoice, exampleDo: [...config.toneOfVoice.exampleDo, ""] } })}
+                  className="flex items-center gap-1 text-[0.625rem] text-success hover:text-success/80 transition-colors font-medium">
+                  <IconPlus className="size-2.5" />Add phrase
+                </button>
+              </div>
+
+              <div>
+                <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-error mb-1">✗ Don&apos;t Say</p>
+                {config.toneOfVoice.exampleDont.map((ex, i) => (
+                  <div key={`dont-${i}`} className="flex items-center gap-1.5 mb-1.5">
+                    <input type="text" placeholder={`Avoid saying ${i + 1}`} value={ex}
+                      onChange={(e) => {
+                        const next = [...config.toneOfVoice.exampleDont];
+                        next[i] = e.target.value;
+                        updateConfig({ toneOfVoice: { ...config.toneOfVoice, exampleDont: next } });
+                      }}
+                      className="flex-1 h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-error focus:ring-2 focus:ring-error/20 transition-all" />
+                    {config.toneOfVoice.exampleDont.length > 1 && (
+                      <button onClick={() => {
+                        const next = config.toneOfVoice.exampleDont.filter((_, j) => j !== i);
+                        updateConfig({ toneOfVoice: { ...config.toneOfVoice, exampleDont: next } });
+                      }} className="text-gray-400 hover:text-error transition-colors"><IconTrash className="size-3" /></button>
+                    )}
+                  </div>
+                ))}
+                <button onClick={() => updateConfig({ toneOfVoice: { ...config.toneOfVoice, exampleDont: [...config.toneOfVoice.exampleDont, ""] } })}
+                  className="flex items-center gap-1 text-[0.625rem] text-error hover:text-error/80 transition-colors font-medium">
+                  <IconPlus className="size-2.5" />Add phrase
+                </button>
+              </div>
+            </div>
+          </Section>
         </div>
-      </div>
-    </div>
+      }
+      actionsBar={
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleDownloadPng}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors"
+          >
+            <IconDownload className="size-3" />
+            PNG
+          </button>
+          <button
+            onClick={handleExportSVG}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors"
+          >
+            <IconDownload className="size-3" />
+            SVG
+          </button>
+          <button
+            onClick={handleExportPDF}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors"
+          >
+            <IconFileText className="size-3" />
+            PDF
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors"
+          >
+            <IconCopy className="size-3" />
+            Copy
+          </button>
+          <button
+            onClick={handleCopyColors}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors"
+          >
+            {copiedColors ? <IconCheck className="size-3 text-success" /> : <IconDroplet className="size-3" />}
+            {copiedColors ? "Copied!" : "Colors"}
+          </button>
+        </div>
+      }
+    />
   );
 }

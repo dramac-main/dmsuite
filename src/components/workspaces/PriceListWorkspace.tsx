@@ -1,14 +1,18 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   IconTag,
   IconSparkles,
   IconWand,
   IconLoader,
   IconDownload,
+  IconCopy,
 } from "@/components/icons";
 import { cleanAIText } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "./StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
+import { drawDocumentThumbnail } from "@/lib/template-renderers";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -85,7 +89,11 @@ function defaultCategories(): PriceCategory[] {
 export default function PriceListWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
+
+  /* ── Zoom ──────────────────────────────────────────────── */
+  const [zoom, setZoom] = useState(0.72);
+  const displayWidth = PAGE_W * zoom;
+  const displayHeight = PAGE_H * zoom;
 
   const [config, setConfig] = useState<PriceListConfig>({
     template: "modern",
@@ -323,18 +331,110 @@ export default function PriceListWorkspace() {
     link.click();
   };
 
+  /* ── Visual Template Previews ──────────────────────────── */
+  const HEADER_MAP: Record<PriceListTemplate, "bar" | "strip" | "minimal" | "gradient" | "centered" | "sidebar"> = {
+    modern: "gradient",
+    classic: "centered",
+    menu: "sidebar",
+    catalog: "bar",
+  };
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () =>
+      TEMPLATES.map((t) => ({
+        id: t.id,
+        label: t.name,
+        render: (ctx: CanvasRenderingContext2D, w: number, h: number) =>
+          drawDocumentThumbnail(ctx, w, h, {
+            primaryColor: config.primaryColor,
+            headerStyle: HEADER_MAP[t.id],
+            showTable: true,
+            showSections: 2,
+          }),
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [config.primaryColor],
+  );
+
+  /* ── Clipboard Copy ────────────────────────────────────── */
+  const handleCopy = useCallback(async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    try {
+      const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
+      if (blob) await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    } catch { /* silent */ }
+  }, []);
+
   /* ── UI ──────────────────────────────────────────────────── */
   return (
-    <div>
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
-        {(["canvas", "settings"] as const).map((t) => (
-          <button key={t} onClick={() => setMobileTab(t)} className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}>{t}</button>
-        ))}
-      </div>
+    <StickyCanvasLayout
+      canvasRef={canvasRef}
+      displayWidth={displayWidth}
+      displayHeight={displayHeight}
+      label={`Price List — ${config.currency} — ${PAGE_W}×${PAGE_H}`}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.1, 2))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.1, 0.3))}
+      onZoomFit={() => setZoom(0.72)}
+      mobileTabs={["Canvas", "Settings"]}
+      toolbar={
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <IconTag className="size-4 text-primary-500" />
+          <span className="font-semibold text-gray-300">{config.listTitle}</span>
+          <span className="text-gray-600">|</span>
+          <span>{config.currency} — {categories.length} categories, {allItems.length} items</span>
+        </div>
+      }
+      actionsBar={
+        <>
+          <button
+            onClick={exportPNG}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-linear-to-r from-primary-500 to-secondary-500 text-white text-xs font-bold hover:from-primary-400 hover:to-secondary-400 transition-colors"
+          >
+            <IconDownload className="size-3.5" /> Export PNG
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-600 text-gray-300 text-xs font-semibold hover:bg-gray-700/50 transition-colors"
+          >
+            <IconCopy className="size-3.5" /> Copy
+          </button>
+        </>
+      }
+      leftPanel={
+        <div className="space-y-3">
+          {/* AI Generation */}
+          <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-3">
+            <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-secondary-500 mb-2">
+              <IconSparkles className="size-3" />
+              AI Price List Generator
+            </label>
+            <textarea
+              rows={3}
+              placeholder="Describe the business/services (e.g. 'Printing shop in Lusaka')..."
+              value={config.description}
+              onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border border-secondary-500/20 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-secondary-500/50 focus:ring-2 focus:ring-secondary-500/20 transition-all resize-none mb-2"
+            />
+            <button
+              onClick={generateAI}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-linear-to-r from-secondary-500 to-primary-500 text-white text-[0.625rem] font-bold hover:from-secondary-400 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
+              {loading ? "Generating…" : "Generate Price List"}
+            </button>
+          </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Settings */}
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
+          {/* Template Slider */}
+          <TemplateSlider
+            templates={templatePreviews}
+            activeId={config.template}
+            onSelect={(id) => setConfig((p) => ({ ...p, template: id as PriceListTemplate }))}
+            label="Template"
+          />
+
+          {/* Price List Settings */}
           <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconTag className="size-4 text-primary-500" />Price List Settings</h3>
 
@@ -350,13 +450,6 @@ export default function PriceListWorkspace() {
             <div className="flex items-center gap-2">
               <input type="checkbox" checked={config.showDescriptions} onChange={(e) => setConfig((p) => ({ ...p, showDescriptions: e.target.checked }))} className="rounded" />
               <label className="text-xs text-gray-400">Show descriptions</label>
-            </div>
-
-            <label className="block text-xs text-gray-400">Template</label>
-            <div className="grid grid-cols-2 gap-1.5">
-              {TEMPLATES.map((t) => (
-                <button key={t.id} onClick={() => setConfig((p) => ({ ...p, template: t.id }))} className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${config.template === t.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{t.name}</button>
-              ))}
             </div>
 
             <label className="block text-xs text-gray-400">Primary Color</label>
@@ -388,31 +481,8 @@ export default function PriceListWorkspace() {
             ))}
             <button onClick={() => setCategories((c) => [...c, { id: uid(), name: "New Category", items: [] }])} className="text-xs text-primary-500 hover:underline">+ Add Category</button>
           </div>
-
-          {/* AI Generation */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Price List Generator</h3>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the business/services (e.g. 'Printing shop in Lusaka')..." value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
-            <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
-              {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
-              {loading ? "Generating…" : "Generate Price List"}
-            </button>
-          </div>
-
-          {/* Export */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-            <button onClick={exportPNG} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"><IconDownload className="size-4" />Export PNG</button>
-          </div>
         </div>
-
-        {/* Canvas */}
-        <div className={`flex-1 min-w-0 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-          <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
-            <canvas ref={canvasRef} style={{ width: Math.min(PAGE_W, 500), height: Math.min(PAGE_W, 500) * (PAGE_H / PAGE_W) }} className="rounded-lg shadow-lg" />
-          </div>
-          <p className="text-xs text-gray-400 text-center mt-2">Price List — {config.currency} — {PAGE_W}×{PAGE_H}px</p>
-        </div>
-      </div>
-    </div>
+      }
+    />
   );
 }

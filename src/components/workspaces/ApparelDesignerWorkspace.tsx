@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
-import { IconSparkles, IconWand, IconLoader, IconDownload, IconShirt } from "@/components/icons";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { IconSparkles, IconWand, IconLoader, IconDownload, IconShirt, IconCopy } from "@/components/icons";
 import { cleanAIText } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
 
 type GarmentType = "tshirt" | "hoodie" | "cap" | "totebag" | "mug";
 type PrintZone = "front" | "back" | "left-sleeve" | "right-sleeve";
@@ -44,7 +46,7 @@ function getContrastColor(hex: string): string {
 export default function ApparelDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
+  const [zoom, setZoom] = useState(0.75);
   const [config, setConfig] = useState<ApparelConfig>({
     garmentType: "tshirt", garmentColor: "#ffffff", printZone: "front",
     template: "typography", designText: "DMSuite", subText: "Design Excellence",
@@ -182,44 +184,161 @@ export default function ApparelDesignerWorkspace() {
 
   const exportPNG = () => { const c = canvasRef.current; if (!c) return; const a = document.createElement("a"); a.download = `apparel-${config.garmentType}.png`; a.href = c.toDataURL("image/png"); a.click(); };
 
-  return (
-    <div>
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
-        {(["canvas", "settings"] as const).map((t) => (<button key={t} onClick={() => setMobileTab(t)} className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}>{t}</button>))}
+  /* ── Zoom / Display ─────────────────────────────────────── */
+  const displayWidth = Math.min(500, garment.w);
+  const displayHeight = displayWidth * (garment.h / garment.w);
+
+  /* ── Template Previews ──────────────────────────────────── */
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () => TEMPLATES.map((t) => ({
+      id: t.id,
+      label: t.name,
+      render: (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+        ctx.fillStyle = config.garmentColor;
+        ctx.fillRect(0, 0, w, h);
+        const tc = getContrastColor(config.garmentColor);
+        ctx.fillStyle = config.primaryColor;
+        if (t.id === "typography") {
+          ctx.font = "bold 11px Inter, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("Abc", w / 2, h / 2 + 4);
+        } else if (t.id === "graphic") {
+          ctx.beginPath(); ctx.arc(w / 2, h * 0.38, 12, 0, Math.PI * 2); ctx.fill();
+          ctx.font = "bold 8px Inter, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("Abc", w / 2, h * 0.75);
+        } else if (t.id === "minimal") {
+          ctx.fillStyle = tc;
+          ctx.font = "300 10px Inter, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("Abc", w / 2, h / 2 + 3);
+        } else if (t.id === "vintage") {
+          ctx.strokeStyle = config.primaryColor;
+          ctx.lineWidth = 1;
+          ctx.strokeRect(6, 6, w - 12, h - 12);
+          ctx.font = "bold 9px Georgia, serif";
+          ctx.textAlign = "center";
+          ctx.fillText("Abc", w / 2, h / 2 + 3);
+        } else if (t.id === "sporty") {
+          ctx.font = "bold italic 12px Inter, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("Abc", w / 2, h / 2 + 4);
+          ctx.fillStyle = config.primaryColor + "30";
+          ctx.fillRect(6, h / 2 + 8, w - 12, 2);
+        } else {
+          ctx.save();
+          ctx.translate(w / 2, h / 2);
+          ctx.rotate(-0.1);
+          ctx.font = "bold 11px Inter, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("Abc", 0, 3);
+          ctx.restore();
+        }
+      },
+    })),
+    [config.garmentColor, config.primaryColor]
+  );
+
+  /* ── Copy to Clipboard ──────────────────────────────────── */
+  const handleCopy = useCallback(async () => {
+    if (!canvasRef.current) return;
+    try {
+      canvasRef.current.toBlob(async (blob) => {
+        if (!blob) return;
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      }, "image/png");
+    } catch { /* ignore */ }
+  }, []);
+
+  /* ── Left Panel ─────────────────────────────────────────── */
+  const leftPanel = (
+    <div className="space-y-3">
+      {/* AI Generator */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Generator</h3>
+        <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={2} placeholder="Describe the design concept…" value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
+        <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">{loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}{loading ? "Generating…" : "Generate Design"}</button>
       </div>
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconShirt className="size-4 text-primary-500" />Apparel Settings</h3>
-            <label className="block text-xs text-gray-400">Garment</label>
-            <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.garmentType} onChange={(e) => setConfig((p) => ({ ...p, garmentType: e.target.value as GarmentType }))}>{GARMENTS.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select>
-            <label className="block text-xs text-gray-400">Garment Color</label>
-            <div className="flex gap-1.5 flex-wrap">{GARMENT_COLORS.map((c) => (<button key={c} onClick={() => setConfig((p) => ({ ...p, garmentColor: c }))} className={`size-7 rounded-full border-2 ${config.garmentColor === c ? "border-primary-500 scale-110" : "border-gray-300 dark:border-gray-600"}`} style={{ backgroundColor: c }} />))}</div>
-            <label className="block text-xs text-gray-400">Print Zone</label>
-            <div className="grid grid-cols-2 gap-1.5">{(["front", "back", "left-sleeve", "right-sleeve"] as const).map((z) => (<button key={z} onClick={() => setConfig((p) => ({ ...p, printZone: z }))} className={`px-2 py-1.5 rounded-lg text-xs font-medium capitalize ${config.printZone === z ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"}`}>{z.replace("-", " ")}</button>))}</div>
-            <label className="block text-xs text-gray-400">Template</label>
-            <div className="grid grid-cols-3 gap-1.5">{TEMPLATES.map((t) => (<button key={t.id} onClick={() => setConfig((p) => ({ ...p, template: t.id }))} className={`px-2 py-1.5 rounded-lg text-xs font-medium ${config.template === t.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"}`}>{t.name}</button>))}</div>
-            <label className="block text-xs text-gray-400">Design Text</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.designText} onChange={(e) => setConfig((p) => ({ ...p, designText: e.target.value }))} />
-            <label className="block text-xs text-gray-400">Sub Text</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.subText} onChange={(e) => setConfig((p) => ({ ...p, subText: e.target.value }))} />
-            <label className="block text-xs text-gray-400">Design Color</label>
-            <div className="flex gap-1.5 flex-wrap">{["#1e40af", "#0f766e", "#7c3aed", "#dc2626", "#ea580c", "#000000", "#ffffff", "#f59e0b"].map((c) => (<button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-primary-500 scale-110" : "border-gray-300 dark:border-gray-600"}`} style={{ backgroundColor: c }} />))}</div>
-          </div>
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Generator</h3>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={2} placeholder="Describe the design concept…" value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
-            <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50">{loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}{loading ? "Generating…" : "Generate Design"}</button>
-          </div>
-          <button onClick={exportPNG} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"><IconDownload className="size-4" />Export PNG</button>
-        </div>
-        <div className={`flex-1 min-w-0 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-          <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
-            <canvas ref={canvasRef} style={{ width: Math.min(garment.w, 500), height: Math.min(garment.w, 500) * (garment.h / garment.w) }} className="rounded-lg shadow-lg" />
-          </div>
-          <p className="text-xs text-gray-400 text-center mt-2">{garment.name} — {config.printZone} — {garment.printW}×{garment.printH}px print area</p>
-        </div>
+
+      {/* Template Slider */}
+      <TemplateSlider
+        templates={templatePreviews}
+        activeId={config.template}
+        onSelect={(id) => setConfig((p) => ({ ...p, template: id as ApparelTemplate }))}
+        thumbWidth={120}
+        thumbHeight={90}
+        label="Templates"
+      />
+
+      {/* Apparel Settings */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconShirt className="size-4 text-primary-500" />Apparel Settings</h3>
+        <label className="block text-xs text-gray-400">Garment</label>
+        <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.garmentType} onChange={(e) => setConfig((p) => ({ ...p, garmentType: e.target.value as GarmentType }))}>{GARMENTS.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select>
+        <label className="block text-xs text-gray-400">Garment Color</label>
+        <div className="flex gap-1.5 flex-wrap">{GARMENT_COLORS.map((c) => (<button key={c} onClick={() => setConfig((p) => ({ ...p, garmentColor: c }))} className={`size-7 rounded-full border-2 ${config.garmentColor === c ? "border-primary-500 scale-110" : "border-gray-300 dark:border-gray-600"}`} style={{ backgroundColor: c }} />))}</div>
+        <label className="block text-xs text-gray-400">Print Zone</label>
+        <div className="grid grid-cols-2 gap-1.5">{(["front", "back", "left-sleeve", "right-sleeve"] as const).map((z) => (<button key={z} onClick={() => setConfig((p) => ({ ...p, printZone: z }))} className={`px-2 py-1.5 rounded-lg text-xs font-medium capitalize ${config.printZone === z ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"}`}>{z.replace("-", " ")}</button>))}</div>
       </div>
     </div>
+  );
+
+  /* ── Right Panel (Content Editors) ───────────────────────── */
+  const rightPanel = (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Design Content</h3>
+        <label className="block text-xs text-gray-400">Design Text</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.designText} onChange={(e) => setConfig((p) => ({ ...p, designText: e.target.value }))} />
+        <label className="block text-xs text-gray-400">Sub Text</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.subText} onChange={(e) => setConfig((p) => ({ ...p, subText: e.target.value }))} />
+        <label className="block text-xs text-gray-400">Design Color</label>
+        <div className="flex gap-1.5 flex-wrap">{["#1e40af", "#0f766e", "#7c3aed", "#dc2626", "#ea580c", "#000000", "#ffffff", "#f59e0b"].map((c) => (<button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-primary-500 scale-110" : "border-gray-300 dark:border-gray-600"}`} style={{ backgroundColor: c }} />))}</div>
+      </div>
+    </div>
+  );
+
+  /* ── Toolbar ─────────────────────────────────────────────── */
+  const toolbar = (
+    <div className="flex items-center gap-1.5">
+      <span className="text-xs font-semibold text-gray-400 capitalize">{garment.name}</span>
+      <span className="text-gray-600 dark:text-gray-600">·</span>
+      <span className="text-xs text-gray-500">{config.printZone.replace("-", " ")} — {garment.printW}×{garment.printH}px</span>
+    </div>
+  );
+
+  return (
+    <StickyCanvasLayout
+      canvasRef={canvasRef}
+      displayWidth={displayWidth}
+      displayHeight={displayHeight}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
+      onZoomFit={() => setZoom(0.75)}
+      label={`${garment.name} — ${config.printZone.replace("-", " ")} — ${garment.printW}×${garment.printH}px print area`}
+      mobileTabs={["Canvas", "Settings", "Content"]}
+      toolbar={toolbar}
+      leftPanel={leftPanel}
+      rightPanel={rightPanel}
+      actionsBar={
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportPNG}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors"
+          >
+            <IconDownload className="size-3" />
+            Download PNG
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors"
+          >
+            <IconCopy className="size-3" />
+            Copy
+          </button>
+        </div>
+      }
+    />
   );
 }

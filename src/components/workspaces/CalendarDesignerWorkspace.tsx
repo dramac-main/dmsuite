@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   IconCalendar,
   IconSparkles,
   IconWand,
   IconLoader,
   IconDownload,
+  IconCopy,
 } from "@/components/icons";
 import { cleanAIText } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -76,7 +79,7 @@ function getFirstDayOfMonth(year: number, month: number): number {
 export default function CalendarDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
+  const [zoom, setZoom] = useState(0.75);
 
   const [config, setConfig] = useState<CalendarConfig>({
     type: "wall",
@@ -93,6 +96,69 @@ export default function CalendarDesignerWorkspace() {
   const calType = TYPES.find((t) => t.id === config.type) || TYPES[0];
   const CW = calType.w;
   const CH = calType.h;
+
+  const displayWidth = Math.min(CW, 600);
+  const displayHeight = displayWidth * (CH / CW);
+
+  /* ── Visual Template Previews ────────────────────────── */
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () => TEMPLATES.map((t) => ({
+      id: t.id,
+      label: t.name,
+      render: (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, w, h);
+        const headerH = h * 0.35;
+        if (t.id === "corporate") {
+          ctx.fillStyle = config.primaryColor;
+          ctx.fillRect(0, 0, w, headerH);
+        } else if (t.id === "nature") {
+          const g = ctx.createLinearGradient(0, 0, w, headerH);
+          g.addColorStop(0, "#065f46"); g.addColorStop(1, "#059669");
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, w, headerH);
+        } else if (t.id === "vibrant") {
+          const g = ctx.createLinearGradient(0, 0, w, 0);
+          g.addColorStop(0, config.primaryColor); g.addColorStop(0.5, "#f59e0b"); g.addColorStop(1, "#ef4444");
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, w, headerH);
+        } else {
+          ctx.fillStyle = "#f8fafc";
+          ctx.fillRect(0, 0, w, headerH);
+          ctx.strokeStyle = "#e2e8f0";
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(0, headerH); ctx.lineTo(w, headerH); ctx.stroke();
+        }
+        ctx.fillStyle = t.id === "minimal" ? "#1e293b" : "#ffffff";
+        ctx.font = "bold 9px Inter, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("Month", 6, headerH - 6);
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "7px Inter, sans-serif";
+        const gridTop = headerH + 4;
+        for (let r = 0; r < 3; r++) {
+          for (let c = 0; c < 7; c++) {
+            ctx.fillStyle = "#e2e8f0";
+            ctx.fillRect(6 + c * ((w - 12) / 7), gridTop + r * 10, ((w - 12) / 7) - 1, 8);
+          }
+        }
+        ctx.strokeStyle = "#e2e8f0";
+        ctx.strokeRect(0, 0, w, h);
+      },
+    })),
+    [config.primaryColor]
+  );
+
+  /* ── Copy to Clipboard ──────────────────────────────── */
+  const handleCopy = useCallback(async () => {
+    if (!canvasRef.current) return;
+    try {
+      canvasRef.current.toBlob(async (blob) => {
+        if (!blob) return;
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      }, "image/png");
+    } catch { /* ignore */ }
+  }, []);
 
   /* ── Render ─────────────────────────────────────────────── */
   const render = useCallback(() => {
@@ -296,97 +362,124 @@ export default function CalendarDesignerWorkspace() {
     link.click();
   };
 
-  /* ── UI ──────────────────────────────────────────────────── */
-  return (
-    <div>
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
-        {(["canvas", "settings"] as const).map((t) => (
-          <button key={t} onClick={() => setMobileTab(t)} className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}>{t}</button>
-        ))}
+  /* ── Left Panel ─────────────────────────────────────────── */
+  const leftPanel = (
+    <div className="space-y-4">
+      {/* AI Generation */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Theme Generator</h3>
+        <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the calendar theme (e.g. 'Corporate calendar for a Lusaka law firm')..." value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
+        <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
+          {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
+          {loading ? "Generating…" : "Generate Theme"}
+        </button>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Settings */}
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconCalendar className="size-4 text-primary-500" />Calendar Settings</h3>
+      {/* Template Slider */}
+      <TemplateSlider
+        templates={templatePreviews}
+        activeId={config.template}
+        onSelect={(id) => setConfig((p) => ({ ...p, template: id as CalendarTemplate }))}
+        label="Templates"
+      />
 
-            <label className="block text-xs text-gray-400">Calendar Type</label>
-            <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.type} onChange={(e) => setConfig((p) => ({ ...p, type: e.target.value as CalendarType }))}>
-              {TYPES.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+      {/* Calendar Settings */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconCalendar className="size-4 text-primary-500" />Calendar Settings</h3>
+
+        <label className="block text-xs text-gray-400">Calendar Type</label>
+        <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.type} onChange={(e) => setConfig((p) => ({ ...p, type: e.target.value as CalendarType }))}>
+          {TYPES.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs text-gray-400">Year</label>
+            <input type="number" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.year} onChange={(e) => setConfig((p) => ({ ...p, year: Number(e.target.value) }))} />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400">Month</label>
+            <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.month} onChange={(e) => setConfig((p) => ({ ...p, month: Number(e.target.value) }))}>
+              {MONTH_NAMES.map((m, i) => <option key={i} value={i}>{m}</option>)}
             </select>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs text-gray-400">Year</label>
-                <input type="number" className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.year} onChange={(e) => setConfig((p) => ({ ...p, year: Number(e.target.value) }))} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400">Month</label>
-                <select className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.month} onChange={(e) => setConfig((p) => ({ ...p, month: Number(e.target.value) }))}>
-                  {MONTH_NAMES.map((m, i) => <option key={i} value={i}>{m}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <label className="block text-xs text-gray-400">Week Start</label>
-            <div className="flex gap-2">
-              {(["monday", "sunday"] as const).map((s) => (
-                <button key={s} onClick={() => setConfig((p) => ({ ...p, weekStart: s }))} className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold capitalize ${config.weekStart === s ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-500"}`}>{s}</button>
-              ))}
-            </div>
-
-            <label className="block text-xs text-gray-400">Title</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.title} onChange={(e) => setConfig((p) => ({ ...p, title: e.target.value }))} placeholder="Optional title" />
-
-            <label className="block text-xs text-gray-400">Subtitle</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.subtitle} onChange={(e) => setConfig((p) => ({ ...p, subtitle: e.target.value }))} placeholder="Optional subtitle" />
-
-            <label className="block text-xs text-gray-400">Template</label>
-            <div className="grid grid-cols-2 gap-1.5">
-              {TEMPLATES.map((t) => (
-                <button key={t.id} onClick={() => setConfig((p) => ({ ...p, template: t.id }))} className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${config.template === t.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{t.name}</button>
-              ))}
-            </div>
-
-            <label className="block text-xs text-gray-400">Primary Color</label>
-            <div className="flex gap-1.5 flex-wrap">
-              {COLOR_PRESETS.map((c) => (
-                <button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
-              ))}
-            </div>
-          </div>
-
-          {/* Zambian Holidays Info */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">🇿🇲 Zambian Holidays</h3>
-            <p className="text-xs text-gray-400">Public holidays are highlighted in red on the calendar grid. Includes all gazetted Zambian holidays.</p>
-          </div>
-
-          {/* AI Generation */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Theme Generator</h3>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the calendar theme (e.g. 'Corporate calendar for a Lusaka law firm')..." value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
-            <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
-              {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
-              {loading ? "Generating…" : "Generate Theme"}
-            </button>
-          </div>
-
-          {/* Export */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-            <button onClick={exportPNG} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"><IconDownload className="size-4" />Export PNG</button>
           </div>
         </div>
 
-        {/* Canvas */}
-        <div className={`flex-1 min-w-0 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-          <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
-            <canvas ref={canvasRef} style={{ width: Math.min(CW, 700), height: Math.min(CW, 700) * (CH / CW) }} className="rounded-lg shadow-lg" />
-          </div>
-          <p className="text-xs text-gray-400 text-center mt-2">{calType.name} — {MONTH_NAMES[config.month]} {config.year} — {CW}×{CH}px</p>
+        <label className="block text-xs text-gray-400">Week Start</label>
+        <div className="flex gap-2">
+          {(["monday", "sunday"] as const).map((s) => (
+            <button key={s} onClick={() => setConfig((p) => ({ ...p, weekStart: s }))} className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold capitalize ${config.weekStart === s ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-500"}`}>{s}</button>
+          ))}
         </div>
+
+        <label className="block text-xs text-gray-400">Primary Color</label>
+        <div className="flex gap-1.5 flex-wrap">
+          {COLOR_PRESETS.map((c) => (
+            <button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
+          ))}
+        </div>
+      </div>
+
+      {/* Zambian Holidays Info */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">🇿🇲 Zambian Holidays</h3>
+        <p className="text-xs text-gray-400">Public holidays are highlighted in red on the calendar grid. Includes all gazetted Zambian holidays.</p>
       </div>
     </div>
+  );
+
+  /* ── Right Panel (Content Editors) ──────────────────────── */
+  const rightPanel = (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Content</h3>
+
+        <label className="block text-xs text-gray-400">Title</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.title} onChange={(e) => setConfig((p) => ({ ...p, title: e.target.value }))} placeholder="Optional title" />
+
+        <label className="block text-xs text-gray-400">Subtitle</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.subtitle} onChange={(e) => setConfig((p) => ({ ...p, subtitle: e.target.value }))} placeholder="Optional subtitle" />
+      </div>
+    </div>
+  );
+
+  /* ── Toolbar ────────────────────────────────────────────── */
+  const toolbar = (
+    <div className="flex items-center gap-2 text-xs text-gray-400">
+      <IconCalendar className="size-3.5 text-primary-500" />
+      <span className="font-medium text-gray-200">{calType.name}</span>
+      <span className="text-gray-600">·</span>
+      <span>{MONTH_NAMES[config.month]} {config.year}</span>
+      <span className="text-gray-600">·</span>
+      <span>{config.template}</span>
+    </div>
+  );
+
+  /* ── UI ──────────────────────────────────────────────────── */
+  return (
+    <StickyCanvasLayout
+      canvasRef={canvasRef}
+      displayWidth={displayWidth}
+      displayHeight={displayHeight}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
+      onZoomFit={() => setZoom(0.75)}
+      label={`${calType.name} — ${MONTH_NAMES[config.month]} ${config.year} — ${CW}×${CH}px`}
+      mobileTabs={["Canvas", "Settings", "Content"]}
+      toolbar={toolbar}
+      leftPanel={leftPanel}
+      rightPanel={rightPanel}
+      actionsBar={
+        <div className="flex items-center gap-2">
+          <button onClick={exportPNG} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors">
+            <IconDownload className="size-3" />Download PNG
+          </button>
+          <button onClick={handleCopy} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors">
+            <IconCopy className="size-3" />Copy
+          </button>
+        </div>
+      }
+    />
   );
 }

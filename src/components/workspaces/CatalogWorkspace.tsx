@@ -1,14 +1,19 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   IconBox,
   IconSparkles,
   IconWand,
   IconLoader,
   IconDownload,
+  IconCopy,
+  IconCheck,
 } from "@/components/icons";
 import { cleanAIText, roundRect } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import { drawDocumentThumbnail } from "@/lib/template-renderers";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -72,7 +77,21 @@ function defaultProducts(): CatalogProduct[] {
 export default function CatalogWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
+  const [zoom, setZoom] = useState(0.75);
+  const [copied, setCopied] = useState(false);
+
+  const displayWidth = Math.round(PAGE_W * zoom);
+  const displayHeight = Math.round(PAGE_H * zoom);
+
+  /* ── Template Previews ──────────────────────────────────── */
+  const HEADER_MAP: Record<CatalogTemplate, "bar" | "strip" | "minimal" | "gradient" | "centered" | "sidebar"> = {
+    modern: "gradient",
+    classic: "bar",
+    grid: "minimal",
+    elegant: "centered",
+    bold: "strip",
+    minimal: "minimal",
+  };
 
   const [config, setConfig] = useState<CatalogConfig>({
     template: "modern",
@@ -92,6 +111,36 @@ export default function CatalogWorkspace() {
   const productsPerPage = config.layout === "grid" ? 4 : 5;
   const totalPages = 2 + Math.ceil(products.length / productsPerPage);
   const sym = config.currencySymbol;
+
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () =>
+      TEMPLATES.map((t) => ({
+        id: t.id,
+        label: t.name,
+        render: (ctx: CanvasRenderingContext2D, w: number, h: number) =>
+          drawDocumentThumbnail(ctx, w, h, {
+            primaryColor: config.primaryColor,
+            headerStyle: HEADER_MAP[t.id],
+            showSections: 3,
+          }),
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [config.primaryColor],
+  );
+
+  /* ── Clipboard Copy ────────────────────────────────────── */
+  const handleCopy = useCallback(async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    try {
+      const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
+      if (blob) {
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch { /* silent */ }
+  }, []);
 
   /* ── Render ─────────────────────────────────────────────── */
   const render = useCallback(() => {
@@ -372,92 +421,145 @@ export default function CatalogWorkspace() {
 
   /* ── UI ──────────────────────────────────────────────────── */
   return (
-    <div>
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
-        {(["canvas", "settings"] as const).map((t) => (
-          <button key={t} onClick={() => setMobileTab(t)} className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}>{t}</button>
-        ))}
-      </div>
-
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Settings */}
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconBox className="size-4 text-primary-500" />Catalog Settings</h3>
-
-            <label className="block text-xs text-gray-400">Catalog Title</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.catalogTitle} onChange={(e) => setConfig((p) => ({ ...p, catalogTitle: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Company</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.companyName} onChange={(e) => setConfig((p) => ({ ...p, companyName: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Layout</label>
-            <div className="grid grid-cols-2 gap-1.5">
-              {(["grid", "list"] as const).map((l) => (
-                <button key={l} onClick={() => setConfig((p) => ({ ...p, layout: l }))} className={`px-2 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${config.layout === l ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{l}</button>
-              ))}
-            </div>
-
-            <label className="block text-xs text-gray-400">Template</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {TEMPLATES.map((t) => (
-                <button key={t.id} onClick={() => setConfig((p) => ({ ...p, template: t.id }))} className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${config.template === t.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{t.name}</button>
-              ))}
-            </div>
-
-            <label className="block text-xs text-gray-400">Primary Color</label>
-            <div className="flex gap-1.5 flex-wrap">
-              {COLOR_PRESETS.map((c) => (
-                <button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
-              ))}
-            </div>
-          </div>
-
-          {/* Products */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2 max-h-56 overflow-y-auto">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Products ({products.length})</h3>
-            {products.map((prod, i) => (
-              <div key={prod.id} className="space-y-1">
-                <div className="flex gap-1">
-                  <input className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 py-1 text-xs text-gray-900 dark:text-white" placeholder="Name" value={prod.name} onChange={(e) => { const p = [...products]; p[i] = { ...p[i], name: e.target.value }; setProducts(p); }} />
-                  <input type="number" className="w-20 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 py-1 text-xs text-gray-900 dark:text-white" placeholder="Price" value={prod.price} onChange={(e) => { const p = [...products]; p[i] = { ...p[i], price: Number(e.target.value) }; setProducts(p); }} />
-                  <button onClick={() => setProducts((p) => p.filter((_, j) => j !== i))} className="text-xs text-red-500">×</button>
-                </div>
-                <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 py-1 text-[10px] text-gray-900 dark:text-white" placeholder="Description" value={prod.description} onChange={(e) => { const p = [...products]; p[i] = { ...p[i], description: e.target.value }; setProducts(p); }} />
-              </div>
+    <StickyCanvasLayout
+      canvasRef={canvasRef}
+      displayWidth={displayWidth}
+      displayHeight={displayHeight}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.1, 2))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.1, 0.3))}
+      onZoomFit={() => setZoom(0.75)}
+      label={`Catalog — Page ${config.activeSection + 1} of ${totalPages} — ${PAGE_W}×${PAGE_H}px`}
+      mobileTabs={["Canvas", "Settings", "Products"]}
+      toolbar={
+        <div className="flex items-center gap-3 text-xs text-gray-500">
+          <IconBox className="size-4 text-primary-500" />
+          <span className="font-semibold text-gray-300">{config.template}</span>
+          <span className="text-gray-600">•</span>
+          <span className="text-gray-400">{config.layout} layout</span>
+          <div className="flex gap-1 ml-auto">
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button key={i} onClick={() => setConfig((p) => ({ ...p, activeSection: i }))} className={`px-2 py-0.5 rounded text-[0.625rem] font-semibold transition-all ${config.activeSection === i ? "bg-primary-500/10 text-primary-500" : "text-gray-500 hover:bg-gray-700/50"}`}>{i + 1}</button>
             ))}
-            <button onClick={() => setProducts((p) => [...p, { id: uid(), name: "", description: "", price: 0, sku: `SKU-${String(p.length + 1).padStart(3, "0")}`, category: "General" }])} className="text-xs text-primary-500 hover:underline">+ Add Product</button>
           </div>
-
-          {/* AI Generation */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Catalog Generator</h3>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe your product line (e.g. 'Computer accessories for a Lusaka electronics shop')..." value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
-            <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
-              {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
-              {loading ? "Generating…" : "Generate Catalog"}
+        </div>
+      }
+      actionsBar={
+        <>
+          <button
+            onClick={exportPNG}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-linear-to-r from-primary-500 to-secondary-500 text-white text-xs font-bold hover:from-primary-400 hover:to-secondary-400 transition-colors"
+          >
+            <IconDownload className="size-3.5" /> Export PNG
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-600 text-gray-300 text-xs font-semibold hover:bg-gray-700/50 transition-colors"
+          >
+            {copied ? <><IconCheck className="size-3.5" /> Copied!</> : <><IconCopy className="size-3.5" /> Copy</>}
+          </button>
+        </>
+      }
+      leftPanel={
+        <div className="space-y-3">
+          {/* AI Director */}
+          <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-3">
+            <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-secondary-500 mb-2">
+              <IconSparkles className="size-3" />
+              AI Catalog Director
+            </label>
+            <textarea
+              rows={3}
+              placeholder="Describe your product line (e.g. 'Computer accessories for a Lusaka electronics shop')..."
+              value={config.description}
+              onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border border-secondary-500/20 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-secondary-500/50 focus:ring-2 focus:ring-secondary-500/20 transition-all resize-none mb-2"
+            />
+            <button
+              onClick={generateAI}
+              disabled={!config.description.trim() || loading}
+              className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-linear-to-r from-secondary-500 to-primary-500 text-white text-[0.625rem] font-bold hover:from-secondary-400 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {loading ? (
+                <><IconLoader className="size-3 animate-spin" /> Generating...</>
+              ) : (
+                <><IconWand className="size-3" /> Generate Catalog</>
+              )}
             </button>
           </div>
 
-          {/* Export */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-            <button onClick={exportPNG} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"><IconDownload className="size-4" />Export PNG</button>
-          </div>
-        </div>
+          {/* Template Slider */}
+          <TemplateSlider
+            templates={templatePreviews}
+            activeId={config.template}
+            onSelect={(id) => setConfig((p) => ({ ...p, template: id as CatalogTemplate }))}
+            thumbWidth={120}
+            thumbHeight={86}
+            label="Templates"
+          />
 
-        {/* Canvas */}
-        <div className={`flex-1 min-w-0 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-          <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
-            <canvas ref={canvasRef} style={{ width: Math.min(PAGE_W, 500), height: Math.min(PAGE_W, 500) * (PAGE_H / PAGE_W) }} className="rounded-lg shadow-lg" />
+          {/* Layout */}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+            <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">Layout</label>
+            <div className="grid grid-cols-2 gap-1">
+              {(["grid", "list"] as const).map((l) => (
+                <button key={l} onClick={() => setConfig((p) => ({ ...p, layout: l }))} className={`py-1.5 rounded-lg text-[0.625rem] font-semibold capitalize transition-all ${config.layout === l ? "bg-primary-500 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{l}</button>
+              ))}
+            </div>
           </div>
-          <div className="flex items-center justify-center gap-2 mt-3">
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button key={i} onClick={() => setConfig((p) => ({ ...p, activeSection: i }))} className={`px-3 py-1 rounded-lg text-xs font-medium ${config.activeSection === i ? "bg-primary-500 text-gray-950" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"}`}>{i + 1}</button>
-            ))}
+
+          {/* Primary Color */}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+            <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">Primary Color</label>
+            <div className="flex gap-1.5 flex-wrap">
+              {COLOR_PRESETS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))}
+                  className={`size-6 rounded-full transition-all ${config.primaryColor === c ? "ring-2 ring-offset-2 ring-primary-500 dark:ring-offset-gray-900" : "hover:scale-110"}`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
           </div>
-          <p className="text-xs text-gray-400 text-center mt-2">Catalog — Page {config.activeSection + 1} of {totalPages} — {PAGE_W}×{PAGE_H}px</p>
+
+          {/* Catalog Settings */}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+            <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">Settings</label>
+            <div>
+              <label className="text-[0.5625rem] text-gray-500">Catalog Title</label>
+              <input type="text" value={config.catalogTitle} onChange={(e) => setConfig((p) => ({ ...p, catalogTitle: e.target.value }))} className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all" />
+            </div>
+            <div>
+              <label className="text-[0.5625rem] text-gray-500">Company Name</label>
+              <input type="text" value={config.companyName} onChange={(e) => setConfig((p) => ({ ...p, companyName: e.target.value }))} className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all" />
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      }
+      rightPanel={
+        <div className="space-y-3">
+          {/* Products Editor */}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">Products ({products.length})</label>
+            </div>
+            <div className="max-h-80 overflow-y-auto space-y-2">
+              {products.map((prod, i) => (
+                <div key={prod.id} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/30 p-2 space-y-1">
+                  <div className="flex gap-1">
+                    <input className="flex-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50" placeholder="Name" value={prod.name} onChange={(e) => { const p = [...products]; p[i] = { ...p[i], name: e.target.value }; setProducts(p); }} />
+                    <input type="number" className="w-20 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50" placeholder="Price" value={prod.price} onChange={(e) => { const p = [...products]; p[i] = { ...p[i], price: Number(e.target.value) }; setProducts(p); }} />
+                    <button onClick={() => setProducts((p) => p.filter((_, j) => j !== i))} className="text-xs text-red-500 hover:text-red-400">×</button>
+                  </div>
+                  <input className="w-full px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50" placeholder="Description" value={prod.description} onChange={(e) => { const p = [...products]; p[i] = { ...p[i], description: e.target.value }; setProducts(p); }} />
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setProducts((p) => [...p, { id: uid(), name: "", description: "", price: 0, sku: `SKU-${String(p.length + 1).padStart(3, "0")}`, category: "General" }])} className="w-full py-1.5 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 text-[0.625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors">+ Add Product</button>
+          </div>
+        </div>
+      }
+    />
   );
 }

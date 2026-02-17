@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   IconPresentation,
   IconSparkles,
@@ -22,6 +22,10 @@ import {
 import { cleanAIText, roundRect } from "@/lib/canvas-utils";
 import PptxGenJS from "pptxgenjs";
 import { jsPDF } from "jspdf";
+import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
+import TemplateSlider, {
+  type TemplatePreview,
+} from "@/components/workspaces/TemplateSlider";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -209,6 +213,64 @@ export default function PresentationWorkspace() {
   const dims =
     ASPECT_RATIOS.find((a) => a.id === config.aspectRatio) ||
     ASPECT_RATIOS[0];
+
+  /* ── Zoom & display ─────────────────────────────────────── */
+  const [zoom, setZoom] = useState(0.75);
+  const displayWidth = dims.w * zoom;
+  const displayHeight = dims.h * zoom;
+
+  /* ── Theme Previews for TemplateSlider ──────────────────── */
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () =>
+      THEMES.map((t) => ({
+        id: t.id,
+        label: t.name,
+        render(ctx: CanvasRenderingContext2D, w: number, h: number) {
+          /* Mini slide preview with theme colours */
+          ctx.fillStyle = t.bg;
+          ctx.fillRect(0, 0, w, h);
+          /* Accent bar */
+          ctx.fillStyle = t.accent;
+          ctx.fillRect(0, h * 0.82, w, 2);
+          /* Decorative circle */
+          ctx.globalAlpha = 0.08;
+          ctx.fillStyle = t.accent;
+          ctx.beginPath();
+          ctx.arc(w * 0.85, h * 0.15, w * 0.22, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          /* Title line */
+          ctx.fillStyle = t.fg;
+          ctx.fillRect(w * 0.12, h * 0.3, w * 0.55, 4);
+          /* Subtitle line */
+          ctx.fillStyle = t.muted;
+          ctx.fillRect(w * 0.2, h * 0.45, w * 0.4, 3);
+          /* Bullet dots */
+          ctx.fillStyle = t.accent;
+          for (let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            ctx.arc(w * 0.18, h * 0.58 + i * (h * 0.07), 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = t.fg + "66";
+            ctx.fillRect(w * 0.24, h * 0.565 + i * (h * 0.07), w * 0.45, 2);
+            ctx.fillStyle = t.accent;
+          }
+        },
+      })),
+    [],
+  );
+
+  /* ── Copy to Clipboard ──────────────────────────────────── */
+  const handleCopy = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob }),
+      ]);
+    });
+  }, []);
 
   /* ── Canvas Render ──────────────────────────────────────── */
   useEffect(() => {
@@ -1222,495 +1284,473 @@ Rules:
 
   /* ── Render ─────────────────────────────────────────────── */
   return (
-    <div className="flex gap-4 h-[calc(100vh-12rem)]">
-      {/* ── Left Panel ── */}
-      <div className="w-72 shrink-0 overflow-y-auto space-y-3 pr-1">
-        {/* AI Director */}
-        <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-3">
-          <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-secondary-500 mb-2">
-            <IconSparkles className="size-3" />
-            AI Presentation Director
-          </label>
-          <textarea
-            rows={3}
-            placeholder="Describe your presentation topic, audience, and goals..."
-            value={config.description}
-            onChange={(e) => updateConfig({ description: e.target.value })}
-            className="w-full px-3 py-2 rounded-xl border border-secondary-500/20 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-secondary-500/50 focus:ring-2 focus:ring-secondary-500/20 transition-all resize-none mb-2"
-          />
-          <button
-            onClick={generatePresentation}
-            disabled={!config.description.trim() || isGenerating}
-            className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-linear-to-r from-secondary-500 to-primary-500 text-white text-[0.625rem] font-bold hover:from-secondary-400 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isGenerating ? (
-              <>
-                <IconLoader className="size-3 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <IconWand className="size-3" /> Generate Deck
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Aspect Ratio */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Aspect Ratio
-          </label>
-          <div className="grid grid-cols-3 gap-1.5">
-            {ASPECT_RATIOS.map((ar) => (
-              <button
-                key={ar.id}
-                onClick={() => updateConfig({ aspectRatio: ar.id })}
-                className={`py-1.5 rounded-lg text-[0.625rem] font-semibold transition-all ${config.aspectRatio === ar.id ? "bg-primary-500 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
-              >
-                {ar.id}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Theme */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Theme
-          </label>
-          <div className="grid grid-cols-4 gap-1.5">
-            {THEMES.map((t) => (
-              <button
-                key={t.id}
-                onClick={() =>
-                  updateConfig({
-                    theme: t.id,
-                    primaryColor: t.accent,
-                  })
-                }
-                className={`flex flex-col items-center gap-1 p-1.5 rounded-lg transition-all ${config.theme === t.id ? "ring-2 ring-primary-500" : "hover:bg-gray-100 dark:hover:bg-gray-800"}`}
-              >
-                <div
-                  className="size-5 rounded-full border border-gray-200 dark:border-gray-700"
-                  style={{ backgroundColor: t.bg }}
-                />
-                <span className="text-[0.5rem] text-gray-500">
-                  {t.name}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Font */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Font
-          </label>
-          <div className="grid grid-cols-4 gap-1">
-            {(["modern", "classic", "minimal", "bold"] as const).map(
-              (fs) => (
-                <button
-                  key={fs}
-                  onClick={() => updateConfig({ fontStyle: fs })}
-                  className={`py-1 rounded-lg text-[0.5625rem] font-semibold capitalize transition-all ${config.fontStyle === fs ? "bg-primary-500 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"}`}
-                >
-                  {fs}
-                </button>
-              ),
-            )}
-          </div>
-        </div>
-
-        {/* Export */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-1.5">
-          <div className="relative">
+    <>
+      <StickyCanvasLayout
+        canvasRef={canvasRef}
+        displayWidth={displayWidth}
+        displayHeight={displayHeight}
+        zoom={zoom}
+        onZoomIn={() => setZoom((z) => Math.min(2, z + 0.1))}
+        onZoomOut={() => setZoom((z) => Math.max(0.3, z - 0.1))}
+        onZoomFit={() => setZoom(0.75)}
+        label={`Presentation — ${config.aspectRatio} — Slide ${currentSlide + 1}/${slides.length}`}
+        mobileTabs={["Canvas", "Design", "Editor"]}
+        /* ── Toolbar: slide navigation + present ───────────── */
+        toolbar={
+          <div className="flex items-center gap-3">
             <button
-              onClick={() => setExportMenuOpen((p) => !p)}
-              className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-linear-to-r from-primary-500 to-secondary-500 text-white text-[0.625rem] font-bold hover:from-primary-400 hover:to-secondary-400 transition-colors"
+              onClick={() => setCurrentSlide((p) => Math.max(0, p - 1))}
+              disabled={currentSlide === 0}
+              className="p-1 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
             >
-              <IconDownload className="size-3" /> Export ▾
+              <IconChevronLeft className="size-3.5" />
             </button>
-            {exportMenuOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
-                <button
-                  onClick={() => { exportSlide(); setExportMenuOpen(false); }}
-                  className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                >
-                  📄 Current Slide (PNG)
-                </button>
-                <button
-                  onClick={() => { exportAllPNG(); setExportMenuOpen(false); }}
-                  className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                >
-                  🖼️ All Slides (PNG)
-                </button>
-                <button
-                  onClick={() => { exportPDF(); setExportMenuOpen(false); }}
-                  className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                >
-                  📕 Export PDF
-                </button>
-                <button
-                  onClick={() => { exportPPTX(); setExportMenuOpen(false); }}
-                  className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                >
-                  📊 Export PPTX
-                </button>
-              </div>
-            )}
+            <span className="text-[0.625rem] text-gray-500 font-semibold tabular-nums">
+              {currentSlide + 1} / {slides.length}
+            </span>
+            <button
+              onClick={() => setCurrentSlide((p) => Math.min(slides.length - 1, p + 1))}
+              disabled={currentSlide === slides.length - 1}
+              className="p-1 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+            >
+              <IconChevronRight className="size-3.5" />
+            </button>
+            <button
+              onClick={enterPresentMode}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-primary-500/30 text-primary-500 text-[0.625rem] font-bold hover:bg-primary-500/10 transition-colors"
+            >
+              <IconMaximize className="size-3" /> Present
+            </button>
           </div>
-          <button
-            onClick={enterPresentMode}
-            className="w-full flex items-center justify-center gap-2 h-9 rounded-xl border border-primary-500/30 text-primary-500 text-[0.625rem] font-bold hover:bg-primary-500/10 transition-colors"
-          >
-            <IconMaximize className="size-3" /> Present
-          </button>
-        </div>
-
-        {/* Slide thumbnails */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-              Slides ({slides.length})
-            </label>
-            <div className="flex items-center gap-1">
-              {clipboardSlide && (
-                <button
-                  onClick={pasteSlide}
-                  title="Paste slide"
-                  className="text-secondary-500 hover:text-secondary-400"
-                >
-                  <IconClipboard className="size-3.5" />
-                </button>
-              )}
+        }
+        /* ── Actions Bar: exports ──────────────────────────── */
+        actionsBar={
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={exportPPTX}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-linear-to-r from-primary-500 to-secondary-500 text-white text-[0.625rem] font-bold hover:from-primary-400 hover:to-secondary-400 transition-colors"
+            >
+              <IconDownload className="size-3" /> PPTX
+            </button>
+            <button
+              onClick={exportPDF}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[0.625rem] font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            >
+              <IconDownload className="size-3" /> PDF
+            </button>
+            <button
+              onClick={exportSlide}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[0.625rem] font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            >
+              <IconDownload className="size-3" /> PNG
+            </button>
+            <button
+              onClick={exportAllPNG}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[0.625rem] font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            >
+              <IconDownload className="size-3" /> All PNG
+            </button>
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[0.625rem] font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            >
+              <IconCopy className="size-3" /> Copy
+            </button>
+          </div>
+        }
+        /* ── Left Panel: AI + Design + Slides ──────────────── */
+        leftPanel={
+          <div className="space-y-3">
+            {/* AI Director */}
+            <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-3">
+              <label className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-secondary-500 mb-2">
+                <IconSparkles className="size-3" />
+                AI Presentation Director
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Describe your presentation topic, audience, and goals..."
+                value={config.description}
+                onChange={(e) => updateConfig({ description: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl border border-secondary-500/20 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-secondary-500/50 focus:ring-2 focus:ring-secondary-500/20 transition-all resize-none mb-2"
+              />
               <button
-                onClick={() => {
-                  setSlides((p) => [
-                    ...p,
-                    {
-                      id: uid(),
-                      layout: "content",
-                      title: "",
-                      subtitle: "",
-                      body: "",
-                      bullets: [],
-                      note: "",
-                      imageUrl: "",
-                      chartPlaceholder: "",
-                    },
-                  ]);
-                  setCurrentSlide(slides.length);
-                }}
-                className="text-primary-500 hover:text-primary-400"
+                onClick={generatePresentation}
+                disabled={!config.description.trim() || isGenerating}
+                className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-linear-to-r from-secondary-500 to-primary-500 text-white text-[0.625rem] font-bold hover:from-secondary-400 hover:to-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <IconPlus className="size-3.5" />
+                {isGenerating ? (
+                  <>
+                    <IconLoader className="size-3 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <IconWand className="size-3" /> Generate Deck
+                  </>
+                )}
               </button>
             </div>
-          </div>
-          <div className="space-y-1 max-h-72 overflow-y-auto">
-            {slides.map((s, i) => (
-              <div
-                key={s.id}
-                onClick={() => setCurrentSlide(i)}
-                className={`w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-left transition-all cursor-pointer ${currentSlide === i ? "bg-primary-500/10 ring-1 ring-primary-500/30" : "hover:bg-gray-50 dark:hover:bg-gray-800"}`}
-              >
-                <span
-                  className="size-5 rounded flex items-center justify-center text-[0.5rem] font-bold shrink-0"
-                  style={{
-                    backgroundColor: themeData.bg,
-                    color: themeData.fg,
-                  }}
-                >
-                  {i + 1}
-                </span>
-                <span className="text-[0.5625rem] text-gray-600 dark:text-gray-400 truncate flex-1 min-w-0">
-                  {s.title || s.layout}
-                </span>
-                <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+
+            {/* Theme Previews */}
+            <TemplateSlider
+              templates={templatePreviews}
+              activeId={config.theme}
+              onSelect={(id) =>
+                updateConfig({
+                  theme: id as PresentationTheme,
+                  primaryColor: THEMES.find((t) => t.id === id)?.accent ?? config.primaryColor,
+                })
+              }
+              thumbWidth={120}
+              thumbHeight={72}
+              label="Theme"
+            />
+
+            {/* Aspect Ratio */}
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+              <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+                Aspect Ratio
+              </label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {ASPECT_RATIOS.map((ar) => (
                   <button
-                    onClick={() => moveSlide(i, "up")}
-                    disabled={i === 0}
-                    title="Move up"
-                    className="text-gray-400 hover:text-primary-500 disabled:opacity-20"
+                    key={ar.id}
+                    onClick={() => updateConfig({ aspectRatio: ar.id })}
+                    className={`py-1.5 rounded-lg text-[0.625rem] font-semibold transition-all ${config.aspectRatio === ar.id ? "bg-primary-500 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
                   >
-                    <IconChevronUp className="size-2.5" />
+                    {ar.id}
                   </button>
-                  <button
-                    onClick={() => moveSlide(i, "down")}
-                    disabled={i === slides.length - 1}
-                    title="Move down"
-                    className="text-gray-400 hover:text-primary-500 disabled:opacity-20"
-                  >
-                    <IconChevronDown className="size-2.5" />
-                  </button>
-                  <button
-                    onClick={() => duplicateSlide(i)}
-                    title="Duplicate"
-                    className="text-gray-400 hover:text-secondary-500"
-                  >
-                    <IconCopy className="size-2.5" />
-                  </button>
-                  <button
-                    onClick={() => copySlide(i)}
-                    title="Copy to clipboard"
-                    className="text-gray-400 hover:text-secondary-500"
-                  >
-                    <IconClipboard className="size-2.5" />
-                  </button>
-                  {slides.length > 1 && (
+                ))}
+              </div>
+            </div>
+
+            {/* Font */}
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+              <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+                Font Style
+              </label>
+              <div className="grid grid-cols-4 gap-1">
+                {(["modern", "classic", "minimal", "bold"] as const).map(
+                  (fs) => (
                     <button
-                      onClick={() => {
-                        setSlides((p) => p.filter((_, j) => j !== i));
-                        if (currentSlide >= slides.length - 1)
-                          setCurrentSlide(Math.max(0, slides.length - 2));
-                      }}
-                      className="text-gray-400 hover:text-red-500"
+                      key={fs}
+                      onClick={() => updateConfig({ fontStyle: fs })}
+                      className={`py-1 rounded-lg text-[0.5625rem] font-semibold capitalize transition-all ${config.fontStyle === fs ? "bg-primary-500 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"}`}
                     >
-                      <IconTrash className="size-2.5" />
+                      {fs}
+                    </button>
+                  ),
+                )}
+              </div>
+            </div>
+
+            {/* Slide Filmstrip */}
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+                  Slides ({slides.length})
+                </label>
+                <div className="flex items-center gap-1">
+                  {clipboardSlide && (
+                    <button
+                      onClick={pasteSlide}
+                      title="Paste slide"
+                      className="text-secondary-500 hover:text-secondary-400"
+                    >
+                      <IconClipboard className="size-3.5" />
                     </button>
                   )}
+                  <button
+                    onClick={() => {
+                      setSlides((p) => [
+                        ...p,
+                        {
+                          id: uid(),
+                          layout: "content",
+                          title: "",
+                          subtitle: "",
+                          body: "",
+                          bullets: [],
+                          note: "",
+                          imageUrl: "",
+                          chartPlaceholder: "",
+                        },
+                      ]);
+                      setCurrentSlide(slides.length);
+                    }}
+                    className="text-primary-500 hover:text-primary-400"
+                  >
+                    <IconPlus className="size-3.5" />
+                  </button>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Center: Canvas ── */}
-      <div className="flex-1 flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-950/50 rounded-xl border border-gray-200 dark:border-gray-800 overflow-auto p-4 gap-3">
-        <canvas
-          ref={canvasRef}
-          className="shadow-2xl rounded-sm"
-          style={{
-            maxWidth: "100%",
-            maxHeight: "calc(100% - 40px)",
-            width: "auto",
-            height: "auto",
-            backgroundColor: themeData.bg,
-          }}
-        />
-        {/* Navigation */}
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setCurrentSlide((p) => Math.max(0, p - 1))}
-            disabled={currentSlide === 0}
-            className="p-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
-          >
-            <IconChevronLeft className="size-4" />
-          </button>
-          <span className="text-xs text-gray-500 font-medium">
-            {currentSlide + 1} / {slides.length}
-          </span>
-          <button
-            onClick={() =>
-              setCurrentSlide((p) =>
-                Math.min(slides.length - 1, p + 1),
-              )
-            }
-            disabled={currentSlide === slides.length - 1}
-            className="p-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
-          >
-            <IconChevronRight className="size-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* ── Right Panel: Slide Editor ── */}
-      <div className="w-80 shrink-0 overflow-y-auto space-y-3 pl-1">
-        {/* Layout selector */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            <IconPresentation className="size-3 inline mr-1" />
-            Slide Layout
-          </label>
-          <div className="grid grid-cols-3 gap-1">
-            {LAYOUTS.map((l) => (
-              <button
-                key={l.id}
-                onClick={() => updateSlide({ layout: l.id })}
-                className={`py-1.5 px-1 rounded-lg text-[0.5625rem] font-semibold transition-all ${slide.layout === l.id ? "bg-primary-500 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
-              >
-                {l.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Slide Content
-          </label>
-          <div>
-            <label className="text-[0.5625rem] text-gray-500">Title</label>
-            <input
-              type="text"
-              value={slide.title}
-              onChange={(e) => updateSlide({ title: e.target.value })}
-              placeholder="Slide title..."
-              className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
-            />
-          </div>
-          <div>
-            <label className="text-[0.5625rem] text-gray-500">
-              Subtitle
-            </label>
-            <input
-              type="text"
-              value={slide.subtitle}
-              onChange={(e) => updateSlide({ subtitle: e.target.value })}
-              placeholder="Subtitle or tagline..."
-              className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
-            />
-          </div>
-          <div>
-            <label className="text-[0.5625rem] text-gray-500">Body</label>
-            <textarea
-              rows={3}
-              value={slide.body}
-              onChange={(e) => updateSlide({ body: e.target.value })}
-              placeholder="Main content..."
-              className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all resize-none"
-            />
-          </div>
-        </div>
-
-        {/* Bullets */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Bullet Points
-          </label>
-          {slide.bullets.map((b, i) => (
-            <div key={i} className="flex gap-1">
-              <input
-                type="text"
-                value={b}
-                onChange={(e) => {
-                  const newB = [...slide.bullets];
-                  newB[i] = e.target.value;
-                  updateSlide({ bullets: newB });
-                }}
-                placeholder={`Point ${i + 1}...`}
-                className="flex-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50"
-              />
-              <button
-                onClick={() =>
-                  updateSlide({
-                    bullets: slide.bullets.filter((_, j) => j !== i),
-                  })
-                }
-                className="text-gray-400 hover:text-red-500 text-xs"
-              >
-                x
-              </button>
-            </div>
-          ))}
-          <button
-            onClick={() =>
-              updateSlide({ bullets: [...slide.bullets, ""] })
-            }
-            className="w-full py-1.5 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 text-[0.5625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors"
-          >
-            <IconPlus className="size-3 inline mr-1" /> Add Bullet
-          </button>
-        </div>
-
-        {/* Speaker Notes */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            Speaker Notes
-          </label>
-          <textarea
-            rows={3}
-            value={slide.note}
-            onChange={(e) => updateSlide({ note: e.target.value })}
-            placeholder="Notes for this slide (not shown on canvas)..."
-            className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all resize-none"
-          />
-        </div>
-
-        {/* Image Upload */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            <IconImage className="size-3 inline mr-1" />
-            Slide Image
-          </label>
-          <input
-            ref={imageInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="hidden"
-          />
-          {slide.imageUrl ? (
-            <div className="space-y-1.5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={slide.imageUrl}
-                alt="Slide"
-                className="w-full h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
-              />
-              <div className="flex gap-1">
-                <button
-                  onClick={() => imageInputRef.current?.click()}
-                  className="flex-1 py-1 rounded-lg text-[0.5625rem] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                >
-                  Replace
-                </button>
-                <button
-                  onClick={() => updateSlide({ imageUrl: "" })}
-                  className="flex-1 py-1 rounded-lg text-[0.5625rem] font-semibold bg-gray-100 dark:bg-gray-800 text-red-500 hover:bg-red-500/10 transition-colors"
-                >
-                  Remove
-                </button>
+              <div className="space-y-1 max-h-72 overflow-y-auto">
+                {slides.map((s, i) => (
+                  <div
+                    key={s.id}
+                    onClick={() => setCurrentSlide(i)}
+                    className={`w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-left transition-all cursor-pointer ${currentSlide === i ? "bg-primary-500/10 ring-1 ring-primary-500/30" : "hover:bg-gray-50 dark:hover:bg-gray-800"}`}
+                  >
+                    <span
+                      className="size-5 rounded flex items-center justify-center text-[0.5rem] font-bold shrink-0"
+                      style={{
+                        backgroundColor: themeData.bg,
+                        color: themeData.fg,
+                      }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span className="text-[0.5625rem] text-gray-600 dark:text-gray-400 truncate flex-1 min-w-0">
+                      {s.title || s.layout}
+                    </span>
+                    <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => moveSlide(i, "up")}
+                        disabled={i === 0}
+                        title="Move up"
+                        className="text-gray-400 hover:text-primary-500 disabled:opacity-20"
+                      >
+                        <IconChevronUp className="size-2.5" />
+                      </button>
+                      <button
+                        onClick={() => moveSlide(i, "down")}
+                        disabled={i === slides.length - 1}
+                        title="Move down"
+                        className="text-gray-400 hover:text-primary-500 disabled:opacity-20"
+                      >
+                        <IconChevronDown className="size-2.5" />
+                      </button>
+                      <button
+                        onClick={() => duplicateSlide(i)}
+                        title="Duplicate"
+                        className="text-gray-400 hover:text-secondary-500"
+                      >
+                        <IconCopy className="size-2.5" />
+                      </button>
+                      <button
+                        onClick={() => copySlide(i)}
+                        title="Copy to clipboard"
+                        className="text-gray-400 hover:text-secondary-500"
+                      >
+                        <IconClipboard className="size-2.5" />
+                      </button>
+                      {slides.length > 1 && (
+                        <button
+                          onClick={() => {
+                            setSlides((p) => p.filter((_, j) => j !== i));
+                            if (currentSlide >= slides.length - 1)
+                              setCurrentSlide(Math.max(0, slides.length - 2));
+                          }}
+                          className="text-gray-400 hover:text-red-500"
+                        >
+                          <IconTrash className="size-2.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ) : (
-            <button
-              onClick={() => imageInputRef.current?.click()}
-              className="w-full py-3 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 text-[0.5625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors flex flex-col items-center gap-1"
-            >
-              <IconImage className="size-4" />
-              Upload Image
-            </button>
-          )}
-          <div>
-            <label className="text-[0.5625rem] text-gray-500">Or paste URL</label>
-            <input
-              type="url"
-              value={slide.imageUrl}
-              onChange={(e) => updateSlide({ imageUrl: e.target.value })}
-              placeholder="https://..."
-              className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
-            />
           </div>
-        </div>
+        }
+        /* ── Right Panel: Slide Editor ─────────────────────── */
+        rightPanel={
+          <div className="space-y-3">
+            {/* Layout selector */}
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+              <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+                <IconPresentation className="size-3 inline mr-1" />
+                Slide Layout
+              </label>
+              <div className="grid grid-cols-3 gap-1">
+                {LAYOUTS.map((l) => (
+                  <button
+                    key={l.id}
+                    onClick={() => updateSlide({ layout: l.id })}
+                    className={`py-1.5 px-1 rounded-lg text-[0.5625rem] font-semibold transition-all ${slide.layout === l.id ? "bg-primary-500 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+                  >
+                    {l.name}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        {/* Chart Placeholder */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
-          <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
-            <IconChart className="size-3 inline mr-1" />
-            Chart Placeholder
-          </label>
-          <div className="grid grid-cols-4 gap-1">
-            {(["" , "bar", "line", "pie"] as const).map((ct) => (
+            {/* Content */}
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+              <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+                Slide Content
+              </label>
+              <div>
+                <label className="text-[0.5625rem] text-gray-500">Title</label>
+                <input
+                  type="text"
+                  value={slide.title}
+                  onChange={(e) => updateSlide({ title: e.target.value })}
+                  placeholder="Slide title..."
+                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
+                />
+              </div>
+              <div>
+                <label className="text-[0.5625rem] text-gray-500">
+                  Subtitle
+                </label>
+                <input
+                  type="text"
+                  value={slide.subtitle}
+                  onChange={(e) => updateSlide({ subtitle: e.target.value })}
+                  placeholder="Subtitle or tagline..."
+                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
+                />
+              </div>
+              <div>
+                <label className="text-[0.5625rem] text-gray-500">Body</label>
+                <textarea
+                  rows={3}
+                  value={slide.body}
+                  onChange={(e) => updateSlide({ body: e.target.value })}
+                  placeholder="Main content..."
+                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all resize-none"
+                />
+              </div>
+            </div>
+
+            {/* Bullets */}
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+              <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+                Bullet Points
+              </label>
+              {slide.bullets.map((b, i) => (
+                <div key={i} className="flex gap-1">
+                  <input
+                    type="text"
+                    value={b}
+                    onChange={(e) => {
+                      const newB = [...slide.bullets];
+                      newB[i] = e.target.value;
+                      updateSlide({ bullets: newB });
+                    }}
+                    placeholder={`Point ${i + 1}...`}
+                    className="flex-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-[0.625rem] focus:outline-none focus:border-primary-500/50"
+                  />
+                  <button
+                    onClick={() =>
+                      updateSlide({
+                        bullets: slide.bullets.filter((_, j) => j !== i),
+                      })
+                    }
+                    className="text-gray-400 hover:text-red-500 text-xs"
+                  >
+                    x
+                  </button>
+                </div>
+              ))}
               <button
-                key={ct || "none"}
-                onClick={() => updateSlide({ chartPlaceholder: ct })}
-                className={`py-1.5 rounded-lg text-[0.5625rem] font-semibold capitalize transition-all ${
-                  slide.chartPlaceholder === ct
-                    ? "bg-primary-500 text-white"
-                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-                }`}
+                onClick={() =>
+                  updateSlide({ bullets: [...slide.bullets, ""] })
+                }
+                className="w-full py-1.5 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 text-[0.5625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors"
               >
-                {ct || "None"}
+                <IconPlus className="size-3 inline mr-1" /> Add Bullet
               </button>
-            ))}
+            </div>
+
+            {/* Speaker Notes */}
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+              <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+                Speaker Notes
+              </label>
+              <textarea
+                rows={3}
+                value={slide.note}
+                onChange={(e) => updateSlide({ note: e.target.value })}
+                placeholder="Notes for this slide (not shown on canvas)..."
+                className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all resize-none"
+              />
+            </div>
+
+            {/* Image Upload */}
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+              <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+                <IconImage className="size-3 inline mr-1" />
+                Slide Image
+              </label>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              {slide.imageUrl ? (
+                <div className="space-y-1.5">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={slide.imageUrl}
+                    alt="Slide"
+                    className="w-full h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+                  />
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => imageInputRef.current?.click()}
+                      className="flex-1 py-1 rounded-lg text-[0.5625rem] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      Replace
+                    </button>
+                    <button
+                      onClick={() => updateSlide({ imageUrl: "" })}
+                      className="flex-1 py-1 rounded-lg text-[0.5625rem] font-semibold bg-gray-100 dark:bg-gray-800 text-red-500 hover:bg-red-500/10 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => imageInputRef.current?.click()}
+                  className="w-full py-3 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 text-[0.5625rem] text-gray-400 hover:border-primary-500 hover:text-primary-500 transition-colors flex flex-col items-center gap-1"
+                >
+                  <IconImage className="size-4" />
+                  Upload Image
+                </button>
+              )}
+              <div>
+                <label className="text-[0.5625rem] text-gray-500">Or paste URL</label>
+                <input
+                  type="url"
+                  value={slide.imageUrl}
+                  onChange={(e) => updateSlide({ imageUrl: e.target.value })}
+                  placeholder="https://..."
+                  className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Chart Placeholder */}
+            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 p-3 space-y-2">
+              <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500">
+                <IconChart className="size-3 inline mr-1" />
+                Chart Placeholder
+              </label>
+              <div className="grid grid-cols-4 gap-1">
+                {(["" , "bar", "line", "pie"] as const).map((ct) => (
+                  <button
+                    key={ct || "none"}
+                    onClick={() => updateSlide({ chartPlaceholder: ct })}
+                    className={`py-1.5 rounded-lg text-[0.5625rem] font-semibold capitalize transition-all ${
+                      slide.chartPlaceholder === ct
+                        ? "bg-primary-500 text-white"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    {ct || "None"}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── Presenter Mode Overlay ── */}
       {isPresentMode && (
@@ -1751,6 +1791,6 @@ Rules:
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

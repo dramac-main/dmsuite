@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   IconFileText,
   IconSparkles,
   IconWand,
   IconLoader,
   IconDownload,
+  IconCopy,
 } from "@/components/icons";
 import { cleanAIText } from "@/lib/canvas-utils";
+import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
+import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -82,7 +85,6 @@ function defaultSections(): ProposalSection[] {
 export default function ProposalWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
 
   const [config, setConfig] = useState<ProposalConfig>({
     template: "corporate",
@@ -347,6 +349,47 @@ export default function ProposalWorkspace() {
 
   useEffect(() => { render(); }, [render]);
 
+  /* ── Zoom / Display ─────────────────────────────────────── */
+  const [zoom, setZoom] = useState(0.75);
+  const displayWidth = Math.min(500, PAGE_W) * zoom;
+  const displayHeight = displayWidth * (PAGE_H / PAGE_W);
+
+  /* ── Template Previews ──────────────────────────────────── */
+  const templatePreviews = useMemo<TemplatePreview[]>(
+    () => TEMPLATES.map((t) => ({
+      id: t.id,
+      label: t.name,
+      render: (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, w, h);
+        const pc = t.id === "corporate" ? "#1e40af" : t.id === "creative" ? "#7c3aed" : t.id === "consulting" ? "#0f766e" : t.id === "tech" ? "#0284c7" : t.id === "minimal" ? "#475569" : "#0f172a";
+        if (t.id === "corporate" || t.id === "creative" || t.id === "executive") {
+          ctx.fillStyle = pc;
+          ctx.fillRect(0, 0, w, h * 0.45);
+        } else {
+          ctx.fillStyle = pc;
+          ctx.fillRect(0, 0, w, 4);
+        }
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "bold 8px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(t.name, w / 2, h * 0.7);
+      },
+    })),
+    []
+  );
+
+  /* ── Copy to Clipboard ──────────────────────────────────── */
+  const handleCopy = useCallback(async () => {
+    if (!canvasRef.current) return;
+    try {
+      canvasRef.current.toBlob(async (blob) => {
+        if (!blob) return;
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      }, "image/png");
+    } catch { /* ignore */ }
+  }, []);
+
   /* ── AI Generate ────────────────────────────────────────── */
   const generateAI = async () => {
     if (!config.description.trim()) return;
@@ -412,116 +455,140 @@ export default function ProposalWorkspace() {
   };
 
   /* ── UI ──────────────────────────────────────────────────── */
-  return (
-    <div>
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
-        {(["canvas", "settings"] as const).map((t) => (
-          <button key={t} onClick={() => setMobileTab(t)} className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}>{t}</button>
+  /* ── Left Panel ─────────────────────────────────────────── */
+  const leftPanel = (
+    <div className="space-y-3">
+      {/* AI Generation */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Proposal Generator</h3>
+        <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the project (e.g. 'Website redesign for a Lusaka law firm')..." value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
+        <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
+          {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
+          {loading ? "Generating…" : "Generate Proposal"}
+        </button>
+      </div>
+
+      {/* Template Slider */}
+      <TemplateSlider
+        templates={templatePreviews}
+        activeId={config.template}
+        onSelect={(id) => setConfig((p) => ({ ...p, template: id as ProposalTemplate }))}
+        thumbWidth={130}
+        thumbHeight={80}
+        label="Templates"
+      />
+
+      {/* Company & Client */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconFileText className="size-4 text-primary-500" />Proposal Settings</h3>
+
+        <label className="block text-xs text-gray-400">Project Title</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.projectTitle} onChange={(e) => setConfig((p) => ({ ...p, projectTitle: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Your Company</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.companyName} onChange={(e) => setConfig((p) => ({ ...p, companyName: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Client Company</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.clientCompany} onChange={(e) => setConfig((p) => ({ ...p, clientCompany: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Client Contact</label>
+        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.clientName} onChange={(e) => setConfig((p) => ({ ...p, clientName: e.target.value }))} />
+
+        <label className="block text-xs text-gray-400">Primary Color</label>
+        <div className="flex gap-1.5 flex-wrap">
+          {COLOR_PRESETS.map((c) => (
+            <button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
+          ))}
+        </div>
+      </div>
+
+      {/* Sections */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2 max-h-60 overflow-y-auto">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Sections</h3>
+        {sections.map((sec, i) => (
+          <div key={sec.id} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer ${config.activeSection === i ? "bg-primary-500/10 border border-primary-500/30" : "hover:bg-gray-50 dark:hover:bg-gray-800"}`} onClick={() => setConfig((p) => ({ ...p, activeSection: i }))}>
+            <input type="checkbox" checked={sec.enabled} onChange={(e) => { const s = [...sections]; s[i] = { ...s[i], enabled: e.target.checked }; setSections(s); }} className="rounded" />
+            <span className="text-xs text-gray-700 dark:text-gray-300 flex-1">{sec.title}</span>
+            <button onClick={(e) => { e.stopPropagation(); moveSection(i, -1); }} className="text-gray-400 hover:text-gray-600 text-xs">↑</button>
+            <button onClick={(e) => { e.stopPropagation(); moveSection(i, 1); }} className="text-gray-400 hover:text-gray-600 text-xs">↓</button>
+          </div>
         ))}
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Settings */}
-        <div className={`w-full lg:w-80 shrink-0 space-y-4 ${mobileTab !== "settings" ? "hidden md:block" : ""}`}>
-          {/* Company & Client */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconFileText className="size-4 text-primary-500" />Proposal Settings</h3>
+      {/* Section Content Editor */}
+      {sections[config.activeSection] && sections[config.activeSection].type !== "cover" && sections[config.activeSection].type !== "pricing" && (
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
+          <label className="block text-xs text-gray-400">{sections[config.activeSection].title} Content</label>
+          <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={5} value={sections[config.activeSection].content} onChange={(e) => { const s = [...sections]; s[config.activeSection] = { ...s[config.activeSection], content: e.target.value }; setSections(s); }} />
+        </div>
+      )}
 
-            <label className="block text-xs text-gray-400">Project Title</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.projectTitle} onChange={(e) => setConfig((p) => ({ ...p, projectTitle: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Your Company</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.companyName} onChange={(e) => setConfig((p) => ({ ...p, companyName: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Client Company</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.clientCompany} onChange={(e) => setConfig((p) => ({ ...p, clientCompany: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Client Contact</label>
-            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.clientName} onChange={(e) => setConfig((p) => ({ ...p, clientName: e.target.value }))} />
-
-            <label className="block text-xs text-gray-400">Template</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {TEMPLATES.map((t) => (
-                <button key={t.id} onClick={() => setConfig((p) => ({ ...p, template: t.id }))} className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${config.template === t.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>{t.name}</button>
-              ))}
-            </div>
-
-            <label className="block text-xs text-gray-400">Primary Color</label>
-            <div className="flex gap-1.5 flex-wrap">
-              {COLOR_PRESETS.map((c) => (
-                <button key={c} onClick={() => setConfig((p) => ({ ...p, primaryColor: c }))} className={`size-7 rounded-full border-2 ${config.primaryColor === c ? "border-white scale-110" : "border-transparent"}`} style={{ backgroundColor: c }} />
-              ))}
-            </div>
-          </div>
-
-          {/* Sections */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2 max-h-60 overflow-y-auto">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Sections</h3>
-            {sections.map((sec, i) => (
-              <div key={sec.id} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer ${config.activeSection === i ? "bg-primary-500/10 border border-primary-500/30" : "hover:bg-gray-50 dark:hover:bg-gray-800"}`} onClick={() => setConfig((p) => ({ ...p, activeSection: i }))}>
-                <input type="checkbox" checked={sec.enabled} onChange={(e) => { const s = [...sections]; s[i] = { ...s[i], enabled: e.target.checked }; setSections(s); }} className="rounded" />
-                <span className="text-xs text-gray-700 dark:text-gray-300 flex-1">{sec.title}</span>
-                <button onClick={(e) => { e.stopPropagation(); moveSection(i, -1); }} className="text-gray-400 hover:text-gray-600 text-xs">↑</button>
-                <button onClick={(e) => { e.stopPropagation(); moveSection(i, 1); }} className="text-gray-400 hover:text-gray-600 text-xs">↓</button>
+      {/* Pricing Items */}
+      {sections[config.activeSection]?.type === "pricing" && (
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Pricing Items</h3>
+          {pricingItems.map((item, i) => (
+            <div key={item.id} className="space-y-1">
+              <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 py-1 text-xs text-gray-900 dark:text-white" placeholder="Description" value={item.description} onChange={(e) => { const p = [...pricingItems]; p[i] = { ...p[i], description: e.target.value }; setPricingItems(p); }} />
+              <div className="flex gap-1">
+                <input type="number" className="w-16 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 py-1 text-xs text-gray-900 dark:text-white" placeholder="Qty" value={item.quantity} onChange={(e) => { const p = [...pricingItems]; p[i] = { ...p[i], quantity: Number(e.target.value) }; setPricingItems(p); }} />
+                <input type="number" className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 py-1 text-xs text-gray-900 dark:text-white" placeholder="Rate" value={item.rate} onChange={(e) => { const p = [...pricingItems]; p[i] = { ...p[i], rate: Number(e.target.value) }; setPricingItems(p); }} />
+                <button onClick={() => setPricingItems((p) => p.filter((_, j) => j !== i))} className="px-2 text-xs text-red-500">×</button>
               </div>
-            ))}
-          </div>
-
-          {/* Section Content Editor */}
-          {sections[config.activeSection] && sections[config.activeSection].type !== "cover" && sections[config.activeSection].type !== "pricing" && (
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-              <label className="block text-xs text-gray-400">{sections[config.activeSection].title} Content</label>
-              <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={5} value={sections[config.activeSection].content} onChange={(e) => { const s = [...sections]; s[config.activeSection] = { ...s[config.activeSection], content: e.target.value }; setSections(s); }} />
             </div>
-          )}
-
-          {/* Pricing Items */}
-          {sections[config.activeSection]?.type === "pricing" && (
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Pricing Items</h3>
-              {pricingItems.map((item, i) => (
-                <div key={item.id} className="space-y-1">
-                  <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 py-1 text-xs text-gray-900 dark:text-white" placeholder="Description" value={item.description} onChange={(e) => { const p = [...pricingItems]; p[i] = { ...p[i], description: e.target.value }; setPricingItems(p); }} />
-                  <div className="flex gap-1">
-                    <input type="number" className="w-16 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 py-1 text-xs text-gray-900 dark:text-white" placeholder="Qty" value={item.quantity} onChange={(e) => { const p = [...pricingItems]; p[i] = { ...p[i], quantity: Number(e.target.value) }; setPricingItems(p); }} />
-                    <input type="number" className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 py-1 text-xs text-gray-900 dark:text-white" placeholder="Rate" value={item.rate} onChange={(e) => { const p = [...pricingItems]; p[i] = { ...p[i], rate: Number(e.target.value) }; setPricingItems(p); }} />
-                    <button onClick={() => setPricingItems((p) => p.filter((_, j) => j !== i))} className="px-2 text-xs text-red-500">×</button>
-                  </div>
-                </div>
-              ))}
-              <button onClick={() => setPricingItems((p) => [...p, { id: uid(), description: "", quantity: 1, rate: 0 }])} className="text-xs text-primary-500 hover:underline">+ Add Item</button>
-            </div>
-          )}
-
-          {/* AI Generation */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><IconSparkles className="size-4 text-primary-500" />AI Proposal Generator</h3>
-            <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={3} placeholder="Describe the project (e.g. 'Website redesign for a Lusaka law firm')..." value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
-            <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors">
-              {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
-              {loading ? "Generating…" : "Generate Proposal"}
-            </button>
-          </div>
-
-          {/* Export */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-            <button onClick={exportPNG} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"><IconDownload className="size-4" />Export PNG</button>
-          </div>
+          ))}
+          <button onClick={() => setPricingItems((p) => [...p, { id: uid(), description: "", quantity: 1, rate: 0 }])} className="text-xs text-primary-500 hover:underline">+ Add Item</button>
         </div>
+      )}
+    </div>
+  );
 
-        {/* Canvas */}
-        <div className={`flex-1 min-w-0 ${mobileTab !== "canvas" ? "hidden md:block" : ""}`}>
-          <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto">
-            <canvas ref={canvasRef} style={{ width: Math.min(PAGE_W, 500), height: Math.min(PAGE_W, 500) * (PAGE_H / PAGE_W) }} className="rounded-lg shadow-lg" />
-          </div>
-          <div className="flex items-center justify-center gap-2 mt-3">
-            {sections.filter((s) => s.enabled).map((s, i) => (
-              <button key={s.id} onClick={() => setConfig((p) => ({ ...p, activeSection: sections.indexOf(s) }))} className={`px-3 py-1 rounded-lg text-xs font-medium ${sections.indexOf(s) === config.activeSection ? "bg-primary-500 text-gray-950" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"}`}>{i + 1}</button>
-            ))}
-          </div>
-          <p className="text-xs text-gray-400 text-center mt-2">Proposal — {sections[config.activeSection]?.title} — {PAGE_W}×{PAGE_H}px</p>
-        </div>
+  /* ── Toolbar ─────────────────────────────────────────────── */
+  const toolbar = (
+    <div className="flex items-center gap-1.5">
+      <span className="text-xs font-semibold text-gray-400 capitalize">{config.template}</span>
+      <span className="text-gray-600 dark:text-gray-600">·</span>
+      <span className="text-xs text-gray-500">{sections[config.activeSection]?.title}</span>
+      <span className="text-gray-600 dark:text-gray-600">·</span>
+      <div className="flex items-center gap-1">
+        {sections.filter((s) => s.enabled).map((s, i) => (
+          <button key={s.id} onClick={() => setConfig((p) => ({ ...p, activeSection: sections.indexOf(s) }))} className={`px-2 py-0.5 rounded text-[10px] font-medium ${sections.indexOf(s) === config.activeSection ? "bg-primary-500 text-gray-950" : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400"}`}>{i + 1}</button>
+        ))}
       </div>
     </div>
+  );
+
+  return (
+    <StickyCanvasLayout
+      canvasRef={canvasRef}
+      displayWidth={displayWidth}
+      displayHeight={displayHeight}
+      zoom={zoom}
+      onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
+      onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
+      onZoomFit={() => setZoom(0.75)}
+      label={`Proposal — ${sections[config.activeSection]?.title} — ${PAGE_W}×${PAGE_H}px`}
+      mobileTabs={["Canvas", "Settings"]}
+      toolbar={toolbar}
+      leftPanel={leftPanel}
+      actionsBar={
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportPNG}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors"
+          >
+            <IconDownload className="size-3" />
+            Download PNG
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 text-xs font-medium hover:bg-gray-800 transition-colors"
+          >
+            <IconCopy className="size-3" />
+            Copy
+          </button>
+        </div>
+      }
+    />
   );
 }
