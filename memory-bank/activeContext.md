@@ -59,22 +59,59 @@ These are the SUBSTANTIAL workspaces (50KB+) that likely have proper functionali
 - Workspace files exist but many are incomplete shells
 - Video/audio workspaces are mostly non-functional
 
-## Recent Changes (Session 19 — Correction & Cleanup)
+## Recent Changes (Session 20 — Tool-by-Tool Audit & Rebuild)
 
-### page.tsx — Fake routes removed
-- Removed ALL "Extended Routing" sections (~140 lines of fake shared routes)
-- Only 72 legitimate routes remain (each tool → its OWN dedicated workspace file)
+### Comprehensive Audit Completed
+- **ALL 69 workspace files** audited systematically
+- Categorized: ~44 solid, ~21 needs-enhancement, 4 rebuilt
 
-### tools.ts — Statuses verified
-- Confirmed 72 ready, 114 coming-soon, 8 beta (statuses were already correct)
+### Rebuilt Workspaces (Session 20)
+1. **VideoEditorWorkspace** (187→700+ lines):
+   - StickyCanvasLayout + canvas-based preview AND timeline
+   - 4-track NLE (video/image/text/audio), 8 transitions, 9 color grades
+   - AI smart-cut via /api/chat, keyboard shortcuts (J/K/L/Space/S/Del)
+   - Playback loop with requestAnimationFrame, frame export
 
-### TOOL-AUDIT-GUIDE.md — Created
-- Comprehensive tool-by-tool tracking document with quality standards
+2. **TextToSpeechWorkspace** (346→580+ lines):
+   - StickyCanvasLayout + canvas-based waveform visualization
+   - Browser SpeechSynthesis API playback, 6 voices with colors
+   - 8 languages, 6 AI script templates, word-by-word tracking
+   - Speed/pitch/volume/emphasis controls, SSML mode
+
+### Session 19 Changes (Still Active)
+- Fake routes removed from page.tsx (~140 lines)
+- TOOL-AUDIT-GUIDE.md created
+- LogoRevealWorkspace rebuilt (87→580+ lines)
+- AIVideoGeneratorWorkspace rebuilt (113→560+ lines)
+
+## Workspace Quality Audit Results
+
+### SOLID — Production Quality (~44 workspaces)
+Design tools: SocialMediaPost, BannerAd, PosterFlyer, ResumeCV, BusinessCard, Invoice,
+Presentation, BrandIdentity, LogoGenerator, EmailTemplate, MenuDesigner, Certificate,
+Infographic, Packaging, Sticker, Brochure, Apparel, Letterhead, Envelope,
+Catalog, Contract, Coupon, IDCard, MockupGenerator, PriceList, Proposal,
+Quotation, Receipt, Report, SalesBookA4, SalesBookA5, Signage, Thumbnail, Wireframe
+
+Utility/content tools: AIChatWorkspace, AnalyticsDashboard, BlogWriter, ColorPalette,
+ContentCalendar, EmailCopy, EmailSequence, IconGenerator, ProductDescription,
+QRCode, SEOOptimizer, SocialCopy, StockImageBrowser, UIComponent
+
+### NEEDS ENHANCEMENT (~17 workspaces)
+These are functional but simulate backend processing:
+BackgroundRemover, BatchProcessor, FileConverter, GifMaker, ImageEnhancer,
+LandingPage, LeadMagnet, MotionGraphics(299 lines—thinnest), MusicGenerator,
+PDFTools, PodcastTools, SalesFunnel, SubtitleGenerator, Transcription,
+VideoCompressor, VoiceCloner, CalendarDesigner(486 lines—thin)
+
+### REBUILT THIS SESSION (4 workspaces)
+VideoEditor, TextToSpeech, LogoReveal, AIVideoGenerator
 
 ## Next Steps (Priority Order)
-1. **Phase A: Audit existing 69 workspaces** — Fix quality issues one by one
-2. **Phase B–D: Build missing tools** — 122 tools need dedicated workspaces
-3. **Phase 5: Platform Maturity** — Auth, DB, payments, deployment
+1. **Enhance thin workspaces** — MotionGraphics (299 lines), CalendarDesigner (486 lines)
+2. **Build missing tools (122)** — Phase B–D from TOOL-AUDIT-GUIDE.md
+3. **Backend integrations** — Real video/audio/PDF processing (requires server)
+4. **Phase 5: Platform Maturity** — Auth, DB, payments, deployment
 
 ## Active Decisions
 - **Tool-by-tool approach** — No shortcuts, no routing tools to wrong workspaces
