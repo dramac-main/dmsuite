@@ -1,6 +1,6 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 96/194 tools with workspaces (49%) — ~90 tools still need building — Build passes ✅ — Full audit complete ✅
+## Overall Status: 96/194 tools with workspaces (49%) — ~90 tools still need building — Build passes ✅ — Full audit complete ✅ — vNext Editor M0-M1 Complete ✅
 
 ---
 
@@ -38,14 +38,33 @@
 - [x] Zustand stores: sidebar, chat, preferences, revision-history (all persisted)
 - [x] Global Advanced Settings store: 40 settings, 6 categories, persisted in localStorage
 - [x] Advanced settings helpers: 25+ pure functions for canvas renderers
+- [x] **NEW:** Editor store (`src/stores/editor.ts`) — doc, commands, selection, interaction, viewport, AI state, clipboard
 
 ### Canvas Infrastructure ✅
 - [x] canvas-utils.ts (~673 lines) — shared canvas drawing utilities
-- [x] canvas-layers.ts (~1024 lines) — layer-based scene graph engine
+- [x] canvas-layers.ts (~1024 lines) — layer-based scene graph engine (v1, kept for backward compat)
 - [x] design-foundation.ts (~1760 lines) — professional design rules engine
 - [x] StickyCanvasLayout — shared layout wrapper for canvas tools
 - [x] TemplateSlider — visual template preview
 - [x] AI revision engine with style locking
+
+### vNext Editor Infrastructure ✅ (Session 28, commit ef6db77)
+- [x] **`src/lib/editor/schema.ts`** — DesignDocumentV2 scene-graph types (8 layer types, paints, effects, blend modes, transforms, rich text, paths)
+- [x] **`src/lib/editor/commands.ts`** — Command-based undo/redo with coalescing (move, resize, update, add, delete, reorder, duplicate, batch)
+- [x] **`src/lib/editor/renderer.ts`** — Full Canvas2D renderer for DesignDocumentV2 (all layer types, paint/stroke/effects, selection handles, export)
+- [x] **`src/lib/editor/hit-test.ts`** — Rotation-aware hit detection + SpatialIndex grid lookup
+- [x] **`src/lib/editor/interaction.ts`** — Pointer state machine (move, resize, rotate, draw-shape, marquee, pan) + keyboard nudge
+- [x] **`src/lib/editor/design-rules.ts`** — Color science (WCAG, harmony, clash), typography scales, spacing grids, print safety, composition balance, validateDesign()
+- [x] **`src/lib/editor/ai-patch.ts`** — AI revision protocol: 6 PatchOp types, 20 intent types, scope enforcement, locked paths, intent→patch compiler, AI prompt builder
+- [x] **`src/lib/editor/index.ts`** — Barrel export
+- [x] **`src/components/editor/CanvasEditor.tsx`** — Universal editor kernel (RAF render loop, ResizeObserver, viewport, grid, overlays)
+- [x] **`src/components/editor/EditorToolbar.tsx`** — Mode tools, undo/redo, zoom, view toggles
+- [x] **`src/components/editor/LayerPropertiesPanel.tsx`** — Right-side inspector (transform, text, shape, icon, image, blend, tags)
+- [x] **`src/components/editor/LayersListPanel.tsx`** — Layer list with visibility/lock toggles
+- [x] **`src/components/editor/index.ts`** — Barrel export
+- [x] **`src/stores/editor.ts`** — Zustand store (doc, commandStack, selection, interaction, viewport, AI, locks, clipboard)
+- [x] Build verified clean (`tsc --noEmit` zero errors)
+- [x] Committed and pushed (ef6db77, 15 files, 6207 insertions)
 
 ### Asset Bank: Icons ✅ (Session 26 + continued)
 - [x] icon-library.ts (~2,450 lines) — 115 professional vector canvas icons
@@ -279,9 +298,28 @@ These workspaces work but simulate backend processing or have limited canvas ren
 - ✅ Build passes with zero TypeScript errors
 - ✅ Updated memory bank
 
-### Next Priority (Session 24+)
-1. **Spot-check remaining agent-built workspaces** (16/19 unchecked)
-2. **Fix Math.random() flicker** in WhitePaper + MediaKit
-3. **Enhance 15 needs-enhancement workspaces** (simulated backends)
-4. **Build missing ~90 tool workspaces** (video, audio, content, marketing, web, utilities)
-5. **Server infrastructure** for real media processing
+### Next Priority (Session 29+)
+1. **M2: BusinessCard Migration** — Convert BusinessCardWorkspace from procedural CardConfig to layer-based DesignDocumentV2 using shared CanvasEditor
+2. **M3: Roll to Other Workspaces** — Replicate pattern to 60+ canvas workspaces
+3. **Spot-check remaining agent-built workspaces** (16/19 unchecked)
+4. **Fix Math.random() flicker** in WhitePaper + MediaKit
+5. **Enhance 15 needs-enhancement workspaces** (simulated backends)
+6. **Build missing ~90 tool workspaces** (video, audio, content, marketing, web, utilities)
+7. **Server infrastructure** for real media processing
+
+### Session 28 — vNext Editor Infrastructure (commit ef6db77)
+- ✅ Diagnosed root cause: workspaces use procedural config, not layer-based scene graph
+  - AI revision can't target individual canvas elements (e.g., "make logo bigger")
+  - AI generator only outputs config text, not full designs
+  - No executor bridge from AI JSON to draw functions
+- ✅ Planned 6-milestone architecture (M0-M5) with user approval
+- ✅ Built complete foundational editor infrastructure:
+  - **8 files in `src/lib/editor/`**: schema, commands, renderer, hit-test, interaction, design-rules, ai-patch, index
+  - **4 files in `src/components/editor/`**: CanvasEditor, EditorToolbar, LayerPropertiesPanel, LayersListPanel + index
+  - **1 new Zustand store**: `src/stores/editor.ts`
+  - **1 modified file**: `src/stores/index.ts` (barrel export)
+- ✅ Fixed 100+ TypeScript errors across all files (generics, imports, signatures)
+- ✅ Build verified clean (`npx tsc --noEmit` — zero errors)
+- ✅ Committed (ef6db77) and pushed — 15 files, 6,207 insertions
+- ✅ Updated memory bank
+- 🔜 Next: M2 — BusinessCard migration to layer-based editor

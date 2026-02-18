@@ -1,9 +1,9 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Phases 1–4 PARTIAL — 96 tools routed with dedicated workspaces, 98 tools still need building
+**Phase:** vNext Editor Infrastructure — Milestones 0-1 + M4 AI Patch Protocol COMPLETE
 
-### Actual State (Session 26 Updated)
+### Actual State (Session 28 Updated)
 - **194 total tools** defined in tools.ts
 - **96 tools** have dedicated workspace routes in page.tsx → status: "ready"  
 - **~90 tools** have NO workspace → status: "coming-soon"
@@ -12,8 +12,118 @@
 - Build passes with zero TypeScript errors
 - All workspaces now use global Accordion component (no more local Section+Set<string>)
 - AI Design Engine v2.0 — massively upgraded with 13 sections, 60+ exports
+- **NEW: vNext Editor Infrastructure** — 14 new files, 6,207 lines, clean build
 
-## Recent Changes (Session 27b — Global Advanced Settings System, commit abb77c4)
+## Recent Changes (Session 28 — vNext Editor Infrastructure, commit ef6db77)
+
+### Foundational Editor System — Complete Infrastructure Layer
+
+#### Problem Diagnosed
+- BusinessCard and all workspaces use procedural `CardConfig` + template rendering
+- AI revision patches config fields but can't target individual canvas elements  
+- No "executor" bridge from AI JSON to draw functions
+- "Make the logo bigger" fails because logo size isn't a JSON-addressable property
+
+#### Solution Architecture: DesignDocumentV2 Layer Scene Graph
+
+**8 new files in `src/lib/editor/`:**
+
+1. **`schema.ts`** (~750 lines): Canonical vNext scene-graph types
+   - Primitives: RGBA, Vec2, AABB, Matrix2D, LayerId, DocId
+   - Paint system: solid/gradient/image/pattern with color stops
+   - StrokeSpec with paint, width, align, dash, cap, join, miter
+   - 7 effect types: drop-shadow, inner-shadow, blur, glow, outline, color-adjust, noise
+   - 16 blend modes with Canvas API composite mappings
+   - Clipping, masks, constraints, decomposed Transform (pos/size/rot/skew/pivot)
+   - Rich text: TextStyle, TextRun, ParagraphStyle
+   - Path geometry: PathCommand union (move/line/cubic/quadratic/arc/close)
+   - 8 layer types: text, shape, image, frame, path, icon, boolean-group, group
+   - DesignDocumentV2 with layersById map, selection, resources, meta
+   - Factory functions, document helpers, color utilities
+
+2. **`commands.ts`** (~300 lines): Command-based undo/redo with coalescing
+   - Command interface: label, category, coalesceKey, execute, undo
+   - CommandStack with snapshot-based undo (reliable)
+   - Pre-built: move (delta), resize (9-param), update (generic), add, delete, reorder, duplicate, batch
+
+3. **`renderer.ts`** (~500 lines): Full Canvas2D renderer for DesignDocumentV2
+   - renderDocumentV2() with RenderOptions (selection, guides, bleed/safe)
+   - Type-specific: renderFrame (recursive), renderText, renderShape (6 shapes + per-corner radii), renderImage (filters), renderIcon, renderPath, renderGroup
+   - Paint helpers: applyPaint, applyStroke, createCanvasGradient
+   - Effects: applyPreEffects (drop shadow), applyPostEffects (placeholder)
+   - Selection handles with rotation handle
+   - Export: renderToCanvas for off-screen rendering
+
+4. **`hit-test.ts`** (~250 lines): Rotation-aware hit detection
+   - hitTestDocument: top-level recursive through frames/groups
+   - hitTestHandles: priority check for resize/rotation handles
+   - isPointInLayer: rotation-aware local-space point transform
+   - SpatialIndex: grid-based (64px cells) with rebuild/query
+
+5. **`interaction.ts`** (~450 lines): Pointer state machine
+   - States: idle → down → dragging
+   - Actions: move, resize, rotate, draw-shape, marquee, pan
+   - screenToWorld/worldToScreen coordinate conversion
+   - handlePointerDown/Move/Up with snap-to-grid support
+   - handleKeyAction for arrow nudge (1px or 10px with Shift)
+   - Cursor management per handle direction
+
+6. **`design-rules.ts`** (~400 lines): Professional design knowledge
+   - Color science: WCAG contrast (AA/AA-Large/AAA), readable color, harmony (6 types), clash detection, tint ladder
+   - Typography: 8 modular scales, type scale generator, min font sizes, line height ranges, letter spacing
+   - Spacing: 8px grid, golden ratio splits, print margins, rule of thirds, safe area
+   - Hierarchy: 4 levels with visual weight scoring (0-100)
+   - Composition: balance calculation (horizontal/vertical)
+   - Print: 8 standard sizes, mm↔px conversion
+   - Validation: validateDesign() → RuleViolation[] (contrast, typography, bounds, print, composition)
+   - AI ranges: 13 property categories with min/max/step, clampToRange()
+
+7. **`ai-patch.ts`** (~870 lines): AI revision protocol
+   - RevisionScope: text-only, colors-only, layout-only, element-specific, full-redesign
+   - SCOPE_ALLOWED_PATHS: prefix-based path validation per scope
+   - PatchOp: replace, add, remove, reorder, add-layer, remove-layer (RFC 6902 subset)
+   - validateAndApplyPatch: scope + lock enforcement, value clamping, post-patch WCAG check
+   - 20 intent types: make-bigger/smaller, center, change-color, make-warmer/cooler, fix-contrast, change-font-size, change-opacity, make-bold/lighter, add/remove-shadow, add-spacing, move-to
+   - LayerTarget: by IDs, tags, nameContains, layerType, special (all/selected/largest-text/primary-image/background)
+   - resolveTarget: deterministic layer resolution
+   - intentToPatchOps: deterministic intent → patch compiler (no AI needed)
+   - processIntent: full pipeline (resolve → plan → validate → command)
+   - parseAIRevisionResponse: JSON extractor from LLM output
+   - buildAIPatchPrompt: full layer description + protocol documentation for AI
+
+8. **`index.ts`**: Barrel export for all editor modules
+
+**4 new React components in `src/components/editor/`:**
+
+1. **`CanvasEditor.tsx`** (~490 lines): Universal editor kernel
+   - Wraps renderer, hit-test, interaction engine, command stack, viewport
+   - ResizeObserver for auto-sizing, auto-fit on first load
+   - requestAnimationFrame render loop
+   - Grid drawing, marquee overlay, zoom/mode/AI-processing indicators
+   - Props: document, onDocumentChange, showGrid, showBleedSafe, readOnly, onSelectionChange, onLayerDoubleClick, renderOverlay, workspaceBg
+
+2. **`EditorToolbar.tsx`**: Mode selector + undo/redo + zoom + view toggles
+
+3. **`LayerPropertiesPanel.tsx`** (~440 lines): Right-side inspector
+   - Transform (X/Y/W/H/Rotation/Opacity), text properties (content/font/size/weight/color/style/align)
+   - Shape properties (type/fill/stroke/corner-radius), icon properties (iconId/color)
+   - Image properties (fit/brightness/contrast/saturation), blend mode, tags
+
+4. **`LayersListPanel.tsx`**: Layer list with visibility/lock toggles
+
+**1 new Zustand store:**
+
+- **`src/stores/editor.ts`** (~290 lines): EditorState store
+  - Document + CommandStack management
+  - Selection (additive, deselect all)
+  - Layer CRUD (add/remove/update/reorder/duplicate)
+  - Interaction mode + drag state
+  - Viewport (zoom/pan/showGrid/showGuides/snap)
+  - AI state (scope, processing flag, patch/intent application)
+  - Locked paths (per-layer path locking for AI)
+  - Clipboard (copy/paste/cut with offset)
+
+- **`src/stores/index.ts`** updated with editor store exports
 
 ### Global Advanced Design Settings — Complete System
 
@@ -325,21 +435,28 @@ VideoCompressor, VoiceCloner
 VideoEditor, TextToSpeech, LogoReveal, AIVideoGenerator, MotionGraphics, CalendarDesigner
 
 ## Next Steps (Priority Order)
-1. **Spot-check remaining agent-built workspaces** — 16 of 19 still unchecked
-2. **Fix Math.random() flicker** — WhitePaper + MediaKit use random values in render (causes flickering decorative elements)
-3. **Enhance remaining thin workspaces** — 15 needs-enhancement workspaces (mostly simulated backends)
-4. **Build missing tools (~90)** — Across design, video, audio, content-writing, marketing, web-ui, utilities categories
-5. **Backend integrations** — Real video/audio/PDF processing (requires server)
-6. **Phase 5: Platform Maturity** — Auth, DB, payments, deployment
+1. **M2: BusinessCard Migration** — Convert from procedural CardConfig to layer-based DesignDocumentV2 + shared CanvasEditor (reference implementation)
+2. **M3: Roll to Other Workspaces** — Replicate pattern to 60+ canvas workspaces
+3. **M5: Pro Features** — Blend modes, masks/clipping, gradients per-layer, text-on-path (infrastructure already in schema)
+4. **Spot-check remaining agent-built workspaces** — 16 of 19 still unchecked
+5. **Fix Math.random() flicker** — WhitePaper + MediaKit
+6. **Enhance remaining thin workspaces** — 15 needs-enhancement workspaces
+7. **Build missing tools (~90)** — video, audio, content-writing, marketing, web-ui, utilities
+8. **Backend integrations** — Real video/audio/PDF processing
+9. **Phase 5: Platform Maturity** — Auth, DB, payments, deployment
 
 ## Active Decisions
 - **Tool-by-tool approach** — No shortcuts, no routing tools to wrong workspaces
 - **Quality over speed** — Each tool must have proper functionality
+- **DesignDocumentV2 is THE standard** — All new work uses vNext editor, old workspaces migrate incrementally
+- **Dual AI modes** — PatchOps for precision, EditIntents for natural language ("make logo bigger")
+- **Intent compiler is deterministic** — Common edits need NO AI call (make-bigger, center, change-color)
+- **Backward compatible migration** — Old canvas-layers.ts kept; workspaces migrate one at a time
+- **BusinessCard first** — Reference implementation, then roll pattern to all canvas workspaces
 - **Stock images** — Must integrate `/api/images` in design workspaces
 - **Print-ready exports** — PDFs with crop marks, high-res PNGs, editable SVGs
 - **AI generates real content** — Not placeholder text
-- **Canvas render pipeline** — 5-stage: Background → Foundation → Layers → Selection → Watermark
-- **Layer-based scene graph** — DesignDocument → Layer[] architecture
-- **Shared infrastructure** — canvas-utils.ts, canvas-layers.ts, design-foundation.ts
+- **Canvas render pipeline** — vNext: DesignDocumentV2 → Renderer → Canvas2D (replaces old 5-stage)
+- **Shared infrastructure** — canvas-utils.ts (legacy), lib/editor/* (vNext)
 - **Multi-provider AI** — Claude primary, OpenAI secondary, auto-fallback
 - **No database yet** — Supabase planned (Phase 5)
