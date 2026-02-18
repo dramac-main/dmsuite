@@ -1,9 +1,9 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** vNext Editor Infrastructure — Milestones 0-1 + M4 AI Patch Protocol COMPLETE
+**Phase:** M2 BusinessCard Migration to vNext Editor — COMPLETE
 
-### Actual State (Session 28 Updated)
+### Actual State (Session 29 Updated)
 - **194 total tools** defined in tools.ts
 - **96 tools** have dedicated workspace routes in page.tsx → status: "ready"  
 - **~90 tools** have NO workspace → status: "coming-soon"
@@ -12,9 +12,67 @@
 - Build passes with zero TypeScript errors
 - All workspaces now use global Accordion component (no more local Section+Set<string>)
 - AI Design Engine v2.0 — massively upgraded with 13 sections, 60+ exports
-- **NEW: vNext Editor Infrastructure** — 14 new files, 6,207 lines, clean build
+- **vNext Editor Infrastructure** — 14 files, 6,207 lines (Session 28)
+- **NEW: M2 BusinessCard Adapter** — layer-based rendering via DesignDocumentV2
 
-## Recent Changes (Session 28 — vNext Editor Infrastructure, commit ef6db77)
+## Recent Changes (Session 29 — M2 BusinessCard Migration)
+
+### BusinessCard Now Renders via vNext Layer Engine
+
+#### What Was Done
+1. **Created `src/lib/editor/business-card-adapter.ts`** (~1,970 lines)
+   - `cardConfigToDocument(config, opts)` — main conversion function
+   - 20 template layout functions (all templates: executive-clean through art-deco)
+   - 5 back-side layout functions (logo-center, pattern-fill, minimal, info-repeat, gradient-brand)
+   - Contact layers builder with icon + text layers per entry
+   - Logo layer builder with image/initials fallback
+   - Pattern overlay via PatternPaint on shape layer
+   - Font size calculator with advanced-settings scaling integration
+   - Smart sync functions: `syncTextToDocument()`, `syncColorsToDocument()`
+   - Reverse sync: `documentToCardConfig()` for AI→sidebar sync
+   - All constants exported: CARD_SIZES, COLOR_PRESETS, TEMPLATE_DEFAULT_THEMES, FONT_FAMILIES
+   - Semantic tags on every layer for AI targeting (name, title, company, contact-*, logo, decorative, etc.)
+
+2. **Fixed `src/lib/editor/renderer.ts`** (3 changes)
+   - Text renderer now uses layer's `fontFamily` directly instead of hardcoded "modern"
+   - Added italic support: `italic` flag from TextStyle prepended to font string
+   - Pattern rendering: replaced stub with real `drawPattern()` call from graphics-engine
+   - Imported `drawPattern` from `@/lib/graphics-engine`
+
+3. **Updated `src/components/workspaces/BusinessCardWorkspace.tsx`** (5 changes)
+   - Added imports for adapter + renderer
+   - Created `renderCardV2()` bridge function using vNext pipeline
+   - Replaced ALL 5 `renderCard()` call sites with `renderCardV2()`:
+     - Canvas preview useEffect
+     - PNG export (handleDownloadPng)
+     - Clipboard copy (handleCopyCanvas)
+     - PDF export (addPage)
+     - Batch export (renderBatchCard)
+   - Legacy `renderCard` and all 20 template renderers preserved but unused
+   - AI revision system unchanged (still works at CardConfig level)
+
+#### Architecture: How It Works Now
+```
+User changes config → useEffect triggers
+  → cardConfigToDocument(config) → DesignDocumentV2 with ~15-25 layers
+  → renderDocumentV2(ctx, doc) → Canvas render via vNext engine
+  → QR overlay (still legacy)
+```
+
+Each business card element is now a separate layer:
+- Text layers: Name, Title, Company, Tagline, Contact entries
+- Icon layers: Contact icons (phone, email, globe, map-pin)
+- Shape layers: Decorative panels, borders, stripes, dividers, accent shapes
+- Path layers: Diagonal cuts, deco fans, corner accents
+- Image layers: Logo (with _imageElement for loaded images)
+- Pattern overlay: ShapeLayerV2 with PatternPaint fill
+
+#### What This Enables (Future Milestones)
+- AI can now target individual layers: "make the logo bigger" → resize logo layer
+- AI can move elements: "move name higher" → update name layer position
+- AI can restyle elements: "make title italic" → update title layer style
+- Interactive editing via CanvasEditor (M3) — select/drag/resize any element
+- Multi-tool reuse: same renderer/editor for all card-based tools
 
 ### Foundational Editor System — Complete Infrastructure Layer
 

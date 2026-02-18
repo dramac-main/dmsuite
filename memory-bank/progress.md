@@ -1,6 +1,6 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 96/194 tools with workspaces (49%) — ~90 tools still need building — Build passes ✅ — Full audit complete ✅ — vNext Editor M0-M1 Complete ✅
+## Overall Status: 96/194 tools with workspaces (49%) — ~90 tools still need building — Build passes ✅ — Full audit complete ✅ — vNext Editor M0-M2 Complete ✅
 
 ---
 
@@ -65,6 +65,21 @@
 - [x] **`src/stores/editor.ts`** — Zustand store (doc, commandStack, selection, interaction, viewport, AI, locks, clipboard)
 - [x] Build verified clean (`tsc --noEmit` zero errors)
 - [x] Committed and pushed (ef6db77, 15 files, 6207 insertions)
+
+### M2: BusinessCard Migration to vNext ✅ (Session 29)
+- [x] **`src/lib/editor/business-card-adapter.ts`** (~1,970 lines) — CardConfig → DesignDocumentV2 conversion
+  - 20 template layout functions creating semantic layer trees
+  - 5 back-side layout functions
+  - Contact layers builder (text + icon per entry)
+  - Logo layer builder (image or initials fallback)
+  - Pattern overlay via PatternPaint on ShapeLayerV2
+  - Smart sync: `syncTextToDocument()`, `syncColorsToDocument()`, `documentToCardConfig()`
+  - All constants exported: CARD_SIZES, COLOR_PRESETS, TEMPLATE_DEFAULT_THEMES, FONT_FAMILIES
+- [x] **Renderer fixes** — fontFamily from layer (not hardcoded), italic support, real pattern rendering via drawPattern
+- [x] **BusinessCardWorkspace wired** — all 5 renderCard call sites replaced with renderCardV2
+  - Canvas preview, PNG export, clipboard, PDF export, batch export — all use vNext pipeline
+  - Legacy template renderers preserved but unused (can be removed later)
+- [x] Build verified clean (`tsc --noEmit` + `next build` both pass)
 
 ### Asset Bank: Icons ✅ (Session 26 + continued)
 - [x] icon-library.ts (~2,450 lines) — 115 professional vector canvas icons

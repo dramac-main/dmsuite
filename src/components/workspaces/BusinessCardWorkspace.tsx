@@ -49,6 +49,8 @@ import {
   getExportScale,
   applyCanvasSettings,
 } from "@/stores/advanced-helpers";
+import { cardConfigToDocument, type CardConfig as CardConfigV2 } from "@/lib/editor/business-card-adapter";
+import { renderDocumentV2 } from "@/lib/editor/renderer";
 
 /* ====================================================================
    BUSINESS CARD TYPOGRAPHY STANDARDS (Industry Research)
@@ -411,7 +413,49 @@ function drawContactBlock(
 }
 
 /* ====================================================================
-   20 PROFESSIONAL TEMPLATE RENDERERS
+   vNEXT RENDERER BRIDGE — Uses DesignDocumentV2 + layer-based rendering
+   ==================================================================== */
+
+/**
+ * Renders a business card using the vNext layer-based engine.
+ * Converts CardConfig → DesignDocumentV2 → Canvas render.
+ * This is the M2 migration path; keeps identical visual output
+ * while enabling AI to target individual layers.
+ */
+function renderCardV2(
+  canvas: HTMLCanvasElement,
+  config: CardConfig,
+  logoImg?: HTMLImageElement | null,
+  scale: number = 1,
+  opts?: { showBleedSafe?: boolean }
+) {
+  const doc = cardConfigToDocument(
+    config as unknown as CardConfigV2,
+    { logoImg: logoImg ?? undefined }
+  );
+
+  const rootFrame = doc.layersById[doc.rootFrameId];
+  if (!rootFrame) return;
+  const W = rootFrame.transform.size.x;
+  const H = rootFrame.transform.size.y;
+
+  canvas.width = Math.round(W * scale);
+  canvas.height = Math.round(H * scale);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  applyCanvasSettings(ctx);
+
+  renderDocumentV2(ctx, doc, {
+    scaleFactor: scale,
+    showBleedSafe: opts?.showBleedSafe ?? false,
+  });
+}
+
+/* ====================================================================
+   20 PROFESSIONAL TEMPLATE RENDERERS (Legacy — kept for reference)
    ==================================================================== */
 
 function renderCard(canvas: HTMLCanvasElement, config: CardConfig, logoImg?: HTMLImageElement | null, scale: number = 1) {
@@ -1767,7 +1811,7 @@ function renderBatchCard(
     phone: entry.phone,
     side,
   };
-  renderCard(offscreen, batchConfig, logoImg, scale);
+  renderCardV2(offscreen, batchConfig, logoImg, scale);
   // QR overlay (use logical dimensions since ctx may have scale transform)
   if (batchConfig.qrCodeUrl) {
     const ctx2 = offscreen.getContext("2d");
@@ -1908,16 +1952,19 @@ export default function BusinessCardWorkspace() {
   // Subscribe to global advanced settings to trigger canvas re-render
   const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
-  // Render canvas
+  // Render canvas — vNext layer-based renderer
   useEffect(() => {
-    const renderToCanvas = (canvas: HTMLCanvasElement, cfg: CardConfig) => {
-      renderCard(canvas, cfg, logoImg);
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      const size = cfg.cardStyle === "custom"
-        ? { w: Math.round(cfg.customWidthMm * MM_PX), h: Math.round(cfg.customHeightMm * MM_PX) }
-        : CARD_SIZES[cfg.cardStyle] || CARD_SIZES.standard;
+    const doRender = (canvas: HTMLCanvasElement, cfg: CardConfig) => {
+      const bleedSafe = showBleed || showSafeZone;
+      renderCardV2(canvas, cfg, logoImg, 1, { showBleedSafe: bleedSafe });
+
+      // QR code overlay (not yet part of layer model)
       if (cfg.qrCodeUrl) {
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        const size = cfg.cardStyle === "custom"
+          ? { w: Math.round(cfg.customWidthMm * MM_PX), h: Math.round(cfg.customHeightMm * MM_PX) }
+          : CARD_SIZES[cfg.cardStyle] || CARD_SIZES.standard;
         const qrSize = Math.min(size.w, size.h) * 0.14;
         if (cfg.side === "front") {
           drawQRPlaceholder(ctx, size.w - qrSize - size.w * 0.06, size.h - qrSize - size.h * 0.1, qrSize, "#000000");
@@ -1925,13 +1972,11 @@ export default function BusinessCardWorkspace() {
           drawQRPlaceholder(ctx, size.w / 2 - qrSize / 2, size.h * 0.65, qrSize, "#000000");
         }
       }
-      if (showBleed) drawBleedOverlay(ctx, size.w, size.h);
-      if (showSafeZone) drawSafeZone(ctx, size.w, size.h);
     };
 
-    if (canvasRef.current) renderToCanvas(canvasRef.current, config);
+    if (canvasRef.current) doRender(canvasRef.current, config);
     if (sideBySide && backCanvasRef.current) {
-      renderToCanvas(backCanvasRef.current, { ...config, side: config.side === "front" ? "back" : "front" });
+      doRender(backCanvasRef.current, { ...config, side: config.side === "front" ? "back" : "front" });
     }
   }, [config, showBleed, showSafeZone, sideBySide, logoImg, advancedSettings]);
 
@@ -2290,7 +2335,7 @@ JSON:`;
   const handleDownloadPng = useCallback(() => {
     // Render at Nx resolution for crisp, print-quality PNG (driven by global export scale)
     const offscreen = document.createElement("canvas");
-    renderCard(offscreen, config, logoImg, getExportScale());
+    renderCardV2(offscreen, config, logoImg, getExportScale());
     if (config.qrCodeUrl) {
       const ctx2 = offscreen.getContext("2d");
       if (ctx2) {
@@ -2318,7 +2363,7 @@ JSON:`;
   const handleCopyCanvas = useCallback(async () => {
     // Copy at Nx resolution for high-quality clipboard image
     const offscreen = document.createElement("canvas");
-    renderCard(offscreen, config, logoImg, getExportScale());
+    renderCardV2(offscreen, config, logoImg, getExportScale());
     if (config.qrCodeUrl) {
       const ctx2 = offscreen.getContext("2d");
       if (ctx2) {
@@ -2359,7 +2404,7 @@ JSON:`;
     const addPage = (side: "front" | "back", isFirst: boolean) => {
       if (!isFirst) pdf.addPage([pageW, pageH], pageW > pageH ? "l" : "p");
       const offscreen = document.createElement("canvas");
-      renderCard(offscreen, { ...config, side }, logoImg, getExportScale()); // print-quality PDF
+      renderCardV2(offscreen, { ...config, side }, logoImg, getExportScale()); // print-quality PDF
       if (config.qrCodeUrl) {
         const ctx2 = offscreen.getContext("2d");
         if (ctx2) {

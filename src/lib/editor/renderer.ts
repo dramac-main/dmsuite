@@ -15,7 +15,9 @@ import type {
 } from "./schema";
 import { BLEND_MODE_TO_COMPOSITE, rgbaToHex } from "./schema";
 import { drawIcon } from "@/lib/icon-library";
-import { roundRect, getCanvasFont, drawTrackedText, wrapCanvasText } from "@/lib/canvas-utils";
+import { roundRect, drawTrackedText, wrapCanvasText } from "@/lib/canvas-utils";
+import { drawPattern } from "@/lib/graphics-engine";
+import type { PatternPaint } from "./schema";
 
 // ---------------------------------------------------------------------------
 // Render Options
@@ -246,7 +248,8 @@ function renderText(ctx: CanvasRenderingContext2D, layer: TextLayerV2): void {
   const s = layer.defaultStyle;
 
   const displayText = s.uppercase ? layer.text.toUpperCase() : layer.text;
-  ctx.font = getCanvasFont(s.fontWeight, s.fontSize, "modern");
+  const italic = s.italic ? "italic " : "";
+  ctx.font = `${italic}${s.fontWeight} ${s.fontSize}px ${s.fontFamily}`;
   ctx.textBaseline = "top";
 
   const lines = wrapCanvasText(ctx, displayText, w);
@@ -471,11 +474,11 @@ function applyPaint(ctx: CanvasRenderingContext2D, paint: Paint, x: number, y: n
       break;
     }
     case "pattern": {
-      // Pattern type would be: paint.patternType as PatternType
-      // Use legacy pattern drawing — will be called separately
-      ctx.fillStyle = rgbaToCSS(paint.color);
-      // Pattern is drawn as overlay; set base fill transparent
-      break;
+      // Render the actual pattern using graphics-engine drawPattern
+      const pp = paint as PatternPaint;
+      const ppColor = rgbaToCSS(pp.color);
+      drawPattern(ctx, x, y, w, h, pp.patternType as Parameters<typeof drawPattern>[5], ppColor, pp.opacity, pp.spacing);
+      return; // drawPattern handles everything, skip ctx.fill()
     }
     case "image":
       // Image paint handled separately
