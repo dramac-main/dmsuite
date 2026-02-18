@@ -46,10 +46,10 @@
 - [x] AI revision engine with style locking
 
 ### Session 22 Infrastructure ✅
-- [x] Accordion component (`src/components/ui/Accordion.tsx`) — single-open panels
-- [x] AI Design Engine (`src/lib/ai-design-engine.ts`) — professional design utilities
+- [x] AI Design Engine v2.0 (`src/lib/ai-design-engine.ts`) — 1200+ lines, 60+ exports, 13 sections
+- [x] Accordion migration complete — all workspaces use global `Accordion` + `AccordionSection`
 - [x] Stock Image Hook (`src/hooks/useStockImages.tsx`) — search + panel component
-- [x] `generateColorPalette()` returns OBJECT (primary, primaryLight, primaryDark, etc.)
+- [x] `generateColorPalette()` returns OBJECT with 30+ keys (primary/tints/neutrals/semantic)
 - [x] `wrapCanvasText(ctx, text, maxWidth)` — 3 args only, returns string[]
 
 ### APIs ✅
@@ -193,8 +193,9 @@ These workspaces work but simulate backend processing or have limited canvas ren
 - [ ] No database (Supabase planned)
 - [ ] No authentication
 - [ ] ~90 tools still need dedicated workspace implementations
-- [ ] 15 agent-built document workspaces should be spot-checked for visual quality
-- [ ] Existing 16 document workspaces still use old Set<string> accordion (should migrate to Accordion component)
+- [ ] 16 agent-built document workspaces should be spot-checked for visual quality (3/19 done)
+- [ ] Math.random() flicker in WhitePaper and MediaKit workspaces
+- [x] ~~Existing 7 document workspaces migrated to global Accordion component~~
 
 ---
 
@@ -241,9 +242,28 @@ These workspaces work but simulate backend processing or have limited canvas ren
 - ✅ ALL 38 document tools now have workspaces — documents category 100% complete
 - ✅ Updated memory bank
 
-### Next Priority (Session 23+)
-1. **Migrate existing document workspaces** to new Accordion component
-2. **Spot-check agent-built workspaces** for visual rendering quality
+### Session 23 — AI Design Engine v2.0 + Accordion Migration
+- ✅ Rewrote AI Design Engine from 708 → 1200+ lines (13 sections, 60+ exports)
+  - Color science (HSL, WCAG contrast, 5 harmony types, color mixing)
+  - Typography (modular scale, optimal line-height/letter-spacing)
+  - Layout (column grid, golden ratio, baseline snapping)
+  - 10 header styles, 8 divider styles, 5 bullet styles
+  - Cards, pull quotes, stat callouts, progress bars
+  - Corner flourishes (4 styles), seals, dot/stripe patterns, noise
+  - Print production (crop marks, registration, CMYK bars, slug lines)
+  - Design-decision system (12 moods → style suggestions)
+  - Page renderers (backgrounds, footers, section headings)
+- ✅ Migrated 7 workspaces from old Set<string> accordion to global Accordion component
+  - Certificate, BusinessCard, BrandIdentity, BannerAd, MenuDesigner, PosterFlyer, SocialMediaPost
+  - Split-panel workspaces got separate Accordion instances per panel
+  - Dynamic labels (MenuDesigner) and inline SVG icons (PosterFlyer) preserved
+- ✅ Spot-checked 3/19 agent-built workspaces (CoverLetter, WhitePaper, MediaKit)
+- ✅ Build passes with zero TypeScript errors
+- ✅ Updated memory bank
+
+### Next Priority (Session 24+)
+1. **Spot-check remaining agent-built workspaces** (16/19 unchecked)
+2. **Fix Math.random() flicker** in WhitePaper + MediaKit
 3. **Enhance 15 needs-enhancement workspaces** (simulated backends)
-4. **Build missing ~90 tool workspaces** (video, audio, content, marketing, web, utilities, design)
+4. **Build missing ~90 tool workspaces** (video, audio, content, marketing, web, utilities)
 5. **Server infrastructure** for real media processing

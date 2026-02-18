@@ -24,6 +24,7 @@ import {
   IconLayers,
 } from "@/components/icons";
 import StockImagePicker, { type StockImage } from "@/components/StockImagePicker";
+import { Accordion, AccordionSection } from "@/components/ui";
 import {
   hexToRgba,
   getCanvasFont,
@@ -272,10 +273,6 @@ export default function SocialMediaPostWorkspace() {
     resizeHandle: null,
     resizeStart: null,
   });
-
-  const [openSections, setOpenSections] = useState<Set<string>>(
-    new Set(["platform", "image", "composition", "content"])
-  );
 
   const updateConfig = useCallback((partial: Partial<PostConfig>) => {
     setConfig((prev) => ({ ...prev, ...partial }));
@@ -998,15 +995,6 @@ export default function SocialMediaPostWorkspace() {
   }, [activeMockup]);
 
   /* ── Helpers ───────────────────────────────────────────── */
-  const toggleSection = (id: string) => {
-    setOpenSections((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
   const selectedLayer =
     doc.selectedLayers.length === 1
       ? doc.layers.find((l) => l.id === doc.selectedLayers[0]) ?? null
@@ -1226,12 +1214,11 @@ export default function SocialMediaPostWorkspace() {
       />
 
       {/* Platform */}
-      <Section
+      <Accordion defaultOpen="platform">
+      <AccordionSection
         icon={<IconSmartphone className="size-3.5" />}
         label="Platform"
         id="platform"
-        open={openSections.has("platform")}
-        toggle={toggleSection}
       >
         <div className="grid grid-cols-2 gap-1.5">
           {platforms.map((p) => (
@@ -1262,15 +1249,13 @@ export default function SocialMediaPostWorkspace() {
             </button>
           ))}
         </div>
-      </Section>
+      </AccordionSection>
 
       {/* Background Image */}
-      <Section
+      <AccordionSection
         icon={<IconImage className="size-3.5" />}
         label="Background"
         id="image"
-        open={openSections.has("image")}
-        toggle={toggleSection}
       >
         {config.backgroundImage ? (
           <div className="relative rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden group">
@@ -1324,15 +1309,13 @@ export default function SocialMediaPostWorkspace() {
             />
           </div>
         )}
-      </Section>
+      </AccordionSection>
 
       {/* Style Controls */}
-      <Section
+      <AccordionSection
         icon={<IconDroplet className="size-3.5" />}
         label="Style"
         id="style"
-        open={openSections.has("style")}
-        toggle={toggleSection}
       >
         <div className="space-y-3">
           <div className="grid grid-cols-5 gap-1">
@@ -1411,7 +1394,8 @@ export default function SocialMediaPostWorkspace() {
             </div>
           </div>
         </div>
-      </Section>
+      </AccordionSection>
+      </Accordion>
 
       {/* Attribution */}
       {config.backgroundImage && (
@@ -1429,12 +1413,11 @@ export default function SocialMediaPostWorkspace() {
   const rightPanel = (
     <div className="space-y-3">
       {/* Content */}
-      <Section
+      <Accordion defaultOpen="content">
+      <AccordionSection
         icon={<IconType className="size-3.5" />}
         label="Content"
         id="content"
-        open={openSections.has("content")}
-        toggle={toggleSection}
       >
         <div className="space-y-2">
           <div>
@@ -1493,7 +1476,8 @@ export default function SocialMediaPostWorkspace() {
             />
           </div>
         </div>
-      </Section>
+      </AccordionSection>
+      </Accordion>
 
       {/* Layer List */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
@@ -2276,42 +2260,4 @@ export default function SocialMediaPostWorkspace() {
   );
 }
 
-/* ── Collapsible Section ─────────────────────────────────── */
 
-function Section({
-  icon,
-  label,
-  id,
-  open,
-  toggle,
-  children,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  id: string;
-  open: boolean;
-  toggle: (id: string) => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <button
-        onClick={() => toggle(id)}
-        className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5 hover:text-gray-700 dark:hover:text-gray-300 transition-colors w-full"
-      >
-        {icon}
-        {label}
-        <svg
-          className={`size-3 ml-auto transition-transform ${open ? "rotate-180" : ""}`}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-      {open && children}
-    </div>
-  );
-}

@@ -60,6 +60,7 @@ import {
   renderCompositionFoundation,
   renderFullDesignToCanvas,
 } from "@/lib/design-foundation";
+import { Accordion, AccordionSection } from "@/components/ui";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
 
@@ -217,10 +218,6 @@ export default function PosterFlyerWorkspace() {
     resizeHandle: null,
     resizeStart: null,
   });
-
-  const [openSections, setOpenSections] = useState<Set<string>>(
-    new Set(["format", "composition", "content"])
-  );
 
   const updateConfig = useCallback((partial: Partial<PosterConfig>) => {
     setConfig((prev) => ({ ...prev, ...partial }));
@@ -932,16 +929,6 @@ export default function PosterFlyerWorkspace() {
     pdf.save(`poster-${config.format}.pdf`);
   }, [config.format, currentFormat, showBleed]);
 
-  /* ── Helpers ───────────────────────────────────────────── */
-  const toggleSection = (id: string) => {
-    setOpenSections((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
   /* ── Zoom / Display ─────────────────────────────────────── */
   const [zoom, setZoom] = useState(0.75);
   const displayWidth = Math.min(600, currentFormat.width) * zoom;
@@ -1054,13 +1041,12 @@ export default function PosterFlyerWorkspace() {
         label="Composition"
       />
 
+      <Accordion defaultOpen="format">
       {/* Format */}
-      <Section
+      <AccordionSection
         icon={<IconLayout className="size-3.5" />}
         label="Format"
         id="format"
-        open={openSections.has("format")}
-        toggle={toggleSection}
       >
         <div className="grid grid-cols-2 gap-1.5">
           {formats.map((f) => (
@@ -1091,15 +1077,13 @@ export default function PosterFlyerWorkspace() {
             </button>
           ))}
         </div>
-      </Section>
+      </AccordionSection>
 
       {/* Background Image */}
-      <Section
+      <AccordionSection
         icon={<IconImage className="size-3.5" />}
         label="Background"
         id="image"
-        open={openSections.has("image")}
-        toggle={toggleSection}
       >
         {config.backgroundImage ? (
           <div className="relative rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden group">
@@ -1153,15 +1137,13 @@ export default function PosterFlyerWorkspace() {
             />
           </div>
         )}
-      </Section>
+      </AccordionSection>
 
       {/* Style */}
-      <Section
+      <AccordionSection
         icon={<IconDroplet className="size-3.5" />}
         label="Style"
         id="style"
-        open={openSections.has("style")}
-        toggle={toggleSection}
       >
         <div className="space-y-3">
           <div className="grid grid-cols-4 gap-1">
@@ -1239,10 +1221,10 @@ export default function PosterFlyerWorkspace() {
             </div>
           </div>
         </div>
-      </Section>
+      </AccordionSection>
 
       {/* Print & Layout */}
-      <Section
+      <AccordionSection
         icon={
           <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <rect x="6" y="6" width="12" height="12" />
@@ -1251,8 +1233,6 @@ export default function PosterFlyerWorkspace() {
         }
         label="Print & Layout"
         id="print-layout"
-        open={openSections.has("print-layout")}
-        toggle={toggleSection}
       >
         <div className="space-y-2.5">
           {/* Bleed toggle */}
@@ -1343,7 +1323,8 @@ export default function PosterFlyerWorkspace() {
             )}
           </div>
         </div>
-      </Section>
+      </AccordionSection>
+      </Accordion>
     </div>
   );
 
@@ -1887,45 +1868,5 @@ export default function PosterFlyerWorkspace() {
         }
       />
     </>
-  );
-}
-
-/* ── Section Component ───────────────────────────────────── */
-
-function Section({
-  icon,
-  label,
-  id,
-  open,
-  toggle,
-  children,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  id: string;
-  open: boolean;
-  toggle: (id: string) => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <button
-        onClick={() => toggle(id)}
-        className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5 hover:text-gray-700 dark:hover:text-gray-300 transition-colors w-full"
-      >
-        {icon}
-        {label}
-        <svg
-          className={`size-3 ml-auto transition-transform ${open ? "rotate-180" : ""}`}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-      {open && children}
-    </div>
   );
 }

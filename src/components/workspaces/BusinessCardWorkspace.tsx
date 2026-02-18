@@ -35,6 +35,7 @@ import { drawCardThumbnail } from "@/lib/template-renderers";
 import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 import { jsPDF } from "jspdf";
+import { Accordion, AccordionSection } from "@/components/ui";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -878,24 +879,6 @@ function drawSafeZone(ctx: CanvasRenderingContext2D, W: number, H: number) {
   ctx.restore();
 }
 
-/* ── Collapsible Section ─────────────────────────────────── */
-
-function Section({ icon, label, id, open, toggle, children }: {
-  icon: React.ReactNode; label: string; id: string;
-  open: boolean; toggle: (id: string) => void; children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
-      <button onClick={() => toggle(id)}
-        className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors w-full">
-        {icon}{label}
-        <svg className={`size-3 ml-auto transition-transform ${open ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><polyline points="6 9 12 15 18 9" /></svg>
-      </button>
-      {open && <div className="mt-2.5">{children}</div>}
-    </div>
-  );
-}
-
 /* ── Component ───────────────────────────────────────────── */
 
 export default function BusinessCardWorkspace() {
@@ -924,18 +907,6 @@ export default function BusinessCardWorkspace() {
   const [showSafeZone, setShowSafeZone] = useState(false);
   const [bleedInExport, setBleedInExport] = useState(false);
   const [sideBySide, setSideBySide] = useState(false);
-
-  const [openSections, setOpenSections] = useState<Set<string>>(
-    new Set(["details", "templates", "layout"])
-  );
-  const toggleSection = (id: string) => {
-    setOpenSections((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
 
   const updateConfig = useCallback((partial: Partial<CardConfig>) => {
     setConfig((prev) => ({ ...prev, ...partial }));
@@ -1257,13 +1228,12 @@ STOCK_IMAGE: keyword for logo/brand image (e.g., "abstract technology logo")`;
   // ── Left Panel (Settings) ─────────────────────────────
   const leftPanel = (
     <div className="space-y-3">
+      <Accordion defaultOpen="details">
       {/* Visual Template Slider */}
-      <Section
+      <AccordionSection
         icon={<IconLayout className="size-3.5" />}
         label="Templates"
         id="templates"
-        open={openSections.has("templates")}
-        toggle={toggleSection}
       >
         <TemplateSlider
           templates={templatePreviews}
@@ -1273,15 +1243,13 @@ STOCK_IMAGE: keyword for logo/brand image (e.g., "abstract technology logo")`;
           thumbHeight={72}
           label=""
         />
-      </Section>
+      </AccordionSection>
 
       {/* Contact Details */}
-      <Section
+      <AccordionSection
         icon={<IconType className="size-3.5" />}
         label="Contact Details"
         id="details"
-        open={openSections.has("details")}
-        toggle={toggleSection}
       >
         <div className="space-y-2">
           {(
@@ -1348,15 +1316,13 @@ STOCK_IMAGE: keyword for logo/brand image (e.g., "abstract technology logo")`;
             )}
           </div>
         </div>
-      </Section>
+      </AccordionSection>
 
       {/* Logo & Branding */}
-      <Section
+      <AccordionSection
         icon={<IconCamera className="size-3.5" />}
         label="Logo & Branding"
         id="logo"
-        open={openSections.has("logo")}
-        toggle={toggleSection}
       >
         <div className="space-y-2">
           <label className="flex items-center gap-2 w-full h-10 px-3 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800/30 cursor-pointer hover:border-primary-500 dark:hover:border-primary-500 transition-colors">
@@ -1397,15 +1363,13 @@ STOCK_IMAGE: keyword for logo/brand image (e.g., "abstract technology logo")`;
             className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
           />
         </div>
-      </Section>
+      </AccordionSection>
 
       {/* Style */}
-      <Section
+      <AccordionSection
         icon={<IconDroplet className="size-3.5" />}
         label="Style"
         id="style"
-        open={openSections.has("style")}
-        toggle={toggleSection}
       >
         <div className="space-y-3">
           <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400">
@@ -1519,15 +1483,13 @@ STOCK_IMAGE: keyword for logo/brand image (e.g., "abstract technology logo")`;
             </span>
           </label>
         </div>
-      </Section>
+      </AccordionSection>
 
       {/* Card Size & Print */}
-      <Section
+      <AccordionSection
         icon={<IconMaximize className="size-3.5" />}
         label="Card Size & Print"
         id="size"
-        open={openSections.has("size")}
-        toggle={toggleSection}
       >
         <div className="space-y-2">
           <div className="flex gap-1.5">
@@ -1662,7 +1624,8 @@ STOCK_IMAGE: keyword for logo/brand image (e.g., "abstract technology logo")`;
             </label>
           </div>
         </div>
-      </Section>
+      </AccordionSection>
+      </Accordion>
 
       {/* AI Generate */}
       <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-3">

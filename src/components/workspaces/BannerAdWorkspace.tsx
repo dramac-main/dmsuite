@@ -18,6 +18,7 @@ import {
   IconMonitor,
 } from "@/components/icons";
 import StockImagePicker, { type StockImage } from "@/components/StockImagePicker";
+import { Accordion, AccordionSection } from "@/components/ui";
 import {
   hexToRgba,
   getCanvasFont,
@@ -252,10 +253,6 @@ export default function BannerAdWorkspace() {
     resizeHandle: null,
     resizeStart: null,
   });
-
-  const [openSections, setOpenSections] = useState<Set<string>>(
-    new Set(["size", "composition", "content"])
-  );
 
   const updateConfig = useCallback((partial: Partial<BannerConfig>) => {
     setConfig((prev) => ({ ...prev, ...partial }));
@@ -886,16 +883,6 @@ ${innerContent}
     }, "image/png");
   }, [activeMockup]);
 
-  /* ── Helpers ───────────────────────────────────────────── */
-  const toggleSection = (id: string) => {
-    setOpenSections((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
   /* ── Zoom / Display ─────────────────────────────────────── */
   const [zoom, setZoom] = useState(0.75);
   const displayWidth = Math.min(500, currentSize.width) * zoom;
@@ -1016,12 +1003,11 @@ ${innerContent}
       />
 
       {/* Banner Size */}
-      <Section
+      <Accordion defaultOpen="size">
+      <AccordionSection
         icon={<IconLayout className="size-3.5" />}
         label="Banner Size"
         id="size"
-        open={openSections.has("size")}
-        toggle={toggleSection}
       >
         <div className="space-y-2">
           {Object.entries(sizeCategories).map(([cat, sizes]) => (
@@ -1058,15 +1044,13 @@ ${innerContent}
             </div>
           ))}
         </div>
-      </Section>
+      </AccordionSection>
 
       {/* Background */}
-      <Section
+      <AccordionSection
         icon={<IconImage className="size-3.5" />}
         label="Background"
         id="image"
-        open={openSections.has("image")}
-        toggle={toggleSection}
       >
         {config.backgroundImage ? (
           <div className="relative rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden group">
@@ -1120,15 +1104,13 @@ ${innerContent}
             />
           </div>
         )}
-      </Section>
+      </AccordionSection>
 
       {/* Style */}
-      <Section
+      <AccordionSection
         icon={<IconDroplet className="size-3.5" />}
         label="Style"
         id="style"
-        open={openSections.has("style")}
-        toggle={toggleSection}
       >
         <div className="space-y-3">
           <div className="grid grid-cols-4 gap-1">
@@ -1197,7 +1179,8 @@ ${innerContent}
             </div>
           </div>
         </div>
-      </Section>
+      </AccordionSection>
+      </Accordion>
 
       {/* Ad Network Compliance */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 space-y-2">
@@ -1272,12 +1255,11 @@ ${innerContent}
   const rightPanel = (
     <div className="space-y-3">
       {/* Content */}
-      <Section
+      <Accordion defaultOpen="content">
+      <AccordionSection
         icon={<IconType className="size-3.5" />}
         label="Content"
         id="content"
-        open={openSections.has("content")}
-        toggle={toggleSection}
       >
         <div className="space-y-2">
           <input
@@ -1327,7 +1309,8 @@ ${innerContent}
             </p>
           )}
         </div>
-      </Section>
+      </AccordionSection>
+      </Accordion>
 
       {/* Layer List */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
@@ -2044,42 +2027,4 @@ ${innerContent}
   );
 }
 
-/* ── Section Component ───────────────────────────────────── */
 
-function Section({
-  icon,
-  label,
-  id,
-  open,
-  toggle,
-  children,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  id: string;
-  open: boolean;
-  toggle: (id: string) => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <button
-        onClick={() => toggle(id)}
-        className="flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5 hover:text-gray-700 dark:hover:text-gray-300 transition-colors w-full"
-      >
-        {icon}
-        {label}
-        <svg
-          className={`size-3 ml-auto transition-transform ${open ? "rotate-180" : ""}`}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-      {open && children}
-    </div>
-  );
-}

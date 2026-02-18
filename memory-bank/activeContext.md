@@ -3,16 +3,50 @@
 ## Current Focus
 **Phase:** Phases 1–4 PARTIAL — 96 tools routed with dedicated workspaces, 98 tools still need building
 
-### Actual State (Session 22 Updated)
+### Actual State (Session 23 Updated)
 - **194 total tools** defined in tools.ts
 - **96 tools** have dedicated workspace routes in page.tsx → status: "ready"  
 - **~90 tools** have NO workspace → status: "coming-soon"
 - **8 tools** have NO workspace → status: "beta"
 - **93 workspace component files** exist in `src/components/workspaces/`
 - Build passes with zero TypeScript errors
-- `useStockImages.ts` renamed to `useStockImages.tsx` (contains JSX)
+- All workspaces now use global Accordion component (no more local Section+Set<string>)
+- AI Design Engine v2.0 — massively upgraded with 13 sections, 60+ exports
 
-## Recent Changes (Session 22 — Document & Business Tools Mass Build)
+## Recent Changes (Session 23 — Accordion Migration + AI Design Engine v2.0)
+
+### AI Design Engine v2.0 (`src/lib/ai-design-engine.ts`)
+Complete rewrite from 708 lines → 1200+ lines with 13 major sections:
+1. **Color Science** — HSL conversion, WCAG contrast, accessible palettes, harmony generators (complementary/analogous/triadic/split-complementary/tetradic), color mixing
+2. **Typography** — Modular-scale type ramp with configurable ratio, optimal line-height/letter-spacing
+3. **Layout & Grid** — Column-based grid system, golden-ratio split, baseline snapping, safe areas
+4. **Spacing & Rhythm** — Proportional spacing system (xxs→xxxl + section)
+5. **Drawing Helpers** — 10 header styles (gradient/solid/diagonal/split/minimal/wave/angular/radial/duotone/stripe), pro text with underline/strikethrough/ellipsis/shadow, 8 divider styles (solid/gradient/dashed/dots/ornate/double/groove/wave), tables with rowBgFn/highlightLast, badges, cards with accent bars, pull quotes, stat callouts, icon circles, 5 bullet list styles, progress bars
+6. **Decorative** — Corner flourishes (4 styles), seals/rosettes, dot patterns, stripe patterns, noise texture overlay
+7. **Print Production** — Crop marks, registration marks, CMYK colour bars, slug lines
+8. **Stock Images** — Search API, draw with cover-fit, gradient-fade overlays
+9. **Watermarks** — Single diagonal + tiled repeating patterns
+10. **Export** — 4 presets (72/150/300/600 DPI), high-res re-render
+11. **Design-Decision System** — Mood-based suggestions for headers, dividers, fonts, bullets, corners, margins
+12. **Visual Hierarchy** — Automatic weight computation for title/subtitle/heading/body/caption/stat
+13. **Page Renderers** — Backgrounds with texture, footers with 3 styles, section headings with numbering
+
+### Accordion Migration (7 workspaces migrated)
+Replaced old `Set<string>` + local `Section` component pattern with global `Accordion` + `AccordionSection`:
+- CertificateDesignerWorkspace ✅
+- BusinessCardWorkspace ✅
+- BrandIdentityWorkspace ✅ (2 Accordion instances — left/right panels)
+- BannerAdWorkspace ✅ (2 Accordion instances — left/right panels)
+- MenuDesignerWorkspace ✅ (dynamic label preserved)
+- PosterFlyerWorkspace ✅ (inline SVG icon preserved)
+- SocialMediaPostWorkspace ✅ (2 Accordion instances — left/right panels)
+
+### Agent-Built Workspace Spot-Check (3/19 checked)
+- CoverLetterWorkspace: Good quality ✅
+- WhitePaperWorkspace: Very good quality ✅ (Math.random flicker noted)
+- MediaKitWorkspace: Very good quality ✅ (Math.random flicker noted)
+
+## Previous Session Changes (Session 22 — Document & Business Tools Mass Build)
 
 ### 24 New Workspace Files Created
 Built complete, production-ready document/business tool workspaces:
@@ -80,13 +114,22 @@ Built complete, production-ready document/business tool workspaces:
 - `Accordion` root + `AccordionSection` children + `useAccordion` hook
 - Exported via `src/components/ui/index.ts` barrel
 
-### AI Design Engine (`src/lib/ai-design-engine.ts`)
-- Professional design utilities: `generateColorPalette()`, `createLayoutGrid()`, `getTypographicScale()`
-- Canvas drawing helpers: `drawHeaderArea()`, `drawProText()`, `drawProDivider()`, `drawTable()`, `drawBadge()`, `drawImagePlaceholder()`
-- Print features: `drawCropMarks()`, `drawRegistrationMark()`
-- Stock integration: `searchStockImages()`, `drawStockImage()`, `drawWatermark()`
-- Export: `exportHighRes()` with 4 quality presets (72/150/300/600 DPI)
-- **NOTE:** `generateColorPalette()` returns an OBJECT (not array) with keys: primary, primaryLight, primaryDark, primaryMuted, primarySubtle, textDark, textMedium, textLight, textOnPrimary, white, offWhite, lightGray, mediumGray, borderGray
+### AI Design Engine (`src/lib/ai-design-engine.ts`) — v2.0
+Complete professional design-decision engine. 1200+ lines, 60+ exports.
+- **Color Science**: `hexToHsl`, `hslToHex`, `contrastRatio`, `getContrastText`, `ensureContrast`, `generateColorPalette`, `generateHarmony`, `mixColors`
+- **Typography**: `getTypographicScale`, `optimalLineHeight`, `optimalLetterSpacing`
+- **Layout**: `createLayoutGrid`, `columnX`, `snapToBaseline`, `goldenSplit`
+- **Spacing**: `createSpacingSystem` (xxs→xxxl)
+- **Drawing**: `drawHeaderArea` (10 styles), `drawProText` (with underline/strikethrough/ellipsis), `drawProDivider` (8 styles), `drawTable`, `drawBadge`, `drawImagePlaceholder`, `drawCard`, `drawPullQuote`, `drawStatCallout`, `drawIconCircle`, `drawBulletList` (5 styles), `drawProgressBar`
+- **Decorative**: `drawCornerFlourishes` (4 styles), `drawSeal`, `drawDotPattern`, `drawStripePattern`, `drawNoiseOverlay`
+- **Print**: `drawCropMarks`, `drawRegistrationMark`, `drawColorBars`, `drawSlugLine`
+- **Stock**: `searchStockImages`, `drawStockImage`, `drawImageWithGradientOverlay`
+- **Watermarks**: `drawWatermark`, `drawTiledWatermark`
+- **Export**: `EXPORT_PRESETS`, `exportHighRes`
+- **Design Decisions**: `suggestHeaderStyle`, `suggestDividerStyle`, `suggestFontStyle`, `suggestBulletStyle`, `suggestCornerStyle`, `suggestMargin`, `computeHierarchy`
+- **Page Renderers**: `drawPageBackground`, `drawPageFooter`, `drawSectionHeading`
+- **Types**: `DesignBrief`, `DesignMood` (12 moods), `DesignElement`, `DesignComposition`, `HeaderStyle`, `DividerStyle`, `ProTextOpts`, `TableColumn`, `TableOpts`, `CardOpts`, `ExportSettings`
+- **NOTE:** `generateColorPalette()` returns an OBJECT with keys: primary, primaryLight, primaryDark, primaryMuted, primarySubtle, primaryVivid, tint50→tint900, textDark, textMedium, textLight, textOnPrimary, white, offWhite, lightGray, mediumGray, borderGray, success, warning, error, info
 
 ### Stock Image Hook (`src/hooks/useStockImages.tsx`)
 - `useStockImages()` hook: manages search query, results, loading state
@@ -123,8 +166,8 @@ VideoCompressor, VoiceCloner
 VideoEditor, TextToSpeech, LogoReveal, AIVideoGenerator, MotionGraphics, CalendarDesigner
 
 ## Next Steps (Priority Order)
-1. **Update existing 16 document workspaces** — Replace old `Set<string>` accordion pattern with new global `Accordion` component (Invoice, ResumeCV, Certificate, MenuDesigner, Proposal, Contract, Quotation, Report, Receipt, Catalog, SalesBookA4, SalesBookA5, PriceList, CouponDesigner, IDCard, Calendar)
-2. **Spot-check subagent-created workspaces** — 15 agent-built workspaces should be visually tested for rendering quality
+1. **Spot-check remaining agent-built workspaces** — 16 of 19 still unchecked
+2. **Fix Math.random() flicker** — WhitePaper + MediaKit use random values in render (causes flickering decorative elements)
 3. **Enhance remaining thin workspaces** — 15 needs-enhancement workspaces (mostly simulated backends)
 4. **Build missing tools (~90)** — Across design, video, audio, content-writing, marketing, web-ui, utilities categories
 5. **Backend integrations** — Real video/audio/PDF processing (requires server)

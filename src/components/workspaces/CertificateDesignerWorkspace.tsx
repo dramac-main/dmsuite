@@ -13,6 +13,7 @@ import {
   IconLayout,
   IconPrinter,
 } from "@/components/icons";
+import { Accordion, AccordionSection } from "@/components/ui";
 import { cleanAIText, hexToRgba, roundRect } from "@/lib/canvas-utils";
 import {
   drawPattern,
@@ -151,24 +152,6 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number): st
   return lines;
 }
 
-/* ── Collapsible Section ─────────────────────────────────── */
-
-function Section({ icon, label, id, open, toggle, children }: {
-  icon: React.ReactNode; label: string; id: string;
-  open: boolean; toggle: (id: string) => void; children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
-      <button onClick={() => toggle(id)}
-        className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors w-full">
-        {icon}{label}
-        <svg className={`size-3 ml-auto transition-transform ${open ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><polyline points="6 9 12 15 18 9" /></svg>
-      </button>
-      {open && <div className="mt-2.5">{children}</div>}
-    </div>
-  );
-}
-
 /* ── Component ─────────────────────────────────────────────── */
 
 export default function CertificateDesignerWorkspace() {
@@ -197,18 +180,6 @@ export default function CertificateDesignerWorkspace() {
     organizationName: "DMSuite Academy — Lusaka, Zambia",
     patternType: "none",
   });
-
-  const [openSections, setOpenSections] = useState<Set<string>>(
-    new Set(["templates", "content"])
-  );
-  const toggleSection = (id: string) => {
-    setOpenSections((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
 
   const sz = SIZES.find((s) => s.id === config.size)!;
   const bc = BORDER_COLORS[config.border];
@@ -580,8 +551,9 @@ Return ONLY valid JSON:
   /* ── Left Panel ─────────────────────────────────────────── */
   const leftPanel = (
     <div className="space-y-3">
+      <Accordion defaultOpen="templates">
       {/* Template Slider */}
-      <Section icon={<IconLayout className="size-3.5" />} label="Templates" id="templates" open={openSections.has("templates")} toggle={toggleSection}>
+      <AccordionSection icon={<IconLayout className="size-3.5" />} label="Templates" id="templates">
         <TemplateSlider
           templates={templatePreviews}
           activeId={config.template}
@@ -590,10 +562,10 @@ Return ONLY valid JSON:
           thumbHeight={100}
           label=""
         />
-      </Section>
+      </AccordionSection>
 
       {/* Content */}
-      <Section icon={<IconType className="size-3.5" />} label="Content" id="content" open={openSections.has("content")} toggle={toggleSection}>
+      <AccordionSection icon={<IconType className="size-3.5" />} label="Content" id="content">
         <div className="space-y-2">
           <input placeholder="Certificate Title" value={config.title} onChange={(e) => upd({ title: e.target.value })}
             className="w-full h-10 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-sm placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all" />
@@ -618,10 +590,10 @@ Return ONLY valid JSON:
             <button onClick={() => upd({ serialNumber: generateSerial() })} className="px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-[0.625rem] font-medium text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">New</button>
           </div>
         </div>
-      </Section>
+      </AccordionSection>
 
       {/* Style */}
-      <Section icon={<IconDroplet className="size-3.5" />} label="Style" id="style" open={openSections.has("style")} toggle={toggleSection}>
+      <AccordionSection icon={<IconDroplet className="size-3.5" />} label="Style" id="style">
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -695,7 +667,8 @@ Return ONLY valid JSON:
             </label>
           </div>
         </div>
-      </Section>
+      </AccordionSection>
+      </Accordion>
 
       {/* AI */}
       <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-3">

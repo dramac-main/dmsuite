@@ -21,6 +21,7 @@ import {
 } from "@/components/icons";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import { Accordion, AccordionSection } from "@/components/ui";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -904,24 +905,6 @@ function loadBrandKit(): BrandConfig | null {
   } catch { return null; }
 }
 
-/* ── Collapsible Section ─────────────────────────────────── */
-
-function Section({ icon, label, id, open, toggle, children }: {
-  icon: React.ReactNode; label: string; id: string;
-  open: boolean; toggle: (id: string) => void; children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <button onClick={() => toggle(id)}
-        className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 hover:text-gray-700 dark:hover:text-gray-300 transition-colors w-full">
-        {icon}{label}
-        <svg className={`size-3 ml-auto transition-transform ${open ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><polyline points="6 9 12 15 18 9" /></svg>
-      </button>
-      {open && children}
-    </div>
-  );
-}
-
 /* ── Component ───────────────────────────────────────────── */
 
 export default function BrandIdentityWorkspace() {
@@ -941,15 +924,6 @@ export default function BrandIdentityWorkspace() {
   });
 
   const [savedFeedback, setSavedFeedback] = useState<string | null>(null);
-
-  const [openSections, setOpenSections] = useState<Set<string>>(new Set(["basics", "palette", "typography"]));
-  const toggleSection = (id: string) => {
-    setOpenSections(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
 
   const updateConfig = useCallback((partial: Partial<BrandConfig>) => {
     setConfig(prev => ({ ...prev, ...partial }));
@@ -1174,8 +1148,9 @@ Return ONLY valid JSON, no markdown.`;
             label="Palette Presets"
           />
 
+          <Accordion defaultOpen="basics">
           {/* Brand Basics */}
-          <Section icon={<IconLayers className="size-3.5" />} label="Brand Basics" id="basics" open={openSections.has("basics")} toggle={toggleSection}>
+          <AccordionSection icon={<IconLayers className="size-3.5" />} label="Brand Basics" id="basics">
             <div className="space-y-2.5">
               <input type="text" placeholder="Brand Name" value={config.brandName}
                 onChange={(e) => updateConfig({ brandName: e.target.value })}
@@ -1200,10 +1175,10 @@ Return ONLY valid JSON, no markdown.`;
                 ))}
               </div>
             </div>
-          </Section>
+          </AccordionSection>
 
           {/* Color Palette */}
-          <Section icon={<IconDroplet className="size-3.5" />} label="Color Palette" id="palette" open={openSections.has("palette")} toggle={toggleSection}>
+          <AccordionSection icon={<IconDroplet className="size-3.5" />} label="Color Palette" id="palette">
             <div className="space-y-3">
               <div className="grid grid-cols-5 gap-2 pt-1">
                 {[
@@ -1222,10 +1197,10 @@ Return ONLY valid JSON, no markdown.`;
                 ))}
               </div>
             </div>
-          </Section>
+          </AccordionSection>
 
           {/* Typography */}
-          <Section icon={<IconType className="size-3.5" />} label="Typography" id="typography" open={openSections.has("typography")} toggle={toggleSection}>
+          <AccordionSection icon={<IconType className="size-3.5" />} label="Typography" id="typography">
             <div className="grid grid-cols-2 gap-2">
               {fontPairings.map((fp, i) => (
                 <button key={i} onClick={() => updateConfig({ fontPairing: fp })}
@@ -1236,10 +1211,10 @@ Return ONLY valid JSON, no markdown.`;
                 </button>
               ))}
             </div>
-          </Section>
+          </AccordionSection>
 
           {/* Pattern */}
-          <Section icon={<IconLayers className="size-3.5" />} label="Brand Pattern" id="pattern" open={openSections.has("pattern")} toggle={toggleSection}>
+          <AccordionSection icon={<IconLayers className="size-3.5" />} label="Brand Pattern" id="pattern">
             <div className="space-y-2.5">
               <div className="grid grid-cols-3 gap-1.5">
                 {patternTypes.map((type) => (
@@ -1257,7 +1232,8 @@ Return ONLY valid JSON, no markdown.`;
                   className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-primary-500" />
               </div>
             </div>
-          </Section>
+          </AccordionSection>
+          </Accordion>
 
           {/* Save / Load Brand Kit */}
           <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/30 p-4">
@@ -1352,7 +1328,8 @@ Return ONLY valid JSON, no markdown.`;
           </div>
 
           {/* Tone of Voice */}
-          <Section icon={<IconBookOpen className="size-3.5" />} label="Tone of Voice" id="tone" open={openSections.has("tone")} toggle={toggleSection}>
+          <Accordion defaultOpen="tone">
+          <AccordionSection icon={<IconBookOpen className="size-3.5" />} label="Tone of Voice" id="tone">
             <div className="space-y-3">
               <div>
                 <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 mb-1">Voice Attributes</p>
@@ -1412,7 +1389,8 @@ Return ONLY valid JSON, no markdown.`;
                 </button>
               </div>
             </div>
-          </Section>
+          </AccordionSection>
+          </Accordion>
         </div>
       }
       actionsBar={
