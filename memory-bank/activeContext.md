@@ -13,9 +13,36 @@
 - All workspaces now use global Accordion component (no more local Section+Set<string>)
 - AI Design Engine v2.0 — massively upgraded with 13 sections, 60+ exports
 
-## Recent Changes (Session 25 — BusinessCardWorkspace Quality Overhaul)
+## Recent Changes (Session 26 — Professional Canvas Icon Library)
 
-### Addressing User Feedback: Templates, AI Revision, Export Quality
+### Asset Bank Architecture: Icons — The First Global Asset Library
+
+#### 1. New File: `src/lib/icon-library.ts` (~1,200 lines)
+- **115 professional vector icons** drawn with pure Canvas2D path commands (no emoji, no text)
+- **8 categories**: Social Media (20), Contact & Communication (15), Business & Professional (20), Creative & Design (15), Technology & Web (15), Nature & Lifestyle (10), Arrows & UI (10), Commerce & Finance (10)
+- All icons normalized to a 24×24 design grid, infinitely scalable at any DPI
+- Consistent API: `drawIcon(ctx, iconId, x, y, size, color, strokeWidth?)`
+- Full metadata registry: `ICON_BANK` array with id, label, category, tags per icon
+- O(1) lookup: `ICON_REGISTRY` record keyed by icon id → draw function
+- AI-ready helpers: `getIconListForAI()`, `searchIcons(query)`, `getAllIconIds()`, `getIconsByCategory()`
+- Browsable: `ICON_CATEGORIES` constant with id, label, description, count
+- Zero external dependencies — standalone module
+
+#### 2. BusinessCardWorkspace Integration
+- Replaced 4 individual icon imports (drawPhoneIcon, drawEmailIcon, drawGlobeIcon, drawLocationIcon) with single `drawIcon()` from icon library
+- `drawContactIcon()` dispatcher now maps to icon library IDs: email→"email", phone→"phone", website→"globe", address→"map-pin"
+- Phone icon upgraded from **emoji 📱** to professional vector handset path
+
+#### 3. Graphics Engine Legacy Wrappers
+- Old `drawPhoneIcon/drawEmailIcon/drawGlobeIcon/drawLocationIcon` in graphics-engine.ts now delegate to icon library
+- Marked as `@deprecated` — new code should import from `@/lib/icon-library` directly
+
+#### 4. AI Engine Icon Awareness
+- `buildGraphicDesignPrompt()` in graphics-engine.ts now injects the full icon catalog into AI prompts
+- `buildRevisionPrompt()` in ai-revision.ts now includes icon library for AI revision suggestions
+- AI can now reference any of 115 icons by ID when designing or revising
+
+### Previous Session (Session 25 — BusinessCardWorkspace Quality Overhaul)
 
 #### 1. Per-Template Default Color Themes (TEMPLATE_DEFAULT_THEMES)
 - **Each of 20 templates now has its OWN unique default color scheme**, applied automatically on selection

@@ -26,11 +26,22 @@
 - Enhanced Tool interface: `aiProviders`, `outputs`, `supportsPartEdit`, `printReady`, `printSizes`
 - 10 AI provider types, 22 output formats, 10 print sizes
 
-### 2. Icon System
-- All icons are inline SVG components in `src/components/icons.tsx` (75 components, 63 in iconMap)
-- `iconMap` record maps string keys → React components
-- Tools reference icons by string key (e.g., `icon: "sparkles"`)
-- Components resolve: `const Icon = iconMap[tool.icon]`
+### 2. Icon Systems
+- **UI Icons** (React/SVG): `src/components/icons.tsx` — 75+ inline SVG components, `iconMap` registry for dashboard/UI use
+- **Canvas Icon Library** (Asset Bank): `src/lib/icon-library.ts` — 115 professional vector icons for canvas rendering
+  - 8 categories: social-media, contact, business, creative, technology, lifestyle, arrows-ui, commerce
+  - API: `drawIcon(ctx, iconId, x, y, size, color, strokeWidth?)`
+  - Registry: `ICON_BANK` (metadata array), `ICON_REGISTRY` (O(1) lookup), `ICON_CATEGORIES` (browsable)
+  - AI helpers: `getIconListForAI()`, `searchIcons()`, `getAllIconIds()`, `getIconsByCategory()`
+  - Injected into AI Design Engine and AI Revision Engine prompts
+  - Legacy wrappers in graphics-engine.ts delegate to icon-library (deprecated)
+
+### 2b. Asset Bank Architecture Pattern
+- Global shared asset libraries stored in `src/lib/` as standalone modules
+- Each asset bank exports: items array (with metadata), registry (O(1) lookup), category list, AI helper functions
+- First bank: Icon Library (115 icons). Future banks: Patterns, Textures, Illustrations, Shapes, etc.
+- Asset banks have ZERO dependencies on other modules (no circular imports)
+- All workspaces and AI engines consume asset banks via simple imports
 
 ### 3. Client Component Strategy
 - All interactive components use `"use client"` directive

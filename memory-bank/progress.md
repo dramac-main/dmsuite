@@ -45,6 +45,17 @@
 - [x] TemplateSlider — visual template preview
 - [x] AI revision engine with style locking
 
+### Asset Bank: Icons ✅ (Session 26)
+- [x] icon-library.ts (~1,200 lines) — 115 professional vector canvas icons
+- [x] 8 categories: Social Media (20), Contact (15), Business (20), Creative (15), Technology (15), Lifestyle (10), Arrows/UI (10), Commerce (10)
+- [x] All icons are pure Canvas2D paths — no emoji, no text, infinitely scalable
+- [x] drawIcon(ctx, iconId, x, y, size, color, strokeWidth?) — single entry point
+- [x] ICON_BANK metadata registry with id, label, category, tags per icon
+- [x] ICON_REGISTRY O(1) lookup, ICON_CATEGORIES browsable list
+- [x] AI-ready: getIconListForAI(), searchIcons(), getAllIconIds(), getIconsByCategory()
+- [x] Integrated into BusinessCardWorkspace, AI Design Engine, AI Revision Engine
+- [x] Legacy wrappers in graphics-engine.ts (deprecated)
+
 ### Session 22 Infrastructure ✅
 - [x] AI Design Engine v2.0 (`src/lib/ai-design-engine.ts`) — 1200+ lines, 60+ exports, 13 sections
 - [x] Accordion migration complete — all workspaces use global `Accordion` + `AccordionSection`
