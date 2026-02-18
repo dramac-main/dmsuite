@@ -4,6 +4,7 @@
 // =============================================================================
 
 import type { DesignDocument, Layer } from "./canvas-layers";
+import { getIconListForAI, ICON_COUNT } from "@/lib/icon-library";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -115,6 +116,10 @@ Background color: ${doc.backgroundColor}
 SCOPE CONSTRAINT: ${scopeInstructions[request.scope]}
 
 USER REQUEST: "${request.instruction}"
+
+AVAILABLE ICON LIBRARY (${ICON_COUNT} professional vector icons):
+${getIconListForAI()}
+You may suggest iconId values from this library for any icon/decorative elements.
 
 Respond with a JSON object containing:
 {

@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { hexToRgba, hexToRgb, lightenColor, darkenColor, roundRect } from "./canvas-utils";
+import { drawIcon, getIconListForAI, ICON_COUNT } from "@/lib/icon-library";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -708,80 +709,29 @@ export function drawBadge(
 }
 
 // ---------------------------------------------------------------------------
-// Professional Icon Shapes (for use in designs)
+// Professional Icon Shapes — LEGACY WRAPPERS
+// These delegate to the comprehensive icon library at src/lib/icon-library.ts
+// Kept for backward compatibility. New code should import from icon-library.
 // ---------------------------------------------------------------------------
 
-/** Draw a simple phone icon */
+/** @deprecated Use drawIcon(ctx, "phone", x, y, size, color) from icon-library */
 export function drawPhoneIcon(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string): void {
-  ctx.save();
-  ctx.fillStyle = color;
-  ctx.font = `${size}px Inter, sans-serif`;
-  ctx.textBaseline = "middle";
-  ctx.fillText("📱", x, y);
-  ctx.restore();
+  drawIcon(ctx, "phone", x, y, size, color);
 }
 
-/** Draw a simple email icon */
+/** @deprecated Use drawIcon(ctx, "email", x, y, size, color) from icon-library */
 export function drawEmailIcon(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string): void {
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = size * 0.08;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  const w = size * 0.9;
-  const h = size * 0.6;
-  const ex = x - w / 2;
-  const ey = y - h / 2;
-  // Envelope body
-  ctx.strokeRect(ex, ey, w, h);
-  // Envelope flap
-  ctx.beginPath();
-  ctx.moveTo(ex, ey);
-  ctx.lineTo(ex + w / 2, ey + h * 0.5);
-  ctx.lineTo(ex + w, ey);
-  ctx.stroke();
-  ctx.restore();
+  drawIcon(ctx, "email", x, y, size, color);
 }
 
-/** Draw a simple globe/web icon */
+/** @deprecated Use drawIcon(ctx, "globe", x, y, size, color) from icon-library */
 export function drawGlobeIcon(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string): void {
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = size * 0.06;
-  const r = size * 0.4;
-  // Outer circle
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.stroke();
-  // Vertical ellipse
-  ctx.beginPath();
-  ctx.ellipse(x, y, r * 0.5, r, 0, 0, Math.PI * 2);
-  ctx.stroke();
-  // Horizontal line
-  ctx.beginPath();
-  ctx.moveTo(x - r, y);
-  ctx.lineTo(x + r, y);
-  ctx.stroke();
-  ctx.restore();
+  drawIcon(ctx, "globe", x, y, size, color);
 }
 
-/** Draw a location pin icon */
+/** @deprecated Use drawIcon(ctx, "map-pin", x, y, size, color) from icon-library */
 export function drawLocationIcon(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string): void {
-  ctx.save();
-  ctx.fillStyle = color;
-  const r = size * 0.3;
-  // Pin body
-  ctx.beginPath();
-  ctx.arc(x, y - r * 0.3, r, Math.PI * 0.2, Math.PI * 0.8, true);
-  ctx.lineTo(x, y + r * 1.5);
-  ctx.closePath();
-  ctx.fill();
-  // Inner dot (white)
-  ctx.fillStyle = "#ffffff";
-  ctx.beginPath();
-  ctx.arc(x, y - r * 0.3, r * 0.35, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  drawIcon(ctx, "map-pin", x, y, size, color);
 }
 
 // ---------------------------------------------------------------------------
@@ -899,6 +849,10 @@ CRITICAL REQUIREMENTS:
 6. Consider COLOR HARMONY: complementary colors, proper contrast, accent colors
 7. Ensure VISUAL BALANCE: proper whitespace, alignment, grid-based layout
 8. Add DEPTH: layered elements, overlapping shapes, shadow effects
+
+ICON LIBRARY (${ICON_COUNT} professional vector icons available):
+${getIconListForAI()}
+Reference any icon by its ID when suggesting decorative or functional icons.
 
 RESPOND WITH JSON (no markdown):
 {

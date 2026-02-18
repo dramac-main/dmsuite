@@ -68,7 +68,7 @@
 | BannerAdWorkspace | 88KB | banner-ad | Layer-based, IAB sizes |
 | PosterFlyerWorkspace | 81KB | poster, flyer | Layer-based, print bleed |
 | ResumeCVWorkspace | 75KB | resume-cv | 6 templates, 4 page sizes |
-| BusinessCardWorkspace | 73KB | business-card | QR code, print marks |
+| BusinessCardWorkspace | ~130KB | business-card | **SESSION 25 QUALITY OVERHAUL**: 20 unique color themes per template, AI Revision deep reasoning + hard scope enforcement + diff validation, 600 DPI export (2x scale), enhanced template visuals (gradients, glows, accents). Previous: 20 templates, AI Director, batch processing, 5 back styles, 12 color presets, 9 patterns, 5 card sizes |
 | InvoiceDesignerWorkspace | 71KB | invoice-designer | 7 currencies, 6 templates |
 | PresentationWorkspace | 69KB | presentation | Slide management, themes |
 | BrandIdentityWorkspace | 64KB | brand-identity | Brand board, patterns |

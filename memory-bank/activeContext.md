@@ -3,7 +3,7 @@
 ## Current Focus
 **Phase:** Phases 1–4 PARTIAL — 96 tools routed with dedicated workspaces, 98 tools still need building
 
-### Actual State (Session 23 Updated)
+### Actual State (Session 24 Updated)
 - **194 total tools** defined in tools.ts
 - **96 tools** have dedicated workspace routes in page.tsx → status: "ready"  
 - **~90 tools** have NO workspace → status: "coming-soon"
@@ -13,7 +13,62 @@
 - All workspaces now use global Accordion component (no more local Section+Set<string>)
 - AI Design Engine v2.0 — massively upgraded with 13 sections, 60+ exports
 
-## Recent Changes (Session 23 — Accordion Migration + AI Design Engine v2.0)
+## Recent Changes (Session 25 — BusinessCardWorkspace Quality Overhaul)
+
+### Addressing User Feedback: Templates, AI Revision, Export Quality
+
+#### 1. Per-Template Default Color Themes (TEMPLATE_DEFAULT_THEMES)
+- **Each of 20 templates now has its OWN unique default color scheme**, applied automatically on selection
+- Diverse palette variety: ~7 light backgrounds, ~13 dark backgrounds with completely different accents
+- Minimal templates: light, airy (white/linen/cream/ice-blue backgrounds)
+- Modern templates: dark, vibrant (neon green on black, purple on charcoal, coral on navy)
+- Classic templates: rich, traditional (gold on cream, burgundy, navy/blue)
+- Creative templates: vivid, playful (magenta/teal/coral accents)
+- Luxury templates: opulent (gold on near-black, marble white, deep red)
+- Template thumbnails now show each template's OWN colors (not user's current palette)
+- Default initial config changed from all-dark to Executive Clean light theme
+
+#### 2. AI Revision Engine — Deep Reasoning + Hard Scope Enforcement
+- **Chain-of-thought reasoning prompt**: Requires AI to think step-by-step before answering
+- **Hard scope enforcement in code**: `SCOPE_ALLOWED_FIELDS` map strips unauthorized field changes regardless of AI response
+- **Diff validation**: Only applies changes where value actually differs from current design
+- Prompt explicitly tells AI which fields are allowed per scope and that unauthorized fields are rejected
+- 3-step post-processing pipeline: Validate → Scope-enforce → Diff-check
+
+#### 3. High-Resolution Export (600 DPI / 2x Scale)
+- Added `scale` parameter to `renderCard()` function (default=1 for display, 2 for export)
+- Added `scale` parameter to `renderBatchCard()` function
+- All exports now render at 2x resolution:
+  - PNG download: 2100×1200px for US Standard (was 1050×600)
+  - PDF export: 2x canvas embedded at exact mm dimensions
+  - Clipboard copy: 2x resolution
+  - Batch PDF: 2x for all cards
+- QR overlay uses logical dimensions to prevent double-scaling
+- Card info display updated to show "600 DPI" export quality
+
+#### 4. Enhanced Template Visuals
+- Executive Clean: warm gradient wash, refined gradient accent bar, secondary accent dot
+- Bold Split: richer gradient panel (3-stop), decorative boundary lines, subtle accent circles, tagline support
+- Neon Edge: triple-layer glow effect, corner glow, decorative scan lines, logo glow effect
+
+### Previous Session (Session 24 — BusinessCardWorkspace Complete Overhaul)
+- Full 2700-line production rewrite with 20 professional templates
+- AI Design Director + AI Revision Engine + Batch Processing
+- 5 card back styles, 12 color presets, 9 patterns, 5 card sizes
+- Logo upload, print-ready export, side-by-side preview
+- US Standard (3.5×2"), EU/ISO (85×54mm), Japan (91×55mm), Square, Rounded, Custom (mm input)
+
+#### Additional Features
+- 12 color presets (Lime Pro, Navy, Charcoal, Midnight, Gold Rush, Forest, Ocean, White Linen, Burgundy, Slate, Coral, Sage)
+- 9 pattern options (dots, lines, diagonal, crosshatch, waves, hexagons, chevrons, diamond)
+- Logo upload (file + URL) with fallback initials (circle/square shapes)
+- Side-by-side front/back preview
+- Contact icons toggle
+- QR code placeholder
+- Template category filtering (All/Minimal/Modern/Classic/Creative/Luxury)
+- TemplateSlider with visual canvas-rendered previews
+
+## Previous Session Changes (Session 23 — Accordion Migration + AI Design Engine v2.0)
 
 ### AI Design Engine v2.0 (`src/lib/ai-design-engine.ts`)
 Complete rewrite from 708 lines → 1200+ lines with 13 major sections:
