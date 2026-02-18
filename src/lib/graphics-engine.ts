@@ -852,7 +852,7 @@ CRITICAL REQUIREMENTS:
 
 ICON LIBRARY (${ICON_COUNT} professional vector icons available):
 ${getIconListForAI()}
-Reference any icon by its ID when suggesting decorative or functional icons.
+When a design calls for icons (e.g. contact info, social handles, decorative accents), use the "iconPlacements" field to specify EXACTLY which icons to draw and where. Each placement needs an iconId from the list above, x/y position in pixels, size in pixels, and a hex color.
 
 RESPOND WITH JSON (no markdown):
 {
@@ -863,6 +863,9 @@ RESPOND WITH JSON (no markdown):
   "colorPalette": { "primary": "#hex", "secondary": "#hex", "accent": "#hex", "bg": "#hex" },
   "layoutSuggestions": ["suggestion1", "suggestion2"],
   "decorativeElements": ["element description 1", "element description 2"],
+  "iconPlacements": [
+    { "iconId": "icon-id-from-library", "x": 100, "y": 200, "size": 24, "color": "#ffffff" }
+  ],
   "additionalContent": {}
 }`;
 }

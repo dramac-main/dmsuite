@@ -120,11 +120,15 @@ USER REQUEST: "${request.instruction}"
 AVAILABLE ICON LIBRARY (${ICON_COUNT} professional vector icons):
 ${getIconListForAI()}
 You may suggest iconId values from this library for any icon/decorative elements.
+When adding or changing icons, include them in the "iconPlacements" array with x, y, size, and color.
 
 Respond with a JSON object containing:
 {
   "changedLayers": [
     { "layerId": "...", "changes": { "property": "newValue", ... } }
+  ],
+  "iconPlacements": [
+    { "iconId": "icon-id-from-library", "x": 100, "y": 200, "size": 24, "color": "#ffffff" }
   ],
   "summary": "Brief description of what was changed"
 }

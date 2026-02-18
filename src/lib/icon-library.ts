@@ -46,6 +46,7 @@ export interface IconMeta {
   id: string;
   label: string;
   category: string;
+  description: string;
   tags: string[];
   draw: IconDrawFn;
 }
@@ -1844,136 +1845,497 @@ const drawTruck: IconDrawFn = (ctx, x, y, size, color, sw) => {
 
 /** Full metadata registry for all icons */
 export const ICON_BANK: IconMeta[] = [
-  // Social Media
-  { id: "linkedin",    label: "LinkedIn",     category: "social-media",   tags: ["social", "professional", "network", "job"], draw: drawLinkedin },
-  { id: "twitter-x",   label: "X (Twitter)",  category: "social-media",   tags: ["social", "microblog", "tweet"], draw: drawTwitterX },
-  { id: "facebook",    label: "Facebook",     category: "social-media",   tags: ["social", "network", "meta"], draw: drawFacebook },
-  { id: "instagram",   label: "Instagram",    category: "social-media",   tags: ["social", "photo", "stories", "reels"], draw: drawInstagram },
-  { id: "youtube",     label: "YouTube",      category: "social-media",   tags: ["video", "streaming", "content"], draw: drawYoutube },
-  { id: "tiktok",      label: "TikTok",       category: "social-media",   tags: ["video", "short", "viral"], draw: drawTiktok },
-  { id: "pinterest",   label: "Pinterest",    category: "social-media",   tags: ["inspiration", "boards", "visual"], draw: drawPinterest },
-  { id: "snapchat",    label: "Snapchat",     category: "social-media",   tags: ["messaging", "stories", "ephemeral"], draw: drawSnapchat },
-  { id: "whatsapp",    label: "WhatsApp",     category: "social-media",   tags: ["messaging", "chat", "communication"], draw: drawWhatsapp },
-  { id: "telegram",    label: "Telegram",     category: "social-media",   tags: ["messaging", "chat", "privacy"], draw: drawTelegram },
-  { id: "reddit",      label: "Reddit",       category: "social-media",   tags: ["forum", "community", "discussion"], draw: drawReddit },
-  { id: "discord",     label: "Discord",      category: "social-media",   tags: ["gaming", "community", "voice"], draw: drawDiscord },
-  { id: "github",      label: "GitHub",       category: "social-media",   tags: ["code", "developer", "repository"], draw: drawGithub },
-  { id: "dribbble",    label: "Dribbble",     category: "social-media",   tags: ["design", "portfolio", "creative"], draw: drawDribbble },
-  { id: "behance",     label: "Behance",      category: "social-media",   tags: ["design", "portfolio", "adobe"], draw: drawBehance },
-  { id: "spotify",     label: "Spotify",      category: "social-media",   tags: ["music", "streaming", "audio"], draw: drawSpotify },
-  { id: "slack",       label: "Slack",        category: "social-media",   tags: ["team", "communication", "work"], draw: drawSlack },
-  { id: "threads",     label: "Threads",      category: "social-media",   tags: ["social", "text", "meta"], draw: drawThreads },
-  { id: "mastodon",    label: "Mastodon",     category: "social-media",   tags: ["social", "fediverse", "decentralized"], draw: drawMastodon },
-  { id: "bluesky",     label: "Bluesky",      category: "social-media",   tags: ["social", "microblog", "decentralized"], draw: drawBluesky },
+  // =========================================================================
+  //  SOCIAL MEDIA (20)
+  // =========================================================================
+  { id: "linkedin", label: "LinkedIn", category: "social-media",
+    description: "Professional networking platform logo — rounded square with stylized 'in' lettermark. Use for professional profiles, career pages, B2B marketing, job listings, corporate contact cards, and networking materials.",
+    tags: ["social", "professional", "network", "job", "career", "hiring", "recruitment", "corporate", "b2b", "resume", "business-card", "connect", "profile", "work", "employment"],
+    draw: drawLinkedin },
+  { id: "twitter-x", label: "X (Twitter)", category: "social-media",
+    description: "X (formerly Twitter) logo — bold intersecting diagonal lines forming an X. Use for social media handles, tweet embeds, news feeds, microblog references, real-time updates, and public announcements.",
+    tags: ["social", "microblog", "tweet", "x", "news", "feed", "post", "handle", "hashtag", "trending", "viral", "follow", "retweet", "timeline", "update"],
+    draw: drawTwitterX },
+  { id: "facebook", label: "Facebook", category: "social-media",
+    description: "Facebook/Meta logo — rounded square with lowercase 'f' lettermark. Use for social sharing buttons, community pages, event promotion, marketplace links, group references, and social login.",
+    tags: ["social", "network", "meta", "community", "group", "page", "share", "like", "event", "marketplace", "friends", "post", "feed", "login", "connect"],
+    draw: drawFacebook },
+  { id: "instagram", label: "Instagram", category: "social-media",
+    description: "Instagram logo — rounded square with camera lens circle and viewfinder dot. Use for photo galleries, visual portfolios, influencer content, stories, reels, fashion, food photography, and lifestyle brands.",
+    tags: ["social", "photo", "stories", "reels", "camera", "filter", "visual", "influencer", "fashion", "lifestyle", "photography", "gallery", "feed", "explore", "grid"],
+    draw: drawInstagram },
+  { id: "youtube", label: "YouTube", category: "social-media",
+    description: "YouTube logo — rounded rectangle with centered play triangle button. Use for video content, tutorials, channels, streaming, vlogs, entertainment, education, and embedded video links.",
+    tags: ["video", "streaming", "content", "channel", "tutorial", "vlog", "subscribe", "play", "watch", "creator", "entertainment", "education", "live", "broadcast", "media"],
+    draw: drawYoutube },
+  { id: "tiktok", label: "TikTok", category: "social-media",
+    description: "TikTok logo — musical note with distinctive offset styling. Use for short-form video, viral content, trends, dance, entertainment, Gen-Z marketing, and creative video campaigns.",
+    tags: ["video", "short", "viral", "trend", "dance", "music", "entertainment", "genz", "creator", "challenge", "duet", "sound", "reel", "clip", "fyp"],
+    draw: drawTiktok },
+  { id: "pinterest", label: "Pinterest", category: "social-media",
+    description: "Pinterest logo — circle with pin/P lettermark inside. Use for inspiration boards, mood boards, visual bookmarking, DIY projects, recipes, home decor, fashion ideas, and wedding planning.",
+    tags: ["inspiration", "boards", "visual", "pin", "mood", "diy", "recipe", "decor", "fashion", "wedding", "craft", "bookmark", "idea", "collection", "aesthetic"],
+    draw: drawPinterest },
+  { id: "snapchat", label: "Snapchat", category: "social-media",
+    description: "Snapchat logo — friendly ghost outline. Use for ephemeral messaging, AR filters, stories, youth marketing, casual communication, and disappearing content.",
+    tags: ["messaging", "stories", "ephemeral", "ghost", "filter", "ar", "snap", "youth", "casual", "disappearing", "selfie", "lens", "streak", "friends", "chat"],
+    draw: drawSnapchat },
+  { id: "whatsapp", label: "WhatsApp", category: "social-media",
+    description: "WhatsApp logo — speech bubble circle with phone handset inside. Use for messaging, customer support chat, group communication, voice calls, international contact, and business messaging.",
+    tags: ["messaging", "chat", "communication", "phone", "call", "group", "support", "customer", "international", "business", "text", "voice", "contact", "number", "green"],
+    draw: drawWhatsapp },
+  { id: "telegram", label: "Telegram", category: "social-media",
+    description: "Telegram logo — paper airplane in flight. Use for secure messaging, channels, groups, bots, privacy-focused communication, broadcast messages, and tech communities.",
+    tags: ["messaging", "chat", "privacy", "secure", "channel", "group", "bot", "broadcast", "encrypted", "fast", "cloud", "file", "airplane", "paper", "tech"],
+    draw: drawTelegram },
+  { id: "reddit", label: "Reddit", category: "social-media",
+    description: "Reddit logo — alien snoo face with antenna in a circle. Use for community forums, discussion threads, subreddits, AMAs, upvotes, user-generated content, and niche communities.",
+    tags: ["forum", "community", "discussion", "subreddit", "upvote", "thread", "ama", "meme", "niche", "comment", "karma", "post", "question", "answer", "vote"],
+    draw: drawReddit },
+  { id: "discord", label: "Discord", category: "social-media",
+    description: "Discord logo — gamepad-shaped face with round eyes. Use for gaming communities, voice chat servers, team communication, developer communities, and real-time group collaboration.",
+    tags: ["gaming", "community", "voice", "server", "chat", "team", "developer", "gamer", "channel", "bot", "stream", "call", "group", "mod", "role"],
+    draw: drawDiscord },
+  { id: "github", label: "GitHub", category: "social-media",
+    description: "GitHub logo — octocat face in a circle. Use for code repositories, open source projects, developer profiles, version control, pull requests, and software collaboration.",
+    tags: ["code", "developer", "repository", "opensource", "git", "pull-request", "commit", "branch", "software", "project", "collaboration", "programming", "fork", "issue", "devops"],
+    draw: drawGithub },
+  { id: "dribbble", label: "Dribbble", category: "social-media",
+    description: "Dribbble logo — basketball circle with curved seam lines. Use for design portfolios, creative showcases, UI/UX design sharing, designer profiles, and visual inspiration.",
+    tags: ["design", "portfolio", "creative", "ui", "ux", "showcase", "designer", "visual", "shot", "illustration", "graphic", "art", "mockup", "pixel", "craft"],
+    draw: drawDribbble },
+  { id: "behance", label: "Behance", category: "social-media",
+    description: "Behance logo — bold 'Be' letterform. Use for creative portfolios, Adobe ecosystem, design projects, photography showcases, and professional creative networking.",
+    tags: ["design", "portfolio", "adobe", "creative", "project", "showcase", "photography", "illustration", "graphic", "professional", "gallery", "art", "branding", "visual", "network"],
+    draw: drawBehance },
+  { id: "spotify", label: "Spotify", category: "social-media",
+    description: "Spotify logo — circle with three curved sound wave bars. Use for music streaming, playlists, podcasts, audio content, artist profiles, and entertainment branding.",
+    tags: ["music", "streaming", "audio", "playlist", "podcast", "song", "artist", "album", "listen", "radio", "sound", "track", "entertainment", "discover", "genre"],
+    draw: drawSpotify },
+  { id: "slack", label: "Slack", category: "social-media",
+    description: "Slack logo — four colored dots with extending bars forming a hash pattern. Use for team messaging, workplace communication, channel organization, integrations, and business collaboration.",
+    tags: ["team", "communication", "work", "channel", "message", "workplace", "collaboration", "integration", "notification", "business", "productivity", "remote", "office", "thread", "huddle"],
+    draw: drawSlack },
+  { id: "threads", label: "Threads", category: "social-media",
+    description: "Threads logo — at-sign-like spiral letterform. Use for text-based social posts, Meta ecosystem, public conversations, and microblogging content.",
+    tags: ["social", "text", "meta", "microblog", "post", "conversation", "public", "follow", "reply", "feed", "trending", "community", "share", "instagram", "thread"],
+    draw: drawThreads },
+  { id: "mastodon", label: "Mastodon", category: "social-media",
+    description: "Mastodon logo — friendly elephant-like rounded shape with trunk. Use for decentralized social media, fediverse content, open-source social networking, and privacy-first platforms.",
+    tags: ["social", "fediverse", "decentralized", "opensource", "privacy", "elephant", "toot", "instance", "federation", "microblog", "alternative", "community", "free", "server", "indie"],
+    draw: drawMastodon },
+  { id: "bluesky", label: "Bluesky", category: "social-media",
+    description: "Bluesky logo — butterfly silhouette with stem. Use for decentralized social media, AT protocol, open social web, microblogging, and alternative social platforms.",
+    tags: ["social", "microblog", "decentralized", "butterfly", "at-protocol", "open", "post", "feed", "follow", "alternative", "sky", "community", "free", "web", "indie"],
+    draw: drawBluesky },
 
-  // Contact & Communication
-  { id: "phone",       label: "Phone",        category: "contact",        tags: ["call", "telephone", "dial"], draw: drawPhone },
-  { id: "email",       label: "Email",        category: "contact",        tags: ["mail", "envelope", "message"], draw: drawEmail },
-  { id: "globe",       label: "Globe/Web",    category: "contact",        tags: ["website", "world", "internet", "url"], draw: drawGlobe },
-  { id: "map-pin",     label: "Location",     category: "contact",        tags: ["address", "pin", "gps", "place"], draw: drawMapPin },
-  { id: "chat",        label: "Chat",         category: "contact",        tags: ["message", "bubble", "conversation"], draw: drawChat },
-  { id: "video-call",  label: "Video Call",   category: "contact",        tags: ["meeting", "zoom", "camera"], draw: drawVideoCall },
-  { id: "fax",         label: "Fax",          category: "contact",        tags: ["document", "legacy", "machine"], draw: drawFax },
-  { id: "mobile",      label: "Mobile",       category: "contact",        tags: ["smartphone", "cell", "device"], draw: drawMobile },
-  { id: "at",          label: "At Symbol",    category: "contact",        tags: ["email", "mention", "handle"], draw: drawAt },
-  { id: "link",        label: "Link",         category: "contact",        tags: ["url", "chain", "connection"], draw: drawLink },
-  { id: "headphones",  label: "Headphones",   category: "contact",        tags: ["audio", "listen", "support"], draw: drawHeadphones },
-  { id: "microphone",  label: "Microphone",   category: "contact",        tags: ["audio", "voice", "podcast", "record"], draw: drawMicrophone },
-  { id: "send",        label: "Send",         category: "contact",        tags: ["paper", "plane", "submit"], draw: drawSend },
-  { id: "inbox",       label: "Inbox",        category: "contact",        tags: ["mail", "receive", "tray"], draw: drawInbox },
-  { id: "qr-code",     label: "QR Code",      category: "contact",        tags: ["scan", "barcode", "digital"], draw: drawQrCode },
+  // =========================================================================
+  //  CONTACT & COMMUNICATION (15)
+  // =========================================================================
+  { id: "phone", label: "Phone", category: "contact",
+    description: "Classic telephone handset in a curved receiver shape. Use for phone numbers, call-to-action buttons, customer service, hotlines, contact information, support lines, and business cards.",
+    tags: ["call", "telephone", "dial", "ring", "mobile", "cell", "contact", "support", "hotline", "customer-service", "number", "receiver", "landline", "voicemail", "business-card"],
+    draw: drawPhone },
+  { id: "email", label: "Email", category: "contact",
+    description: "Envelope with a V-shaped flap — the universal email symbol. Use for email addresses, newsletter signups, inbox notifications, contact forms, mailing lists, and correspondence.",
+    tags: ["mail", "envelope", "message", "inbox", "newsletter", "contact", "address", "correspondence", "notification", "subscribe", "compose", "send", "receive", "letter", "business-card"],
+    draw: drawEmail },
+  { id: "globe", label: "Globe/Web", category: "contact",
+    description: "Earth globe with latitude/longitude grid lines — represents worldwide web and internet. Use for website URLs, international business, global reach, world map, travel, and web addresses on business cards.",
+    tags: ["website", "world", "internet", "url", "web", "global", "international", "earth", "map", "worldwide", "domain", "online", "address", "http", "business-card"],
+    draw: drawGlobe },
+  { id: "map-pin", label: "Location", category: "contact",
+    description: "Map location pin/marker with inner circle — classic GPS-style marker. Use for physical addresses, store locations, navigation, directions, venue info, maps, and office addresses on business cards.",
+    tags: ["address", "pin", "gps", "place", "location", "map", "navigation", "directions", "venue", "store", "office", "marker", "geographic", "find-us", "business-card"],
+    draw: drawMapPin },
+  { id: "chat", label: "Chat", category: "contact",
+    description: "Speech bubble with three dots inside and a tail. Use for live chat, customer support, messaging features, chatbots, comments, discussions, and real-time communication.",
+    tags: ["message", "bubble", "conversation", "support", "live-chat", "chatbot", "comment", "discuss", "real-time", "customer", "help", "dialog", "feedback", "sms", "text"],
+    draw: drawChat },
+  { id: "video-call", label: "Video Call", category: "contact",
+    description: "Video camera/camcorder with playback screen — represents video conferencing. Use for Zoom/Teams/Meet meetings, virtual consultations, webinars, remote work, and video-based communication.",
+    tags: ["meeting", "zoom", "camera", "conference", "teams", "meet", "webinar", "remote", "virtual", "consultation", "screen", "video", "face-to-face", "online", "call"],
+    draw: drawVideoCall },
+  { id: "fax", label: "Fax", category: "contact",
+    description: "Fax machine with paper output and button grid. Use for fax numbers, legacy communication, medical offices, legal documents, government forms, and traditional business contact info.",
+    tags: ["document", "legacy", "machine", "paper", "office", "medical", "legal", "government", "traditional", "number", "transmission", "print", "scan", "formal", "business-card"],
+    draw: drawFax },
+  { id: "mobile", label: "Mobile", category: "contact",
+    description: "Smartphone with screen and home button outline. Use for mobile phone numbers, app references, responsive design, mobile-first content, and cellphone contact information.",
+    tags: ["smartphone", "cell", "device", "mobile-phone", "app", "screen", "touchscreen", "cellular", "portable", "handheld", "ios", "android", "responsive", "number", "business-card"],
+    draw: drawMobile },
+  { id: "at", label: "At Symbol", category: "contact",
+    description: "The @ at-sign symbol — universal email and social media handle indicator. Use for email addresses, social handles, mentions, usernames, and digital contact information.",
+    tags: ["email", "mention", "handle", "username", "symbol", "digital", "social", "address", "at-sign", "identifier", "account", "profile", "tag", "domain", "contact"],
+    draw: drawAt },
+  { id: "link", label: "Link", category: "contact",
+    description: "Two interlocking chain links — represents hyperlinks and connections. Use for URLs, hyperlinks, website references, external links, resource connections, and sharing.",
+    tags: ["url", "chain", "connection", "hyperlink", "external", "reference", "share", "attach", "web", "anchor", "redirect", "shortlink", "qr", "click", "navigate"],
+    draw: drawLink },
+  { id: "headphones", label: "Headphones", category: "contact",
+    description: "Over-ear headphones with headband arc and ear cups. Use for audio support, podcast listening, music, customer service helplines, call center, and audio-related services.",
+    tags: ["audio", "listen", "support", "podcast", "music", "call-center", "helpline", "customer-service", "sound", "stereo", "ear", "dj", "studio", "radio", "streaming"],
+    draw: drawHeadphones },
+  { id: "microphone", label: "Microphone", category: "contact",
+    description: "Studio condenser microphone on a stand with base. Use for podcasts, voice recording, audio content, radio, karaoke, speeches, voiceovers, and sound production.",
+    tags: ["audio", "voice", "podcast", "record", "radio", "speech", "karaoke", "voiceover", "studio", "sound", "broadcast", "sing", "talk", "narration", "production"],
+    draw: drawMicrophone },
+  { id: "send", label: "Send", category: "contact",
+    description: "Paper airplane / send arrow pointing right. Use for send buttons, submit actions, email sending, message dispatch, form submission, and share functionality.",
+    tags: ["paper", "plane", "submit", "dispatch", "forward", "share", "mail", "message", "action", "button", "arrow", "deliver", "post", "publish", "notify"],
+    draw: drawSend },
+  { id: "inbox", label: "Inbox", category: "contact",
+    description: "Inbox tray with down arrow showing incoming messages. Use for email inboxes, notifications, received messages, mail collection, and incoming correspondence.",
+    tags: ["mail", "receive", "tray", "notification", "incoming", "collect", "unread", "new", "download", "archive", "storage", "pending", "queue", "messages", "box"],
+    draw: drawInbox },
+  { id: "qr-code", label: "QR Code", category: "contact",
+    description: "Scannable QR code with three finder pattern squares and data dots. Use for quick links, contactless sharing, digital business cards, payment codes, URLs, and scan-to-connect.",
+    tags: ["scan", "barcode", "digital", "contactless", "link", "payment", "url", "vcard", "nfc", "code", "matrix", "quick-response", "mobile", "share", "business-card"],
+    draw: drawQrCode },
 
-  // Business & Professional
-  { id: "briefcase",     label: "Briefcase",     category: "business",     tags: ["work", "job", "portfolio", "case"], draw: drawBriefcase },
-  { id: "building",      label: "Building",      category: "business",     tags: ["office", "company", "corporate", "hq"], draw: drawBuilding },
-  { id: "calendar",      label: "Calendar",      category: "business",     tags: ["date", "schedule", "event", "planner"], draw: drawCalendar },
-  { id: "clock",         label: "Clock",         category: "business",     tags: ["time", "hour", "schedule", "deadline"], draw: drawClock },
-  { id: "dollar",        label: "Dollar",        category: "business",     tags: ["money", "currency", "finance", "payment"], draw: drawDollar },
-  { id: "chart-bar",     label: "Bar Chart",     category: "business",     tags: ["analytics", "data", "graph", "metrics"], draw: drawChartBar },
-  { id: "chart-line",    label: "Line Chart",    category: "business",     tags: ["analytics", "data", "trend", "growth"], draw: drawChartLine },
-  { id: "users",         label: "Users/Team",    category: "business",     tags: ["people", "group", "team", "collaboration"], draw: drawUsers },
-  { id: "user",          label: "User",          category: "business",     tags: ["person", "profile", "account"], draw: drawUser },
-  { id: "handshake",     label: "Handshake",     category: "business",     tags: ["deal", "agreement", "partnership"], draw: drawHandshake },
-  { id: "award",         label: "Award",         category: "business",     tags: ["medal", "trophy", "achievement", "badge"], draw: drawAward },
-  { id: "target",        label: "Target",        category: "business",     tags: ["goal", "bullseye", "aim", "focus"], draw: drawTarget },
-  { id: "presentation",  label: "Presentation",  category: "business",     tags: ["slides", "pitch", "screen", "projector"], draw: drawPresentation },
-  { id: "certificate",   label: "Certificate",   category: "business",     tags: ["diploma", "license", "credential"], draw: drawCertificate },
-  { id: "invoice",       label: "Invoice",       category: "business",     tags: ["bill", "document", "receipt", "payment"], draw: drawInvoice },
-  { id: "contract",      label: "Contract",      category: "business",     tags: ["document", "signature", "agreement", "legal"], draw: drawContract },
-  { id: "lightbulb",     label: "Lightbulb",     category: "business",     tags: ["idea", "innovation", "creative", "concept"], draw: drawLightbulb },
-  { id: "rocket",        label: "Rocket",        category: "business",     tags: ["launch", "startup", "growth", "speed"], draw: drawRocket },
-  { id: "gem",           label: "Gem",           category: "business",     tags: ["diamond", "value", "premium", "luxury"], draw: drawGem },
-  { id: "shield",        label: "Shield",        category: "business",     tags: ["security", "protection", "trust", "verified"], draw: drawShield },
+  // =========================================================================
+  //  BUSINESS & PROFESSIONAL (20)
+  // =========================================================================
+  { id: "briefcase", label: "Briefcase", category: "business",
+    description: "Professional briefcase with handle and clasp line. Use for business services, corporate identity, career pages, job listings, professional portfolios, and work-related content.",
+    tags: ["work", "job", "portfolio", "case", "career", "corporate", "professional", "office", "executive", "business", "employment", "consultant", "formal", "services", "enterprise"],
+    draw: drawBriefcase },
+  { id: "building", label: "Building", category: "business",
+    description: "Multi-story office building with windows and entrance door. Use for corporate headquarters, real estate, company profiles, office locations, commercial property, and business addresses.",
+    tags: ["office", "company", "corporate", "hq", "headquarters", "real-estate", "commercial", "tower", "skyscraper", "property", "workplace", "enterprise", "address", "city", "urban"],
+    draw: drawBuilding },
+  { id: "calendar", label: "Calendar", category: "business",
+    description: "Calendar page with date grid, binding rings, and numbered days. Use for scheduling, events, appointments, deadlines, date pickers, planners, and time management.",
+    tags: ["date", "schedule", "event", "planner", "appointment", "deadline", "booking", "agenda", "month", "week", "reminder", "organize", "time", "meeting", "reservation"],
+    draw: drawCalendar },
+  { id: "clock", label: "Clock", category: "business",
+    description: "Analog clock face with hour and minute hands showing time. Use for time management, deadlines, hours of operation, scheduling, countdowns, and time-sensitive content.",
+    tags: ["time", "hour", "schedule", "deadline", "watch", "timer", "countdown", "business-hours", "opening", "closing", "punctual", "duration", "minute", "alarm", "timezone"],
+    draw: drawClock },
+  { id: "dollar", label: "Dollar", category: "business",
+    description: "Dollar sign ($) inside a circle — currency and money symbol. Use for pricing, financial services, revenue, budgets, cost displays, payment amounts, and money-related content.",
+    tags: ["money", "currency", "finance", "payment", "price", "cost", "revenue", "budget", "income", "profit", "salary", "fee", "rate", "billing", "economic"],
+    draw: drawDollar },
+  { id: "chart-bar", label: "Bar Chart", category: "business",
+    description: "Three vertical bars of increasing height on a baseline — bar graph visualization. Use for sales data, analytics dashboards, performance metrics, comparisons, and statistical reports.",
+    tags: ["analytics", "data", "graph", "metrics", "statistics", "performance", "sales", "comparison", "dashboard", "report", "kpi", "revenue", "growth", "quarterly", "visual"],
+    draw: drawChartBar },
+  { id: "chart-line", label: "Line Chart", category: "business",
+    description: "Upward-trending line graph with data points on X-Y axes. Use for growth trends, stock prices, progress tracking, time-series data, performance over time, and analytics.",
+    tags: ["analytics", "data", "trend", "growth", "stock", "progress", "timeline", "increase", "tracking", "performance", "forecast", "upward", "line-graph", "roi", "trajectory"],
+    draw: drawChartLine },
+  { id: "users", label: "Users/Team", category: "business",
+    description: "Two overlapping person silhouettes representing a group or team. Use for team pages, group features, collaboration, community, HR, audience segments, and user management.",
+    tags: ["people", "group", "team", "collaboration", "community", "hr", "audience", "members", "staff", "employees", "department", "organization", "crowd", "social", "collective"],
+    draw: drawUsers },
+  { id: "user", label: "User", category: "business",
+    description: "Single person silhouette with head circle and shoulder arc. Use for user profiles, account settings, personal information, contact person, author credits, and individual identity.",
+    tags: ["person", "profile", "account", "individual", "avatar", "identity", "member", "contact", "author", "customer", "client", "admin", "login", "personal", "bio"],
+    draw: drawUser },
+  { id: "handshake", label: "Handshake", category: "business",
+    description: "Two hands clasping in a handshake gesture. Use for partnerships, deals, agreements, collaboration, B2B relationships, trust, and successful negotiations.",
+    tags: ["deal", "agreement", "partnership", "trust", "collaboration", "b2b", "negotiation", "alliance", "cooperation", "contract", "relationship", "merge", "welcome", "onboard", "mutual"],
+    draw: drawHandshake },
+  { id: "award", label: "Award", category: "business",
+    description: "Medal/ribbon award with circle medallion and two ribbon tails. Use for achievements, certifications, prizes, recognition, quality badges, excellence, and competition winners.",
+    tags: ["medal", "trophy", "achievement", "badge", "prize", "recognition", "excellence", "winner", "champion", "quality", "certified", "honor", "first-place", "competition", "reward"],
+    draw: drawAward },
+  { id: "target", label: "Target", category: "business",
+    description: "Concentric circles with filled bullseye center — target/crosshair. Use for goals, objectives, KPIs, marketing targets, focus areas, accuracy, and strategic planning.",
+    tags: ["goal", "bullseye", "aim", "focus", "objective", "kpi", "strategy", "mission", "accuracy", "precision", "marketing", "plan", "milestone", "hit", "center"],
+    draw: drawTarget },
+  { id: "presentation", label: "Presentation", category: "business",
+    description: "Presentation screen on stand with chart inside. Use for slideshows, pitches, meetings, boardroom presentations, keynotes, webinars, and business demos.",
+    tags: ["slides", "pitch", "screen", "projector", "keynote", "meeting", "boardroom", "demo", "webinar", "powerpoint", "lecture", "training", "speaker", "visual", "deck"],
+    draw: drawPresentation },
+  { id: "certificate", label: "Certificate", category: "business",
+    description: "Document with text lines and an official seal/stamp in corner. Use for certifications, diplomas, licenses, credentials, compliance badges, and official documents.",
+    tags: ["diploma", "license", "credential", "seal", "official", "compliance", "accreditation", "stamp", "verified", "document", "qualification", "training", "completion", "authority", "education"],
+    draw: drawCertificate },
+  { id: "invoice", label: "Invoice", category: "business",
+    description: "Document with folded corner, text lines, and billing details. Use for invoices, bills, purchase orders, financial documents, billing, and accounting records.",
+    tags: ["bill", "document", "receipt", "payment", "accounting", "purchase-order", "billing", "financial", "statement", "charge", "due", "payable", "itemized", "ledger", "tax"],
+    draw: drawInvoice },
+  { id: "contract", label: "Contract", category: "business",
+    description: "Document with multiple text lines and a signature squiggle at the bottom. Use for contracts, legal agreements, terms of service, NDAs, and formal documentation.",
+    tags: ["document", "signature", "agreement", "legal", "nda", "terms", "binding", "formal", "sign", "clause", "policy", "compliance", "notary", "witness", "execute"],
+    draw: drawContract },
+  { id: "lightbulb", label: "Lightbulb", category: "business",
+    description: "Incandescent light bulb with filament area and screw base. Use for ideas, innovation, creativity, tips, insights, brainstorming, solutions, and inspiration moments.",
+    tags: ["idea", "innovation", "creative", "concept", "tip", "insight", "brainstorm", "solution", "inspiration", "think", "bright", "eureka", "strategy", "invention", "suggestion"],
+    draw: drawLightbulb },
+  { id: "rocket", label: "Rocket", category: "business",
+    description: "Rocket ship with pointed nose, window, side fins, and flame trail. Use for product launches, startup branding, rapid growth, space tech, acceleration, and ambitious projects.",
+    tags: ["launch", "startup", "growth", "speed", "space", "boost", "accelerate", "scale", "ambition", "moonshot", "blast-off", "fast", "propel", "mission", "venture"],
+    draw: drawRocket },
+  { id: "gem", label: "Gem", category: "business",
+    description: "Faceted diamond/gem with top crown and pavilion facet lines. Use for premium features, luxury branding, valuable content, VIP access, pricing tiers, and high-quality offerings.",
+    tags: ["diamond", "value", "premium", "luxury", "vip", "exclusive", "precious", "quality", "rare", "tier", "elite", "jewel", "brilliant", "crystal", "treasure"],
+    draw: drawGem },
+  { id: "shield", label: "Shield", category: "business",
+    description: "Shield/badge shape with a checkmark inside — security verified. Use for security features, trust badges, protection guarantees, SSL, privacy policies, and verification marks.",
+    tags: ["security", "protection", "trust", "verified", "safe", "guarantee", "ssl", "privacy", "defense", "guard", "insurance", "warranty", "antivirus", "firewall", "badge"],
+    draw: drawShield },
 
-  // Creative & Design
-  { id: "palette",       label: "Palette",       category: "creative",     tags: ["art", "color", "paint", "design"], draw: drawPalette },
-  { id: "pen",           label: "Pen",           category: "creative",     tags: ["write", "edit", "draw", "sketch"], draw: drawPen },
-  { id: "camera",        label: "Camera",        category: "creative",     tags: ["photo", "photography", "capture"], draw: drawCamera },
-  { id: "film",          label: "Film",          category: "creative",     tags: ["movie", "cinema", "video", "reel"], draw: drawFilm },
-  { id: "music",         label: "Music",         category: "creative",     tags: ["note", "audio", "song", "melody"], draw: drawMusic },
-  { id: "brush",         label: "Brush",         category: "creative",     tags: ["paint", "art", "stroke", "creative"], draw: drawBrush },
-  { id: "layers",        label: "Layers",        category: "creative",     tags: ["stack", "design", "depth", "compose"], draw: drawLayers },
-  { id: "grid",          label: "Grid",          category: "creative",     tags: ["layout", "table", "structure", "matrix"], draw: drawGrid },
-  { id: "crop",          label: "Crop",          category: "creative",     tags: ["resize", "trim", "frame", "cut"], draw: drawCrop },
-  { id: "wand",          label: "Magic Wand",    category: "creative",     tags: ["magic", "sparkle", "auto", "enhance"], draw: drawWand },
-  { id: "eye",           label: "Eye",           category: "creative",     tags: ["view", "visible", "preview", "watch"], draw: drawEye },
-  { id: "download",      label: "Download",      category: "creative",     tags: ["save", "export", "arrow", "get"], draw: drawDownload },
-  { id: "upload",        label: "Upload",        category: "creative",     tags: ["import", "send", "arrow", "push"], draw: drawUpload },
-  { id: "print",         label: "Print",         category: "creative",     tags: ["printer", "paper", "output", "hard copy"], draw: drawPrint },
-  { id: "color-swatch",  label: "Color Swatch",  category: "creative",     tags: ["palette", "theme", "scheme", "picker"], draw: drawColorSwatch },
+  // =========================================================================
+  //  CREATIVE & DESIGN (15)
+  // =========================================================================
+  { id: "palette", label: "Palette", category: "creative",
+    description: "Artist's paint palette with thumb hole and paint blob dots. Use for art, color customization, design tools, creative studios, branding, and color picker features.",
+    tags: ["art", "color", "paint", "design", "creative", "studio", "artist", "branding", "customize", "theme", "hue", "pigment", "canvas", "illustration", "picker"],
+    draw: drawPalette },
+  { id: "pen", label: "Pen", category: "creative",
+    description: "Angled pen/pencil tool with nib and edit line. Use for writing, editing, drawing, annotation, signatures, content creation, blogging, and text editing.",
+    tags: ["write", "edit", "draw", "sketch", "pencil", "annotation", "signature", "create", "compose", "blog", "author", "draft", "note", "scribble", "calligraphy"],
+    draw: drawPen },
+  { id: "camera", label: "Camera", category: "creative",
+    description: "DSLR-style camera body with lens, viewfinder hump, and inner lens circles. Use for photography, photo shoots, image capture, portfolio sections, and visual content creation.",
+    tags: ["photo", "photography", "capture", "image", "shot", "picture", "lens", "dslr", "portrait", "landscape", "snap", "shutter", "focus", "gallery", "visual"],
+    draw: drawCamera },
+  { id: "film", label: "Film", category: "creative",
+    description: "Film strip frame with sprocket holes on both sides. Use for cinema, movies, video production, entertainment, film festivals, and media projects.",
+    tags: ["movie", "cinema", "video", "reel", "strip", "frame", "production", "director", "theater", "entertainment", "hollywood", "documentary", "short-film", "premiere", "festival"],
+    draw: drawFilm },
+  { id: "music", label: "Music", category: "creative",
+    description: "Two connected musical notes (beamed eighth notes). Use for music players, audio content, playlists, concert promotions, band pages, and sound-related features.",
+    tags: ["note", "audio", "song", "melody", "tune", "rhythm", "beat", "concert", "band", "instrument", "harmony", "compose", "playlist", "dj", "soundtrack"],
+    draw: drawMusic },
+  { id: "brush", label: "Brush", category: "creative",
+    description: "Paint brush with bristle head and handle. Use for art tools, painting, creative expression, design studios, makeup, and artistic content.",
+    tags: ["paint", "art", "stroke", "creative", "bristle", "watercolor", "acrylic", "canvas", "artistic", "studio", "texture", "coat", "finish", "makeover", "tool"],
+    draw: drawBrush },
+  { id: "layers", label: "Layers", category: "creative",
+    description: "Three stacked diamond/rhombus layers representing depth. Use for layer management, design software, compositing, depth, multi-level content, and design hierarchy.",
+    tags: ["stack", "design", "depth", "compose", "level", "overlay", "blend", "arrange", "z-index", "tier", "flatten", "group", "merge", "hierarchy", "structure"],
+    draw: drawLayers },
+  { id: "grid", label: "Grid", category: "creative",
+    description: "3x3 grid of evenly spaced lines forming nine cells. Use for layout systems, galleries, photo grids, spreadsheets, dashboards, and structured arrangements.",
+    tags: ["layout", "table", "structure", "matrix", "gallery", "spreadsheet", "column", "row", "cell", "organize", "dashboard", "responsive", "framework", "alignment", "template"],
+    draw: drawGrid },
+  { id: "crop", label: "Crop", category: "creative",
+    description: "Two overlapping L-shaped crop brackets. Use for image cropping, photo editing, aspect ratio adjustment, framing, and composition tools.",
+    tags: ["resize", "trim", "frame", "cut", "aspect-ratio", "composition", "edit", "photo", "adjust", "reframe", "selection", "boundary", "proportion", "dimension", "tool"],
+    draw: drawCrop },
+  { id: "wand", label: "Magic Wand", category: "creative",
+    description: "Diagonal wand with three sparkle/star bursts at the tip. Use for auto-enhance, magic selection, AI-powered features, transformations, and one-click improvements.",
+    tags: ["magic", "sparkle", "auto", "enhance", "ai", "transform", "one-click", "improve", "effect", "filter", "smart", "instant", "wizard", "automate", "boost"],
+    draw: drawWand },
+  { id: "eye", label: "Eye", category: "creative",
+    description: "Human eye with eyelid outline, iris circle, and pupil dot. Use for visibility toggles, preview modes, view counts, show/hide, privacy, and attention/focus.",
+    tags: ["view", "visible", "preview", "watch", "visibility", "show", "hide", "look", "observe", "inspect", "iris", "pupil", "attention", "focus", "toggle"],
+    draw: drawEye },
+  { id: "download", label: "Download", category: "creative",
+    description: "Downward arrow into a tray/surface. Use for file downloads, export actions, save to device, resource downloads, and asset acquisition.",
+    tags: ["save", "export", "arrow", "get", "file", "resource", "acquire", "fetch", "grab", "install", "store", "offline", "backup", "archive", "pdf"],
+    draw: drawDownload },
+  { id: "upload", label: "Upload", category: "creative",
+    description: "Upward arrow from a tray/surface. Use for file uploads, import actions, cloud sync, media publishing, and content submission.",
+    tags: ["import", "send", "arrow", "push", "file", "cloud", "sync", "publish", "submit", "attach", "transfer", "share", "deploy", "post", "media"],
+    draw: drawUpload },
+  { id: "print", label: "Print", category: "creative",
+    description: "Desktop printer with paper input tray above and output tray below. Use for printing, hard copies, physical output, print-ready content, and document production.",
+    tags: ["printer", "paper", "output", "hard-copy", "document", "physical", "press", "copy", "publish", "offset", "inkjet", "laser", "page", "cmyk", "production"],
+    draw: drawPrint },
+  { id: "color-swatch", label: "Color Swatch", category: "creative",
+    description: "Three side-by-side vertical color swatches/strips. Use for color themes, palette selection, brand colors, design systems, and color scheme presentation.",
+    tags: ["palette", "theme", "scheme", "picker", "swatch", "brand-color", "design-system", "tone", "shade", "tint", "pantone", "hex", "rgb", "sample", "selection"],
+    draw: drawColorSwatch },
 
-  // Technology & Web
-  { id: "code",          label: "Code",          category: "technology",   tags: ["programming", "developer", "html", "brackets"], draw: drawCode },
-  { id: "server",        label: "Server",        category: "technology",   tags: ["hosting", "data", "rack", "infrastructure"], draw: drawServer },
-  { id: "cloud",         label: "Cloud",         category: "technology",   tags: ["storage", "hosting", "saas", "sync"], draw: drawCloud },
-  { id: "wifi",          label: "WiFi",          category: "technology",   tags: ["wireless", "internet", "signal", "connectivity"], draw: drawWifi },
-  { id: "database",      label: "Database",      category: "technology",   tags: ["storage", "sql", "records", "data"], draw: drawDatabase },
-  { id: "cpu",           label: "CPU/Chip",      category: "technology",   tags: ["processor", "hardware", "computing", "chip"], draw: drawCpu },
-  { id: "lock",          label: "Lock",          category: "technology",   tags: ["security", "password", "privacy", "encrypt"], draw: drawLock },
-  { id: "settings",      label: "Settings",      category: "technology",   tags: ["gear", "config", "options", "preferences"], draw: drawSettings },
-  { id: "terminal",      label: "Terminal",      category: "technology",   tags: ["console", "command", "cli", "shell"], draw: drawTerminal },
-  { id: "api",           label: "API/Network",   category: "technology",   tags: ["endpoint", "connection", "node", "graph"], draw: drawApi },
-  { id: "bolt",          label: "Lightning",     category: "technology",   tags: ["power", "fast", "electric", "energy"], draw: drawBolt },
-  { id: "ai",            label: "AI/Brain",      category: "technology",   tags: ["artificial", "intelligence", "neural", "ml"], draw: drawAi },
-  { id: "robot",         label: "Robot",         category: "technology",   tags: ["bot", "automation", "android", "machine"], draw: drawRobot },
-  { id: "magnet",        label: "Magnet",        category: "technology",   tags: ["attract", "pull", "retention", "lead"], draw: drawMagnet },
-  { id: "fingerprint",   label: "Fingerprint",   category: "technology",   tags: ["biometric", "identity", "auth", "secure"], draw: drawFingerprint },
+  // =========================================================================
+  //  TECHNOLOGY & WEB (15)
+  // =========================================================================
+  { id: "code", label: "Code", category: "technology",
+    description: "Angle brackets (< />) with a forward slash — code/HTML symbol. Use for programming, web development, software engineering, tech blogs, API docs, and developer content.",
+    tags: ["programming", "developer", "html", "brackets", "web", "software", "engineering", "frontend", "backend", "syntax", "script", "coding", "markup", "tags", "dev"],
+    draw: drawCode },
+  { id: "server", label: "Server", category: "technology",
+    description: "Two stacked server rack units with status LEDs and drive lines. Use for web hosting, data centers, infrastructure, backend services, and cloud computing.",
+    tags: ["hosting", "data", "rack", "infrastructure", "datacenter", "backend", "cloud", "compute", "uptime", "deployment", "virtual", "instance", "node", "cluster", "hardware"],
+    draw: drawServer },
+  { id: "cloud", label: "Cloud", category: "technology",
+    description: "Fluffy cumulus cloud shape with rounded bumps. Use for cloud computing, SaaS products, online storage, weather, cloud sync, and internet-based services.",
+    tags: ["storage", "hosting", "saas", "sync", "computing", "online", "aws", "azure", "digital", "virtual", "platform", "weather", "upload", "backup", "service"],
+    draw: drawCloud },
+  { id: "wifi", label: "WiFi", category: "technology",
+    description: "Three concentric WiFi signal arcs above a dot — wireless connectivity symbol. Use for internet access, wireless networks, connectivity, hotspots, and network status.",
+    tags: ["wireless", "internet", "signal", "connectivity", "hotspot", "network", "broadband", "access", "router", "connected", "online", "bars", "speed", "coverage", "available"],
+    draw: drawWifi },
+  { id: "database", label: "Database", category: "technology",
+    description: "Cylinder stack with horizontal slice lines — database/storage icon. Use for data storage, SQL databases, records, backend systems, and data management.",
+    tags: ["storage", "sql", "records", "data", "table", "query", "nosql", "schema", "repository", "warehouse", "backup", "migration", "crud", "relational", "persistent"],
+    draw: drawDatabase },
+  { id: "cpu", label: "CPU/Chip", category: "technology",
+    description: "Microprocessor chip with inner die and pin connectors on all four sides. Use for computing power, hardware, processors, tech specs, and performance benchmarks.",
+    tags: ["processor", "hardware", "computing", "chip", "silicon", "performance", "benchmark", "core", "thread", "architecture", "semiconductor", "gpu", "embedded", "circuit", "spec"],
+    draw: drawCpu },
+  { id: "lock", label: "Lock", category: "technology",
+    description: "Padlock with shackle arc, body, and keyhole. Use for security, passwords, encryption, locked content, authentication, and access control.",
+    tags: ["security", "password", "privacy", "encrypt", "padlock", "authentication", "access", "protected", "secure", "login", "credential", "two-factor", "vault", "restricted", "ssl"],
+    draw: drawLock },
+  { id: "settings", label: "Settings", category: "technology",
+    description: "Gear/cog wheel with inner circle and radiating teeth. Use for settings menus, configuration, preferences, admin panels, system options, and customization.",
+    tags: ["gear", "config", "options", "preferences", "admin", "customize", "control", "panel", "system", "manage", "tune", "adjust", "setup", "wrench", "cog"],
+    draw: drawSettings },
+  { id: "terminal", label: "Terminal", category: "technology",
+    description: "Terminal/console window with prompt chevron and cursor line. Use for command line, developer tools, coding environments, shell access, and technical documentation.",
+    tags: ["console", "command", "cli", "shell", "prompt", "bash", "powershell", "developer", "devops", "script", "execute", "debug", "output", "log", "terminal-window"],
+    draw: drawTerminal },
+  { id: "api", label: "API/Network", category: "technology",
+    description: "Central node connected to four surrounding nodes — network/API topology. Use for API endpoints, microservices, network diagrams, integrations, and system architecture.",
+    tags: ["endpoint", "connection", "node", "graph", "microservice", "integration", "rest", "graphql", "webhook", "architecture", "topology", "mesh", "gateway", "connector", "hub"],
+    draw: drawApi },
+  { id: "bolt", label: "Lightning", category: "technology",
+    description: "Lightning bolt / thunderbolt zigzag shape. Use for power, speed, electrical, flash sales, quick actions, energy, charging, and high-performance features.",
+    tags: ["power", "fast", "electric", "energy", "thunder", "flash", "quick", "instant", "charge", "voltage", "speed", "rapid", "turbo", "performance", "zap"],
+    draw: drawBolt },
+  { id: "ai", label: "AI/Brain", category: "technology",
+    description: "Brain outline with internal neural connection curves — artificial intelligence symbol. Use for AI features, machine learning, neural networks, smart automation, and intelligent systems.",
+    tags: ["artificial", "intelligence", "neural", "ml", "brain", "smart", "automation", "deep-learning", "cognitive", "algorithm", "model", "predict", "generative", "assistant", "thinking"],
+    draw: drawAi },
+  { id: "robot", label: "Robot", category: "technology",
+    description: "Friendly robot face with antenna, square head, round eyes, and side ears. Use for chatbots, automation, robotics, AI assistants, tech mascots, and machine interfaces.",
+    tags: ["bot", "automation", "android", "machine", "chatbot", "assistant", "mechanical", "mascot", "cyborg", "humanoid", "automated", "digital-worker", "ai", "tech", "smart"],
+    draw: drawRobot },
+  { id: "magnet", label: "Magnet", category: "technology",
+    description: "U-shaped horseshoe magnet with pole markings. Use for lead magnets, attraction marketing, retention, magnetic content, pull strategies, and engagement.",
+    tags: ["attract", "pull", "retention", "lead", "engagement", "magnetic", "horseshoe", "force", "sticky", "grab", "interest", "convert", "funnel", "inbound", "draw-in"],
+    draw: drawMagnet },
+  { id: "fingerprint", label: "Fingerprint", category: "technology",
+    description: "Concentric fingerprint ridges forming a biometric pattern. Use for biometric auth, identity verification, security, unique identification, and personalization.",
+    tags: ["biometric", "identity", "auth", "secure", "unique", "verification", "scan", "touch-id", "personal", "forensic", "pattern", "sensor", "recognition", "unlock", "privacy"],
+    draw: drawFingerprint },
 
-  // Nature & Lifestyle
-  { id: "heart",        label: "Heart",        category: "lifestyle",     tags: ["love", "like", "health", "favorite"], draw: drawHeart },
-  { id: "star",         label: "Star",         category: "lifestyle",     tags: ["rating", "favorite", "featured", "quality"], draw: drawStar },
-  { id: "sun",          label: "Sun",          category: "lifestyle",     tags: ["day", "light", "bright", "weather"], draw: drawSun },
-  { id: "moon",         label: "Moon",         category: "lifestyle",     tags: ["night", "dark", "sleep", "theme"], draw: drawMoon },
-  { id: "leaf",         label: "Leaf",         category: "lifestyle",     tags: ["nature", "eco", "green", "organic"], draw: drawLeaf },
-  { id: "tree",         label: "Tree",         category: "lifestyle",     tags: ["nature", "forest", "growth", "environment"], draw: drawTree },
-  { id: "flame",        label: "Flame",        category: "lifestyle",     tags: ["fire", "hot", "trending", "popular"], draw: drawFlame },
-  { id: "drop",         label: "Water Drop",   category: "lifestyle",     tags: ["water", "liquid", "rain", "hydration"], draw: drawDrop },
-  { id: "coffee",       label: "Coffee",       category: "lifestyle",     tags: ["cafe", "drink", "morning", "beverage"], draw: drawCoffee },
-  { id: "glasses",      label: "Glasses",      category: "lifestyle",     tags: ["vision", "smart", "reading", "fashion"], draw: drawGlasses },
+  // =========================================================================
+  //  NATURE & LIFESTYLE (10)
+  // =========================================================================
+  { id: "heart", label: "Heart", category: "lifestyle",
+    description: "Classic heart shape with two curved lobes meeting at a point. Use for love, favorites, likes, health/wellness, charity, romance, and emotional content.",
+    tags: ["love", "like", "health", "favorite", "wellness", "romance", "charity", "care", "passion", "emotion", "valentine", "dating", "affection", "wish", "donate"],
+    draw: drawHeart },
+  { id: "star", label: "Star", category: "lifestyle",
+    description: "Five-pointed star with alternating outer and inner vertices. Use for ratings, reviews, favorites, featured content, quality marks, rewards, and excellence.",
+    tags: ["rating", "favorite", "featured", "quality", "review", "five-star", "top", "best", "premium", "highlight", "bookmark", "excellent", "gold", "rank", "recommend"],
+    draw: drawStar },
+  { id: "sun", label: "Sun", category: "lifestyle",
+    description: "Circle with radiating ray lines — bright sun symbol. Use for daytime, brightness, summer, outdoor activities, solar energy, light mode, and positive vibes.",
+    tags: ["day", "light", "bright", "weather", "summer", "outdoor", "solar", "energy", "warm", "morning", "sunshine", "tropical", "positive", "vitamin-d", "beach"],
+    draw: drawSun },
+  { id: "moon", label: "Moon", category: "lifestyle",
+    description: "Crescent moon shape — nighttime/dark mode symbol. Use for night, dark mode toggle, sleep, dreams, nightlife, astronomy, and evening content.",
+    tags: ["night", "dark", "sleep", "theme", "crescent", "dream", "evening", "lunar", "astronomy", "nightlife", "dark-mode", "rest", "calm", "twilight", "stargazing"],
+    draw: drawMoon },
+  { id: "leaf", label: "Leaf", category: "lifestyle",
+    description: "Single leaf with pointed tip and center vein line. Use for eco-friendly, organic products, sustainability, nature, green initiatives, and environmental content.",
+    tags: ["nature", "eco", "green", "organic", "sustainable", "environment", "plant", "garden", "vegan", "natural", "renewable", "fresh", "herbal", "botanical", "earth"],
+    draw: drawLeaf },
+  { id: "tree", label: "Tree", category: "lifestyle",
+    description: "Evergreen/pine tree with layered triangular canopy and trunk. Use for nature, forestry, growth, family trees, environmental campaigns, and woodland themes.",
+    tags: ["nature", "forest", "growth", "environment", "pine", "evergreen", "woodland", "park", "timber", "family-tree", "roots", "canopy", "planting", "conservation", "camping"],
+    draw: drawTree },
+  { id: "flame", label: "Flame", category: "lifestyle",
+    description: "Fire flame with outer and inner flame layers. Use for hot deals, trending content, fire sales, energy, passion, spicy food, and popular/viral items.",
+    tags: ["fire", "hot", "trending", "popular", "viral", "heat", "spicy", "sale", "passion", "energy", "burning", "ignite", "blaze", "warmth", "bbq"],
+    draw: drawFlame },
+  { id: "drop", label: "Water Drop", category: "lifestyle",
+    description: "Water droplet with pointed top and rounded bottom. Use for water, rain, hydration, beverages, cleaning, plumbing, tears, and liquid-related content.",
+    tags: ["water", "liquid", "rain", "hydration", "beverage", "clean", "pure", "splash", "droplet", "tear", "moisture", "dew", "aqua", "plumbing", "fountain"],
+    draw: drawDrop },
+  { id: "coffee", label: "Coffee", category: "lifestyle",
+    description: "Coffee mug with handle and two steam wisps rising from top. Use for coffee shops, cafes, morning routines, beverages, meetings over coffee, and break time.",
+    tags: ["cafe", "drink", "morning", "beverage", "cup", "tea", "latte", "espresso", "hot", "break", "meeting", "barista", "shop", "brew", "relaxation"],
+    draw: drawCoffee },
+  { id: "glasses", label: "Glasses", category: "lifestyle",
+    description: "Pair of eyeglasses with two circular lenses, bridge, and temple arms. Use for reading, vision, smart/intellectual branding, fashion accessories, and optical services.",
+    tags: ["vision", "smart", "reading", "fashion", "optical", "intellectual", "nerd", "geek", "spectacles", "eyewear", "lens", "frame", "style", "academic", "see"],
+    draw: drawGlasses },
 
-  // Arrows & UI
-  { id: "arrow-right",  label: "Arrow Right",  category: "arrows-ui",     tags: ["next", "forward", "direction"], draw: drawArrowRight },
-  { id: "arrow-up",     label: "Arrow Up",     category: "arrows-ui",     tags: ["top", "increase", "up"], draw: drawArrowUp },
-  { id: "check",        label: "Checkmark",    category: "arrows-ui",     tags: ["done", "success", "complete", "verified"], draw: drawCheck },
-  { id: "close",        label: "Close/X",      category: "arrows-ui",     tags: ["cancel", "delete", "remove", "dismiss"], draw: drawClose },
-  { id: "plus",         label: "Plus",         category: "arrows-ui",     tags: ["add", "new", "create", "expand"], draw: drawPlus },
-  { id: "minus",        label: "Minus",        category: "arrows-ui",     tags: ["remove", "subtract", "collapse"], draw: drawMinus },
-  { id: "search",       label: "Search",       category: "arrows-ui",     tags: ["find", "magnify", "lookup", "query"], draw: drawSearch },
-  { id: "menu",         label: "Menu",         category: "arrows-ui",     tags: ["hamburger", "navigation", "list"], draw: drawMenu },
-  { id: "refresh",      label: "Refresh",      category: "arrows-ui",     tags: ["reload", "sync", "update", "retry"], draw: drawRefresh },
-  { id: "expand",       label: "Expand",       category: "arrows-ui",     tags: ["fullscreen", "maximize", "resize"], draw: drawExpand },
+  // =========================================================================
+  //  ARROWS & UI (10)
+  // =========================================================================
+  { id: "arrow-right", label: "Arrow Right", category: "arrows-ui",
+    description: "Horizontal arrow pointing right with arrowhead. Use for next/forward navigation, continue buttons, progress indicators, and directional cues.",
+    tags: ["next", "forward", "direction", "continue", "proceed", "go", "right", "navigate", "progress", "advance", "following", "step", "flow", "move", "action"],
+    draw: drawArrowRight },
+  { id: "arrow-up", label: "Arrow Up", category: "arrows-ui",
+    description: "Vertical arrow pointing upward with arrowhead. Use for increase, improvement, upload, scroll-to-top, upvote, and ascending actions.",
+    tags: ["top", "increase", "up", "improve", "rise", "scroll", "upvote", "ascending", "higher", "boost", "elevate", "climb", "upgrade", "above", "raise"],
+    draw: drawArrowUp },
+  { id: "check", label: "Checkmark", category: "arrows-ui",
+    description: "Bold checkmark/tick mark — universal symbol for completion and approval. Use for completed tasks, success states, verified items, form validation, and approval indicators.",
+    tags: ["done", "success", "complete", "verified", "approved", "correct", "valid", "confirm", "accept", "pass", "tick", "yes", "finished", "ok", "good"],
+    draw: drawCheck },
+  { id: "close", label: "Close/X", category: "arrows-ui",
+    description: "Bold X mark — cross/close symbol. Use for close buttons, dismiss actions, cancel operations, error states, remove items, and clear/reset actions.",
+    tags: ["cancel", "delete", "remove", "dismiss", "exit", "clear", "stop", "reject", "wrong", "error", "no", "x-mark", "terminate", "abort", "reset"],
+    draw: drawClose },
+  { id: "plus", label: "Plus", category: "arrows-ui",
+    description: "Bold plus sign (+) — addition/create symbol. Use for add buttons, create new items, expand sections, zoom in, and positive actions.",
+    tags: ["add", "new", "create", "expand", "more", "increase", "positive", "append", "insert", "grow", "additional", "extra", "open", "include", "zoom-in"],
+    draw: drawPlus },
+  { id: "minus", label: "Minus", category: "arrows-ui",
+    description: "Bold minus/dash sign — subtraction/remove symbol. Use for remove buttons, decrease quantities, collapse sections, zoom out, and negative actions.",
+    tags: ["remove", "subtract", "collapse", "decrease", "less", "reduce", "shrink", "hide", "minimize", "negative", "exclude", "delete", "fold", "close", "zoom-out"],
+    draw: drawMinus },
+  { id: "search", label: "Search", category: "arrows-ui",
+    description: "Magnifying glass with circular lens and angled handle. Use for search bars, find features, lookup functionality, explore sections, and discovery.",
+    tags: ["find", "magnify", "lookup", "query", "explore", "discover", "filter", "browse", "seek", "inspect", "investigate", "scan", "hunt", "locate", "lens"],
+    draw: drawSearch },
+  { id: "menu", label: "Menu", category: "arrows-ui",
+    description: "Three horizontal parallel lines — hamburger menu icon. Use for navigation menus, mobile menus, sidebar toggles, and menu dropdowns.",
+    tags: ["hamburger", "navigation", "list", "sidebar", "toggle", "drawer", "nav", "mobile", "dropdown", "options", "three-lines", "panel", "collapse", "open", "responsive"],
+    draw: drawMenu },
+  { id: "refresh", label: "Refresh", category: "arrows-ui",
+    description: "Circular arrow forming a partial loop with arrowhead tip. Use for refresh/reload actions, sync operations, retry, update content, and redo actions.",
+    tags: ["reload", "sync", "update", "retry", "redo", "loop", "circular", "repeat", "renew", "restart", "regenerate", "cycle", "again", "recalculate", "live"],
+    draw: drawRefresh },
+  { id: "expand", label: "Expand", category: "arrows-ui",
+    description: "Four outward-pointing corner arrows — fullscreen/expand symbol. Use for fullscreen toggle, maximize, expand content, enlarge view, and resize actions.",
+    tags: ["fullscreen", "maximize", "resize", "enlarge", "zoom", "bigger", "stretch", "widen", "grow", "scale-up", "fit", "fill", "viewport", "immersive", "theater"],
+    draw: drawExpand },
 
-  // Commerce & Finance
-  { id: "shopping-cart", label: "Shopping Cart", category: "commerce",     tags: ["buy", "shop", "ecommerce", "basket"], draw: drawShoppingCart },
-  { id: "credit-card",  label: "Credit Card",  category: "commerce",      tags: ["payment", "visa", "mastercard", "charge"], draw: drawCreditCard },
-  { id: "wallet",       label: "Wallet",       category: "commerce",      tags: ["money", "payment", "digital", "funds"], draw: drawWallet },
-  { id: "tag",          label: "Price Tag",    category: "commerce",      tags: ["label", "price", "sale", "discount"], draw: drawTag },
-  { id: "receipt",      label: "Receipt",      category: "commerce",      tags: ["invoice", "bill", "transaction", "proof"], draw: drawReceipt },
-  { id: "bank",         label: "Bank",         category: "commerce",      tags: ["finance", "institution", "savings", "loan"], draw: drawBank },
-  { id: "piggy-bank",   label: "Piggy Bank",   category: "commerce",      tags: ["savings", "money", "invest", "accumulate"], draw: drawPiggyBank },
-  { id: "percent",      label: "Percent",      category: "commerce",      tags: ["discount", "rate", "off", "deal"], draw: drawPercent },
-  { id: "gift",         label: "Gift",         category: "commerce",      tags: ["present", "reward", "bonus", "surprise"], draw: drawGift },
-  { id: "truck",        label: "Truck",        category: "commerce",      tags: ["delivery", "shipping", "logistics", "transport"], draw: drawTruck },
+  // =========================================================================
+  //  COMMERCE & FINANCE (10)
+  // =========================================================================
+  { id: "shopping-cart", label: "Shopping Cart", category: "commerce",
+    description: "Shopping cart with basket body and two wheels. Use for e-commerce, buy buttons, product pages, checkout, add-to-cart actions, and online stores.",
+    tags: ["buy", "shop", "ecommerce", "basket", "cart", "checkout", "purchase", "store", "retail", "online", "add-to-cart", "product", "order", "marketplace", "consumer"],
+    draw: drawShoppingCart },
+  { id: "credit-card", label: "Credit Card", category: "commerce",
+    description: "Payment card with magnetic stripe and chip area. Use for payment methods, checkout, billing, subscriptions, card-on-file, and accepted payment icons.",
+    tags: ["payment", "visa", "mastercard", "charge", "billing", "stripe", "chip", "debit", "swipe", "tap", "contactless", "subscription", "checkout", "transaction", "bank-card"],
+    draw: drawCreditCard },
+  { id: "wallet", label: "Wallet", category: "commerce",
+    description: "Wallet/billfold with card slot and clasp dot. Use for digital wallets, payment apps, stored payment methods, funds balance, and personal finance.",
+    tags: ["money", "payment", "digital", "funds", "balance", "billfold", "apple-pay", "google-pay", "stored-value", "purse", "cash", "pocket", "personal-finance", "ewallet", "crypto"],
+    draw: drawWallet },
+  { id: "tag", label: "Price Tag", category: "commerce",
+    description: "Price tag with angled shape, string hole dot, and pointed end. Use for pricing, discounts, labels, sale events, product tags, and promotional offers.",
+    tags: ["label", "price", "sale", "discount", "offer", "promo", "deal", "markdown", "clearance", "coupon", "value", "cost", "retail", "wholesale", "bargain"],
+    draw: drawTag },
+  { id: "receipt", label: "Receipt", category: "commerce",
+    description: "Receipt/till slip with zigzag torn bottom edge and printed text lines. Use for transaction records, purchase confirmation, expense tracking, and proof of payment.",
+    tags: ["invoice", "bill", "transaction", "proof", "purchase", "expense", "record", "confirmation", "till", "pos", "total", "subtotal", "tax", "register", "slip"],
+    draw: drawReceipt },
+  { id: "bank", label: "Bank", category: "commerce",
+    description: "Classical bank building with triangular pediment roof, four pillars, and stepped base. Use for banking services, financial institutions, loans, mortgages, and monetary systems.",
+    tags: ["finance", "institution", "savings", "loan", "mortgage", "deposit", "withdraw", "interest", "federal", "reserve", "treasury", "vault", "branch", "checking", "capital"],
+    draw: drawBank },
+  { id: "piggy-bank", label: "Piggy Bank", category: "commerce",
+    description: "Cute piggy bank with coin slot, legs, ear, snout, and eye. Use for savings, investment, budgeting, financial planning, kids finance, and money-saving tips.",
+    tags: ["savings", "money", "invest", "accumulate", "budget", "financial-planning", "kids", "coins", "frugal", "save-up", "nest-egg", "rainy-day", "deposit", "goal", "thrift"],
+    draw: drawPiggyBank },
+  { id: "percent", label: "Percent", category: "commerce",
+    description: "Percent sign (%) with two circles and diagonal slash. Use for discounts, interest rates, statistics, probability, tax rates, and percentage-based content.",
+    tags: ["discount", "rate", "off", "deal", "interest", "statistics", "probability", "tax", "commission", "markup", "margin", "yield", "apr", "percentage", "ratio"],
+    draw: drawPercent },
+  { id: "gift", label: "Gift", category: "commerce",
+    description: "Wrapped gift box with ribbon bow on top and cross ribbon. Use for gifts, rewards, promotions, loyalty programs, birthday celebrations, and special offers.",
+    tags: ["present", "reward", "bonus", "surprise", "birthday", "holiday", "celebration", "loyalty", "promotion", "offer", "wrap", "ribbon", "box", "giveaway", "voucher"],
+    draw: drawGift },
+  { id: "truck", label: "Truck", category: "commerce",
+    description: "Delivery truck with cargo box, cab, and wheels on ground line. Use for shipping, delivery services, logistics, fleet management, moving, and freight.",
+    tags: ["delivery", "shipping", "logistics", "transport", "freight", "fleet", "moving", "courier", "package", "express", "overnight", "carrier", "dispatch", "supply-chain", "last-mile"],
+    draw: drawTruck },
 ];
 
 // ---------------------------------------------------------------------------
@@ -2036,13 +2398,41 @@ export function getIconsByCategory(categoryId: string): IconMeta[] {
   return ICON_BANK.filter(i => i.category === categoryId);
 }
 
-/** Search icons by tag keyword (fuzzy) */
+/** Search icons by query — searches id, label, tags, AND description for maximum recall */
 export function searchIcons(query: string): IconMeta[] {
   const q = query.toLowerCase().trim();
   if (!q) return ICON_BANK;
-  return ICON_BANK.filter(
-    i => i.id.includes(q) || i.label.toLowerCase().includes(q) || i.tags.some(t => t.includes(q))
-  );
+  const words = q.split(/\s+/);
+  return ICON_BANK.filter(i => {
+    const haystack = `${i.id} ${i.label} ${i.description} ${i.tags.join(" ")}`.toLowerCase();
+    return words.every(w => haystack.includes(w));
+  });
+}
+
+/**
+ * Match icons that are contextually relevant to a user's design request.
+ * Scores icons by how many query words appear in their metadata and returns
+ * top N matches sorted by relevance.
+ */
+export function matchIconsForContext(
+  userText: string,
+  maxResults = 8,
+): IconMeta[] {
+  const words = userText.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+  if (!words.length) return [];
+
+  const scored = ICON_BANK.map(icon => {
+    const haystack = `${icon.id} ${icon.label} ${icon.description} ${icon.tags.join(" ")}`.toLowerCase();
+    let score = 0;
+    for (const w of words) {
+      if (haystack.includes(w)) score++;
+    }
+    return { icon, score };
+  })
+    .filter(s => s.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  return scored.slice(0, maxResults).map(s => s.icon);
 }
 
 /** Get all icon IDs as a flat array (for AI prompt injection) */
@@ -2050,12 +2440,54 @@ export function getAllIconIds(): string[] {
   return ICON_BANK.map(i => i.id);
 }
 
-/** Get a formatted list for AI prompt context */
+/**
+ * Get a formatted icon catalog for AI prompt context.
+ * Includes descriptions so the AI understands what each icon looks like
+ * and when to use it.
+ */
 export function getIconListForAI(): string {
   return ICON_CATEGORIES.map(cat => {
     const icons = getIconsByCategory(cat.id);
-    return `${cat.label} (${icons.length}): ${icons.map(i => i.id).join(", ")}`;
+    const lines = icons.map(i => `  • ${i.id}: ${i.description}`);
+    return `## ${cat.label} (${icons.length})\n${lines.join("\n")}`;
+  }).join("\n\n");
+}
+
+/**
+ * Compact version of icon list for token-constrained prompts.
+ * Lists IDs with short labels only.
+ */
+export function getIconListForAICompact(): string {
+  return ICON_CATEGORIES.map(cat => {
+    const icons = getIconsByCategory(cat.id);
+    return `${cat.label} (${icons.length}): ${icons.map(i => `${i.id} (${i.label})`).join(", ")}`;
   }).join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// AI ICON PLACEMENT — types & rendering for AI-driven icon placement
+// ---------------------------------------------------------------------------
+
+/** Describes where the AI wants to place an icon on the canvas */
+export interface AIIconPlacement {
+  iconId: string;
+  x: number;
+  y: number;
+  size: number;
+  color: string;
+}
+
+/**
+ * Render an array of AI-specified icon placements onto a canvas.
+ * Silently skips unknown icon IDs (falls back to drawIcon's circle).
+ */
+export function drawIconPlacements(
+  ctx: CanvasRenderingContext2D,
+  placements: AIIconPlacement[],
+): void {
+  for (const p of placements) {
+    drawIcon(ctx, p.iconId, p.x, p.y, p.size, p.color);
+  }
 }
 
 /** Total icon count */
