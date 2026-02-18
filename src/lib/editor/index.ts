@@ -86,3 +86,13 @@ export {
   handlePointerDown, handlePointerMove, handlePointerUp,
   handleKeyAction,
 } from "./interaction";
+
+// ---- v1 → v2 Migration Bridge ----
+export type { MigrationOptions } from "./v1-migration";
+export {
+  migrateDocumentV1toV2,
+  extractTextFromV2, extractColorsFromV2, getTextLayersByTag,
+  mapFontFamily, mapAlign,
+  convertTextLayer, convertShapeLayer, convertImageLayer,
+  convertCtaLayer, convertDecorativeLayer, convertGroupLayer,
+} from "./v1-migration";

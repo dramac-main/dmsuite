@@ -15,19 +15,21 @@ interface StickyCanvasLayoutProps {
   leftPanel: ReactNode;
   /** Right panel content (optional — layers, export, properties) */
   rightPanel?: ReactNode;
-  /** Canvas ref */
-  canvasRef: React.RefObject<HTMLCanvasElement | null>;
-  /** Canvas display width (scaled) */
-  displayWidth: number;
-  /** Canvas display height (scaled) */
-  displayHeight: number;
+  /** Canvas ref (used when rendering a raw <canvas>) */
+  canvasRef?: React.RefObject<HTMLCanvasElement | null>;
+  /** Custom canvas content (e.g., CanvasEditor) — replaces raw <canvas> */
+  canvasSlot?: ReactNode;
+  /** Canvas display width (scaled) — only used for raw canvas mode */
+  displayWidth?: number;
+  /** Canvas display height (scaled) — only used for raw canvas mode */
+  displayHeight?: number;
   /** Canvas label (e.g., "Business Card — 1050×600") */
   label?: string;
   /** Toolbar content above canvas */
   toolbar?: ReactNode;
   /** Mobile tab labels — default: ["Canvas", "Settings"] */
   mobileTabs?: string[];
-  /** Canvas mouse/touch handlers */
+  /** Canvas mouse/touch handlers (raw canvas mode only) */
   canvasHandlers?: {
     onMouseDown?: React.MouseEventHandler;
     onMouseMove?: React.MouseEventHandler;
@@ -36,7 +38,7 @@ interface StickyCanvasLayoutProps {
   };
   /** Additional actions bar below canvas */
   actionsBar?: ReactNode;
-  /** Zoom state */
+  /** Zoom state (raw canvas mode only — CanvasEditor manages zoom internally) */
   zoom?: number;
   onZoomIn?: () => void;
   onZoomOut?: () => void;
@@ -48,8 +50,9 @@ export default function StickyCanvasLayout({
   leftPanel,
   rightPanel,
   canvasRef,
-  displayWidth,
-  displayHeight,
+  canvasSlot,
+  displayWidth = 800,
+  displayHeight = 600,
   label,
   toolbar,
   mobileTabs = ["Canvas", "Settings"],
@@ -104,51 +107,63 @@ export default function StickyCanvasLayout({
               <div className="flex items-center gap-2 flex-wrap">
                 {toolbar}
               </div>
-              <div className="flex items-center gap-1">
-                {onZoomOut && (
-                  <button
-                    onClick={onZoomOut}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors"
-                    aria-label="Zoom out"
-                  >
-                    <IconZoomOut className="size-4" />
-                  </button>
-                )}
-                {onZoomFit && (
-                  <button
-                    onClick={onZoomFit}
-                    className="px-2 py-1 rounded-lg text-xs font-mono text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors min-w-12 text-center"
-                    title="Fit to view"
-                  >
-                    {Math.round(zoom * 100)}%
-                  </button>
-                )}
-                {onZoomIn && (
-                  <button
-                    onClick={onZoomIn}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors"
-                    aria-label="Zoom in"
-                  >
-                    <IconZoomIn className="size-4" />
-                  </button>
-                )}
-              </div>
+              {/* Zoom controls (only in raw canvas mode — CanvasEditor manages zoom internally) */}
+              {!canvasSlot && (
+                <div className="flex items-center gap-1">
+                  {onZoomOut && (
+                    <button
+                      onClick={onZoomOut}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors"
+                      aria-label="Zoom out"
+                    >
+                      <IconZoomOut className="size-4" />
+                    </button>
+                  )}
+                  {onZoomFit && (
+                    <button
+                      onClick={onZoomFit}
+                      className="px-2 py-1 rounded-lg text-xs font-mono text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors min-w-12 text-center"
+                      title="Fit to view"
+                    >
+                      {Math.round(zoom * 100)}%
+                    </button>
+                  )}
+                  {onZoomIn && (
+                    <button
+                      onClick={onZoomIn}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors"
+                      aria-label="Zoom in"
+                    >
+                      <IconZoomIn className="size-4" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Canvas area */}
-            <div
-              className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto"
-              style={{ maxHeight: "calc(100vh - 330px)" }}
-            >
-              <canvas
-                ref={canvasRef}
-                style={{ width: displayWidth * zoom, height: displayHeight * zoom }}
-                className="rounded-lg shadow-lg cursor-crosshair bg-white"
-                role="img"
-                aria-label="Design canvas"
-                {...canvasHandlers}
-              />
-            </div>
+            {canvasSlot ? (
+              <div
+                className="bg-gray-100 dark:bg-gray-800/50 rounded-2xl overflow-hidden"
+                style={{ maxHeight: "calc(100vh - 330px)", minHeight: 300 }}
+              >
+                {canvasSlot}
+              </div>
+            ) : (
+              <div
+                className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto"
+                style={{ maxHeight: "calc(100vh - 330px)" }}
+              >
+                <canvas
+                  ref={canvasRef}
+                  style={{ width: displayWidth * zoom, height: displayHeight * zoom }}
+                  className="rounded-lg shadow-lg cursor-crosshair bg-white"
+                  role="img"
+                  aria-label="Design canvas"
+                  {...canvasHandlers}
+                />
+              </div>
+            )}
 
             {/* Label */}
             {label && (

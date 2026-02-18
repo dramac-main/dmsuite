@@ -71,6 +71,10 @@ import {
 } from "@/lib/design-foundation";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import { CanvasEditor, EditorToolbar, LayersListPanel, LayerPropertiesPanel } from "@/components/editor";
+import { useEditorStore } from "@/stores";
+import { migrateDocumentV1toV2 } from "@/lib/editor/v1-migration";
+import { renderToCanvas as renderToCanvasV2 } from "@/lib/editor/renderer";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -269,6 +273,10 @@ export default function SocialMediaPostWorkspace() {
   const [undoStack, setUndoStack] = useState<DesignDocument[]>([]);
   const [redoStack, setRedoStack] = useState<DesignDocument[]>([]);
 
+  /* ── vNext Editor Mode ─────────────────────────────────── */
+  const [editorMode, setEditorMode] = useState(false);
+  const editorStore = useEditorStore();
+
   /* ── Interaction state ──────────────────────────────────── */
   const [interaction, setInteraction] = useState<InteractionState>({
     mode: "select",
@@ -431,8 +439,23 @@ export default function SocialMediaPostWorkspace() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadedImage]);
 
+  /* ── vNext doc sync (editor mode) ────────────────────────── */
+  useEffect(() => {
+    if (!editorMode) return;
+    const v2 = migrateDocumentV1toV2(doc, {
+      toolId: "social-media-post",
+      dpi: 72,
+      fontStyle: config.fontStyle,
+      bleedMm: 0,
+      safeAreaMm: 0,
+    });
+    editorStore.setDoc(v2);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editorMode, doc, config.fontStyle]);
+
   /* ── Render canvas ─────────────────────────────────────── */
   useEffect(() => {
+    if (editorMode) return;               // vNext editor owns its own render
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -486,7 +509,7 @@ export default function SocialMediaPostWorkspace() {
       ctx.fillText(config.brandLogo, w * 0.95, h * 0.97);
       ctx.restore();
     }
-  }, [doc, config, currentPlatform, loadedImage]);
+  }, [editorMode, doc, config, currentPlatform, loadedImage]);
 
   /* ── Canvas Interaction Handlers ────────────────────────── */
   const getCanvasPoint = useCallback(
@@ -1414,9 +1437,18 @@ export default function SocialMediaPostWorkspace() {
     </div>
   );
 
+  /* ── Editor Right Panel ───────────────────────────────────── */
+  const editorRightPanel = editorMode ? (
+    <div className="space-y-3">
+      <LayersListPanel />
+      <LayerPropertiesPanel />
+    </div>
+  ) : null;
+
   /* ── Right Panel ─────────────────────────────────────────── */
   const rightPanel = (
     <div className="space-y-3">
+      {editorRightPanel}
       {/* Content */}
       <Accordion defaultOpen="content">
       <AccordionSection
@@ -2178,7 +2210,17 @@ export default function SocialMediaPostWorkspace() {
   );
 
   /* ── Toolbar ─────────────────────────────────────────────── */
-  const toolbar = (
+  const toolbar = editorMode ? (
+    <div className="flex items-center gap-2">
+      <EditorToolbar />
+      <button
+        onClick={() => setEditorMode(false)}
+        className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+      >
+        ✕ Exit Editor
+      </button>
+    </div>
+  ) : (
     <div className="flex items-center gap-1.5">
       <span className="text-xs">{currentPlatform.icon}</span>
       <span className="text-xs font-semibold text-gray-400">{currentPlatform.label}</span>
@@ -2213,6 +2255,12 @@ export default function SocialMediaPostWorkspace() {
           <path d="M21 10l-5-5M21 10l-5 5" />
         </svg>
       </button>
+      <button
+        onClick={() => setEditorMode(true)}
+        className="ml-2 flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-primary-400 hover:text-primary-300 hover:bg-primary-500/10 transition-colors"
+      >
+        ✎ Edit Layers
+      </button>
     </div>
   );
 
@@ -2229,22 +2277,27 @@ export default function SocialMediaPostWorkspace() {
       />
 
       <StickyCanvasLayout
-        canvasRef={canvasRef}
-        displayWidth={displayWidth}
-        displayHeight={displayHeight}
-        zoom={zoom}
-        onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
-        onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
-        onZoomFit={() => setZoom(0.75)}
+        {...(editorMode
+          ? { canvasSlot: <CanvasEditor /> }
+          : {
+              canvasRef,
+              displayWidth,
+              displayHeight,
+              zoom,
+              onZoomIn: () => setZoom((z) => Math.min(z + 0.25, 3)),
+              onZoomOut: () => setZoom((z) => Math.max(z - 0.25, 0.25)),
+              onZoomFit: () => setZoom(0.75),
+              canvasHandlers: {
+                onMouseDown: handleCanvasMouseDown,
+                onMouseMove: handleCanvasMouseMove,
+                onMouseUp: handleCanvasMouseUp,
+                onMouseLeave: handleCanvasMouseUp,
+              },
+            }
+        )}
         label={`${currentPlatform.label} — ${currentPlatform.ratio} — ${currentPlatform.width}×${currentPlatform.height}`}
         mobileTabs={["Canvas", "Design", "Content"]}
         toolbar={toolbar}
-        canvasHandlers={{
-          onMouseDown: handleCanvasMouseDown,
-          onMouseMove: handleCanvasMouseMove,
-          onMouseUp: handleCanvasMouseUp,
-          onMouseLeave: handleCanvasMouseUp,
-        }}
         actionsBar={
           <div className="flex items-center gap-2">
             <button onClick={handleDownloadPng} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 transition-colors">

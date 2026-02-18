@@ -49,8 +49,13 @@ import {
   getExportScale,
   applyCanvasSettings,
 } from "@/stores/advanced-helpers";
-import { cardConfigToDocument, type CardConfig as CardConfigV2 } from "@/lib/editor/business-card-adapter";
+import { cardConfigToDocument, documentToCardConfig, type CardConfig as CardConfigV2 } from "@/lib/editor/business-card-adapter";
 import { renderDocumentV2 } from "@/lib/editor/renderer";
+import { renderToCanvas } from "@/lib/editor/renderer";
+import { CanvasEditor, EditorToolbar, LayersListPanel, LayerPropertiesPanel } from "@/components/editor";
+import { useEditorStore } from "@/stores/editor";
+import { buildAIPatchPrompt, parseAIRevisionResponse, processIntent } from "@/lib/editor/ai-patch";
+import type { RevisionScope as EditorRevisionScope } from "@/lib/editor/ai-patch";
 
 /* ====================================================================
    BUSINESS CARD TYPOGRAPHY STANDARDS (Industry Research)
@@ -1878,6 +1883,10 @@ export default function BusinessCardWorkspace() {
   const [batchExporting, setBatchExporting] = useState(false);
   const [batchProgress, setBatchProgress] = useState(0);
 
+  // ── vNext Editor Mode ──
+  const [editorMode, setEditorMode] = useState(false);
+  const editorStore = useEditorStore();
+
   const updateConfig = useCallback((partial: Partial<CardConfig>) => {
     setConfig((prev) => ({ ...prev, ...partial }));
   }, []);
@@ -1952,8 +1961,20 @@ export default function BusinessCardWorkspace() {
   // Subscribe to global advanced settings to trigger canvas re-render
   const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
-  // Render canvas — vNext layer-based renderer
+  // ── vNext Editor: Sync config → DesignDocumentV2 → editor store ──
   useEffect(() => {
+    if (!editorMode) return;
+    const doc = cardConfigToDocument(
+      config as unknown as CardConfigV2,
+      { logoImg: logoImg ?? undefined }
+    );
+    editorStore.setDoc(doc);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editorMode, config, logoImg, advancedSettings]);
+
+  // Render canvas — vNext layer-based renderer (raw canvas mode only)
+  useEffect(() => {
+    if (editorMode) return; // CanvasEditor handles rendering in editor mode
     const doRender = (canvas: HTMLCanvasElement, cfg: CardConfig) => {
       const bleedSafe = showBleed || showSafeZone;
       renderCardV2(canvas, cfg, logoImg, 1, { showBleedSafe: bleedSafe });
@@ -1978,7 +1999,7 @@ export default function BusinessCardWorkspace() {
     if (sideBySide && backCanvasRef.current) {
       doRender(backCanvasRef.current, { ...config, side: config.side === "front" ? "back" : "front" });
     }
-  }, [config, showBleed, showSafeZone, sideBySide, logoImg, advancedSettings]);
+  }, [editorMode, config, showBleed, showSafeZone, sideBySide, logoImg, advancedSettings]);
 
   /* ==================================================================
      AI DESIGN ENGINE - Full generation
@@ -2227,6 +2248,87 @@ JSON:`;
   }, [revisionPrompt, revisionScope, config, updateConfig]);
 
   /* ==================================================================
+     AI REVISION ENGINE (vNext) - Layer-level targeting via ai-patch.ts
+     Used when editor mode is active — targets individual layers
+     ================================================================== */
+  const handleEditorRevision = useCallback(async () => {
+    if (!revisionPrompt.trim()) return;
+    setIsRevising(true);
+    editorStore.setAIProcessing(true);
+
+    try {
+      // Map workspace revision scope → editor scope
+      const scopeMap: Record<RevisionScope, EditorRevisionScope> = {
+        "text-only": "text-only",
+        "colors-only": "colors-only",
+        "layout-only": "layout-only",
+        "element-specific": "element-specific",
+        "full-redesign": "full-redesign",
+      };
+      const editorScope = scopeMap[revisionScope] ?? "full-redesign";
+
+      // Build the AI prompt with full layer context
+      const systemPrompt = buildAIPatchPrompt(
+        editorStore.doc,
+        revisionPrompt,
+        editorScope,
+        editorStore.lockedPaths
+      );
+
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [{ role: "user", content: systemPrompt }] }),
+      });
+      if (!response.ok) throw new Error("AI revision failed");
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No stream");
+      let fullText = "";
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        fullText += decoder.decode(value, { stream: true });
+      }
+
+      // Parse AI response into intents/patches
+      const parsed = parseAIRevisionResponse(fullText);
+      if (!parsed) throw new Error("Could not parse AI response");
+
+      let appliedCount = 0;
+      // Process high-level intents first (deterministic compiler)
+      if (parsed.intents) {
+        for (const intent of parsed.intents) {
+          const result = editorStore.applyAIIntent(intent, editorScope);
+          appliedCount += result.applied.length;
+        }
+      }
+      // Then apply raw patch ops
+      if (parsed.patchOps && parsed.patchOps.length > 0) {
+        const result = editorStore.applyAIPatch(parsed.patchOps, editorScope);
+        appliedCount += result.applied.length;
+      }
+
+      if (appliedCount > 0) {
+        const entry: RevisionEntry = {
+          id: Date.now().toString(),
+          instruction: revisionPrompt,
+          scope: revisionScope,
+          timestamp: Date.now(),
+          changes: { _layerPatches: appliedCount } as unknown as Partial<CardConfig>,
+        };
+        setRevisionHistory(prev => [entry, ...prev].slice(0, 20));
+      }
+      setRevisionPrompt("");
+    } catch (err) {
+      console.error("AI editor revision error:", err);
+    } finally {
+      setIsRevising(false);
+      editorStore.setAIProcessing(false);
+    }
+  }, [revisionPrompt, revisionScope, editorStore]);
+
+  /* ==================================================================
      BATCH PROCESSING - Same design, many employees
      ================================================================== */
   const addBatchEntry = useCallback(() => {
@@ -2333,9 +2435,14 @@ JSON:`;
 
   // Single Export handlers
   const handleDownloadPng = useCallback(() => {
-    // Render at Nx resolution for crisp, print-quality PNG (driven by global export scale)
-    const offscreen = document.createElement("canvas");
-    renderCardV2(offscreen, config, logoImg, getExportScale());
+    // In editor mode, export directly from the editor store's document
+    const offscreen = editorMode
+      ? renderToCanvas(editorStore.doc, getExportScale())
+      : (() => {
+        const c = document.createElement("canvas");
+        renderCardV2(c, config, logoImg, getExportScale());
+        return c;
+      })();
     if (config.qrCodeUrl) {
       const ctx2 = offscreen.getContext("2d");
       if (ctx2) {
@@ -2358,12 +2465,17 @@ JSON:`;
       a.click();
       URL.revokeObjectURL(url);
     }, "image/png");
-  }, [config, logoImg]);
+  }, [config, logoImg, editorMode, editorStore.doc]);
 
   const handleCopyCanvas = useCallback(async () => {
     // Copy at Nx resolution for high-quality clipboard image
-    const offscreen = document.createElement("canvas");
-    renderCardV2(offscreen, config, logoImg, getExportScale());
+    const offscreen = editorMode
+      ? renderToCanvas(editorStore.doc, getExportScale())
+      : (() => {
+        const c = document.createElement("canvas");
+        renderCardV2(c, config, logoImg, getExportScale());
+        return c;
+      })();
     if (config.qrCodeUrl) {
       const ctx2 = offscreen.getContext("2d");
       if (ctx2) {
@@ -2383,7 +2495,7 @@ JSON:`;
         await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
       }, "image/png");
     } catch { /* clipboard may not be available */ }
-  }, [config, logoImg]);
+  }, [config, logoImg, editorMode, editorStore.doc]);
 
   const handleExportPdf = useCallback(() => {
     const size = getCardSize();
@@ -2403,8 +2515,14 @@ JSON:`;
 
     const addPage = (side: "front" | "back", isFirst: boolean) => {
       if (!isFirst) pdf.addPage([pageW, pageH], pageW > pageH ? "l" : "p");
-      const offscreen = document.createElement("canvas");
-      renderCardV2(offscreen, { ...config, side }, logoImg, getExportScale()); // print-quality PDF
+      // In editor mode for the current side, use the editor's live document
+      const offscreen = (editorMode && side === config.side)
+        ? renderToCanvas(editorStore.doc, getExportScale())
+        : (() => {
+          const c = document.createElement("canvas");
+          renderCardV2(c, { ...config, side }, logoImg, getExportScale());
+          return c;
+        })();
       if (config.qrCodeUrl) {
         const ctx2 = offscreen.getContext("2d");
         if (ctx2) {
@@ -2438,7 +2556,7 @@ JSON:`;
     addPage("front", true);
     addPage("back", false);
     pdf.save(`business-card-${config.name || "design"}.pdf`);
-  }, [config, bleedInExport, getCardSize, logoImg]);
+  }, [config, bleedInExport, getCardSize, logoImg, editorMode, editorStore.doc]);
 
   const currentSize = getCardSize();
   const displayW = Math.min(480, currentSize.w);
@@ -2787,7 +2905,7 @@ JSON:`;
             rows={2}
             className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all resize-none"
           />
-          <button onClick={handleRevision}
+          <button onClick={editorMode ? handleEditorRevision : handleRevision}
             disabled={!revisionPrompt.trim() || isRevising}
             className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
@@ -2943,30 +3061,80 @@ JSON:`;
   );
 
   // Toolbar
-  const toolbar = (
+  const toolbar = editorMode ? (
+    <div className="flex items-center gap-2">
+      <EditorToolbar />
+      <div className="h-5 w-px bg-gray-700" />
+      <button
+        onClick={() => setEditorMode(false)}
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gray-700 text-gray-400 text-xs font-medium hover:bg-gray-800 hover:text-gray-200 transition-colors"
+      >
+        Exit Editor
+      </button>
+    </div>
+  ) : (
     <div className="flex items-center gap-1.5">
       <span className="text-xs font-semibold text-gray-400 capitalize">{config.side}</span>
       <span className="text-gray-600 dark:text-gray-600">{"\u00b7"}</span>
       <span className="text-xs text-gray-500">{TEMPLATES.find(t => t.id === config.template)?.label}</span>
       <span className="text-gray-600 dark:text-gray-600">{"\u00b7"}</span>
       <span className="text-xs text-gray-500">{currentSize.label}</span>
+      <span className="text-gray-600 dark:text-gray-600">{"\u00b7"}</span>
+      <button
+        onClick={() => setEditorMode(true)}
+        className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary-500/10 text-primary-400 text-xs font-medium hover:bg-primary-500/20 transition-colors border border-primary-500/20"
+      >
+        <IconLayout className="size-3" />
+        Edit Layers
+      </button>
     </div>
   );
+
+  // Right panel — add layers + properties panels when in editor mode
+  const editorRightPanel = editorMode ? (
+    <div className="space-y-3">
+      {/* Layers Panel */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Layers</h3>
+        <LayersListPanel />
+      </div>
+      {/* Properties Panel */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Properties</h3>
+        <LayerPropertiesPanel />
+      </div>
+      {/* Original right panel content (export, batch, info) */}
+      {rightPanel}
+    </div>
+  ) : rightPanel;
 
   return (
     <StickyCanvasLayout
       leftPanel={leftPanel}
-      rightPanel={rightPanel}
-      canvasRef={canvasRef}
-      displayWidth={displayW}
-      displayHeight={displayH}
+      rightPanel={editorRightPanel}
+      {...(editorMode
+        ? {
+          canvasSlot: (
+            <CanvasEditor
+              className="w-full h-full"
+              showBleedSafe={showBleed || showSafeZone}
+              workspaceBg="#1e1e2e"
+            />
+          ),
+        }
+        : {
+          canvasRef: canvasRef,
+          displayWidth: displayW,
+          displayHeight: displayH,
+          zoom: zoom,
+          onZoomIn: () => setZoom((z) => Math.min(z + 0.25, 3)),
+          onZoomOut: () => setZoom((z) => Math.max(z - 0.25, 0.25)),
+          onZoomFit: () => setZoom(1),
+        }
+      )}
       label={`${currentSize.label} \u00b7 Export: ${currentSize.w * 2}\u00d7${currentSize.h * 2}px \u00b7 600 DPI`}
       toolbar={toolbar}
       mobileTabs={["Canvas", "Settings"]}
-      zoom={zoom}
-      onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
-      onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
-      onZoomFit={() => setZoom(1)}
       actionsBar={
         <div className="flex items-center gap-2">
           <button onClick={handleDownloadPng}

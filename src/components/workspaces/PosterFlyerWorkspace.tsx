@@ -65,6 +65,10 @@ import {
 import { Accordion, AccordionSection } from "@/components/ui";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import { CanvasEditor, EditorToolbar, LayersListPanel, LayerPropertiesPanel } from "@/components/editor";
+import { useEditorStore } from "@/stores/editor";
+import { migrateDocumentV1toV2 } from "@/lib/editor/v1-migration";
+import { renderToCanvas } from "@/lib/editor/renderer";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -214,6 +218,10 @@ export default function PosterFlyerWorkspace() {
   const [undoStack, setUndoStack] = useState<DesignDocument[]>([]);
   const [redoStack, setRedoStack] = useState<DesignDocument[]>([]);
 
+  /* ── vNext Editor Mode ─────────────────────────────────── */
+  const [editorMode, setEditorMode] = useState(false);
+  const editorStore = useEditorStore();
+
   /* ── Interaction ───────────────────────────────────────── */
   const [interaction, setInteraction] = useState<InteractionState>({
     mode: "select",
@@ -351,8 +359,23 @@ export default function PosterFlyerWorkspace() {
     img.src = config.backgroundImage.urls.regular;
   }, [config.backgroundImage]);
 
+  /* ── vNext Editor: Sync v1 doc → v2 doc → editor store ── */
+  useEffect(() => {
+    if (!editorMode) return;
+    const v2Doc = migrateDocumentV1toV2(doc, {
+      toolId: "poster-flyer",
+      dpi: 150,
+      fontStyle: config.fontStyle,
+      bleedMm: 3,
+      safeAreaMm: 10,
+    });
+    editorStore.setDoc(v2Doc);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editorMode, doc, config.fontStyle]);
+
   /* ── Render canvas ─────────────────────────────────────── */
   useEffect(() => {
+    if (editorMode) return; // CanvasEditor handles rendering in editor mode
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -509,7 +532,7 @@ export default function PosterFlyerWorkspace() {
       ctx.setLineDash([]);
       ctx.restore();
     }
-  }, [doc, config, currentFormat, loadedImage, showBleed, showSafeZone, showGrid, gridSize, qrCodeUrl]);
+  }, [editorMode, doc, config, currentFormat, loadedImage, showBleed, showSafeZone, showGrid, gridSize, qrCodeUrl]);
 
   /* ── Canvas Interaction ────────────────────────────────── */
   const getCanvasPoint = useCallback(
@@ -1796,7 +1819,18 @@ export default function PosterFlyerWorkspace() {
     </div>
   );
 
-  const toolbar = (
+  const toolbar = editorMode ? (
+    <div className="flex items-center gap-2">
+      <EditorToolbar />
+      <div className="h-5 w-px bg-gray-700" />
+      <button
+        onClick={() => setEditorMode(false)}
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gray-700 text-gray-400 text-xs font-medium hover:bg-gray-800 hover:text-gray-200 transition-colors"
+      >
+        Exit Editor
+      </button>
+    </div>
+  ) : (
     <div className="flex items-center gap-1.5">
       <span className="text-xs font-semibold text-gray-400">{currentFormat.label}</span>
       <span className="text-gray-600">·</span>
@@ -1807,8 +1841,31 @@ export default function PosterFlyerWorkspace() {
           <span className="text-xs text-gray-500">{doc.layers.length} layers</span>
         </>
       )}
+      <span className="text-gray-600">·</span>
+      <button
+        onClick={() => setEditorMode(true)}
+        className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary-500/10 text-primary-400 text-xs font-medium hover:bg-primary-500/20 transition-colors border border-primary-500/20"
+      >
+        <IconLayout className="size-3" />
+        Edit Layers
+      </button>
     </div>
   );
+
+  // Right panel — augment with editor panels when in editor mode
+  const editorRightPanel = editorMode ? (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Layers</h3>
+        <LayersListPanel />
+      </div>
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Properties</h3>
+        <LayerPropertiesPanel />
+      </div>
+      {rightPanel}
+    </div>
+  ) : rightPanel;
 
   /* ── UI ──────────────────────────────────────────────────── */
   return (
@@ -1824,24 +1881,37 @@ export default function PosterFlyerWorkspace() {
       />
 
       <StickyCanvasLayout
-        canvasRef={canvasRef}
-        displayWidth={displayWidth}
-        displayHeight={displayHeight}
-        zoom={zoom}
-        onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
-        onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
-        onZoomFit={() => setZoom(0.75)}
+        {...(editorMode
+          ? {
+            canvasSlot: (
+              <CanvasEditor
+                className="w-full h-full"
+                showBleedSafe={showBleed || showSafeZone}
+                workspaceBg="#0a0a1a"
+              />
+            ),
+          }
+          : {
+            canvasRef: canvasRef,
+            displayWidth: displayWidth,
+            displayHeight: displayHeight,
+            zoom: zoom,
+            onZoomIn: () => setZoom((z) => Math.min(z + 0.25, 3)),
+            onZoomOut: () => setZoom((z) => Math.max(z - 0.25, 0.25)),
+            onZoomFit: () => setZoom(0.75),
+            canvasHandlers: {
+              onMouseDown: handleCanvasMouseDown,
+              onMouseMove: handleCanvasMouseMove,
+              onMouseUp: handleCanvasMouseUp,
+              onMouseLeave: handleCanvasMouseUp,
+            },
+          }
+        )}
         label={`Poster / Flyer — ${currentFormat.width}×${currentFormat.height}px`}
         mobileTabs={["Canvas", "Settings", "Content"]}
         toolbar={toolbar}
-        canvasHandlers={{
-          onMouseDown: handleCanvasMouseDown,
-          onMouseMove: handleCanvasMouseMove,
-          onMouseUp: handleCanvasMouseUp,
-          onMouseLeave: handleCanvasMouseUp,
-        }}
         leftPanel={leftPanel}
-        rightPanel={rightPanel}
+        rightPanel={editorRightPanel}
         actionsBar={
           <div className="flex items-center gap-2">
             <button

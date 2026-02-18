@@ -67,6 +67,10 @@ import {
 } from "@/lib/design-foundation";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import { CanvasEditor, EditorToolbar, LayersListPanel, LayerPropertiesPanel } from "@/components/editor";
+import { useEditorStore } from "@/stores/editor";
+import { migrateDocumentV1toV2 } from "@/lib/editor/v1-migration";
+import { renderToCanvas as renderToCanvasV2 } from "@/lib/editor/renderer";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -249,6 +253,10 @@ export default function BannerAdWorkspace() {
   const [undoStack, setUndoStack] = useState<DesignDocument[]>([]);
   const [redoStack, setRedoStack] = useState<DesignDocument[]>([]);
 
+  /* ── vNext Editor Mode ─────────────────────────────────── */
+  const [editorMode, setEditorMode] = useState(false);
+  const editorStore = useEditorStore();
+
   /* ── Interaction ───────────────────────────────────────── */
   const [interaction, setInteraction] = useState<InteractionState>({
     mode: "select",
@@ -378,8 +386,23 @@ export default function BannerAdWorkspace() {
     img.src = config.backgroundImage.urls.regular;
   }, [config.backgroundImage]);
 
+  /* ── vNext doc sync (editor mode) ────────────────────────── */
+  useEffect(() => {
+    if (!editorMode) return;
+    const v2 = migrateDocumentV1toV2(doc, {
+      toolId: "banner-ad",
+      dpi: 72,
+      fontStyle: config.fontStyle,
+      bleedMm: 0,
+      safeAreaMm: 0,
+    });
+    editorStore.setDoc(v2);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editorMode, doc, config.fontStyle]);
+
   /* ── Render canvas ─────────────────────────────────────── */
   useEffect(() => {
+    if (editorMode) return;               // vNext editor owns its own render
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -432,7 +455,7 @@ export default function BannerAdWorkspace() {
       },
       "image/png"
     );
-  }, [doc, config, currentSize, loadedImage]);
+  }, [editorMode, doc, config, currentSize, loadedImage]);
 
   /* ── Canvas Interaction ────────────────────────────────── */
   const getCanvasPoint = useCallback(
@@ -1257,8 +1280,16 @@ ${innerContent}
     </div>
   );
 
+  const editorRightPanel = editorMode ? (
+    <div className="space-y-3">
+      <LayersListPanel />
+      <LayerPropertiesPanel />
+    </div>
+  ) : null;
+
   const rightPanel = (
     <div className="space-y-3">
+      {editorRightPanel}
       {/* Content */}
       <Accordion defaultOpen="content">
       <AccordionSection
@@ -1937,7 +1968,17 @@ ${innerContent}
     </div>
   );
 
-  const toolbar = (
+  const toolbar = editorMode ? (
+    <div className="flex items-center gap-2">
+      <EditorToolbar />
+      <button
+        onClick={() => setEditorMode(false)}
+        className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+      >
+        ✕ Exit Editor
+      </button>
+    </div>
+  ) : (
     <div className="flex items-center gap-1.5">
       <span className="text-xs font-semibold text-gray-400">{currentSize.label}</span>
       <span className="text-gray-600">·</span>
@@ -1963,6 +2004,12 @@ ${innerContent}
           {(estimatedFileSize / 1024).toFixed(1)}KB
         </span>
       )}
+      <button
+        onClick={() => setEditorMode(true)}
+        className="ml-2 flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-primary-400 hover:text-primary-300 hover:bg-primary-500/10 transition-colors"
+      >
+        ✎ Edit Layers
+      </button>
     </div>
   );
 
@@ -1980,22 +2027,27 @@ ${innerContent}
       />
 
       <StickyCanvasLayout
-        canvasRef={canvasRef}
-        displayWidth={displayWidth}
-        displayHeight={displayHeight}
-        zoom={zoom}
-        onZoomIn={() => setZoom((z) => Math.min(z + 0.25, 3))}
-        onZoomOut={() => setZoom((z) => Math.max(z - 0.25, 0.25))}
-        onZoomFit={() => setZoom(0.75)}
+        {...(editorMode
+          ? { canvasSlot: <CanvasEditor /> }
+          : {
+              canvasRef,
+              displayWidth,
+              displayHeight,
+              zoom,
+              onZoomIn: () => setZoom((z) => Math.min(z + 0.25, 3)),
+              onZoomOut: () => setZoom((z) => Math.max(z - 0.25, 0.25)),
+              onZoomFit: () => setZoom(0.75),
+              canvasHandlers: {
+                onMouseDown: handleCanvasMouseDown,
+                onMouseMove: handleCanvasMouseMove,
+                onMouseUp: handleCanvasMouseUp,
+                onMouseLeave: handleCanvasMouseUp,
+              },
+            }
+        )}
         label={`Banner Ad — ${currentSize.width}×${currentSize.height}px · ${currentSize.label}`}
         mobileTabs={["Canvas", "Settings", "Content"]}
         toolbar={toolbar}
-        canvasHandlers={{
-          onMouseDown: handleCanvasMouseDown,
-          onMouseMove: handleCanvasMouseMove,
-          onMouseUp: handleCanvasMouseUp,
-          onMouseLeave: handleCanvasMouseUp,
-        }}
         leftPanel={leftPanel}
         rightPanel={rightPanel}
         actionsBar={
