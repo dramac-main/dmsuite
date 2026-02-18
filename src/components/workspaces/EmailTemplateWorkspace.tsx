@@ -21,6 +21,8 @@ import { cleanAIText, roundRect, lighten, darken } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 import { drawDocumentThumbnail } from "@/lib/template-renderers";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -104,6 +106,9 @@ export default function EmailTemplateWorkspace() {
     { id: uid(), type: "text", content: "", align: "left" },
     { id: uid(), type: "button", content: "", align: "center" },
   ]);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<EmailConfig>({
     preheader: "",
@@ -487,7 +492,7 @@ export default function EmailTemplateWorkspace() {
       ctx.fillRect(0, 0, W, finalH);
       /* Note: React will re-render due to height change */
     }
-  }, [blocks, config]);
+  }, [blocks, config, advancedSettings]);
 
   /* ── AI Generation ──────────────────────────────────────── */
   const generateEmail = useCallback(async () => {
@@ -932,6 +937,9 @@ ${blocksHtml}
               <input type="text" value={config.footerText} onChange={(e) => updateConfig({ footerText: e.target.value })} placeholder="© 2025 Company | Lusaka, Zambia" className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all" />
             </div>
           </div>
+
+          {/* Advanced Settings — Global */}
+          <AdvancedSettingsPanel />
         </div>
       }
       rightPanel={

@@ -12,6 +12,8 @@ import {
 import { cleanAIText, roundRect } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -67,6 +69,9 @@ const CONTENT_COLORS = ["#1e40af", "#0f766e", "#7c3aed", "#dc2626", "#ea580c", "
 export default function MockupGeneratorWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<MockupConfig>({
     scene: "phone",
@@ -302,7 +307,7 @@ export default function MockupGeneratorWorkspace() {
     ctx.font = `9px ${font}`;
     ctx.textAlign = "center";
     ctx.fillText(`${scene.name} Mockup — ${scene.width}×${scene.height}`, W / 2, H - 10);
-  }, [config, scene]);
+  }, [config, scene, advancedSettings]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -467,6 +472,9 @@ export default function MockupGeneratorWorkspace() {
         onSelect={(id) => setConfig((p) => ({ ...p, scene: id as MockupType }))}
         label="Scene Presets"
       />
+
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
     </>
   );
 

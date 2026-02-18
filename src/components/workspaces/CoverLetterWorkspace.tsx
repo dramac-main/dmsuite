@@ -15,6 +15,8 @@ import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 import { drawDocumentThumbnail } from "@/lib/template-renderers";
 import { Accordion, AccordionSection } from "@/components/ui";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -76,6 +78,9 @@ export default function CoverLetterWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [zoom, setZoom] = useState(1);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<CoverLetterConfig>({
     template: "professional",
@@ -359,7 +364,7 @@ export default function CoverLetterWorkspace() {
       ctx.arc(PAGE_W / 2, PAGE_H - 20, 3, 0, Math.PI * 2);
       ctx.fill();
     }
-  }, [config]);
+  }, [config, advancedSettings]);
 
   useEffect(() => { renderCanvas(); }, [renderCanvas]);
 
@@ -618,7 +623,10 @@ Write compelling, specific, professional paragraphs. Use Zambian professional co
           ))}
         </div>
       </AccordionSection>
-    </Accordion>
+          {/* Advanced Settings — Global */}
+        <AdvancedSettingsPanel />
+
+      </Accordion>
   );
 
   /* ── Right Panel ─────────────────────────────────────────── */

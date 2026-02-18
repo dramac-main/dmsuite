@@ -49,6 +49,8 @@ import {
   duplicateLayer,
   renderToSize,
 } from "@/lib/canvas-layers";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 import {
   type CompositionType,
   type ExportFormat,
@@ -196,6 +198,9 @@ export default function BannerAdWorkspace() {
   const [estimatedFileSize, setEstimatedFileSize] = useState<number | null>(null);
   const [activeMockup, setActiveMockup] = useState<string | null>(null);
   const mockupCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<BannerConfig>({
     size: "medium-rect",
@@ -358,7 +363,7 @@ export default function BannerAdWorkspace() {
     config.subtext,
     config.ctaText,
     config.brandName,
-  ]);
+  , advancedSettings]);
 
   /* ── Load background ───────────────────────────────────── */
   useEffect(() => {
@@ -1310,6 +1315,9 @@ ${innerContent}
           )}
         </div>
       </AccordionSection>
+            {/* Advanced Settings — Global */}
+        <AdvancedSettingsPanel />
+
       </Accordion>
 
       {/* Layer List */}

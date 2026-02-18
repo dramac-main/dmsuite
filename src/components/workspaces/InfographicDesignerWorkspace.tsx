@@ -14,6 +14,8 @@ import {
 import { cleanAIText, hexToRgba, getContrastColor } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -130,6 +132,9 @@ export default function InfographicDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
   const [editIdx, setEditIdx] = useState<number | null>(null);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<InfographicConfig>({
     size: "standard",
@@ -577,7 +582,7 @@ export default function InfographicDesignerWorkspace() {
       curY += sectionH;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config, sz]);
+  }, [config, sz, advancedSettings]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -839,6 +844,9 @@ export default function InfographicDesignerWorkspace() {
               {loading ? "Generating…" : "Generate Infographic Data"}
             </button>
           </div>
+
+          {/* Advanced Settings — Global */}
+          <AdvancedSettingsPanel />
         </>
       }
       canvasRef={canvasRef}

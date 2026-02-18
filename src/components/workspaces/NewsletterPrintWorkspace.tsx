@@ -8,6 +8,8 @@ import { StockImagePanel } from "@/hooks/useStockImages";
 import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 import { Accordion, AccordionSection } from "@/components/ui";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -49,6 +51,9 @@ export default function NewsletterPrintWorkspace() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [currentPage, setCurrentPage] = useState(0);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<NLConfig>({
     template: "corporate", primaryColor: "#1e3a5f", accentColor: "#06b6d4",
@@ -252,7 +257,7 @@ export default function NewsletterPrintWorkspace() {
       const imgData = await imgRes.json();
       if (imgData.results?.[0]?.urls?.regular) updateConfig({ heroImageUrl: imgData.results[0].urls.regular });
     } catch { /* skip */ }
-  }, [config.description, config.heroTitle, isGenerating, updateConfig]);
+  }, [config.description, config.heroTitle, isGenerating, updateConfig, advancedSettings]);
 
   const handleExport = useCallback((preset: string) => {
     const canvas = canvasRef.current;
@@ -366,7 +371,10 @@ export default function NewsletterPrintWorkspace() {
           ))}
         </div>
       </AccordionSection>
-    </Accordion>
+          {/* Advanced Settings — Global */}
+        <AdvancedSettingsPanel />
+
+      </Accordion>
   );
 
   return (

@@ -13,6 +13,8 @@ import { cleanAIText } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 import { drawDocumentThumbnail } from "@/lib/template-renderers";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -94,6 +96,9 @@ export default function PriceListWorkspace() {
   const [zoom, setZoom] = useState(0.72);
   const displayWidth = PAGE_W * zoom;
   const displayHeight = PAGE_H * zoom;
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<PriceListConfig>({
     template: "modern",
@@ -282,7 +287,7 @@ export default function PriceListWorkspace() {
       ctx.fillStyle = pc;
       ctx.fillRect(0, H - 4, W, 4);
     }
-  }, [config, categories, allItems, totalPages, sym]);
+  }, [config, categories, allItems, totalPages, sym, advancedSettings]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -481,6 +486,9 @@ export default function PriceListWorkspace() {
             ))}
             <button onClick={() => setCategories((c) => [...c, { id: uid(), name: "New Category", items: [] }])} className="text-xs text-primary-500 hover:underline">+ Add Category</button>
           </div>
+
+          {/* Advanced Settings — Global */}
+          <AdvancedSettingsPanel />
         </div>
       }
     />

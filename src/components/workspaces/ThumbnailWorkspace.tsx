@@ -12,6 +12,8 @@ import {
 import { cleanAIText } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -70,6 +72,9 @@ const FONT_MAP: Record<string, string> = {
 export default function ThumbnailWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<ThumbnailConfig>({
     platform: "youtube",
@@ -277,7 +282,7 @@ export default function ThumbnailWorkspace() {
     ctx.fillStyle = config.accentColor;
     const barY = headY + headLines.length * (headlineSize * 1.2) + 8 * scale;
     ctx.fillRect(headX, barY, 100 * scale, 4 * scale);
-  }, [config, currentPlatform]);
+  }, [config, currentPlatform, advancedSettings]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -421,6 +426,9 @@ export default function ThumbnailWorkspace() {
           </div>
         </div>
       </div>
+
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
     </div>
   );
 

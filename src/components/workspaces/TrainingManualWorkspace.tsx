@@ -11,6 +11,8 @@ import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 import { drawDocumentThumbnail } from "@/lib/template-renderers";
 import { Accordion, AccordionSection } from "@/components/ui";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -69,6 +71,9 @@ export default function TrainingManualWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [zoom, setZoom] = useState(1);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<ManualConfig>({
     template: "professional",
@@ -417,7 +422,7 @@ Generate exactly 4 chapters. Each chapter should have 4 learning objectives.`,
       }
     } catch { /* skip */ }
     setIsGenerating(false);
-  }, [config.description, isGenerating, updateConfig, config.title, config.subtitle, config.organization]);
+  }, [config.description, isGenerating, updateConfig, config.title, config.subtitle, config.organization, advancedSettings]);
 
   /* ── Export ──────────────────────────────────────────────── */
 
@@ -553,7 +558,10 @@ Generate exactly 4 chapters. Each chapter should have 4 learning objectives.`,
           ))}
         </div>
       </AccordionSection>
-    </Accordion>
+          {/* Advanced Settings — Global */}
+        <AdvancedSettingsPanel />
+
+      </Accordion>
   );
 
   /* ── Toolbar ─────────────────────────────────────────────── */

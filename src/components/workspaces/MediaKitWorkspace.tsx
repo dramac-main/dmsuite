@@ -13,6 +13,8 @@ import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 import { drawDocumentThumbnail } from "@/lib/template-renderers";
 import { Accordion, AccordionSection } from "@/components/ui";
 import { StockImagePanel, type StockImage } from "@/hooks/useStockImages";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -86,6 +88,9 @@ export default function MediaKitWorkspace() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [brandImg, setBrandImg] = useState<HTMLImageElement | null>(null);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<MediaKitConfig>({
     template: "corporate",
@@ -542,7 +547,7 @@ export default function MediaKitWorkspace() {
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
     ctx.fillText(`${activePage + 1} / ${PAGES.length}`, PAGE_W / 2, PAGE_H - 14);
-  }, [config, brandImg, keyStats, socialStats, pressContacts]);
+  }, [config, brandImg, keyStats, socialStats, pressContacts, advancedSettings]);
 
   useEffect(() => { renderCanvas(); }, [renderCanvas]);
 
@@ -846,7 +851,10 @@ Generate 6 key stats, 6 social platforms, and 3 press contacts.`,
           ))}
         </div>
       </AccordionSection>
-    </Accordion>
+          {/* Advanced Settings — Global */}
+        <AdvancedSettingsPanel />
+
+      </Accordion>
   );
 
   /* ── Toolbar ─────────────────────────────────────────────── */

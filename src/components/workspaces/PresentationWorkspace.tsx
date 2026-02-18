@@ -26,6 +26,8 @@ import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, {
   type TemplatePreview,
 } from "@/components/workspaces/TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -191,6 +193,9 @@ export default function PresentationWorkspace() {
   const presentRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const loadedImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<PresentationConfig>({
     theme: "midnight",
@@ -763,7 +768,7 @@ export default function PresentationWorkspace() {
       );
       ctx.textAlign = "left";
     }
-  }, [slide, config, themeData, dims, currentSlide, slides.length]);
+  }, [slide, config, themeData, dims, currentSlide, slides.length, advancedSettings]);
 
   /* ── Load images for slides ─────────────────────────────── */
   useEffect(() => {
@@ -1245,7 +1250,7 @@ Rules:
     } finally {
       setIsGenerating(false);
     }
-  }, [config]);
+  }, [config, advancedSettings]);
 
   /* ── Export ──────────────────────────────────────────────── */
   const exportSlide = useCallback(() => {
@@ -1552,6 +1557,9 @@ Rules:
                 ))}
               </div>
             </div>
+
+            {/* Advanced Settings — Global */}
+            <AdvancedSettingsPanel />
           </div>
         }
         /* ── Right Panel: Slide Editor ─────────────────────── */

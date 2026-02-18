@@ -17,6 +17,8 @@ import {
 import { cleanAIText, hexToRgba } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ══════════════════════════════════════════════════════════════
    DMSuite — Calendar Designer Workspace
@@ -135,6 +137,9 @@ export default function CalendarDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
   const [zoom, setZoom] = useState(0.65);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<CalendarConfig>({
     type: "wall",
@@ -561,7 +566,7 @@ export default function CalendarDesignerWorkspace() {
         renderMonth(ctx, 16 + miniW + 16, stripY, miniW, stripH, nextY, nextM, false);
       }
     }
-  }, [config, CW, CH, renderMonth, renderYearView]);
+  }, [config, CW, CH, renderMonth, renderYearView, advancedSettings]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -860,6 +865,9 @@ export default function CalendarDesignerWorkspace() {
           })}
         </div>
       </div>
+
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
 
       {/* Export */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">

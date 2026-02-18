@@ -13,6 +13,8 @@ import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 import { drawDocumentThumbnail } from "@/lib/template-renderers";
 import { Accordion, AccordionSection } from "@/components/ui";
 import { StockImagePanel, type StockImage } from "@/hooks/useStockImages";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -79,6 +81,9 @@ export default function CaseStudyWorkspace() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [heroImg, setHeroImg] = useState<HTMLImageElement | null>(null);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<CaseStudyConfig>({
     template: "corporate",
@@ -481,7 +486,7 @@ export default function CaseStudyWorkspace() {
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
     ctx.fillText(`${activePage + 1} / ${PAGES.length}`, PAGE_W / 2, PAGE_H - 14);
-  }, [config, heroImg, metrics]);
+  }, [config, heroImg, metrics, advancedSettings]);
 
   useEffect(() => { renderCanvas(); }, [renderCanvas]);
 
@@ -721,7 +726,10 @@ Generate exactly 6 metrics. Make it compelling with specific numbers.`,
           ))}
         </div>
       </AccordionSection>
-    </Accordion>
+          {/* Advanced Settings — Global */}
+        <AdvancedSettingsPanel />
+
+      </Accordion>
   );
 
   /* ── Toolbar ─────────────────────────────────────────────── */

@@ -12,6 +12,8 @@ import {
 import { cleanAIText } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -65,6 +67,9 @@ const COLOR_PRESETS = ["#1e40af", "#0f766e", "#7c3aed", "#dc2626", "#ea580c", "#
 export default function SignageDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<SignageConfig>({
     template: "retail",
@@ -312,7 +317,7 @@ export default function SignageDesignerWorkspace() {
     ctx.font = `9px ${font}`;
     ctx.textAlign = "right";
     ctx.fillText(`👁 ${viewDist.label}`, SW - M - 4, M + 12);
-  }, [config, SW, SH, viewDist]);
+  }, [config, SW, SH, viewDist, advancedSettings]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -444,6 +449,9 @@ export default function SignageDesignerWorkspace() {
         <label className="block text-xs text-gray-400">Address</label>
         <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white" value={config.address} onChange={(e) => setConfig((p) => ({ ...p, address: e.target.value }))} />
       </div>
+
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
     </div>
   );
 

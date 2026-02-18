@@ -29,6 +29,8 @@ import { Accordion, AccordionSection } from "@/components/ui";
 import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 import { jsPDF } from "jspdf";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -200,6 +202,9 @@ export default function MenuDesignerWorkspace() {
   const [loading, setLoading] = useState(false);
   const [editSection, setEditSection] = useState<number>(0);
   const [zoom, setZoom] = useState(1);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<MenuConfig>({
     foldType: "single",
@@ -536,7 +541,7 @@ export default function MenuDesignerWorkspace() {
     if (isFine) {
       drawDivider(ctx, totalW * 0.35, H - 38, totalW * 0.3, "ornate", ac, 0.2);
     }
-  }, [config, ps, fold]);
+  }, [config, ps, fold, advancedSettings]);
 
   /* ── AI Generate ────────────────────────────────────────── */
   const generateAI = useCallback(async () => {
@@ -841,6 +846,9 @@ Include 4-5 sections with 2-4 items each. Use realistic Zambian prices (K15-K250
           </label>
         </div>
       </AccordionSection>
+            {/* Advanced Settings — Global */}
+        <AdvancedSettingsPanel />
+
       </Accordion>
 
       {/* AI */}

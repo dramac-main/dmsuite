@@ -11,6 +11,8 @@ import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 import { drawDocumentThumbnail } from "@/lib/template-renderers";
 import { Accordion, AccordionSection } from "@/components/ui";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -71,6 +73,9 @@ export default function WorksheetDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [zoom, setZoom] = useState(1);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<WorksheetConfig>({
     template: "corporate",
@@ -367,7 +372,7 @@ export default function WorksheetDesignerWorkspace() {
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
     ctx.fillText(`${activePage + 1} / ${PAGES.length}`, PAGE_W / 2, PAGE_H - 14);
-  }, [config, formSections]);
+  }, [config, formSections, advancedSettings]);
 
   useEffect(() => { renderCanvas(); }, [renderCanvas]);
 
@@ -549,7 +554,10 @@ Generate exactly 4 sections. Use varied field types.`,
           ))}
         </div>
       </AccordionSection>
-    </Accordion>
+          {/* Advanced Settings — Global */}
+        <AdvancedSettingsPanel />
+
+      </Accordion>
   );
 
   /* ── Toolbar ─────────────────────────────────────────────── */

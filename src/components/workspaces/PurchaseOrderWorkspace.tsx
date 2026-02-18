@@ -9,6 +9,8 @@ import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 import { drawDocumentThumbnail } from "@/lib/template-renderers";
 import { Accordion, AccordionSection } from "@/components/ui";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -65,6 +67,9 @@ export default function PurchaseOrderWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [zoom, setZoom] = useState(1);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<POConfig>({
     template: "standard", primaryColor: "#1e3a5f",
@@ -236,7 +241,7 @@ export default function PurchaseOrderWorkspace() {
       }
     } catch { /* skip */ }
     setIsGenerating(false);
-  }, [config.description, isGenerating, updateConfig]);
+  }, [config.description, isGenerating, updateConfig, advancedSettings]);
 
   const handleExport = useCallback((preset: string) => {
     const canvas = canvasRef.current;
@@ -349,7 +354,10 @@ export default function PurchaseOrderWorkspace() {
           ))}
         </div>
       </AccordionSection>
-    </Accordion>
+          {/* Advanced Settings — Global */}
+        <AdvancedSettingsPanel />
+
+      </Accordion>
   );
 
   return (

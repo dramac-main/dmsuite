@@ -27,6 +27,8 @@ import { cleanAIText, roundRect, lighten } from "@/lib/canvas-utils";
 import { drawDocumentThumbnail } from "@/lib/template-renderers";
 import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -149,6 +151,9 @@ export default function ResumeCVWorkspace() {
   ]);
 
   const [skills, setSkills] = useState<SkillEntry[]>([{ name: "", level: 80 }]);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<ResumeConfig>({
     description: "",
@@ -1067,7 +1072,7 @@ export default function ResumeCVWorkspace() {
         }
       }
     }
-  }, [personal, experience, education, skills, config, pageDims, sectionOrder, customSections]);
+  }, [personal, experience, education, skills, config, pageDims, sectionOrder, customSections, advancedSettings]);
 
   /* ── AI Generation ──────────────────────────────────────── */
   const generateResume = useCallback(
@@ -1734,6 +1739,9 @@ Rules:
           ))}
         </div>
       )}
+
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
 
       {/* Export */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">

@@ -12,6 +12,8 @@ import {
 import { cleanAIText } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -85,6 +87,9 @@ function defaultSections(): ProposalSection[] {
 export default function ProposalWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<ProposalConfig>({
     template: "corporate",
@@ -345,7 +350,7 @@ export default function ProposalWorkspace() {
       ctx.fillStyle = pc;
       ctx.fillRect(0, H - 4, W, 4);
     }
-  }, [config, sections, pricingItems, sym, pricingTotal]);
+  }, [config, sections, pricingItems, sym, pricingTotal, advancedSettings]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -540,6 +545,9 @@ export default function ProposalWorkspace() {
           <button onClick={() => setPricingItems((p) => [...p, { id: uid(), description: "", quantity: 1, rate: 0 }])} className="text-xs text-primary-500 hover:underline">+ Add Item</button>
         </div>
       )}
+
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
     </div>
   );
 

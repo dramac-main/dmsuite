@@ -22,6 +22,8 @@ import { cleanAIText, roundRect, lighten } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 import { drawDocumentThumbnail } from "@/lib/template-renderers";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -165,6 +167,9 @@ export default function InvoiceDesignerWorkspace() {
 
   const [paymentTerms, setPaymentTerms] = useState<PaymentTermsOption>("net30");
 
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
+
   const [config, setConfig] = useState<InvoiceConfig>({
     businessName: "",
     businessAddress: "",
@@ -261,7 +266,7 @@ export default function InvoiceDesignerWorkspace() {
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paymentTerms, config.invoiceDate]);
+  }, [paymentTerms, config.invoiceDate, advancedSettings]);
 
   /* ── Canvas Render ──────────────────────────────────────── */
   useEffect(() => {
@@ -1197,7 +1202,7 @@ Rules:
       onZoomFit={() => setZoom(0.72)}
       mobileTabs={["Canvas", "Settings", "Content"]}
       toolbar={
-        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
           <IconReceipt className="size-4 text-primary-500" />
           <span className="font-semibold text-gray-300">{config.invoiceNumber || "INV-001"}</span>
           <span className="text-gray-600">|</span>
@@ -1642,6 +1647,9 @@ Rules:
               </div>
             </div>
           )}
+
+          {/* Advanced Settings — Global */}
+          <AdvancedSettingsPanel />
         </div>
       }
     />

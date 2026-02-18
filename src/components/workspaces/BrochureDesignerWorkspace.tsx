@@ -7,6 +7,8 @@ import {
 import { cleanAIText, roundRect } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -73,6 +75,9 @@ export default function BrochureDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
   const [zoom, setZoom] = useState(0.75);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<BrochureConfig>({
     foldType: "tri-fold",
@@ -195,7 +200,7 @@ export default function BrochureDesignerWorkspace() {
     ctx.strokeStyle = "#ef444440";
     ctx.strokeRect(bleed, bleed, ps.w - bleed * 2, ps.h - bleed * 2);
     ctx.setLineDash([]);
-  }, [config, fold, ps]);
+  }, [config, fold, ps, advancedSettings]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -329,6 +334,9 @@ export default function BrochureDesignerWorkspace() {
           ))}
         </div>
       </div>
+
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
     </div>
   );
 

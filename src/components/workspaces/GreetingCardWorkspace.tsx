@@ -18,6 +18,8 @@ import { StockImagePanel, type StockImage } from "@/hooks/useStockImages";
 import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 import { Accordion, AccordionSection } from "@/components/ui";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -420,6 +422,9 @@ export default function GreetingCardWorkspace() {
   const [coverImg, setCoverImg] = useState<HTMLImageElement | null>(null);
 
   const defaultTemplate = TEMPLATES[0];
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
+
   const [config, setConfig] = useState<GreetingCardConfig>({
     template: "birthday",
     primaryColor: "#e11d48",
@@ -445,7 +450,7 @@ export default function GreetingCardWorkspace() {
     img.onload = () => setCoverImg(img);
     img.onerror = () => setCoverImg(null);
     img.src = config.coverImageUrl;
-  }, [config.coverImageUrl]);
+  }, [config.coverImageUrl, advancedSettings]);
 
   /* ── Canvas Render ───────────────────────────────────────── */
 
@@ -681,7 +686,10 @@ export default function GreetingCardWorkspace() {
           ))}
         </div>
       </AccordionSection>
-    </Accordion>
+          {/* Advanced Settings — Global */}
+        <AdvancedSettingsPanel />
+
+      </Accordion>
   );
 
   /* ── Right Panel ─────────────────────────────────────────── */

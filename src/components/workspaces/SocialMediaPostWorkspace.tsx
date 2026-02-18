@@ -53,6 +53,8 @@ import {
   duplicateLayer,
   renderToSize,
 } from "@/lib/canvas-layers";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 import {
   type CompositionType,
   type ExportFormat,
@@ -214,6 +216,9 @@ export default function SocialMediaPostWorkspace() {
   const [carouselMode, setCarouselMode] = useState(false);
   const [slides, setSlides] = useState<DesignDocument[]>([]);
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<PostConfig>({
     platform: "instagram-post",
@@ -383,7 +388,7 @@ export default function SocialMediaPostWorkspace() {
     config.ctaText,
     config.label,
     config.brandLogo,
-  ]);
+  , advancedSettings]);
 
   /* ── Load background image ─────────────────────────────── */
   useEffect(() => {
@@ -1477,6 +1482,9 @@ export default function SocialMediaPostWorkspace() {
           </div>
         </div>
       </AccordionSection>
+            {/* Advanced Settings — Global */}
+        <AdvancedSettingsPanel />
+
       </Accordion>
 
       {/* Layer List */}

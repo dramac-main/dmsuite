@@ -14,6 +14,8 @@ import { cleanAIText, roundRect } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
 import { drawDocumentThumbnail } from "@/lib/template-renderers";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -92,6 +94,9 @@ export default function CatalogWorkspace() {
     bold: "strip",
     minimal: "minimal",
   };
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<CatalogConfig>({
     template: "modern",
@@ -374,7 +379,7 @@ export default function CatalogWorkspace() {
       ctx.fillStyle = pc;
       ctx.fillRect(0, H - 4, W, 4);
     }
-  }, [config, products, categories, productsPerPage, totalPages, sym]);
+  }, [config, products, categories, productsPerPage, totalPages, sym, advancedSettings]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -535,6 +540,9 @@ export default function CatalogWorkspace() {
               <input type="text" value={config.companyName} onChange={(e) => setConfig((p) => ({ ...p, companyName: e.target.value }))} className="w-full px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500/50 transition-all" />
             </div>
           </div>
+
+          {/* Advanced Settings — Global */}
+          <AdvancedSettingsPanel />
         </div>
       }
       rightPanel={

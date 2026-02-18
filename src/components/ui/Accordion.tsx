@@ -49,7 +49,7 @@ interface AccordionSectionProps {
   id: string;
   icon?: ReactNode;
   label: string;
-  badge?: string | number;
+  badge?: ReactNode;
   children: ReactNode;
   className?: string;
 }

@@ -16,6 +16,8 @@ import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 import { Accordion, AccordionSection } from "@/components/ui";
 import { StockImagePanel, type StockImage } from "@/hooks/useStockImages";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -94,6 +96,9 @@ export default function InvitationDesignerWorkspace() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [bgImg, setBgImg] = useState<HTMLImageElement | null>(null);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<InvitationConfig>({
     template: "wedding",
@@ -458,7 +463,7 @@ export default function InvitationDesignerWorkspace() {
       ctx.arc(centerX, PAGE_H - 18, 2, 0, Math.PI * 2);
       ctx.fill();
     }
-  }, [config, bgImg, PAGE_W, PAGE_H]);
+  }, [config, bgImg, PAGE_W, PAGE_H, advancedSettings]);
 
   useEffect(() => { renderCanvas(); }, [renderCanvas]);
 
@@ -741,7 +746,10 @@ Use Zambian context.`,
           ))}
         </div>
       </AccordionSection>
-    </Accordion>
+          {/* Advanced Settings — Global */}
+        <AdvancedSettingsPanel />
+
+      </Accordion>
   );
 
   /* ── Right Panel ─────────────────────────────────────────── */

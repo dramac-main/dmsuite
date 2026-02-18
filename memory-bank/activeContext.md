@@ -3,7 +3,7 @@
 ## Current Focus
 **Phase:** Phases 1–4 PARTIAL — 96 tools routed with dedicated workspaces, 98 tools still need building
 
-### Actual State (Session 24 Updated)
+### Actual State (Session 26 Updated)
 - **194 total tools** defined in tools.ts
 - **96 tools** have dedicated workspace routes in page.tsx → status: "ready"  
 - **~90 tools** have NO workspace → status: "coming-soon"
@@ -13,7 +13,55 @@
 - All workspaces now use global Accordion component (no more local Section+Set<string>)
 - AI Design Engine v2.0 — massively upgraded with 13 sections, 60+ exports
 
-## Recent Changes (Session 26 continued — AI Icon Placement Pipeline)
+## Recent Changes (Session 27 — Alignment Fix + Advanced Settings)
+
+### Business Card Workspace — Major Quality Update (commit 6427c88)
+
+#### 1. Perfect Icon-Text Alignment (drawContactBlock)
+- **Root cause**: `textBaseline` was never set inside `drawContactBlock`, inheriting whatever the previous template draw left; text was drawn at `y + 1` (band-aid hack)
+- **Fix**: Explicitly set `ctx.textBaseline = "middle"` once before the forEach loop
+- **Icon sizing**: Changed from `fontSize + 3` (arbitrary) → `Math.round(fontSize * 0.85 * iconSizeScale)` (proportional)
+- **Icon gap**: Changed from hardcoded `6px` → `Math.round(fontSize * 0.35)` (proportional to text size)
+- **Text position**: Removed all `y + 1` hacks — text now drawn at exactly `y` (same as icon center)
+- **Right-align formula**: Fixed icon center calculation: `x - textW - iconGap - iconSize/2` (was slightly off)
+
+#### 2. Corporate-Stripe Template — Horizontal Contact Fix
+- Added `ctx.textBaseline = "middle"` before the horizontal contact forEach
+- Icon y and text y both set to `H * 0.72` (were split: icon 0.72, text 0.73)
+- Separator dot recentered to `contactY` (was `H * 0.72 - 2`)
+- `iconSizeScale` respected for horizontal-layout icons too
+
+#### 3. Advanced Settings Panel (NEW in left panel)
+- New `AccordionSection` with `id="advanced"` and `IconSettings` icon
+- **5 range sliders** with live percentage readout:
+  - **Name & Headline Size** (60–150%, default 100%) — scales name/nameXl in getFontSizes
+  - **Contact & Detail Size** (60–140%, default 100%) — scales contact/contactLg
+  - **Icon Size** (50–160%, default 100%) — scales all contact icons
+  - **Row Spacing** (80–200%, default 100%) — multiplies gap between contact rows
+  - **Pattern Opacity** (1–20%, default 6%) — replaces hardcoded 0.03 opacity
+- **Reset to Defaults** button restores all 5 to defaults
+- Collapsed by default
+
+#### 4. _renderCfg Pattern (NEW Architecture)
+- Module-level `let _renderCfg: CardConfig | null = null` variable
+- Set at the TOP of `renderCard()` before any template rendering
+- Read by `getFontSizes()` and `drawContactBlock()` to access advanced settings
+- Avoids signature changes to all 20 template renderers
+- Thread-safe in browser (single-threaded JS)
+
+#### 5. CardConfig Interface Extensions
+5 new fields added:
+- `nameFontScale: number` (default 1.0)
+- `contactFontScale: number` (default 1.0)
+- `patternOpacity: number` (default 0.06)
+- `iconSizeScale: number` (default 1.0)
+- `contactLineHeight: number` (default 1.0)
+
+#### 6. Pattern Opacity Fix
+- Was hardcoded `0.03` (very subtle, almost invisible)
+- Now `config.patternOpacity ?? 0.06` — double the default visibility, user-controllable
+
+## Previous Changes (Session 26 — AI Icon Placement Pipeline)
 
 ### Icon Library Enrichment — All 115 Icons Now AI-Ready
 

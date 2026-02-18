@@ -5,6 +5,8 @@ import { IconSparkles, IconWand, IconLoader, IconDownload, IconShirt, IconCopy }
 import { cleanAIText } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 type GarmentType = "tshirt" | "hoodie" | "cap" | "totebag" | "mug";
 type PrintZone = "front" | "back" | "left-sleeve" | "right-sleeve";
@@ -47,6 +49,9 @@ export default function ApparelDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
   const [zoom, setZoom] = useState(0.75);
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
+
   const [config, setConfig] = useState<ApparelConfig>({
     garmentType: "tshirt", garmentColor: "#ffffff", printZone: "front",
     template: "typography", designText: "DMSuite", subText: "Design Excellence",
@@ -162,7 +167,7 @@ export default function ApparelDesignerWorkspace() {
         ctx.fill();
       }
     }
-  }, [config, garment, textColor]);
+  }, [config, garment, textColor, advancedSettings]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -280,6 +285,9 @@ export default function ApparelDesignerWorkspace() {
         <label className="block text-xs text-gray-400">Print Zone</label>
         <div className="grid grid-cols-2 gap-1.5">{(["front", "back", "left-sleeve", "right-sleeve"] as const).map((z) => (<button key={z} onClick={() => setConfig((p) => ({ ...p, printZone: z }))} className={`px-2 py-1.5 rounded-lg text-xs font-medium capitalize ${config.printZone === z ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"}`}>{z.replace("-", " ")}</button>))}</div>
       </div>
+
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
     </div>
   );
 

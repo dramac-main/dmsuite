@@ -12,6 +12,8 @@ import {
 import { cleanAIText } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -78,6 +80,9 @@ function defaultClauses(): ContractClause[] {
 export default function ContractWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<ContractConfig>({
     template: "standard",
@@ -333,7 +338,7 @@ export default function ContractWorkspace() {
       ctx.fillStyle = pc;
       ctx.fillRect(0, H - 4, W, 4);
     }
-  }, [config, clauses, pageCount]);
+  }, [config, clauses, pageCount, advancedSettings]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -526,6 +531,9 @@ export default function ContractWorkspace() {
           })}
         </div>
       )}
+
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
 
       {/* Export */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">

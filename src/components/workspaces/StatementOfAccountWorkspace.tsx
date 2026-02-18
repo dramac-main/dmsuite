@@ -7,6 +7,8 @@ import { drawProText, drawProDivider, drawTable, generateColorPalette, exportHig
 import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 import { Accordion, AccordionSection } from "@/components/ui";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -55,6 +57,9 @@ export default function StatementOfAccountWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [zoom, setZoom] = useState(1);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<SOAConfig>({
     template: "corporate", primaryColor: "#1e3a5f",
@@ -255,7 +260,7 @@ export default function StatementOfAccountWorkspace() {
       if (jsonMatch) { const data = JSON.parse(jsonMatch[0]); updateConfig(data); }
     } catch { /* skip */ }
     setIsGenerating(false);
-  }, [config.description, isGenerating, updateConfig]);
+  }, [config.description, isGenerating, updateConfig, advancedSettings]);
 
   const handleExport = useCallback((preset: string) => {
     const canvas = canvasRef.current;
@@ -375,7 +380,10 @@ export default function StatementOfAccountWorkspace() {
           ))}
         </div>
       </AccordionSection>
-    </Accordion>
+          {/* Advanced Settings — Global */}
+        <AdvancedSettingsPanel />
+
+      </Accordion>
   );
 
   return (

@@ -18,6 +18,8 @@ import { StockImagePanel, type StockImage } from "@/hooks/useStockImages";
 import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 import { Accordion, AccordionSection } from "@/components/ui";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -350,6 +352,9 @@ export default function PortfolioBuilderWorkspace() {
   const [zoom, setZoom] = useState(1);
   const [coverImg, setCoverImg] = useState<HTMLImageElement | null>(null);
 
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
+
   const [config, setConfig] = useState<PortfolioConfig>({
     template: "creative",
     primaryColor: "#7c3aed",
@@ -377,7 +382,7 @@ export default function PortfolioBuilderWorkspace() {
     img.onload = () => setCoverImg(img);
     img.onerror = () => setCoverImg(null);
     img.src = config.coverImageUrl;
-  }, [config.coverImageUrl]);
+  }, [config.coverImageUrl, advancedSettings]);
 
   /* ── Canvas Render ───────────────────────────────────────── */
 
@@ -633,7 +638,10 @@ export default function PortfolioBuilderWorkspace() {
           ))}
         </div>
       </AccordionSection>
-    </Accordion>
+          {/* Advanced Settings — Global */}
+        <AdvancedSettingsPanel />
+
+      </Accordion>
   );
 
   /* ── Right Panel ─────────────────────────────────────────── */

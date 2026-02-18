@@ -12,6 +12,8 @@ import {
 import { cleanAIText } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -55,6 +57,9 @@ const CARD_H = 540;
 export default function IDCardDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<IDCardConfig>({
     name: "John Mwamba",
@@ -286,7 +291,7 @@ export default function IDCardDesignerWorkspace() {
       c.fillStyle = primary;
       c.fillRect(0, h - 6, w, 6);
     }
-  }, [config]);
+  }, [config, advancedSettings]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -483,6 +488,9 @@ export default function IDCardDesignerWorkspace() {
           {loading ? "Generating…" : "Generate Content"}
         </button>
       </div>
+
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
     </div>
   );
 

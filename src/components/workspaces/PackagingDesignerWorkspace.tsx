@@ -12,6 +12,8 @@ import {
 import { cleanAIText, hexToRgba, getContrastColor } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -94,6 +96,9 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number): st
 export default function PackagingDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<PackagingConfig>({
     packageType: "box",
@@ -666,7 +671,7 @@ export default function PackagingDesignerWorkspace() {
       case "bag": renderBag(ctx, W, H); break;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config, pkg]);
+  }, [config, pkg, advancedSettings]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -834,6 +839,9 @@ export default function PackagingDesignerWorkspace() {
         <label className="block text-xs text-gray-400">Barcode Number</label>
         <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white font-mono" value={config.barcode} onChange={(e) => upd({ barcode: e.target.value })} />
       </div>
+
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
     </div>
   );
 

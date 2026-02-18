@@ -12,6 +12,8 @@ import {
 import { cleanAIText } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -63,6 +65,9 @@ function generateCode(): string {
 export default function CouponDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<CouponConfig>({
     type: "discount",
@@ -280,7 +285,7 @@ export default function CouponDesignerWorkspace() {
     ctx.strokeStyle = "#d1d5db";
     ctx.lineWidth = 1;
     ctx.strokeRect(0, 0, W, H);
-  }, [config]);
+  }, [config, advancedSettings]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -481,6 +486,9 @@ export default function CouponDesignerWorkspace() {
           {loading ? "Generating…" : "Generate Content"}
         </button>
       </div>
+
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
     </div>
   );
 

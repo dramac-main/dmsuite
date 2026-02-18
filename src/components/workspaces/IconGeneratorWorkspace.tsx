@@ -13,6 +13,8 @@ import {
   IconStar,
 } from "@/components/icons";
 import { cleanAIText } from "@/lib/canvas-utils";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -79,6 +81,9 @@ export default function IconGeneratorWorkspace() {
   const [zoomLevel, setZoomLevel] = useState(1);
   const previewRef = useRef<HTMLDivElement>(null);
 
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
+
   const [config, setConfig] = useState<IconConfig>({
     prompt: "",
     style: "line",
@@ -120,7 +125,7 @@ export default function IconGeneratorWorkspace() {
 
       return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" ${strokeAttr}>${bgMarkup}${pathContent}</svg>`;
     },
-    [config]
+    [config, advancedSettings]
   );
 
   /* ── AI: Generate Icon ──────────────────────────────────── */
@@ -440,6 +445,9 @@ export default function IconGeneratorWorkspace() {
               {loading ? "Generating…" : batchMode ? "Generate Batch" : "Generate Icon"}
             </button>
           </div>
+
+          {/* Advanced Settings — Global */}
+          <AdvancedSettingsPanel />
         </div>
 
         {/* ── Content Area ─────────────────────────────────── */}

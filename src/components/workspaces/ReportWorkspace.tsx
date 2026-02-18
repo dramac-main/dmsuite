@@ -12,6 +12,8 @@ import {
 import { cleanAIText } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -87,6 +89,9 @@ function defaultSections(): ReportSection[] {
 export default function ReportWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<ReportConfig>({
     template: "corporate",
@@ -438,7 +443,7 @@ export default function ReportWorkspace() {
       ctx.fillStyle = pc;
       ctx.fillRect(0, H - 4, W, 4);
     }
-  }, [config, sections]);
+  }, [config, sections, advancedSettings]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -656,6 +661,9 @@ export default function ReportWorkspace() {
           {loading ? "Generating…" : "Generate Report"}
         </button>
       </div>
+
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
     </div>
   );
 

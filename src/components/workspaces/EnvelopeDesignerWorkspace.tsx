@@ -5,6 +5,8 @@ import { IconSparkles, IconWand, IconLoader, IconDownload, IconMail, IconCopy } 
 import { cleanAIText } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 type EnvelopeSize = "dl" | "c5" | "c4" | "10" | "custom";
 type EnvelopeTemplate = "minimal" | "corporate" | "elegant" | "modern" | "bold" | "creative";
@@ -42,6 +44,9 @@ const COLOR_PRESETS = ["#1e40af", "#0f766e", "#7c3aed", "#dc2626", "#ea580c", "#
 export default function EnvelopeDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
+
   const [config, setConfig] = useState<EnvelopeConfig>({
     size: "dl", template: "corporate", primaryColor: "#1e40af", viewSide: "front",
     companyName: "DMSuite Solutions", returnAddress: "Plot 1234, Cairo Road\nLusaka, Zambia",
@@ -122,7 +127,7 @@ export default function EnvelopeDesignerWorkspace() {
       ctx.fillText(config.companyName, sz.w / 2, sz.h * 0.75);
       ctx.globalAlpha = 1;
     }
-  }, [config, sz]);
+  }, [config, sz, advancedSettings]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -235,6 +240,9 @@ export default function EnvelopeDesignerWorkspace() {
         <textarea className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none" rows={2} placeholder="Describe your business…" value={config.description} onChange={(e) => setConfig((p) => ({ ...p, description: e.target.value }))} />
         <button onClick={generateAI} disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50">{loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}{loading ? "Generating…" : "Generate"}</button>
       </div>
+
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
     </>
   );
 

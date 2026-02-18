@@ -18,7 +18,6 @@ import {
   IconPlus,
   IconTrash,
   IconCheck,
-  IconSettings,
 } from "@/components/icons";
 import { hexToRgba, getContrastColor, roundRect } from "@/lib/canvas-utils";
 import {
@@ -36,8 +35,20 @@ import { drawIcon } from "@/lib/icon-library";
 import { drawCardThumbnail } from "@/lib/template-renderers";
 import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
 import { jsPDF } from "jspdf";
 import { Accordion, AccordionSection } from "@/components/ui";
+import { useAdvancedSettingsStore } from "@/stores";
+import {
+  getAdvancedSettings,
+  scaledFontSize,
+  scaledIconSize,
+  scaledIconGap,
+  scaledElementGap,
+  getPatternOpacity,
+  getExportScale,
+  applyCanvasSettings,
+} from "@/stores/advanced-helpers";
 
 /* ====================================================================
    BUSINESS CARD TYPOGRAPHY STANDARDS (Industry Research)
@@ -99,12 +110,6 @@ interface CardConfig {
   qrCodeUrl: string;
   /* Back card */
   backStyle: "logo-center" | "pattern-fill" | "minimal" | "info-repeat" | "gradient-brand";
-  /* Advanced Tweaks */
-  nameFontScale: number;      // 0.6–1.5, default 1.0 — scales name & XL name sizes
-  contactFontScale: number;   // 0.6–1.4, default 1.0 — scales contact & contactLg sizes
-  patternOpacity: number;     // 0.01–0.20, default 0.06 — pattern overlay opacity
-  iconSizeScale: number;      // 0.5–1.6, default 1.0 — contact icon size multiplier
-  contactLineHeight: number;  // 0.8–2.0, default 1.0 — vertical gap between contact rows
 }
 
 /* -- Revision Types -------------------------------------------------- */
@@ -259,20 +264,19 @@ let _renderCfg: CardConfig | null = null;
 /** Professional font sizes (calculated for 1050px wide canvas = 300DPI) */
 function getFontSizes(W: number, _H: number) {
   const s = fontScale(W);
-  // Advanced-settings scale factors (read from active render config)
-  const ns = _renderCfg?.nameFontScale    ?? 1.0;  // name / nameXl
-  const cs = _renderCfg?.contactFontScale ?? 1.0;  // contact / contactLg
+  // Advanced-settings scale factors — read from global Zustand store
+  const adv = getAdvancedSettings();
   return {
-    name:        Math.round(36 * s * ns),  // ~12pt base
-    title:       Math.round(24 * s),       // ~8pt
-    company:     Math.round(22 * s),       // ~7.5pt
-    companyLg:   Math.round(28 * s),       // ~9.5pt
-    contact:     Math.round(21 * s * cs),  // ~7pt base
-    contactLg:   Math.round(23 * s * cs),  // ~8pt base
-    tagline:     Math.round(19 * s),       // ~6.5pt
-    label:       Math.round(17 * s),       // ~6pt
-    nameXl:      Math.round(42 * s * ns),  // ~14pt base
-    titleLg:     Math.round(26 * s),       // ~9pt
+    name:        scaledFontSize(Math.round(36 * s), "heading", adv),  // ~12pt base
+    title:       scaledFontSize(Math.round(24 * s), "body", adv),     // ~8pt
+    company:     scaledFontSize(Math.round(22 * s), "body", adv),     // ~7.5pt
+    companyLg:   scaledFontSize(Math.round(28 * s), "body", adv),     // ~9.5pt
+    contact:     scaledFontSize(Math.round(21 * s), "label", adv),    // ~7pt base
+    contactLg:   scaledFontSize(Math.round(23 * s), "label", adv),    // ~8pt base
+    tagline:     scaledFontSize(Math.round(19 * s), "label", adv),    // ~6.5pt
+    label:       scaledFontSize(Math.round(17 * s), "label", adv),    // ~6pt
+    nameXl:      scaledFontSize(Math.round(42 * s), "heading", adv),  // ~14pt base
+    titleLg:     scaledFontSize(Math.round(26 * s), "body", adv),     // ~9pt
   };
 }
 
@@ -361,43 +365,42 @@ function drawContactBlock(
   textColor: string, iconColor: string, fontSize: number
 ) {
   const entries = getContactEntries(c);
-  // Advanced-settings multipliers
-  const lineHeightMult = c.contactLineHeight ?? 1.0;
-  const iconScale      = c.iconSizeScale    ?? 1.0;
-  const scaledGap = Math.round(gap * lineHeightMult);
+  // Advanced-settings multipliers — read from global store
+  const adv = getAdvancedSettings();
+  const lineGap = scaledElementGap(gap, adv);
 
   ctx.font          = getFont(400, fontSize, c.fontStyle);
   ctx.textBaseline  = "middle"; // Align text visual center to the icon center (y)
 
   entries.forEach((entry, i) => {
-    const y    = startY + i * scaledGap;
+    const y    = startY + i * lineGap;
     const textW = ctx.measureText(entry.value).width;
 
     if (c.showContactIcons) {
       // Icon slightly smaller than full font size (0.85×) for optical balance;
       // gap between icon-right-edge and text-left is ~0.35× fontSize
-      const iconSize = Math.round(fontSize * 0.85 * iconScale);
-      const iconGap  = Math.round(fontSize * 0.35);
+      const icoSize = scaledIconSize(Math.round(fontSize * 0.85), adv);
+      const icoGap  = scaledIconGap(Math.round(fontSize * 0.35), adv);
 
       if (align === "center") {
-        const totalW = iconSize + iconGap + textW;
+        const totalW = icoSize + icoGap + textW;
         const startX = x - totalW / 2;
-        drawContactIcon(ctx, entry.type, startX + iconSize / 2, y, iconSize, iconColor);
+        drawContactIcon(ctx, entry.type, startX + icoSize / 2, y, icoSize, iconColor);
         ctx.fillStyle  = textColor;
         ctx.textAlign  = "left";
-        ctx.fillText(entry.value, startX + iconSize + iconGap, y);
+        ctx.fillText(entry.value, startX + icoSize + icoGap, y);
       } else if (align === "right") {
-        // Text right-aligns to x; icon sits left of text with iconGap spacing
+        // Text right-aligns to x; icon sits left of text with icoGap spacing
         ctx.fillStyle  = textColor;
         ctx.textAlign  = "right";
         ctx.fillText(entry.value, x, y);
-        drawContactIcon(ctx, entry.type, x - textW - iconGap - iconSize / 2, y, iconSize, iconColor);
+        drawContactIcon(ctx, entry.type, x - textW - icoGap - icoSize / 2, y, icoSize, iconColor);
       } else {
         // Left-align
-        drawContactIcon(ctx, entry.type, x + iconSize / 2, y, iconSize, iconColor);
+        drawContactIcon(ctx, entry.type, x + icoSize / 2, y, icoSize, iconColor);
         ctx.fillStyle  = textColor;
         ctx.textAlign  = "left";
-        ctx.fillText(entry.value, x + iconSize + iconGap, y);
+        ctx.fillText(entry.value, x + icoSize + icoGap, y);
       }
     } else {
       ctx.fillStyle  = textColor;
@@ -428,6 +431,7 @@ function renderCard(canvas: HTMLCanvasElement, config: CardConfig, logoImg?: HTM
   if (scale !== 1) ctx.scale(scale, scale);
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
+  applyCanvasSettings(ctx); // global text rendering / smoothing prefs
 
   // Clip for rounded card style
   if (config.cardStyle === "rounded") {
@@ -440,9 +444,9 @@ function renderCard(canvas: HTMLCanvasElement, config: CardConfig, logoImg?: HTM
   ctx.fillStyle = config.bgColor;
   ctx.fillRect(0, 0, W, H);
 
-  // Optional pattern overlay — opacity driven by config.patternOpacity (default 0.06)
+  // Optional pattern overlay — opacity driven by global advanced settings
   if (config.patternType && config.patternType !== "none") {
-    drawPattern(ctx, 0, 0, W, H, config.patternType as Parameters<typeof drawPattern>[5], config.primaryColor, config.patternOpacity ?? 0.06, 28);
+    drawPattern(ctx, 0, 0, W, H, config.patternType as Parameters<typeof drawPattern>[5], config.primaryColor, getPatternOpacity(0.06), 28);
   }
 
   if (config.side === "back") {
@@ -992,7 +996,7 @@ const TEMPLATE_RENDERERS: Record<string, (ctx: CanvasRenderingContext2D, W: numb
     entries.forEach((entry, idx) => {
       const contactY = H * 0.72;
       if (c.showContactIcons) {
-        const iconSz = Math.round((f.contact + 2) * (c.iconSizeScale ?? 1.0));
+        const iconSz = scaledIconSize(Math.round(f.contact + 2));
         drawContactIcon(ctx, entry.type, detailX + iconSz / 2, contactY, iconSz, hexToRgba(c.primaryColor, 0.4));
         detailX += iconSz + Math.round(f.contact * 0.3);
       }
@@ -1808,12 +1812,6 @@ export default function BusinessCardWorkspace() {
     showContactIcons: true,
     qrCodeUrl: "",
     backStyle: "logo-center",
-    // Advanced tweaks — all default to 1.0 / 0.06 (no visible change from previous behaviour)
-    nameFontScale: 1.0,
-    contactFontScale: 1.0,
-    patternOpacity: 0.06,
-    iconSizeScale: 1.0,
-    contactLineHeight: 1.0,
   });
 
   // View State
@@ -1907,6 +1905,9 @@ export default function BusinessCardWorkspace() {
     [config.primaryColor, config.secondaryColor, config.bgColor, filteredTemplates]
   );
 
+  // Subscribe to global advanced settings to trigger canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
+
   // Render canvas
   useEffect(() => {
     const renderToCanvas = (canvas: HTMLCanvasElement, cfg: CardConfig) => {
@@ -1932,7 +1933,7 @@ export default function BusinessCardWorkspace() {
     if (sideBySide && backCanvasRef.current) {
       renderToCanvas(backCanvasRef.current, { ...config, side: config.side === "front" ? "back" : "front" });
     }
-  }, [config, showBleed, showSafeZone, sideBySide, logoImg]);
+  }, [config, showBleed, showSafeZone, sideBySide, logoImg, advancedSettings]);
 
   /* ==================================================================
      AI DESIGN ENGINE - Full generation
@@ -2287,9 +2288,9 @@ JSON:`;
 
   // Single Export handlers
   const handleDownloadPng = useCallback(() => {
-    // Render at 2x resolution for crisp, print-quality PNG (600 DPI effective)
+    // Render at Nx resolution for crisp, print-quality PNG (driven by global export scale)
     const offscreen = document.createElement("canvas");
-    renderCard(offscreen, config, logoImg, 2);
+    renderCard(offscreen, config, logoImg, getExportScale());
     if (config.qrCodeUrl) {
       const ctx2 = offscreen.getContext("2d");
       if (ctx2) {
@@ -2315,9 +2316,9 @@ JSON:`;
   }, [config, logoImg]);
 
   const handleCopyCanvas = useCallback(async () => {
-    // Copy at 2x resolution for high-quality clipboard image
+    // Copy at Nx resolution for high-quality clipboard image
     const offscreen = document.createElement("canvas");
-    renderCard(offscreen, config, logoImg, 2);
+    renderCard(offscreen, config, logoImg, getExportScale());
     if (config.qrCodeUrl) {
       const ctx2 = offscreen.getContext("2d");
       if (ctx2) {
@@ -2358,7 +2359,7 @@ JSON:`;
     const addPage = (side: "front" | "back", isFirst: boolean) => {
       if (!isFirst) pdf.addPage([pageW, pageH], pageW > pageH ? "l" : "p");
       const offscreen = document.createElement("canvas");
-      renderCard(offscreen, { ...config, side }, logoImg, 2); // 2x for print-quality PDF
+      renderCard(offscreen, { ...config, side }, logoImg, getExportScale()); // print-quality PDF
       if (config.qrCodeUrl) {
         const ctx2 = offscreen.getContext("2d");
         if (ctx2) {
@@ -2690,96 +2691,10 @@ JSON:`;
           </div>
         </AccordionSection>
 
-        {/* Advanced Settings */}
-        <AccordionSection icon={<IconSettings className="size-3.5" />} label="Advanced Settings" id="advanced">
-          <div className="space-y-4">
-
-            {/* Typography */}
-            <div>
-              <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 mb-2.5">Typography Scale</p>
-              <div className="space-y-3">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[0.5625rem] text-gray-400">Name &amp; Headline Size</span>
-                    <span className="text-[0.5625rem] font-mono text-primary-500">{Math.round(config.nameFontScale * 100)}%</span>
-                  </div>
-                  <input type="range" min={60} max={150} step={5}
-                    value={Math.round(config.nameFontScale * 100)}
-                    onChange={(e) => updateConfig({ nameFontScale: Number(e.target.value) / 100 })}
-                    className="w-full h-1.5 rounded-full accent-primary-500 cursor-pointer"
-                  />
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[0.5625rem] text-gray-400">Contact &amp; Detail Size</span>
-                    <span className="text-[0.5625rem] font-mono text-primary-500">{Math.round(config.contactFontScale * 100)}%</span>
-                  </div>
-                  <input type="range" min={60} max={140} step={5}
-                    value={Math.round(config.contactFontScale * 100)}
-                    onChange={(e) => updateConfig({ contactFontScale: Number(e.target.value) / 100 })}
-                    className="w-full h-1.5 rounded-full accent-primary-500 cursor-pointer"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Contact Icons */}
-            <div>
-              <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 mb-2.5">Contact Icons</p>
-              <div className="space-y-3">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[0.5625rem] text-gray-400">Icon Size</span>
-                    <span className="text-[0.5625rem] font-mono text-primary-500">{Math.round(config.iconSizeScale * 100)}%</span>
-                  </div>
-                  <input type="range" min={50} max={160} step={5}
-                    value={Math.round(config.iconSizeScale * 100)}
-                    onChange={(e) => updateConfig({ iconSizeScale: Number(e.target.value) / 100 })}
-                    className="w-full h-1.5 rounded-full accent-primary-500 cursor-pointer"
-                  />
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[0.5625rem] text-gray-400">Row Spacing</span>
-                    <span className="text-[0.5625rem] font-mono text-primary-500">{Math.round(config.contactLineHeight * 100)}%</span>
-                  </div>
-                  <input type="range" min={80} max={200} step={5}
-                    value={Math.round(config.contactLineHeight * 100)}
-                    onChange={(e) => updateConfig({ contactLineHeight: Number(e.target.value) / 100 })}
-                    className="w-full h-1.5 rounded-full accent-primary-500 cursor-pointer"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Pattern */}
-            <div>
-              <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 mb-2.5">Pattern Overlay</p>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[0.5625rem] text-gray-400">Intensity</span>
-                  <span className="text-[0.5625rem] font-mono text-primary-500">{Math.round(config.patternOpacity * 100)}%</span>
-                </div>
-                <input type="range" min={1} max={20} step={1}
-                  value={Math.round(config.patternOpacity * 100)}
-                  onChange={(e) => updateConfig({ patternOpacity: Number(e.target.value) / 100 })}
-                  className="w-full h-1.5 rounded-full accent-primary-500 cursor-pointer"
-                />
-                <p className="text-[0.5rem] text-gray-500 mt-1">Affects all pattern styles. Only visible when a pattern is selected.</p>
-              </div>
-            </div>
-
-            {/* Reset */}
-            <button
-              onClick={() => updateConfig({ nameFontScale: 1.0, contactFontScale: 1.0, patternOpacity: 0.06, iconSizeScale: 1.0, contactLineHeight: 1.0 })}
-              className="w-full h-8 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-400 text-[0.625rem] font-semibold uppercase tracking-wider hover:text-gray-200 hover:border-gray-500 transition-colors"
-            >
-              Reset to Defaults
-            </button>
-          </div>
-        </AccordionSection>
-
       </Accordion>
+
+      {/* Advanced Settings — Global (shared across all document/print tools) */}
+      <AdvancedSettingsPanel />
 
       {/* AI Design Director */}
       <div className="rounded-xl border border-secondary-500/20 bg-secondary-500/5 p-3">

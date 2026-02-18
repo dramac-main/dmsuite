@@ -17,6 +17,8 @@ import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 import { drawDocumentThumbnail } from "@/lib/template-renderers";
 import { Accordion, AccordionSection } from "@/components/ui";
 import { StockImagePanel, type StockImage } from "@/hooks/useStockImages";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -83,6 +85,9 @@ export default function RealEstateListingWorkspace() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [heroImg, setHeroImg] = useState<HTMLImageElement | null>(null);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<RealEstateConfig>({
     template: "modern",
@@ -389,7 +394,7 @@ export default function RealEstateListingWorkspace() {
     // Bottom accent bar
     ctx.fillStyle = primaryColor;
     ctx.fillRect(0, PAGE_H - 6, PAGE_W, 6);
-  }, [config, heroImg]);
+  }, [config, heroImg, advancedSettings]);
 
   useEffect(() => { renderCanvas(); }, [renderCanvas]);
 
@@ -637,7 +642,10 @@ Return JSON: { "propertyName": "", "address": "", "city": "", "price": "", "curr
           ))}
         </div>
       </AccordionSection>
-    </Accordion>
+          {/* Advanced Settings — Global */}
+        <AdvancedSettingsPanel />
+
+      </Accordion>
   );
 
   /* ── Right Panel ─────────────────────────────────────────── */

@@ -14,6 +14,8 @@ import {
 } from "@/components/icons";
 import { cleanAIText } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -84,6 +86,9 @@ function uid() {
 export default function WireframeWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<WireframeConfig>({
     pageType: "landing",
@@ -260,7 +265,7 @@ export default function WireframeWorkspace() {
     ctx.textAlign = "right";
     ctx.textBaseline = "top";
     ctx.fillText(`${deviceInfo.label} · ${deviceInfo.width}px`, sourceW - padding, 8);
-  }, [elements, config, selectedId, deviceInfo]);
+  }, [elements, config, selectedId, deviceInfo, advancedSettings]);
 
   useEffect(() => {
     drawCanvas();
@@ -472,9 +477,12 @@ export default function WireframeWorkspace() {
             {loading ? "Generating…" : "Suggest Layout"}
           </button>
         </div>
+
+        {/* Advanced Settings — Global */}
+        <AdvancedSettingsPanel />
       </>
     ),
-    [config, elements, selectedId, loading]
+    [config, elements, selectedId, loading, advancedSettings]
   );
 
   /* ── Toolbar ── */

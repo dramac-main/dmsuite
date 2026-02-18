@@ -12,6 +12,8 @@ import {
 import { cleanAIText } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -72,6 +74,9 @@ export default function ReceiptWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
   const [zoom, setZoom] = useState(1);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<ReceiptConfig>({
     template: "pos",
@@ -299,7 +304,7 @@ export default function ReceiptWorkspace() {
     ctx.fillStyle = "#94a3b8";
     ctx.font = `9px ${font}`;
     ctx.fillText(config.receiptNumber, W / 2, y);
-  }, [config, items, fmt, subtotal, taxAmount, total, sym]);
+  }, [config, items, fmt, subtotal, taxAmount, total, sym, advancedSettings]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -479,6 +484,9 @@ export default function ReceiptWorkspace() {
           {loading ? "Generating…" : "Generate Receipt"}
         </button>
       </div>
+
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
     </div>
   );
 

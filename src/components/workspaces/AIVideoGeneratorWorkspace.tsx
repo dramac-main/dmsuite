@@ -18,6 +18,8 @@ import {
 import { hexToRgba, roundRect } from "@/lib/canvas-utils";
 import { cleanAIText } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "./StickyCanvasLayout";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -91,6 +93,9 @@ export default function AIVideoGeneratorWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const startTimeRef = useRef<number>(0);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<SceneConfig>({
     prompt: "",
@@ -335,7 +340,7 @@ export default function AIVideoGeneratorWorkspace() {
       }
     };
     animRef.current = requestAnimationFrame(loop);
-  }, [isPlaying, config.duration, drawFrame]);
+  }, [isPlaying, config.duration, drawFrame, advancedSettings]);
 
   useEffect(() => () => cancelAnimationFrame(animRef.current), []);
 
@@ -679,6 +684,9 @@ export default function AIVideoGeneratorWorkspace() {
           </div>
         )}
       </div>
+
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
 
       {/* Export */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">

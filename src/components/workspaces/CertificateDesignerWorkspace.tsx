@@ -27,6 +27,8 @@ import { drawCertificateThumbnail } from "@/lib/template-renderers";
 import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 import { jsPDF } from "jspdf";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -158,6 +160,9 @@ export default function CertificateDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
   const [zoom, setZoom] = useState(1);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<CertificateConfig>({
     type: "achievement",
@@ -442,7 +447,7 @@ export default function CertificateDesignerWorkspace() {
 
     // ─── Bottom decorative divider ───────────────────────
     drawDivider(ctx, W * 0.3, H - inset - 20, W * 0.4, "diamond", ac, 0.15);
-  }, [config, sz, bc]);
+  }, [config, sz, bc, advancedSettings]);
 
   /* ── AI Generate ────────────────────────────────────────── */
   const generateAI = useCallback(async () => {
@@ -668,6 +673,9 @@ Return ONLY valid JSON:
           </div>
         </div>
       </AccordionSection>
+            {/* Advanced Settings — Global */}
+        <AdvancedSettingsPanel />
+
       </Accordion>
 
       {/* AI */}

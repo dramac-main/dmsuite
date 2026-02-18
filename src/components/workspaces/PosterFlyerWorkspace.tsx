@@ -46,6 +46,8 @@ import {
   renderToSize,
 } from "@/lib/canvas-layers";
 import { jsPDF } from "jspdf";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 import {
   type CompositionType,
   type ExportFormat,
@@ -158,6 +160,9 @@ export default function PosterFlyerWorkspace() {
   const [showGrid, setShowGrid] = useState(false);
   const [gridSize, setGridSize] = useState(50);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<PosterConfig>({
     format: "a4-portrait",
@@ -331,7 +336,7 @@ export default function PosterFlyerWorkspace() {
     config.eventDate,
     config.venue,
     config.brandLogo,
-  ]);
+  , advancedSettings]);
 
   /* ── Load background ───────────────────────────────────── */
   useEffect(() => {
@@ -1324,6 +1329,9 @@ export default function PosterFlyerWorkspace() {
           </div>
         </div>
       </AccordionSection>
+            {/* Advanced Settings — Global */}
+        <AdvancedSettingsPanel />
+
       </Accordion>
     </div>
   );

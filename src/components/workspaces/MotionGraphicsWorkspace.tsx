@@ -20,6 +20,8 @@ import {
 } from "@/components/icons";
 import { hexToRgba, cleanAIText } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "./StickyCanvasLayout";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ══════════════════════════════════════════════════════════════
    DMSuite — Motion Graphics Workspace
@@ -514,6 +516,9 @@ export default function MotionGraphicsWorkspace() {
   const startTimeRef = useRef<number>(0);
 
   /* ── State ──────────────────────────────────────────────── */
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
+
   const [config, setConfig] = useState<ProjectConfig>({
     aspectRatio: "16:9",
     resolution: "1080p",
@@ -918,7 +923,7 @@ export default function MotionGraphicsWorkspace() {
 
     animRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animRef.current);
-  }, [playing, config.duration, renderFrame, renderTimeline, currentTime]);
+  }, [playing, config.duration, renderFrame, renderTimeline, currentTime, advancedSettings]);
 
   /* ── Initial + Static Render ────────────────────────────── */
   useEffect(() => {
@@ -1457,6 +1462,9 @@ export default function MotionGraphicsWorkspace() {
           )}
         </div>
       )}
+
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
 
       {/* Export */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">

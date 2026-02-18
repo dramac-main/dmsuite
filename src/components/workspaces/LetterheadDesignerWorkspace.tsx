@@ -7,6 +7,8 @@ import {
 import { cleanAIText, roundRect } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -49,6 +51,9 @@ const COLOR_PRESETS = ["#1e40af", "#0f766e", "#7c3aed", "#dc2626", "#ea580c", "#
 export default function LetterheadDesignerWorkspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<LetterheadConfig>({
     template: "corporate",
@@ -163,7 +168,7 @@ export default function LetterheadDesignerWorkspace() {
     ctx.lineWidth = 0.5;
     ctx.strokeRect(bleed, bleed, ps.w - bleed * 2, ps.h - bleed * 2);
     ctx.setLineDash([]);
-  }, [config, ps]);
+  }, [config, ps, advancedSettings]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -329,6 +334,9 @@ export default function LetterheadDesignerWorkspace() {
           {loading ? "Generating…" : "Generate"}
         </button>
       </div>
+
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
     </div>
   );
 

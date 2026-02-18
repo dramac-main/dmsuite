@@ -22,6 +22,8 @@ import {
 import StickyCanvasLayout from "@/components/workspaces/StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "@/components/workspaces/TemplateSlider";
 import { Accordion, AccordionSection } from "@/components/ui";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -912,6 +914,9 @@ export default function BrandIdentityWorkspace() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [copiedColors, setCopiedColors] = useState(false);
 
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
+
   const [config, setConfig] = useState<BrandConfig>({
     brandName: "",
     tagline: "",
@@ -933,7 +938,7 @@ export default function BrandIdentityWorkspace() {
   useEffect(() => {
     if (!canvasRef.current) return;
     renderBrandBoard(canvasRef.current, config);
-  }, [config]);
+  }, [config, advancedSettings]);
 
   // AI generation
   const generateWithAI = useCallback(async () => {
@@ -1390,7 +1395,10 @@ Return ONLY valid JSON, no markdown.`;
               </div>
             </div>
           </AccordionSection>
-          </Accordion>
+                {/* Advanced Settings — Global */}
+        <AdvancedSettingsPanel />
+
+      </Accordion>
         </div>
       }
       actionsBar={

@@ -12,6 +12,8 @@ import {
 import { cleanAIText, roundRect } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -72,6 +74,9 @@ function defaultPages(): SalesBookPage[] {
 export default function SalesBookA5Workspace() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loading, setLoading] = useState(false);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<SalesBookConfig>({
     template: "compact",
@@ -310,7 +315,7 @@ export default function SalesBookA5Workspace() {
       ctx.fillStyle = pc;
       ctx.fillRect(0, H - 4, W, 4);
     }
-  }, [config, pages]);
+  }, [config, pages, advancedSettings]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -493,6 +498,9 @@ export default function SalesBookA5Workspace() {
   /* ── Right Panel ────────────────────────────────────────── */
   const rightPanel = (
     <div className="space-y-4">
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
+
       {/* Export */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2.5">Export</h3>

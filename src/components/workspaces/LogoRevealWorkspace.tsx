@@ -15,6 +15,8 @@ import {
 } from "@/components/icons";
 import { hexToRgba, getContrastColor, roundRect } from "@/lib/canvas-utils";
 import StickyCanvasLayout from "./StickyCanvasLayout";
+import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
+import { useAdvancedSettingsStore } from "@/stores";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -134,6 +136,9 @@ export default function LogoRevealWorkspace() {
   const animRef = useRef<number>(0);
   const startTimeRef = useRef<number>(0);
   const particlesRef = useRef<Particle[]>([]);
+
+  // Subscribe to global advanced settings for canvas re-render
+  const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
   const [config, setConfig] = useState<LogoRevealConfig>({
     logoText: "DMSuite",
@@ -443,7 +448,7 @@ export default function LogoRevealWorkspace() {
     particlesRef.current = createParticles(
       config.particleCount, CANVAS_W, CANVAS_H, config.accentColor,
     );
-  }, [config.particleCount, config.accentColor]);
+  }, [config.particleCount, config.accentColor, advancedSettings]);
 
   // ── Draw initial static frame ───────────────────────────
   useEffect(() => {
@@ -785,6 +790,9 @@ Return ONLY the JSON, no explanation.`,
         {aiLoading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
         AI Suggest Style
       </button>
+
+      {/* Advanced Settings — Global */}
+      <AdvancedSettingsPanel />
 
       {/* Export */}
       <div className="space-y-2">
