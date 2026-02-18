@@ -4,3 +4,5 @@ export type { ChatMessage, ChatConversation } from "./chat";
 export { usePreferencesStore } from "./preferences";
 export { useAdvancedSettingsStore } from "./advanced-settings";
 export type { AdvancedDesignSettings, TypographySettings, ColorEffectsSettings, SpacingLayoutSettings, IconGraphicSettings, BorderDividerSettings, ExportQualitySettings } from "./advanced-settings";
+export { useEditorStore } from "./editor";
+export type { InteractionMode, DragState, ViewportState, AIRevisionState } from "./editor";
