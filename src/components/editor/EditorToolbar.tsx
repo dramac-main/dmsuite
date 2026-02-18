@@ -2,11 +2,13 @@
 
 // =============================================================================
 // DMSuite — Editor Toolbar
-// Top-of-canvas toolbar with mode selection, undo/redo, zoom, and add layer.
+// Top-of-canvas toolbar with mode selection, undo/redo, zoom, alignment,
+// and viewport toggles.
 // =============================================================================
 
 import React from "react";
 import { useEditorStore, type InteractionMode } from "@/stores/editor";
+import AlignDistributeBar from "./AlignDistributeBar";
 
 // ---------------------------------------------------------------------------
 // Component
@@ -27,6 +29,7 @@ export default function EditorToolbar() {
   const showGuides = useEditorStore((s) => s.viewport.showGuides);
   const snapEnabled = useEditorStore((s) => s.viewport.snapEnabled);
   const setViewport = useEditorStore((s) => s.setViewport);
+  const selCount = useEditorStore((s) => s.doc.selection.ids.length);
 
   const tools: Array<{ mode: InteractionMode; icon: string; label: string; shortcut: string }> = [
     { mode: "select", icon: "↖", label: "Select", shortcut: "V" },
@@ -88,6 +91,14 @@ export default function EditorToolbar() {
       </div>
 
       <Separator />
+
+      {/* Align / Distribute (contextual — visible when selection exists) */}
+      {selCount >= 1 && (
+        <>
+          <AlignDistributeBar />
+          <Separator />
+        </>
+      )}
 
       {/* View toggles */}
       <div className="flex items-center gap-0.5">

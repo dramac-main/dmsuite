@@ -20,6 +20,7 @@ import {
   handlePointerDown, handlePointerMove, handlePointerUp, handleKeyAction,
   type InteractionState, type ViewportTransform,
 } from "@/lib/editor/interaction";
+import { snapLayer, drawSnapGuides, type SnapGuide, DEFAULT_SNAP_CONFIG } from "@/lib/editor/snapping";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -80,6 +81,7 @@ export default function CanvasEditor({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const interactionRef = useRef<InteractionState>(createInteractionState());
+  const snapGuidesRef = useRef<SnapGuide[]>([]);
   const rafRef = useRef<number>(0);
 
   // ---- Local state ----
@@ -113,14 +115,13 @@ export default function CanvasEditor({
     return () => observer.disconnect();
   }, []);
 
-  // ---- Auto-fit on first load ----
+  // ---- Auto-fit: runs when canvas first gets a size AND when a new document is loaded ----
   useEffect(() => {
     if (canvasSize.w > 0 && canvasSize.h > 0) {
       store.fitToCanvas(canvasSize.w, canvasSize.h);
     }
-    // Only on first meaningful size
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canvasSize.w > 0 && canvasSize.h > 0]);
+  }, [canvasSize.w > 0 && canvasSize.h > 0, doc.rootFrameId]);
 
   // ---- Render loop ----
   const render = useCallback(() => {
@@ -154,7 +155,7 @@ export default function CanvasEditor({
       showSelection: true,
       showGuides: viewport.showGuides,
       showBleedSafe,
-      scaleFactor: vp.zoom,
+      scaleFactor: 1, // viewport transform above already handles zoom — do NOT pass vp.zoom here (double-scaling)
     };
     renderDocumentV2(ctx, doc, renderOpts);
 
@@ -191,6 +192,15 @@ export default function CanvasEditor({
     // Custom overlay (in screen space, receives viewport for coord conversion)
     if (renderOverlay) {
       renderOverlay(ctx, vp);
+    }
+
+    // Draw snap guides (in world space → apply viewport transform)
+    if (snapGuidesRef.current.length > 0) {
+      ctx.save();
+      ctx.translate(vp.offsetX, vp.offsetY);
+      ctx.scale(vp.zoom, vp.zoom);
+      drawSnapGuides(ctx, snapGuidesRef.current, vp.zoom);
+      ctx.restore();
     }
 
     // Zoom indicator handled by HTML overlay
@@ -277,7 +287,46 @@ export default function CanvasEditor({
       for (const cmd of result.commands) {
         tempDoc = cmd.execute(tempDoc);
       }
+
+      // Apply smart snapping to get visual guides
+      if (viewport.snapEnabled && doc.selection.ids.length === 1) {
+        const movingId = doc.selection.ids[0];
+        const movedLayer = tempDoc.layersById[movingId];
+        if (movedLayer) {
+          const snapResult = snapLayer(
+            tempDoc, movingId,
+            movedLayer.transform.position.x,
+            movedLayer.transform.position.y,
+            { ...DEFAULT_SNAP_CONFIG, snapToGrid: viewport.showGrid },
+          );
+          snapGuidesRef.current = snapResult.guides;
+          // Apply snapped position if it differs
+          if (
+            snapResult.snappedX !== movedLayer.transform.position.x ||
+            snapResult.snappedY !== movedLayer.transform.position.y
+          ) {
+            tempDoc = {
+              ...tempDoc,
+              layersById: {
+                ...tempDoc.layersById,
+                [movingId]: {
+                  ...movedLayer,
+                  transform: {
+                    ...movedLayer.transform,
+                    position: { x: snapResult.snappedX, y: snapResult.snappedY },
+                  },
+                },
+              },
+            };
+          }
+        }
+      } else {
+        snapGuidesRef.current = [];
+      }
+
       applyDocChanges(tempDoc);
+    } else if (result.state.phase !== "dragging") {
+      snapGuidesRef.current = [];
     }
 
     if (result.needsRepaint) {
@@ -293,6 +342,7 @@ export default function CanvasEditor({
     const result = handlePointerUp(doc, interactionRef.current, world);
 
     interactionRef.current = result.state;
+    snapGuidesRef.current = [];
     setCursor(result.cursor);
 
     if (result.selection) {

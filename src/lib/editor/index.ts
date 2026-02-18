@@ -96,3 +96,29 @@ export {
   convertTextLayer, convertShapeLayer, convertImageLayer,
   convertCtaLayer, convertDecorativeLayer, convertGroupLayer,
 } from "./v1-migration";
+
+// ---- Alignment & Distribution ----
+export {
+  createAlignCommand, createDistributeCommand,
+  createSpaceEvenlyCommand, createFlipCommand,
+} from "./align-distribute";
+
+// ---- Smart Snapping ----
+export type { SnapConfig, SnapGuide, SnapResult } from "./snapping";
+export {
+  snapLayer, snapResize, drawSnapGuides,
+  DEFAULT_SNAP_CONFIG,
+} from "./snapping";
+
+// ---- Parametric Template Generator ----
+export type {
+  SlotName, SlotSpec, LayoutRecipe, AccentLayer, AccentKit, CardTheme, GenerateParams,
+} from "./template-generator";
+export {
+  LAYOUT_RECIPES, LAYOUT_RECIPE_MAP,
+  ACCENT_KITS, ACCENT_KIT_MAP,
+  CARD_THEMES, CARD_THEME_MAP,
+  generateCardDocument,
+  getCombinationCount, getRecipesForStyle, getThemesByMood, getThemesByCategory,
+  suggestCombination, applyThemeToConfig,
+} from "./template-generator";

@@ -463,6 +463,32 @@ function buildPatternLayer(
 }
 
 // =============================================================================
+// 6b. QR Code Layer Builder
+// =============================================================================
+
+function buildQrCodeLayer(
+  W: number, H: number, cfg: CardConfig, side: "front" | "back"
+): ShapeLayerV2 | null {
+  if (!cfg.qrCodeUrl) return null;
+  const qrSize = Math.round(Math.min(W, H) * 0.14);
+  let x: number, y: number;
+  if (side === "front") {
+    x = W - qrSize - Math.round(W * 0.06);
+    y = H - qrSize - Math.round(H * 0.1);
+  } else {
+    x = Math.round(W / 2 - qrSize / 2);
+    y = Math.round(H * 0.65);
+  }
+  return rect({
+    name: "QR Code",
+    x, y, w: qrSize, h: qrSize,
+    fill: solidPaintHex("#000000", 0.08),
+    tags: ["qr-code", "branding", "contact-qr"],
+    radii: [4, 4, 4, 4],
+  });
+}
+
+// =============================================================================
 // 7.  Template Layout Functions
 // =============================================================================
 
@@ -1317,13 +1343,14 @@ function layoutDotMatrix(W: number, H: number, cfg: CardConfig, fs: FontSizes, f
 
 function layoutGoldFoil(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
   const layers: LayerV2[] = [];
-  const gold1 = "#c9a227";
-  const gold2 = "#e8d48b";
+  // Use config colors so AI color changes propagate to gold accents
+  const gold1 = cfg.primaryColor;
+  const gold2 = cfg.secondaryColor;
 
   // Border
   layers.push(rect({
     name: "Gold Border", x: 16, y: 16, w: W - 32, h: H - 32,
-    stroke: stroke(gold1, 1.5), tags: ["decorative", "border"],
+    stroke: stroke(gold1, 1.5), tags: ["decorative", "border", "accent"],
   }));
 
   // Corner L-shapes (simplified as small rectangles)
@@ -1340,7 +1367,7 @@ function layoutGoldFoil(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff
   for (const c of corners) {
     layers.push(rect({
       name: c.name, x: c.x, y: c.y, w: c.w, h: c.h,
-      fill: solidPaintHex(gold2), tags: ["decorative", "corner"],
+      fill: solidPaintHex(gold2), tags: ["decorative", "corner", "accent"],
     }));
   }
 
@@ -1649,7 +1676,13 @@ function layoutBackPatternFill(W: number, H: number, cfg: CardConfig, fs: FontSi
     tags: ["decorative", "back-element"],
   }));
 
-  // Pattern fill (will be added separately via buildPatternLayer)
+  // Pattern fill overlay
+  const patType = cfg.patternType && cfg.patternType !== "none" ? cfg.patternType : "dots";
+  const backPattern = buildPatternLayer(W, H, patType, contrastC, 0.08);
+  if (backPattern) {
+    backPattern.tags = [...backPattern.tags, "back-element"];
+    layers.push(backPattern);
+  }
 
   // Logo (centered)
   const logoS = Math.min(W, H) * 0.22;
@@ -1833,6 +1866,9 @@ export function cardConfigToDocument(
     W, H, cfg.patternType, cfg.primaryColor, patternOpacity
   );
 
+  // Build QR code layer if URL is set
+  const qrLayer = buildQrCodeLayer(W, H, cfg, isFront ? "front" : "back");
+
   // Add layers to document (in render order: first added = bottom)
   // Pattern goes first (bottommost decoration)
   if (patternLayer) {
@@ -1842,6 +1878,11 @@ export function cardConfigToDocument(
   // Then template layers (in order: first element = rendered first / bottom)
   for (const layer of templateLayers) {
     doc = addLayer(doc, layer);
+  }
+
+  // QR code on top of everything
+  if (qrLayer) {
+    doc = addLayer(doc, qrLayer);
   }
 
   // Set logo image ref if available
@@ -1906,36 +1947,159 @@ export function syncTextToDocument(
 /**
  * Update colors in an existing document from CardConfig.
  * Preserves layout, updates text colors and decorative element fills.
+ *
+ * Pass `prevTextColor` / `prevPrimaryColor` to enable per-layer override preservation:
+ * only layers whose current color still matches the *previous* global color will be
+ * updated. Layers that have been manually recolored are left untouched.
  */
 export function syncColorsToDocument(
   doc: DesignDocumentV2,
-  cfg: CardConfig
+  cfg: CardConfig,
+  options?: {
+    /** Only update name/primary-text layers that still match this OLD text color */
+    prevTextColor?: string;
+    /** Only update accent shape layers that still match this OLD primary color */
+    prevPrimaryColor?: string;
+    /** Only update secondary-colored layers that still match this OLD secondary color */
+    prevSecondaryColor?: string;
+    /** Explicit set of layer IDs to always skip */
+    skipLayerIds?: ReadonlySet<string>;
+  }
 ): DesignDocumentV2 {
   let updated = doc;
   const layers = Object.values(updated.layersById);
+  const prevTextRGBA      = options?.prevTextColor      ? hexToRGBA(options.prevTextColor)      : null;
+  const prevPrimaryRGBA   = options?.prevPrimaryColor    ? hexToRGBA(options.prevPrimaryColor)   : null;
+  const prevSecondaryRGBA = options?.prevSecondaryColor  ? hexToRGBA(options.prevSecondaryColor) : null;
 
   for (const layer of layers) {
-    // Update text colors
-    if (layer.type === "text" && (layer.tags.includes("name") || layer.tags.includes("primary-text"))) {
-      updated = updateLayer(updated, layer.id, {
-        defaultStyle: { ...layer.defaultStyle, fill: solidPaintHex(cfg.textColor) },
-      } as Partial<LayerV2>);
+    if (options?.skipLayerIds?.has(layer.id)) continue;
+
+    // ── Text layers: sync fill color based on semantic tags ──
+    if (layer.type === "text") {
+      const tl = layer as TextLayerV2;
+
+      // Name / primary-text → textColor
+      if (tl.tags.includes("name") || tl.tags.includes("primary-text")) {
+        const shouldUpdate = !prevTextRGBA || _textLayerColorMatches(tl, prevTextRGBA);
+        if (shouldUpdate) {
+          updated = updateLayer(updated, layer.id, {
+            defaultStyle: { ...(updated.layersById[layer.id] as TextLayerV2).defaultStyle, fill: solidPaintHex(cfg.textColor) },
+          } as Partial<LayerV2>);
+        }
+      }
+
+      // Title → primaryColor (many templates use primaryColor for titles)
+      if (tl.tags.includes("title")) {
+        const shouldUpdate = !prevPrimaryRGBA || _textLayerColorMatches(tl, prevPrimaryRGBA);
+        if (shouldUpdate) {
+          updated = updateLayer(updated, layer.id, {
+            defaultStyle: { ...(updated.layersById[layer.id] as TextLayerV2).defaultStyle, fill: solidPaintHex(cfg.primaryColor) },
+          } as Partial<LayerV2>);
+        }
+      }
+
+      // Company → textColor (with lower alpha, preserve existing alpha)
+      if (tl.tags.includes("company")) {
+        const shouldUpdate = !prevTextRGBA || _textLayerColorMatches(tl, prevTextRGBA);
+        // Also check primaryColor — some templates use primaryColor for company text
+        const shouldUpdateP = !shouldUpdate && (!prevPrimaryRGBA || _textLayerColorMatches(tl, prevPrimaryRGBA));
+        if (shouldUpdate) {
+          updated = updateLayer(updated, layer.id, {
+            defaultStyle: { ...(updated.layersById[layer.id] as TextLayerV2).defaultStyle, fill: solidPaintHex(cfg.textColor) },
+          } as Partial<LayerV2>);
+        } else if (shouldUpdateP) {
+          updated = updateLayer(updated, layer.id, {
+            defaultStyle: { ...(updated.layersById[layer.id] as TextLayerV2).defaultStyle, fill: solidPaintHex(cfg.primaryColor) },
+          } as Partial<LayerV2>);
+        }
+      }
+
+      // Contact text → textColor
+      if (tl.tags.includes("contact-text")) {
+        const shouldUpdate = !prevTextRGBA || _textLayerColorMatches(tl, prevTextRGBA);
+        if (shouldUpdate) {
+          updated = updateLayer(updated, layer.id, {
+            defaultStyle: { ...(updated.layersById[layer.id] as TextLayerV2).defaultStyle, fill: solidPaintHex(cfg.textColor) },
+          } as Partial<LayerV2>);
+        }
+      }
+
+      // Tagline → textColor
+      if (tl.tags.includes("tagline")) {
+        const shouldUpdate = !prevTextRGBA || _textLayerColorMatches(tl, prevTextRGBA);
+        if (shouldUpdate) {
+          updated = updateLayer(updated, layer.id, {
+            defaultStyle: { ...(updated.layersById[layer.id] as TextLayerV2).defaultStyle, fill: solidPaintHex(cfg.textColor) },
+          } as Partial<LayerV2>);
+        }
+      }
     }
 
-    // Update primary color elements
+    // ── Icon layers: contact-icon → primaryColor ──
+    if (layer.type === "icon" && layer.tags.includes("contact-icon")) {
+      const shouldUpdate = !prevPrimaryRGBA || _rgbaApprox((layer as import("./schema").IconLayerV2).color, prevPrimaryRGBA);
+      if (shouldUpdate) {
+        updated = updateLayer(updated, layer.id, {
+          color: hexToRGBA(cfg.primaryColor),
+        } as Partial<LayerV2>);
+      }
+    }
+
+    // ── Shape layers: accent → primaryColor ──
     if (layer.tags.includes("accent") && layer.type === "shape") {
-      updated = updateLayer(updated, layer.id, {
-        fills: [solidPaintHex(cfg.primaryColor)],
-      } as Partial<LayerV2>);
+      const firstFill = (layer as ShapeLayerV2).fills?.[0];
+      const shouldUpdate = !prevPrimaryRGBA || (firstFill?.kind === "solid" && _rgbaApprox(firstFill.color, prevPrimaryRGBA));
+      if (shouldUpdate) {
+        updated = updateLayer(updated, layer.id, {
+          fills: [solidPaintHex(cfg.primaryColor)],
+        } as Partial<LayerV2>);
+      }
+    }
+
+    // ── Shape layers: corner decoratives → secondaryColor ──
+    if (layer.tags.includes("corner") && layer.type === "shape") {
+      const firstFill = (layer as ShapeLayerV2).fills?.[0];
+      const shouldUpdate = !prevSecondaryRGBA || (firstFill?.kind === "solid" && _rgbaApprox(firstFill.color, prevSecondaryRGBA));
+      if (shouldUpdate) {
+        updated = updateLayer(updated, layer.id, {
+          fills: [solidPaintHex(cfg.secondaryColor)],
+        } as Partial<LayerV2>);
+      }
+    }
+
+    // ── Shape layers: border strokes → primaryColor ──
+    if (layer.tags.includes("border") && layer.type === "shape") {
+      const sl = layer as ShapeLayerV2;
+      if (sl.strokes.length > 0) {
+        const firstStroke = sl.strokes[0];
+        const strokeColor = firstStroke.paint.kind === "solid" ? firstStroke.paint.color : null;
+        const shouldUpdate = !prevPrimaryRGBA || (strokeColor && _rgbaApprox(strokeColor, prevPrimaryRGBA));
+        if (shouldUpdate) {
+          updated = updateLayer(updated, layer.id, {
+            strokes: sl.strokes.map((s, i) => i === 0 ? { ...s, paint: solidPaintHex(cfg.primaryColor) } : s),
+          } as Partial<LayerV2>);
+        }
+      }
     }
   }
 
-  // Update root frame background
+  // Always update root frame background
   updated = updateLayer(updated, doc.rootFrameId, {
     fills: [solidPaintHex(cfg.bgColor)],
   } as Partial<LayerV2>);
 
   return updated;
+}
+
+/** True if a text layer's fill solid-color approximately equals `target` (within `tol` per channel) */
+function _textLayerColorMatches(layer: TextLayerV2, target: RGBA, tol = 4): boolean {
+  const fill = layer.defaultStyle.fill;
+  return fill.kind === "solid" && _rgbaApprox(fill.color, target, tol);
+}
+
+function _rgbaApprox(a: RGBA, b: RGBA, tol = 4): boolean {
+  return Math.abs(a.r - b.r) <= tol && Math.abs(a.g - b.g) <= tol && Math.abs(a.b - b.b) <= tol;
 }
 
 /**
@@ -1973,3 +2137,17 @@ export {
   getContrastColor,
   type FontSizes,
 };
+
+// =============================================================================
+// 12.  Builder exports for TemplateGenerator (avoids circular dependency)
+// =============================================================================
+
+/**
+ * These are the low-level builder functions, exported so the parametric
+ * template generator can compose them without importing the full template
+ * layout functions (which would cause a circular dependency).
+ */
+export const buildLogoLayerFn = buildLogoLayer;
+export const buildContactLayersFn = buildContactLayers;
+export const buildPatternLayerFn = buildPatternLayer;
+export const buildQrCodeLayerFn = buildQrCodeLayer;

@@ -2,13 +2,16 @@
 
 // =============================================================================
 // DMSuite — Layers List Panel
-// Displays all layers in order with visibility/lock toggles and drag reorder.
+// Displays all layers in order with visibility/lock toggles.
+// Shows color swatches for text/shape layers so users can identify them quickly.
 // =============================================================================
 
 import React, { useCallback } from "react";
 import { useEditorStore } from "@/stores/editor";
-import type { LayerV2, LayerId } from "@/lib/editor/schema";
-import { getLayerOrder } from "@/lib/editor/schema";
+import type { LayerV2, LayerId, TextLayerV2, ShapeLayerV2, IconLayerV2 } from "@/lib/editor/schema";
+import { getLayerOrder, rgbaToHex } from "@/lib/editor/schema";
+
+// SINGLE DEFINITION — no duplicates below
 
 // ---------------------------------------------------------------------------
 // Component
@@ -78,6 +81,25 @@ export default function LayersListPanel() {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers: extract the "primary" display color from a layer
+// ---------------------------------------------------------------------------
+
+function getLayerSwatchColor(layer: LayerV2): string | null {
+  if (layer.type === "text") {
+    const fill = (layer as TextLayerV2).defaultStyle.fill;
+    if (fill.kind === "solid") return rgbaToHex(fill.color);
+  }
+  if (layer.type === "shape") {
+    const fill = (layer as ShapeLayerV2).fills?.[0];
+    if (fill?.kind === "solid") return rgbaToHex(fill.color);
+  }
+  if (layer.type === "icon") {
+    return rgbaToHex((layer as IconLayerV2).color);
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // Layer Row
 // ---------------------------------------------------------------------------
 
@@ -108,6 +130,8 @@ function LayerRow({
     "boolean-group": "⊕",
   };
 
+  const swatchColor = getLayerSwatchColor(layer);
+
   return (
     <div
       onClick={onClick}
@@ -122,12 +146,23 @@ function LayerRow({
         {typeIcon[layer.type] ?? "?"}
       </span>
 
-      {/* Name */}
+      {/* Color swatch */}
+      {swatchColor ? (
+        <span
+          className="w-3 h-3 rounded-sm shrink-0 border border-gray-700/50"
+          style={{ backgroundColor: swatchColor }}
+          title={swatchColor}
+        />
+      ) : (
+        <span className="w-3 h-3 shrink-0" />
+      )}
+
+      {/* Name + text preview */}
       <span className="flex-1 truncate text-xs">
         {layer.name}
-        {layer.type === "text" && (
+        {layer.type === "text" && (layer as TextLayerV2).text && (
           <span className="ml-1 text-gray-600 truncate">
-            — {(layer as { text?: string }).text?.substring(0, 20)}
+            — {(layer as TextLayerV2).text.substring(0, 18)}
           </span>
         )}
       </span>

@@ -196,32 +196,177 @@ export function validateAndApplyPatch(
 // 4. Op → Command conversion
 // ---------------------------------------------------------------------------
 
+/**
+ * Deep-set a value at a JSON pointer path within a layer, returning a minimal
+ * Partial<LayerV2> that preserves ALL sibling properties at every nesting level.
+ *
+ * This is critical: `updateLayer` does a shallow merge, so if we blindly pass
+ * `{ defaultStyle: { fill: x } }` it would clobber fontSize, fontWeight, etc.
+ * Instead we clone the top-level key and set only the nested value within it.
+ *
+ * Handles both object keys and array indices (e.g., /fills/0, /effects/1).
+ */
+function deepSetOnLayer(layer: LayerV2, path: string, value: unknown): Partial<LayerV2> {
+  const parts = path.split("/").filter(Boolean);
+  if (parts.length === 0) return {};
+
+  const topKey = parts[0];
+  const layerAny = layer as unknown as Record<string, unknown>;
+
+  // Simple case: top-level replacement
+  if (parts.length === 1) {
+    return { [topKey]: value } as Partial<LayerV2>;
+  }
+
+  // Deep clone the top-level value so we never mutate the live document
+  const topValue: unknown = JSON.parse(JSON.stringify(layerAny[topKey] ?? {}));
+
+  // Navigate to the parent of the target node
+  let current: unknown = topValue;
+  for (let i = 1; i < parts.length - 1; i++) {
+    const key = parts[i];
+    const idx = Number(key);
+    if (Array.isArray(current)) {
+      if (!isNaN(idx)) {
+        if (current[idx] == null || typeof current[idx] !== "object") {
+          (current as unknown[])[idx] = {};
+        }
+        current = (current as unknown[])[idx];
+      }
+    } else if (current && typeof current === "object") {
+      const obj = current as Record<string, unknown>;
+      if (obj[key] == null || typeof obj[key] !== "object") {
+        obj[key] = {};
+      }
+      current = obj[key];
+    }
+  }
+
+  // Set the final key
+  const lastKey = parts[parts.length - 1];
+  const lastIdx = Number(lastKey);
+  if (Array.isArray(current)) {
+    if (!isNaN(lastIdx)) {
+      (current as unknown[])[lastIdx] = value;
+    }
+  } else if (current && typeof current === "object") {
+    (current as Record<string, unknown>)[lastKey] = value;
+  }
+
+  return { [topKey]: topValue } as Partial<LayerV2>;
+}
+
+/**
+ * Push a value to an array at a JSON pointer path within a layer.
+ * The path should point to the array (e.g., "/effects", "/fills").
+ */
+function deepPushToLayer(layer: LayerV2, path: string, value: unknown): Partial<LayerV2> {
+  const parts = path.split("/").filter(Boolean);
+  if (parts.length === 0) return {};
+
+  const topKey = parts[0];
+  const layerAny = layer as unknown as Record<string, unknown>;
+  const topValue: unknown = JSON.parse(JSON.stringify(layerAny[topKey] ?? (parts.length === 1 ? [] : {})));
+
+  if (parts.length === 1) {
+    if (Array.isArray(topValue)) {
+      (topValue as unknown[]).push(value);
+    }
+    return { [topKey]: topValue } as Partial<LayerV2>;
+  }
+
+  // Navigate to target array and push
+  let current: unknown = topValue;
+  for (let i = 1; i < parts.length; i++) {
+    const key = parts[i];
+    const idx = Number(key);
+    if (Array.isArray(current)) {
+      if (!isNaN(idx)) current = (current as unknown[])[idx];
+    } else if (current && typeof current === "object") {
+      const obj = current as Record<string, unknown>;
+      if (i === parts.length - 1) {
+        if (Array.isArray(obj[key])) {
+          (obj[key] as unknown[]).push(value);
+        } else {
+          obj[key] = [value];
+        }
+        break;
+      }
+      if (obj[key] == null || typeof obj[key] !== "object") obj[key] = {};
+      current = obj[key];
+    }
+  }
+
+  return { [topKey]: topValue } as Partial<LayerV2>;
+}
+
+/**
+ * Remove a value at a JSON pointer path within a layer.
+ * For array elements (e.g., /effects/0), splices out that index.
+ * For object keys, deletes the property.
+ */
+function deepRemoveFromLayer(layer: LayerV2, path: string): Partial<LayerV2> {
+  const parts = path.split("/").filter(Boolean);
+  if (parts.length === 0) return {};
+
+  const topKey = parts[0];
+  const layerAny = layer as unknown as Record<string, unknown>;
+
+  if (parts.length === 1) {
+    return { [topKey]: undefined } as Partial<LayerV2>;
+  }
+
+  const topValue: unknown = JSON.parse(JSON.stringify(layerAny[topKey] ?? {}));
+
+  let current: unknown = topValue;
+  for (let i = 1; i < parts.length - 1; i++) {
+    const key = parts[i];
+    const idx = Number(key);
+    if (Array.isArray(current)) {
+      if (!isNaN(idx)) current = (current as unknown[])[idx];
+    } else if (current && typeof current === "object") {
+      current = (current as Record<string, unknown>)[key];
+    }
+    if (current == null) return { [topKey]: topValue } as Partial<LayerV2>;
+  }
+
+  const lastKey = parts[parts.length - 1];
+  const lastIdx = Number(lastKey);
+  if (Array.isArray(current)) {
+    if (!isNaN(lastIdx)) (current as unknown[]).splice(lastIdx, 1);
+  } else if (current && typeof current === "object") {
+    delete (current as Record<string, unknown>)[lastKey];
+  }
+
+  return { [topKey]: topValue } as Partial<LayerV2>;
+}
+
 function opToCommand(doc: DesignDocumentV2, op: PatchOp): Command | null {
   switch (op.op) {
     case "replace": {
       if (!op.layerId || !op.path) return null;
       const layer = doc.layersById[op.layerId];
       if (!layer) return null;
-
-      const changes = setNestedValue({}, op.path, op.value);
+      // Use deep-set so sibling properties are never clobbered
+      const changes = deepSetOnLayer(layer, op.path, op.value);
       return createUpdateCommand(op.layerId, changes as Partial<LayerV2>, `Set ${op.path}`);
     }
 
     case "add": {
       if (!op.layerId || !op.path) return null;
-      // For arrays (fills, strokes, effects): push to array
       const layer = doc.layersById[op.layerId];
       if (!layer) return null;
-
-      const changes = setNestedValue({}, op.path, op.value);
+      // Push to the target array, preserving existing items
+      const changes = deepPushToLayer(layer, op.path, op.value);
       return createUpdateCommand(op.layerId, changes as Partial<LayerV2>, `Add to ${op.path}`);
     }
 
     case "remove": {
       if (!op.layerId) return null;
-      // If path is specified, remove a nested property; otherwise remove the layer
       if (op.path) {
-        const changes = setNestedValue({}, op.path, undefined);
+        const layer = doc.layersById[op.layerId];
+        if (!layer) return null;
+        const changes = deepRemoveFromLayer(layer, op.path);
         return createUpdateCommand(op.layerId, changes as Partial<LayerV2>, `Remove ${op.path}`);
       }
       return null;
@@ -264,7 +409,17 @@ export type IntentType =
   | "add-border" | "remove-border"
   | "change-font-size" | "change-opacity"
   | "swap-colors" | "harmonize-colors"
-  | "ensure-readable" | "fix-contrast";
+  | "ensure-readable" | "fix-contrast"
+  // ---- Pro intent types (M3.5) ----
+  | "add-effect" | "remove-effect" | "update-effect"
+  | "set-fill" | "add-gradient-fill" | "add-pattern-fill"
+  | "set-stroke" | "remove-stroke"
+  | "set-blend-mode"
+  | "set-corner-radius"
+  | "flip" | "rotate"
+  | "set-font" | "set-text-style"
+  | "set-image-filters"
+  | "reorder-layer";
 
 export interface EditIntent {
   type: IntentType;
@@ -572,6 +727,263 @@ export function intentToPatchOps(doc: DesignDocumentV2, intent: EditIntent): Pat
       }
       break;
     }
+
+    // ================================================================
+    // Pro intent implementations (M3.5 — Full AI Control)
+    // ================================================================
+
+    case "add-effect": {
+      const effectType = (intent.params?.effectType as string) ?? "drop-shadow";
+      const defaults: Record<string, unknown> = {
+        "drop-shadow": { type: "drop-shadow", enabled: true, color: { r: 0, g: 0, b: 0, a: 0.25 }, offsetX: 2, offsetY: 4, blur: 8, spread: 0 },
+        "inner-shadow": { type: "inner-shadow", enabled: true, color: { r: 0, g: 0, b: 0, a: 0.2 }, offsetX: 1, offsetY: 2, blur: 4, spread: 0 },
+        "blur": { type: "blur", enabled: true, blurType: "gaussian", radius: 4, angle: 0 },
+        "glow": { type: "glow", enabled: true, color: { r: 163, g: 230, b: 53, a: 0.6 }, inner: false, radius: 8, intensity: 0.5 },
+        "outline": { type: "outline", enabled: true, color: { r: 255, g: 255, b: 255, a: 1 }, width: 2 },
+        "color-adjust": { type: "color-adjust", enabled: true, brightness: 0, contrast: 0, saturation: 0, temperature: 0, hueRotate: 0 },
+        "noise": { type: "noise", enabled: true, intensity: 0.3, monochrome: true },
+      };
+      const overrides = (intent.params?.overrides ?? {}) as Record<string, unknown>;
+      const effect = { ...(defaults[effectType] ?? defaults["drop-shadow"]) as Record<string, unknown>, ...overrides };
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer) continue;
+        ops.push({ op: "replace", layerId: id, path: "/effects", value: [...layer.effects, effect] });
+      }
+      break;
+    }
+
+    case "remove-effect": {
+      const effectType = intent.params?.effectType as string;
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer) continue;
+        const filtered = effectType
+          ? layer.effects.filter(e => e.type !== effectType)
+          : []; // Remove all if no type specified
+        ops.push({ op: "replace", layerId: id, path: "/effects", value: filtered });
+      }
+      break;
+    }
+
+    case "update-effect": {
+      const effectType = intent.params?.effectType as string;
+      const updates = intent.params?.updates as Record<string, unknown>;
+      if (!effectType || !updates) break;
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer) continue;
+        const newEffects = layer.effects.map(e =>
+          e.type === effectType ? { ...e, ...updates } : e
+        );
+        ops.push({ op: "replace", layerId: id, path: "/effects", value: newEffects });
+      }
+      break;
+    }
+
+    case "set-fill": {
+      const color = intent.params?.color as string;
+      const opacity = (intent.params?.opacity as number) ?? 1;
+      if (!color) break;
+      const rgba = { ...hexToRGBA(color), a: opacity };
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer) continue;
+        if (layer.type === "shape" || layer.type === "frame" || layer.type === "path") {
+          ops.push({ op: "replace", layerId: id, path: "/fills", value: [solidPaint(rgba)] });
+        } else if (layer.type === "text") {
+          ops.push({ op: "replace", layerId: id, path: "/defaultStyle/fill", value: solidPaint(rgba) });
+        } else if (layer.type === "icon") {
+          ops.push({ op: "replace", layerId: id, path: "/color", value: rgba });
+        }
+      }
+      break;
+    }
+
+    case "add-gradient-fill": {
+      const gradType = (intent.params?.gradientType as string) ?? "linear";
+      const angle = (intent.params?.angle as number) ?? 180;
+      const stops = (intent.params?.stops as Array<{ offset: number; color: string }>) ??
+        [{ offset: 0, color: "#a3e635" }, { offset: 1, color: "#06b6d4" }];
+      const gradient = {
+        kind: "gradient" as const,
+        type: gradType,
+        angle,
+        stops: stops.map(s => ({ offset: s.offset, color: hexToRGBA(s.color) })),
+      };
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer) continue;
+        if (layer.type === "shape" || layer.type === "frame" || layer.type === "path") {
+          ops.push({ op: "replace", layerId: id, path: "/fills", value: [gradient] });
+        } else if (layer.type === "text") {
+          ops.push({ op: "replace", layerId: id, path: "/defaultStyle/fill", value: gradient });
+        }
+      }
+      break;
+    }
+
+    case "add-pattern-fill": {
+      const patternType = (intent.params?.patternType as string) ?? "dots";
+      const patternOpacity = (intent.params?.opacity as number) ?? 0.3;
+      const patternScale = (intent.params?.scale as number) ?? 1;
+      const pattern = {
+        kind: "pattern" as const,
+        patternType,
+        opacity: patternOpacity,
+        scale: patternScale,
+        spacing: (intent.params?.spacing as number) ?? 10,
+        color: hexToRGBA((intent.params?.color as string) ?? "#ffffff"),
+      };
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer) continue;
+        if (layer.type === "shape" || layer.type === "frame") {
+          const current = (layer as ShapeLayerV2).fills ?? [];
+          ops.push({ op: "replace", layerId: id, path: "/fills", value: [...current, pattern] });
+        }
+      }
+      break;
+    }
+
+    case "set-stroke": {
+      const color = intent.params?.color as string;
+      const width = (intent.params?.width as number) ?? 2;
+      const align = (intent.params?.align as string) ?? "center";
+      if (!color) break;
+      const stroke = {
+        paint: solidPaint(hexToRGBA(color)),
+        width,
+        align,
+        cap: "round" as const,
+        join: "round" as const,
+        dashArray: [] as number[],
+      };
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer) continue;
+        if (layer.type === "shape" || layer.type === "frame" || layer.type === "path") {
+          ops.push({ op: "replace", layerId: id, path: "/strokes", value: [stroke] });
+        }
+      }
+      break;
+    }
+
+    case "remove-stroke": {
+      for (const id of layerIds) {
+        ops.push({ op: "replace", layerId: id, path: "/strokes", value: [] });
+      }
+      break;
+    }
+
+    case "set-blend-mode": {
+      const blendMode = (intent.params?.blendMode as string) ?? "normal";
+      for (const id of layerIds) {
+        ops.push({ op: "replace", layerId: id, path: "/blendMode", value: blendMode });
+      }
+      break;
+    }
+
+    case "set-corner-radius": {
+      const radius = (intent.params?.radius as number) ?? 8;
+      const individual = intent.params?.individual as [number, number, number, number] | undefined;
+      const radii = individual ?? [radius, radius, radius, radius];
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer) continue;
+        if (layer.type === "shape" || layer.type === "frame") {
+          ops.push({ op: "replace", layerId: id, path: "/cornerRadii", value: radii });
+        }
+      }
+      break;
+    }
+
+    case "flip": {
+      const axis = (intent.params?.axis as "horizontal" | "vertical") ?? "horizontal";
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer) continue;
+        // Flip by adjusting skew (180° on relevant axis simulates flip)
+        if (axis === "horizontal") {
+          ops.push({ op: "replace", layerId: id, path: "/transform/skewY", value: layer.transform.skewY === 0 ? 180 : 0 });
+        } else {
+          ops.push({ op: "replace", layerId: id, path: "/transform/skewX", value: layer.transform.skewX === 0 ? 180 : 0 });
+        }
+      }
+      break;
+    }
+
+    case "rotate": {
+      const angle = (intent.params?.angle as number) ?? 90;
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer) continue;
+        ops.push({ op: "replace", layerId: id, path: "/transform/rotation", value: layer.transform.rotation + angle });
+      }
+      break;
+    }
+
+    case "set-font": {
+      const fontFamily = intent.params?.fontFamily as string;
+      const fontSize = intent.params?.fontSize as number | undefined;
+      const fontWeight = intent.params?.fontWeight as number | undefined;
+      if (!fontFamily && !fontSize && !fontWeight) break;
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (layer?.type !== "text") continue;
+        const t = layer as TextLayerV2;
+        const newStyle = { ...t.defaultStyle };
+        if (fontFamily) newStyle.fontFamily = fontFamily;
+        if (fontSize) newStyle.fontSize = clampToRange(fontSize, "fontSize");
+        if (fontWeight) newStyle.fontWeight = clampToRange(fontWeight, "fontWeight");
+        ops.push({ op: "replace", layerId: id, path: "/defaultStyle", value: newStyle });
+      }
+      break;
+    }
+
+    case "set-text-style": {
+      const italic = intent.params?.italic as boolean | undefined;
+      const underline = intent.params?.underline as boolean | undefined;
+      const uppercase = intent.params?.uppercase as boolean | undefined;
+      const letterSpacing = intent.params?.letterSpacing as number | undefined;
+      const lineHeight = intent.params?.lineHeight as number | undefined;
+      const textAlign = intent.params?.align as string | undefined;
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (layer?.type !== "text") continue;
+        const t = layer as TextLayerV2;
+        const newStyle = { ...t.defaultStyle };
+        if (italic !== undefined) newStyle.italic = italic;
+        if (underline !== undefined) newStyle.underline = underline;
+        if (uppercase !== undefined) newStyle.uppercase = uppercase;
+        if (letterSpacing !== undefined) newStyle.letterSpacing = letterSpacing;
+        if (lineHeight !== undefined) newStyle.lineHeight = lineHeight;
+        ops.push({ op: "replace", layerId: id, path: "/defaultStyle", value: newStyle });
+        if (textAlign) {
+          ops.push({ op: "replace", layerId: id, path: "/paragraphs/0/align", value: textAlign });
+        }
+      }
+      break;
+    }
+
+    case "set-image-filters": {
+      const filters = intent.params as Record<string, unknown>;
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (layer?.type !== "image") continue;
+        const img = layer as ImageLayerV2;
+        ops.push({ op: "replace", layerId: id, path: "/imageFilters", value: { ...img.imageFilters, ...filters } });
+      }
+      break;
+    }
+
+    case "reorder-layer": {
+      const direction = (intent.params?.direction as "up" | "down" | "top" | "bottom") ?? "up";
+      for (const id of layerIds) {
+        ops.push({ op: "reorder", layerId: id, direction });
+      }
+      break;
+    }
   }
 
   return ops;
@@ -666,9 +1078,9 @@ export function buildAIPatchPrompt(
 
   const scopeDesc: Record<RevisionScope, string> = {
     "text-only": "ONLY modify text content, fonts, text colors. Do NOT change positions, sizes, or non-text layers.",
-    "colors-only": "ONLY modify colors, fills, strokes, gradients. Do NOT change positions, sizes, or text content.",
+    "colors-only": "ONLY modify colors, fills, strokes, gradients. Do NOT change positions, sizes, or text content. Use tag-based targeting from the SEMANTIC ELEMENT MAP below to target the SPECIFIC element the user names.",
     "layout-only": "ONLY modify positions, sizes, rotation. Do NOT change colors or text content.",
-    "element-specific": "Only modify the specifically targeted layers. Leave everything else unchanged.",
+    "element-specific": "Only modify the SPECIFIC element(s) the user names. Use tag-based targeting from the SEMANTIC ELEMENT MAP below. Leave ALL other layers unchanged.",
     "full-redesign": "You may modify any property of any layer, add or remove layers.",
   };
 
@@ -687,26 +1099,136 @@ ${scopeDesc[scope]}
 ## USER REQUEST
 "${userInstruction}"
 
+## SEMANTIC ELEMENT → TAG MAP (BUSINESS CARD)
+Use these tags to target SPECIFIC elements — NEVER use layerType to hit all-text when the user names a specific element:
+| User says…                              | Target selector to use              |
+|-----------------------------------------|-------------------------------------|
+| "name", "full name", "person's name"    | { "tags": ["name"] }                |
+| "title", "job title", "position"        | { "tags": ["title"] }               |
+| "company", "company name", "business"   | { "tags": ["company"] }             |
+| "tagline", "subtitle", "slogan"         | { "tags": ["tagline"] }             |
+| "contact", "email", "phone", "website"  | { "tags": ["contact-text"] }        |
+| "contact icons"                         | { "tags": ["contact-icon"] }        |
+| "accent", "line", "bar", "decorative"   | { "tags": ["accent"] }              |
+| "logo", "brand mark"                    | { "tags": ["logo"] }                |
+| "QR code", "qr"                         | { "tags": ["qr-code"] }             |
+| "pattern", "overlay", "texture"         | { "tags": ["pattern"] }             |
+| "border", "frame border"                | { "tags": ["border"] }              |
+| "corner", "corner marks"                | { "tags": ["corner"] }              |
+| "background", "card background"         | { "special": "background" }         |
+| "ALL text", "every text element"        | { "layerType": "text" }  ← ONLY for GLOBAL changes |
+
+## CRITICAL TARGETING RULE
+⚠️ When the user mentions a SPECIFIC element by name (name, title, company, contact, accent, background),
+you MUST use the tag-based target from the map above.
+NEVER use { "layerType": "text" } or { "special": "all" } for a named-element request —
+that would change EVERY layer, not just the requested one.
+
 ## RESPONSE FORMAT
 You have TWO options. Use whichever is most appropriate (or both):
 
 ### Option A: Strict Patch Operations (for precise changes)
+Use the layer ID from the layer list above. The path is a JSON pointer into the layer object.
 {
   "patchOps": [
-    { "op": "replace", "layerId": "layer-id", "path": "/transform/size", "value": { "x": 200, "y": 100 } },
-    { "op": "replace", "layerId": "layer-id", "path": "/defaultStyle/fontSize", "value": 32 },
-    { "op": "add-layer", "layerData": { "type": "text", "text": "New text", "tags": ["footer"] }, "parentId": "root-frame-id" },
-    { "op": "remove-layer", "layerId": "layer-to-remove" }
+    { "op": "replace", "layerId": "EXACT-LAYER-ID-FROM-LIST", "path": "/defaultStyle/fill", "value": { "kind": "solid", "color": { "r": 255, "g": 0, "b": 0, "a": 1 }, "opacity": 1 } },
+    { "op": "replace", "layerId": "EXACT-LAYER-ID-FROM-LIST", "path": "/defaultStyle/fontSize", "value": 32 }
   ],
   "summary": "Brief description"
 }
 
+### Editable Paths by Layer Type
+
+**TEXT layer** — the richest layer type:
+| Property          | Path                              | Value format                              |
+|-------------------|-----------------------------------|-------------------------------------------|
+| Fill color        | /defaultStyle/fill                | { "kind": "solid", "color": {r,g,b,a}, "opacity": 1 } |
+| Gradient fill     | /defaultStyle/fill                | { "kind": "gradient", "type": "linear", "angle": 135, "stops": [{offset:0,color:{r,g,b,a}},{offset:1,color:{r,g,b,a}}] } |
+| Font size         | /defaultStyle/fontSize            | number (px, 4–800)                        |
+| Font weight       | /defaultStyle/fontWeight          | 100/200/300/400/500/600/700/800/900       |
+| Font family       | /defaultStyle/fontFamily          | string, e.g. "Inter", "Playfair Display"  |
+| Italic            | /defaultStyle/italic              | true / false                              |
+| Underline         | /defaultStyle/underline           | true / false                              |
+| Strikethrough     | /defaultStyle/strikethrough       | true / false                              |
+| Uppercase         | /defaultStyle/uppercase           | true / false                              |
+| Letter spacing    | /defaultStyle/letterSpacing       | number (px, e.g. 2.5)                     |
+| Line height       | /defaultStyle/lineHeight          | number (multiplier, e.g. 1.4)             |
+| Text alignment    | /paragraphs/0/align               | "left" / "center" / "right" / "justify"   |
+| Text content      | /text                             | string                                    |
+| Opacity           | /opacity                          | number 0–1                                |
+| Blend mode        | /blendMode                        | "normal"/"multiply"/"screen"/"overlay"/…  |
+| Effects           | /effects                          | array of effect objects (see below)       |
+
+**SHAPE layer:**
+| Property          | Path                              | Value format                              |
+|-------------------|-----------------------------------|-------------------------------------------|
+| Fill (solid)      | /fills                            | [{ "kind": "solid", "color": {r,g,b,a}, "opacity": 1 }] |
+| Fill (gradient)   | /fills                            | [{ "kind": "gradient", "type": "linear", "angle": 135, "stops": [...] }] |
+| Fill (pattern)    | /fills                            | [{ "kind": "pattern", "patternType": "dots", "opacity": 0.3, "scale": 1 }] |
+| Stroke            | /strokes                          | [{ "paint": {kind:"solid",color:{r,g,b,a},"opacity":1}, "width": 2, "align": "center" }] |
+| Corner radii      | /cornerRadii                      | [topLeft, topRight, bottomRight, bottomLeft] (numbers) |
+| Shape type        | /shapeType                        | "rectangle"/"ellipse"/"triangle"/"polygon"/"star"/"line" |
+| Polygon sides     | /sides                            | number 3–24                               |
+| Star inner ratio  | /innerRadiusRatio                 | number 0.1–0.9                            |
+| Opacity           | /opacity                          | number 0–1                                |
+| Blend mode        | /blendMode                        | string                                    |
+| Effects           | /effects                          | array of effect objects                   |
+
+**FRAME layer (card background):**
+| Property          | Path                              | Value format                              |
+|-------------------|-----------------------------------|-------------------------------------------|
+| Background fill   | /fills                            | same as shape fills                       |
+| Border stroke     | /strokes                          | same as shape strokes                     |
+| Corner radii      | /cornerRadii                      | [tl, tr, br, bl]                          |
+
+**IMAGE layer:**
+| Property          | Path                              | Value format                              |
+|-------------------|-----------------------------------|-------------------------------------------|
+| Brightness        | /imageFilters/brightness          | number -100 to 100                        |
+| Contrast          | /imageFilters/contrast            | number -100 to 100                        |
+| Saturation        | /imageFilters/saturation          | number -100 to 100                        |
+| Temperature       | /imageFilters/temperature         | number -100 to 100                        |
+| Blur              | /imageFilters/blur                | number 0–20                               |
+| Grayscale         | /imageFilters/grayscale           | true / false                              |
+| Sepia             | /imageFilters/sepia               | true / false                              |
+| Fit mode          | /fit                              | "cover"/"contain"/"stretch"/"fill"        |
+| Corner radius     | /cornerRadius                     | number                                    |
+| Overlay fill      | /fills                            | array of paint objects                    |
+| Opacity           | /opacity                          | number 0–1                                |
+| Blend mode        | /blendMode                        | string                                    |
+
+**ICON layer:**
+| Property          | Path                              | Value format                              |
+|-------------------|-----------------------------------|-------------------------------------------|
+| Color             | /color                            | { "r": 0, "g": 0, "b": 0, "a": 1 }       |
+| Stroke width      | /strokeWidth                      | number 0.5–10                             |
+| Opacity           | /opacity                          | number 0–1                                |
+
+**ALL layers (base properties):**
+| Property          | Path                              | Value format                              |
+|-------------------|-----------------------------------|-------------------------------------------|
+| Opacity           | /opacity                          | number 0–1                                |
+| Blend mode        | /blendMode                        | "normal"/"multiply"/"screen"/"overlay"/"darken"/"lighten"/"color-dodge"/"color-burn"/"hard-light"/"soft-light"/"difference"/"exclusion"/"hue"/"saturation"/"color"/"luminosity" |
+| Effects           | /effects                          | see effect schema below                   |
+| Position X        | /transform/position/x             | number (px)                               |
+| Position Y        | /transform/position/y             | number (px)                               |
+| Width             | /transform/size/x                 | number (px)                               |
+| Height            | /transform/size/y                 | number (px)                               |
+| Rotation          | /transform/rotation               | number (degrees)                          |
+
+**Effect Object Schema** (for /effects array — use with "add-effect" intent or patchOps "/effects" replace):
+  drop-shadow: { "type": "drop-shadow", "color": {"r":0,"g":0,"b":0,"a":0.4}, "offsetX": 4, "offsetY": 4, "blur": 8, "spread": 0, "enabled": true }
+  inner-shadow: { "type": "inner-shadow", "color": {"r":0,"g":0,"b":0,"a":0.3}, "offsetX": 0, "offsetY": 2, "blur": 6, "spread": 0, "enabled": true }
+  blur:         { "type": "blur", "radius": 4, "enabled": true }
+  glow:         { "type": "glow", "color": {"r":163,"g":230,"b":53,"a":0.6}, "blur": 12, "spread": 4, "enabled": true }
+  outline:      { "type": "outline", "color": {"r":255,"g":255,"b":255,"a":1}, "width": 2, "enabled": true }
+
 ### Option B: High-Level Intents (for semantic changes)
 {
   "intents": [
+    { "type": "change-color", "target": { "tags": ["title"] }, "params": { "color": "#ff0000" } },
     { "type": "make-bigger", "target": { "tags": ["logo"] }, "params": { "factor": 1.5 } },
-    { "type": "center", "target": { "nameContains": "heading" }, "params": { "axis": "horizontal" } },
-    { "type": "change-color", "target": { "layerType": "text" }, "params": { "color": "#ff0000" } },
+    { "type": "center", "target": { "tags": ["name"] }, "params": { "axis": "horizontal" } },
     { "type": "fix-contrast", "target": { "special": "all" } }
   ],
   "summary": "Brief description"
@@ -715,42 +1237,39 @@ You have TWO options. Use whichever is most appropriate (or both):
 ### Available Intent Types:
 make-bigger, make-smaller, center, change-color, make-warmer, make-cooler,
 fix-contrast, ensure-readable, change-font-size, change-opacity, make-bold,
-make-lighter, add-shadow, remove-shadow, add-spacing, move-to
+make-lighter, add-shadow, remove-shadow, add-spacing, move-to,
+add-effect, remove-effect, update-effect,
+set-fill, add-gradient-fill, add-pattern-fill,
+set-stroke, remove-stroke, set-blend-mode,
+set-corner-radius, flip, rotate,
+set-font, set-text-style, set-image-filters, reorder-layer
 
-### Target Selectors:
-- { "ids": ["exact-layer-id"] }
-- { "tags": ["logo", "headline"] }
-- { "nameContains": "contact" }
-- { "layerType": "text" }
+### Effect Types (for add-effect):
+drop-shadow, inner-shadow, blur, glow, outline, color-adjust, noise
+
+### Gradient Types (for add-gradient-fill):
+linear, radial, angular, diamond (with stops: [{ offset: 0, color: "#hex" }])
+
+### Target Selectors (choose the MOST SPECIFIC one that matches):
+- { "ids": ["exact-layer-id"] }          ← most precise — use when you know the ID from the layer list
+- { "tags": ["name"] }                   ← use for named semantic elements (name/title/company/etc.)
+- { "nameContains": "contact" }          ← use when tags are unknown but name matches
+- { "layerType": "text" }               ← ONLY for "change ALL text" requests
 - { "special": "all" | "selected" | "largest-text" | "primary-image" | "background" }
 
 ## RULES
-1. Make the SMALLEST change that satisfies the request
+1. Make the SMALLEST change that satisfies the request — only touch the SPECIFIC element named
 2. Respect all LOCKED properties
-3. Ensure WCAG AA contrast (≥4.5:1) for all text
+3. Ensure WCAG AA contrast (≥4.5:1) for all text after the change
 4. Stay within the canvas bounds
 5. Maintain visual hierarchy and balance
-6. Return valid JSON only — no markdown, no explanations outside JSON`;
+6. Return valid JSON only — no markdown, no explanations outside JSON
+7. NEVER use { "layerType": "text" } when the user names a specific element like "name" or "title"`;
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): Record<string, unknown> {
-  const parts = path.split("/").filter(Boolean);
-  let current = obj;
-  for (let i = 0; i < parts.length - 1; i++) {
-    if (!current[parts[i]] || typeof current[parts[i]] !== "object") {
-      current[parts[i]] = {};
-    }
-    current = current[parts[i]] as Record<string, unknown>;
-  }
-  if (parts.length > 0) {
-    current[parts[parts.length - 1]] = value;
-  }
-  return obj;
-}
 
 function validateValueRange(path: string, value: unknown): string | null {
   if (typeof value !== "number") return null;

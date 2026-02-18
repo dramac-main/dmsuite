@@ -49,10 +49,20 @@ import {
   getExportScale,
   applyCanvasSettings,
 } from "@/stores/advanced-helpers";
-import { cardConfigToDocument, documentToCardConfig, type CardConfig as CardConfigV2 } from "@/lib/editor/business-card-adapter";
+import {
+  cardConfigToDocument, documentToCardConfig,
+  syncTextToDocument, syncColorsToDocument,
+  type CardConfig as CardConfigV2,
+} from "@/lib/editor/business-card-adapter";
+import {
+  generateCardDocument,
+  LAYOUT_RECIPES, CARD_THEMES, ACCENT_KITS,
+  suggestCombination, applyThemeToConfig, getCombinationCount,
+} from "@/lib/editor/template-generator";
 import { renderDocumentV2 } from "@/lib/editor/renderer";
 import { renderToCanvas } from "@/lib/editor/renderer";
 import { CanvasEditor, EditorToolbar, LayersListPanel, LayerPropertiesPanel } from "@/components/editor";
+import BusinessCardLayerQuickEdit from "@/components/editor/BusinessCardLayerQuickEdit";
 import { useEditorStore } from "@/stores/editor";
 import { buildAIPatchPrompt, parseAIRevisionResponse, processIntent } from "@/lib/editor/ai-patch";
 import type { RevisionScope as EditorRevisionScope } from "@/lib/editor/ai-patch";
@@ -1870,6 +1880,11 @@ export default function BusinessCardWorkspace() {
   const [sideBySide, setSideBySide] = useState(false);
   const [templateFilter, setTemplateFilter] = useState<string>("all");
 
+  // ── Parametric Generator State ──
+  const [genRecipeId,    setGenRecipeId]    = useState<string>(LAYOUT_RECIPES[0].id);
+  const [genThemeId,     setGenThemeId]     = useState<string>(CARD_THEMES[0].id);
+  const [genAccentKitId, setGenAccentKitId] = useState<string>(ACCENT_KITS[0].id);
+
   // Revision State
   const [revisionPrompt, setRevisionPrompt] = useState("");
   const [revisionScope, setRevisionScope] = useState<RevisionScope>("full-redesign");
@@ -1890,6 +1905,45 @@ export default function BusinessCardWorkspace() {
   const updateConfig = useCallback((partial: Partial<CardConfig>) => {
     setConfig((prev) => ({ ...prev, ...partial }));
   }, []);
+
+  /** Apply a parametric generator design: builds a full DesignDocumentV2
+   *  and loads it into the editor store, then syncs theme colours back
+   *  to the CardConfig so the rest of the workspace stays coherent. */
+  const applyGeneratorDesign = useCallback((
+    recipeId: string,
+    themeId: string,
+    accentKitId: string,
+  ) => {
+    const doc = generateCardDocument({
+      cfg: config as unknown as CardConfigV2,
+      recipeId,
+      themeId,
+      accentKitId,
+      logoImg: logoImg ?? undefined,
+    });
+    editorStore.setDoc(doc);
+    if (!editorMode) setEditorMode(true);
+
+    // Sync theme colours back so manual controls reflect the new palette.
+    const themePartial = applyThemeToConfig(config as unknown as CardConfigV2, themeId);
+    setConfig((prev) => ({
+      ...prev,
+      ...(themePartial as Partial<CardConfig>),
+    }));
+  }, [config, logoImg, editorMode, editorStore]);
+
+  /** Suggest a random recipe/theme/kit combination and immediately apply it. */
+  const handleSuggestDesign = useCallback(() => {
+    const styles = ["minimal", "modern", "classic", "creative", "luxury"] as const;
+    const style  = styles[Math.floor(Math.random() * styles.length)];
+    const moods  = ["vibrant", "dark", "light", "muted", "metallic"] as const;
+    const mood   = moods[Math.floor(Math.random() * moods.length)];
+    const combo = suggestCombination(style, mood, Date.now());
+    setGenRecipeId(combo.recipeId);
+    setGenThemeId(combo.themeId);
+    setGenAccentKitId(combo.accentKitId);
+    applyGeneratorDesign(combo.recipeId, combo.themeId, combo.accentKitId);
+  }, [applyGeneratorDesign]);
 
   // Load logo image
   useEffect(() => {
@@ -1961,16 +2015,70 @@ export default function BusinessCardWorkspace() {
   // Subscribe to global advanced settings to trigger canvas re-render
   const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
-  // ── vNext Editor: Sync config → DesignDocumentV2 → editor store ──
+  // ── vNext Editor: Smart sync — tracks what changed to decide full rebuild vs. incremental ──
+  // Structural fields (template, fontStyle, cardStyle, side, logo) → full rebuild.
+  // Text/color-only changes → incremental sync that PRESERVES per-layer color overrides.
+  const _prevSyncRef = useRef<{
+    templateKey: string;
+    textColor: string;
+    primaryColor: string;
+    secondaryColor: string;
+    logoUrl: string;
+  } | null>(null);
+  const _prevEditorModeRef = useRef(false);
+
   useEffect(() => {
-    if (!editorMode) return;
-    const doc = cardConfigToDocument(
-      config as unknown as CardConfigV2,
-      { logoImg: logoImg ?? undefined }
-    );
-    editorStore.setDoc(doc);
+    if (!editorMode) {
+      _prevEditorModeRef.current = false;
+      return;
+    }
+
+    const justEntered = !_prevEditorModeRef.current;
+    _prevEditorModeRef.current = true;
+
+    // Structural key: any change here forces a full document rebuild.
+    const templateKey = `${config.template}|${config.fontStyle}|${config.cardStyle}|${config.side}`;
+    const logoUrl = logoImg?.src ?? "";
+    const prev = _prevSyncRef.current;
+
+    const needsFullRebuild =
+      justEntered ||
+      !prev ||
+      prev.templateKey !== templateKey ||
+      prev.logoUrl !== logoUrl;
+
+    if (needsFullRebuild) {
+      // Full rebuild: entering editor mode, template/style/logo changed.
+      const doc = cardConfigToDocument(
+        config as unknown as CardConfigV2,
+        { logoImg: logoImg ?? undefined }
+      );
+      editorStore.setDoc(doc);
+    } else {
+      // Incremental sync — only update what config describes, leave manual per-layer
+      // overrides untouched.
+      //   • syncTextToDocument → updates text content only (never touches colors)
+      //   • syncColorsToDocument → updates global-color-tagged layers, but skips any
+      //     layer whose fill was manually changed (fingerprint comparison via prevTextColor)
+      let updatedDoc = syncTextToDocument(editorStore.doc, config as unknown as CardConfigV2);
+      updatedDoc = syncColorsToDocument(updatedDoc, config as unknown as CardConfigV2, {
+        prevTextColor:      prev.textColor,
+        prevPrimaryColor:   prev.primaryColor,
+        prevSecondaryColor: prev.secondaryColor,
+      });
+      editorStore.setDoc(updatedDoc);
+    }
+
+    _prevSyncRef.current = {
+      templateKey,
+      textColor:      config.textColor,
+      primaryColor:   config.primaryColor,
+      secondaryColor: config.secondaryColor,
+      logoUrl,
+    };
+    // advancedSettings intentionally omitted: font scales are baked in at full-rebuild time.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editorMode, config, logoImg, advancedSettings]);
+  }, [editorMode, config, logoImg]);
 
   // Render canvas — vNext layer-based renderer (raw canvas mode only)
   useEffect(() => {
@@ -1978,21 +2086,6 @@ export default function BusinessCardWorkspace() {
     const doRender = (canvas: HTMLCanvasElement, cfg: CardConfig) => {
       const bleedSafe = showBleed || showSafeZone;
       renderCardV2(canvas, cfg, logoImg, 1, { showBleedSafe: bleedSafe });
-
-      // QR code overlay (not yet part of layer model)
-      if (cfg.qrCodeUrl) {
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-        const size = cfg.cardStyle === "custom"
-          ? { w: Math.round(cfg.customWidthMm * MM_PX), h: Math.round(cfg.customHeightMm * MM_PX) }
-          : CARD_SIZES[cfg.cardStyle] || CARD_SIZES.standard;
-        const qrSize = Math.min(size.w, size.h) * 0.14;
-        if (cfg.side === "front") {
-          drawQRPlaceholder(ctx, size.w - qrSize - size.w * 0.06, size.h - qrSize - size.h * 0.1, qrSize, "#000000");
-        } else {
-          drawQRPlaceholder(ctx, size.w / 2 - qrSize / 2, size.h * 0.65, qrSize, "#000000");
-        }
-      }
     };
 
     if (canvasRef.current) doRender(canvasRef.current, config);
@@ -2105,30 +2198,58 @@ TAGLINE: A short tagline for the company (if none provided)`;
   /* ==================================================================
      AI REVISION ENGINE - Deep Reasoning + Hard Scope Enforcement
      ================================================================== */
+  /**
+   * Returns true when the prompt names a specific card element by name.
+   * These requests can only be fulfilled at the layer level — not via global CardConfig fields.
+   */
+  const isElementSpecificRequest = useCallback((prompt: string): boolean => {
+    const lower = prompt.toLowerCase();
+    const ELEMENT_KEYWORDS = [
+      "name", "full name", "person",
+      "title", "job title", "position", "role",
+      "company", "company name", "business name", "organisation", "organization",
+      "tagline", "slogan", "subtitle",
+      "contact", "email", "phone", "website", "address",
+      "accent", "line", "divider", "bar", "stripe",
+      "background", "card background",
+    ];
+    return ELEMENT_KEYWORDS.some(kw => lower.includes(kw));
+  }, []);
+
   const handleRevision = useCallback(async () => {
     if (!revisionPrompt.trim()) return;
     setIsRevising(true);
     try {
       const currentDesign = {
+        name: config.name,
+        title: config.title,
+        company: config.company,
+        tagline: config.tagline,
+        email: config.email,
+        phone: config.phone,
+        website: config.website,
+        address: config.address,
         template: config.template,
         primaryColor: config.primaryColor,
         secondaryColor: config.secondaryColor,
         textColor: config.textColor,
         bgColor: config.bgColor,
         fontStyle: config.fontStyle,
+        cardStyle: config.cardStyle,
+        side: config.side,
         patternType: config.patternType,
         backStyle: config.backStyle,
-        tagline: config.tagline,
         showContactIcons: config.showContactIcons,
+        qrCodeUrl: config.qrCodeUrl,
       };
 
       // ── HARD SCOPE ENFORCEMENT: define exactly which fields each scope may touch ──
       const SCOPE_ALLOWED_FIELDS: Record<RevisionScope, string[]> = {
-        "text-only":        ["fontStyle", "tagline", "showContactIcons"],
+        "text-only":        ["name", "title", "company", "tagline", "email", "phone", "website", "address", "fontStyle", "showContactIcons"],
         "colors-only":      ["primaryColor", "secondaryColor", "textColor", "bgColor"],
-        "layout-only":      ["template", "patternType", "backStyle"],
-        "element-specific": ["fontStyle", "tagline", "showContactIcons", "primaryColor", "secondaryColor", "textColor", "bgColor", "template", "patternType", "backStyle"],
-        "full-redesign":    ["fontStyle", "tagline", "showContactIcons", "primaryColor", "secondaryColor", "textColor", "bgColor", "template", "patternType", "backStyle"],
+        "layout-only":      ["template", "patternType", "backStyle", "cardStyle", "side"],
+        "element-specific": ["name", "title", "company", "tagline", "email", "phone", "website", "address", "fontStyle", "showContactIcons", "primaryColor", "secondaryColor", "textColor", "bgColor", "template", "patternType", "backStyle", "cardStyle", "side", "qrCodeUrl"],
+        "full-redesign":    ["name", "title", "company", "tagline", "email", "phone", "website", "address", "fontStyle", "showContactIcons", "primaryColor", "secondaryColor", "textColor", "bgColor", "template", "patternType", "backStyle", "cardStyle", "side", "qrCodeUrl"],
       };
 
       const allowedFields = SCOPE_ALLOWED_FIELDS[revisionScope];
@@ -2172,6 +2293,9 @@ Available templates: ${templateIds}
 Available fonts: modern, classic, bold, elegant, minimal
 Available patterns: ${patternIds}
 Available back styles: logo-center, pattern-fill, minimal, info-repeat, gradient-brand
+Available card styles: standard, eu, jp, square, rounded, custom
+Available sides: front, back
+qrCodeUrl: set to any URL string to add a QR code, or "" to remove it
 
 JSON:`;
 
@@ -2208,6 +2332,18 @@ JSON:`;
         if (rawChanges.backStyle !== undefined) validatedChanges.backStyle = rawChanges.backStyle;
         if (rawChanges.tagline !== undefined) validatedChanges.tagline = rawChanges.tagline;
         if (rawChanges.showContactIcons !== undefined) validatedChanges.showContactIcons = rawChanges.showContactIcons;
+        // Text content fields (string passthrough)
+        if (typeof rawChanges.name === "string") validatedChanges.name = rawChanges.name;
+        if (typeof rawChanges.title === "string") validatedChanges.title = rawChanges.title;
+        if (typeof rawChanges.company === "string") validatedChanges.company = rawChanges.company;
+        if (typeof rawChanges.email === "string") validatedChanges.email = rawChanges.email;
+        if (typeof rawChanges.phone === "string") validatedChanges.phone = rawChanges.phone;
+        if (typeof rawChanges.website === "string") validatedChanges.website = rawChanges.website;
+        if (typeof rawChanges.address === "string") validatedChanges.address = rawChanges.address;
+        // Layout fields
+        if (rawChanges.cardStyle && ["standard", "eu", "jp", "square", "rounded", "custom"].includes(rawChanges.cardStyle)) validatedChanges.cardStyle = rawChanges.cardStyle;
+        if (rawChanges.side && ["front", "back"].includes(rawChanges.side)) validatedChanges.side = rawChanges.side;
+        if (typeof rawChanges.qrCodeUrl === "string") validatedChanges.qrCodeUrl = rawChanges.qrCodeUrl;
 
         // ── Step 2: HARD SCOPE ENFORCEMENT — strip any field not in allowedFields ──
         const scopedChanges: Partial<CardConfig> = {};
@@ -2251,13 +2387,13 @@ JSON:`;
      AI REVISION ENGINE (vNext) - Layer-level targeting via ai-patch.ts
      Used when editor mode is active — targets individual layers
      ================================================================== */
-  const handleEditorRevision = useCallback(async () => {
+  const handleEditorRevision = useCallback(async (scopeOverride?: EditorRevisionScope) => {
     if (!revisionPrompt.trim()) return;
     setIsRevising(true);
     editorStore.setAIProcessing(true);
 
     try {
-      // Map workspace revision scope → editor scope
+      // Map workspace revision scope → editor scope (scopeOverride takes priority)
       const scopeMap: Record<RevisionScope, EditorRevisionScope> = {
         "text-only": "text-only",
         "colors-only": "colors-only",
@@ -2265,7 +2401,7 @@ JSON:`;
         "element-specific": "element-specific",
         "full-redesign": "full-redesign",
       };
-      const editorScope = scopeMap[revisionScope] ?? "full-redesign";
+      const editorScope = scopeOverride ?? scopeMap[revisionScope] ?? "full-redesign";
 
       // Build the AI prompt with full layer context
       const systemPrompt = buildAIPatchPrompt(
@@ -2327,6 +2463,36 @@ JSON:`;
       editorStore.setAIProcessing(false);
     }
   }, [revisionPrompt, revisionScope, editorStore]);
+
+  /**
+   * Smart router: element-specific requests always go through the editor (layer-level)
+   * path regardless of whether editor mode is currently active.
+   * Global requests use the appropriate path based on current mode.
+   */
+  const handleSmartRevision = useCallback(async () => {
+    if (!revisionPrompt.trim()) return;
+    const needsLayerLevel = isElementSpecificRequest(revisionPrompt);
+    if (needsLayerLevel) {
+      // Ensure the editor document is populated before running the AI revision.
+      // If editor mode wasn't active the doc may be empty — build it now.
+      const hasDoc = Object.keys(editorStore.doc?.layersById ?? {}).length > 1;
+      if (!hasDoc) {
+        const freshDoc = cardConfigToDocument(config, { logoImg: logoImg ?? undefined });
+        editorStore.setDoc(freshDoc);
+      }
+      // Activate editor mode so the canvas reflects the result
+      setEditorMode(true);
+      // Force element-specific scope so the AI targets only the named element's layers,
+      // regardless of whatever scope the user currently has selected in the UI.
+      await handleEditorRevision("element-specific");
+    } else {
+      if (editorMode) {
+        await handleEditorRevision();
+      } else {
+        await handleRevision();
+      }
+    }
+  }, [revisionPrompt, isElementSpecificRequest, editorMode, config, logoImg, editorStore, handleEditorRevision, handleRevision]);
 
   /* ==================================================================
      BATCH PROCESSING - Same design, many employees
@@ -2568,6 +2734,90 @@ JSON:`;
   const leftPanel = (
     <div className="space-y-3">
       <Accordion defaultOpen="details">
+
+        {/* ── Parametric Generator — Infinite Designs ─────────────────── */}
+        <AccordionSection
+          icon={<IconSparkles className="size-3.5" />}
+          label="Infinite Designs"
+          id="generator"
+          badge={`${getCombinationCount().toLocaleString()} combos`}
+        >
+          <div className="space-y-3">
+            {/* Combo count pill */}
+            <p className="text-[0.5625rem] text-gray-400 leading-relaxed">
+              Mix <span className="text-primary-400 font-semibold">{LAYOUT_RECIPES.length} layouts</span>
+              {" × "}
+              <span className="text-secondary-400 font-semibold">{CARD_THEMES.length} themes</span>
+              {" × "}
+              <span className="text-primary-300 font-semibold">{ACCENT_KITS.length} accent kits</span>
+              {" = "}
+              <span className="text-white font-bold">{getCombinationCount().toLocaleString()}</span> base designs.
+            </p>
+
+            {/* Layout Recipe */}
+            <div>
+              <label className="block text-[0.625rem] font-semibold text-gray-400 mb-1 uppercase tracking-wide">Layout Recipe</label>
+              <select
+                value={genRecipeId}
+                onChange={(e) => setGenRecipeId(e.target.value)}
+                className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+              >
+                {LAYOUT_RECIPES.map(r => (
+                  <option key={r.id} value={r.id}>{r.label}</option>
+                ))}
+              </select>
+              <p className="mt-0.5 text-[0.5rem] text-gray-500 truncate">
+                {LAYOUT_RECIPES.find(r => r.id === genRecipeId)?.description ?? ""}
+              </p>
+            </div>
+
+            {/* Card Theme */}
+            <div>
+              <label className="block text-[0.625rem] font-semibold text-gray-400 mb-1 uppercase tracking-wide">Theme</label>
+              <select
+                value={genThemeId}
+                onChange={(e) => setGenThemeId(e.target.value)}
+                className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+              >
+                {CARD_THEMES.map(t => (
+                  <option key={t.id} value={t.id}>{t.label} — {t.mood}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Accent Kit */}
+            <div>
+              <label className="block text-[0.625rem] font-semibold text-gray-400 mb-1 uppercase tracking-wide">Accent Kit</label>
+              <select
+                value={genAccentKitId}
+                onChange={(e) => setGenAccentKitId(e.target.value)}
+                className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+              >
+                {ACCENT_KITS.map(k => (
+                  <option key={k.id} value={k.id}>{k.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={handleSuggestDesign}
+                className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-white hover:border-primary-500/50 hover:bg-primary-500/10 text-xs font-medium transition-all"
+              >
+                <IconRefresh className="size-3" />
+                Suggest
+              </button>
+              <button
+                onClick={() => applyGeneratorDesign(genRecipeId, genThemeId, genAccentKitId)}
+                className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-xl bg-primary-500 hover:bg-primary-400 text-gray-950 text-xs font-semibold transition-all"
+              >
+                <IconSparkles className="size-3" />
+                Apply Design
+              </button>
+            </div>
+          </div>
+        </AccordionSection>
 
         {/* Templates Section */}
         <AccordionSection icon={<IconLayout className="size-3.5" />} label="Templates" id="templates" badge={filteredTemplates.length}>
@@ -2905,7 +3155,7 @@ JSON:`;
             rows={2}
             className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all resize-none"
           />
-          <button onClick={editorMode ? handleEditorRevision : handleRevision}
+          <button onClick={handleSmartRevision}
             disabled={!revisionPrompt.trim() || isRevising}
             className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
@@ -3093,6 +3343,13 @@ JSON:`;
   // Right panel — add layers + properties panels when in editor mode
   const editorRightPanel = editorMode ? (
     <div className="space-y-3">
+      {/* Element Colors — quick per-element color overrides */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+          Element Colors
+        </h3>
+        <BusinessCardLayerQuickEdit />
+      </div>
       {/* Layers Panel */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Layers</h3>

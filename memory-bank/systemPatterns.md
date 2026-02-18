@@ -122,7 +122,7 @@ DesignRules (design-rules.ts) — Professional Knowledge
 AI Patch Protocol (ai-patch.ts) — AI ↔ Editor Bridge
   ├── Dual-mode: strict PatchOp (RFC 6902 subset) OR high-level EditIntent
   ├── PatchOp: replace, add, remove, reorder, add-layer, remove-layer
-  ├── EditIntent: 20 types (make-bigger, center, change-color, fix-contrast, ...)
+  ├── EditIntent: 35 types (make-bigger, center, change-color, fix-contrast, add-effect, set-fill, add-gradient-fill, flip, set-font, set-text-style, set-image-filters, reorder-layer, ...)
   ├── LayerTarget: by IDs, tags, nameContains, layerType, special selectors
   ├── resolveTarget(doc, target) — deterministic layer resolution
   ├── intentToPatchOps(doc, intent) — NO AI NEEDED, deterministic compiler
@@ -132,11 +132,29 @@ AI Patch Protocol (ai-patch.ts) — AI ↔ Editor Bridge
   ├── buildAIPatchPrompt(doc, instruction, scope, lockedPaths) — AI system prompt generator
   └── parseAIRevisionResponse(raw) — JSON extractor from LLM output
 
+Align & Distribute (align-distribute.ts) — Layout Commands
+  ├── createAlignCommand(doc, ids, axis) — align to artboard or selection bounds
+  ├── createDistributeCommand(doc, ids, axis) — redistribute 3+ layers evenly
+  ├── createSpaceEvenlyCommand(doc, ids, axis, gap?) — equal gap spacing
+  └── createFlipCommand(doc, ids, axis) — horizontal/vertical flip
+
+Smart Snapping (snapping.ts) — Visual Guides
+  ├── snapLayer(doc, id, x, y, config) → SnapResult (adjusted pos + guides)
+  ├── snapResize(doc, id, handle, x, y, w, h, config) — resize snapping
+  ├── drawSnapGuides(ctx, guides, zoom) — overlay renderer
+  └── Wired into CanvasEditor during drag operations
+
 React Components (components/editor/)
-  ├── CanvasEditor — universal editor kernel (RAF loop, resize, viewport, grid, overlays)
-  ├── EditorToolbar — mode tools, undo/redo, zoom, view toggles
-  ├── LayerPropertiesPanel — right-side inspector (transform, text, shape, icon, image, blend, tags)
-  └── LayersListPanel — layer list with visibility/lock toggles
+  ├── CanvasEditor — universal editor kernel (RAF loop, resize, viewport, grid, overlays, snap guides)
+  ├── EditorToolbar — mode tools, undo/redo, zoom, view toggles, contextual AlignDistributeBar
+  ├── LayerPropertiesPanel — full inspector (integrates all sub-editors below)
+  ├── LayersListPanel — layer list with visibility/lock toggles
+  ├── ColorPickerPopover — HSV picker with hex/RGB/opacity/presets
+  ├── FillStrokeEditor — multi-fill/stroke with solid/gradient/pattern
+  ├── TextStyleEditor — font, size, weight, color, alignment, spacing, overflow
+  ├── TransformEditor — position, size, rotation, skew, opacity, flip
+  ├── EffectsEditor — 7 stackable effect types with per-type controls
+  └── AlignDistributeBar — 6 align + 2 distribute actions
 
 Zustand Store (stores/editor.ts)
   ├── document + commandStack management

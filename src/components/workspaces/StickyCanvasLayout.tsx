@@ -144,8 +144,8 @@ export default function StickyCanvasLayout({
             {/* Canvas area */}
             {canvasSlot ? (
               <div
-                className="bg-gray-100 dark:bg-gray-800/50 rounded-2xl overflow-hidden"
-                style={{ maxHeight: "calc(100vh - 330px)", minHeight: 300 }}
+                className="bg-gray-100 dark:bg-gray-800/50 rounded-2xl overflow-hidden flex flex-col"
+                style={{ height: "calc(100vh - 330px)" }}
               >
                 {canvasSlot}
               </div>

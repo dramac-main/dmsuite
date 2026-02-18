@@ -1,9 +1,9 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** M2 BusinessCard Migration to vNext Editor — COMPLETE
+**Phase:** M3.7 Complete — Business Card Full AI Sync Audit + Gap Fixes
 
-### Actual State (Session 29 Updated)
+### Actual State (Session 33 Updated)
 - **194 total tools** defined in tools.ts
 - **96 tools** have dedicated workspace routes in page.tsx → status: "ready"  
 - **~90 tools** have NO workspace → status: "coming-soon"
@@ -12,92 +12,170 @@
 - Build passes with zero TypeScript errors
 - All workspaces now use global Accordion component (no more local Section+Set<string>)
 - AI Design Engine v2.0 — massively upgraded with 13 sections, 60+ exports
-- **vNext Editor Infrastructure** — 14 files, 6,207 lines (Session 28)
-- **NEW: M2 BusinessCard Adapter** — layer-based rendering via DesignDocumentV2
+- **vNext Editor Infrastructure** — 14+ files, 6,207+ lines (Session 28)
+- **M2 BusinessCard Adapter** — layer-based rendering via DesignDocumentV2 (Session 29)
+- **M3 BusinessCard Interactive Editor** — editorMode toggle, CanvasEditor, AI revision via ai-patch (Session 30)
+- **M5 Multi-Workspace Migration** — PosterFlyer, BannerAd, SocialMediaPost all wired with vNext editor (Session 30)
+- **M3.5 Pro Editor + AI Full Control** — 8 new pro UI components, rewritten LayerPropertiesPanel, 15 new AI intent types, smart snapping, align/distribute (Session 31)
+- **M3.6 AI Pipeline Deep Fix** — critical `opToCommand` nested-path bug fixed, AI prompt with full path schema (Session 32)
+- **M3.7 Business Card Full AI Sync** — QR code layer, back-side pattern, Gold Foil cfg colors, expanded syncColorsToDocument, expanded legacy AI prompt, expanded Quick Edit panel (Session 33)
 
-## Recent Changes (Session 29 — M2 BusinessCard Migration)
+## Recent Changes (Session 33 — M3.7 Business Card Full AI Sync)
 
-### BusinessCard Now Renders via vNext Layer Engine
+### Deep Audit → 5 Gaps Found and Fixed
 
-#### What Was Done
-1. **Created `src/lib/editor/business-card-adapter.ts`** (~1,970 lines)
-   - `cardConfigToDocument(config, opts)` — main conversion function
-   - 20 template layout functions (all templates: executive-clean through art-deco)
-   - 5 back-side layout functions (logo-center, pattern-fill, minimal, info-repeat, gradient-brand)
-   - Contact layers builder with icon + text layers per entry
-   - Logo layer builder with image/initials fallback
-   - Pattern overlay via PatternPaint on shape layer
-   - Font size calculator with advanced-settings scaling integration
-   - Smart sync functions: `syncTextToDocument()`, `syncColorsToDocument()`
-   - Reverse sync: `documentToCardConfig()` for AI→sidebar sync
-   - All constants exported: CARD_SIZES, COLOR_PRESETS, TEMPLATE_DEFAULT_THEMES, FONT_FAMILIES
-   - Semantic tags on every layer for AI targeting (name, title, company, contact-*, logo, decorative, etc.)
+1. **Dead `qrCodeUrl` field → now builds a QR Code layer** (`business-card-adapter.ts`)
+   - New `buildQrCodeLayer()` function creates a shape layer with tags `["qr-code", "branding", "contact-qr"]`
+   - Positioned front (bottom-right) or back (center) based on `side`
+   - Added to document in `cardConfigToDocument()` after all template layers
+   - Removed legacy QR overlay from raw canvas render (was outside layer model)
 
-2. **Fixed `src/lib/editor/renderer.ts`** (3 changes)
-   - Text renderer now uses layer's `fontFamily` directly instead of hardcoded "modern"
-   - Added italic support: `italic` flag from TextStyle prepended to font string
-   - Pattern rendering: replaced stub with real `drawPattern()` call from graphics-engine
-   - Imported `drawPattern` from `@/lib/graphics-engine`
+2. **Back-side `pattern-fill` layout was missing its pattern** (`business-card-adapter.ts`)
+   - `layoutBackPatternFill` had a comment "will be added separately" but never called `buildPatternLayer`
+   - Now actually creates a pattern overlay with fallback to `"dots"` if no patternType set
+   - Pattern layer properly tagged with `["pattern", "decorative", "back-element"]`
 
-3. **Updated `src/components/workspaces/BusinessCardWorkspace.tsx`** (5 changes)
-   - Added imports for adapter + renderer
-   - Created `renderCardV2()` bridge function using vNext pipeline
-   - Replaced ALL 5 `renderCard()` call sites with `renderCardV2()`:
-     - Canvas preview useEffect
-     - PNG export (handleDownloadPng)
-     - Clipboard copy (handleCopyCanvas)
-     - PDF export (addPage)
-     - Batch export (renderBatchCard)
-   - Legacy `renderCard` and all 20 template renderers preserved but unused
-   - AI revision system unchanged (still works at CardConfig level)
+3. **Gold Foil template had hardcoded `#c9a227`/`#e8d48b`** (`business-card-adapter.ts`)
+   - Replaced `gold1`/`gold2` constants with `cfg.primaryColor`/`cfg.secondaryColor`
+   - AI color changes now properly propagate to borders, corners, dividers, titles
+   - Corner marks now tagged `"accent"` so they're targetable by color sync
 
-#### Architecture: How It Works Now
-```
-User changes config → useEffect triggers
-  → cardConfigToDocument(config) → DesignDocumentV2 with ~15-25 layers
-  → renderDocumentV2(ctx, doc) → Canvas render via vNext engine
-  → QR overlay (still legacy)
-```
+4. **`syncColorsToDocument` only covered name+accent** (`business-card-adapter.ts`)
+   - Now covers ALL text tags: `title` → primaryColor, `company` → textColor/primaryColor,
+     `contact-text` → textColor, `tagline` → textColor
+   - Now syncs `contact-icon` (icon layers) → primaryColor
+   - Now syncs `corner` (shape layers) → secondaryColor
+   - Now syncs `border` (shape strokes) → primaryColor
+   - Added `prevSecondaryColor` fingerprinting for manual override preservation
+   - Workspace sync ref updated to track `secondaryColor`
 
-Each business card element is now a separate layer:
-- Text layers: Name, Title, Company, Tagline, Contact entries
-- Icon layers: Contact icons (phone, email, globe, map-pin)
-- Shape layers: Decorative panels, borders, stripes, dividers, accent shapes
-- Path layers: Diagonal cuts, deco fans, corner accents
-- Image layers: Logo (with _imageElement for loaded images)
-- Pattern overlay: ShapeLayerV2 with PatternPaint fill
+5. **Legacy AI revision prompt was missing 11 CardConfig fields**
+   - Added: `name`, `title`, `company`, `email`, `phone`, `website`, `address`, `cardStyle`, `side`, `qrCodeUrl`
+   - All scopes updated: "text-only" can now edit contact text fields, "layout-only" can change cardStyle/side
+   - Validation added for all new fields (string passthrough, enum checks)
+   - Prompt instructions expanded with cardStyle options, side toggle, qrCodeUrl control
 
-#### What This Enables (Future Milestones)
-- AI can now target individual layers: "make the logo bigger" → resize logo layer
-- AI can move elements: "move name higher" → update name layer position
-- AI can restyle elements: "make title italic" → update title layer style
-- Interactive editing via CanvasEditor (M3) — select/drag/resize any element
-- Multi-tool reuse: same renderer/editor for all card-based tools
+### AI Prompt Enhanced: Expanded Semantic Tag Map (`ai-patch.ts`)
+The `buildAIPatchPrompt` semantic element map now includes 14 entries (was 8):
+Added: `contact-icon`, `logo`, `qr-code`, `pattern`, `border`, `corner`
 
-### Foundational Editor System — Complete Infrastructure Layer
+### BusinessCardLayerQuickEdit Expanded (`BusinessCardLayerQuickEdit.tsx`)
+Quick-edit color picker panel now shows 11 semantic entries (was 6):
+Added: Icons, Border, Corners, Logo, QR Code
+Also: icon layers now supported in `getLayerColor` and `handleColorChange`
 
-#### Problem Diagnosed
-- BusinessCard and all workspaces use procedural `CardConfig` + template rendering
-- AI revision patches config fields but can't target individual canvas elements  
-- No "executor" bridge from AI JSON to draw functions
-- "Make the logo bigger" fails because logo size isn't a JSON-addressable property
+**Icon layers**: `/color`, `/strokeWidth`, `/opacity`
 
-#### Solution Architecture: DesignDocumentV2 Layer Scene Graph
+**All layers**: `/opacity`, `/blendMode`, `/effects`, `/transform/position/x`, `/transform/position/y`, 
+`/transform/size/x`, `/transform/size/y`, `/transform/rotation`
 
-**8 new files in `src/lib/editor/`:**
+**Effect schema** documented inline (drop-shadow, inner-shadow, blur, glow, outline)
 
-1. **`schema.ts`** (~750 lines): Canonical vNext scene-graph types
-   - Primitives: RGBA, Vec2, AABB, Matrix2D, LayerId, DocId
-   - Paint system: solid/gradient/image/pattern with color stops
-   - StrokeSpec with paint, width, align, dash, cap, join, miter
-   - 7 effect types: drop-shadow, inner-shadow, blur, glow, outline, color-adjust, noise
-   - 16 blend modes with Canvas API composite mappings
-   - Clipping, masks, constraints, decomposed Transform (pos/size/rot/skew/pivot)
-   - Rich text: TextStyle, TextRun, ParagraphStyle
-   - Path geometry: PathCommand union (move/line/cubic/quadratic/arc/close)
-   - 8 layer types: text, shape, image, frame, path, icon, boolean-group, group
-   - DesignDocumentV2 with layersById map, selection, resources, meta
-   - Factory functions, document helpers, color utilities
+
+
+### New Library Modules
+
+1. **`src/lib/editor/align-distribute.ts`** (~220 lines)
+   - `createAlignCommand(doc, layerIds, axis)` — align to artboard (1 layer) or selection bounds (multi)
+   - `createDistributeCommand(doc, layerIds, axis)` — redistribute 3+ layers evenly
+   - `createSpaceEvenlyCommand(doc, layerIds, axis, customGap?)` — equal gap spacing
+   - `createFlipCommand(doc, layerIds, axis)` — horizontal/vertical flip
+
+2. **`src/lib/editor/snapping.ts`** (~310 lines)
+   - `snapLayer(doc, movingId, proposedX, proposedY, config)` → SnapResult with adjusted position + visual guides
+   - `snapResize(doc, resizingId, handle, x, y, w, h, config)` — resize edge snapping
+   - `drawSnapGuides(ctx, guides, zoom)` — overlay renderer for snap guide lines
+   - `SnapConfig` with tolerance, snapToLayers, snapToArtboard, snapToGrid, gridSize, showSpacing
+   - Wired into CanvasEditor: snap guides appear during drag when snap enabled
+
+### New UI Components (src/components/editor/)
+
+3. **`ColorPickerPopover.tsx`** (~290 lines)
+   - Full HSV color picker: SV pad + hue bar + hex input + RGB fields + opacity slider
+   - 24 preset color swatches
+   - Drag interaction on SV pad and hue bar
+   - Outside-click-to-close behavior
+   - Also exports `ColorSwatch` for inline color display
+
+4. **`FillStrokeEditor.tsx`** (~380 lines)
+   - `FillEditor({ fills, onChange, label? })` — multi-fill editor with add/remove/reorder
+   - Supports solid, gradient (4 types: linear/radial/angular/diamond), and pattern (12 types) paints
+   - `GradientControls` — type selector, angle control, multi-stop editor
+   - `PatternControls` — 12 pattern types, opacity/scale/spacing sliders
+   - `StrokeEditor({ strokes, onChange })` — width, align (center/inside/outside), cap, join, dash pattern
+
+5. **`TextStyleEditor.tsx`** (~270 lines)
+   - Text content textarea, font family dropdown (12 families), font size, weight (100-900)
+   - Text color via ColorPickerPopover
+   - Style toggles: italic, underline, strikethrough, uppercase
+   - Alignment: left/center/right/justify, vertical: top/middle/bottom
+   - Letter spacing slider (-5 to 20), line height slider (0.5 to 3)
+   - Overflow mode: clip/ellipsis/expand
+
+6. **`TransformEditor.tsx`** (~210 lines)
+   - X/Y position, W/H with lock aspect ratio toggle
+   - Rotation with quick preset buttons (0°/90°/180°/270°)
+   - Skew X/Y, opacity slider
+   - Flip H/V buttons, reset rotation/skew
+   - Exports reusable `NumField` component
+
+7. **`EffectsEditor.tsx`** (~280 lines)
+   - Stackable non-destructive effects: add/remove/reorder/enable/disable
+   - 7 effect types with per-type controls:
+     - Drop Shadow (color, blur, offset, spread)
+     - Inner Shadow (color, blur, offset, spread)
+     - Blur (gaussian/motion, radius, angle)
+     - Glow (color, inner toggle, radius, intensity)
+     - Outline (color, width)
+     - Color Adjust (brightness/contrast/saturation/temperature/hueRotate)
+     - Noise (intensity, monochrome)
+
+8. **`AlignDistributeBar.tsx`** (~120 lines)
+   - Horizontal toolbar with 6 align buttons (left/center-h/right/top/center-v/bottom)
+   - Conditional distribute buttons (horizontal/vertical) for 3+ selections
+   - SVG icons for each action
+   - Integrated into EditorToolbar (shows when layers selected)
+
+### Modified Files
+
+9. **`LayerPropertiesPanel.tsx`** — REWRITTEN (was 546 lines → ~420 lines)
+   - Replaced all basic inline controls with new sub-editors
+   - TransformEditor for all layers
+   - TextStyleEditor for text layers
+   - FillEditor + StrokeEditor for shapes/frames/paths
+   - EffectsEditor for all layers
+   - ColorPickerPopover replacing native `<input type="color">`
+   - New: CornerRadiiEditor (linked/unlinked per-corner radius)
+   - New: ImagePropertiesV2 with focal point, filter sliders, fill overlays
+   - New: Constraint editor (horizontal + vertical)
+   - Collapsible PanelSection for each group
+
+10. **`EditorToolbar.tsx`** — Enhanced
+    - Imports and renders AlignDistributeBar when layers are selected
+    - Selection count tracked from store
+
+11. **`CanvasEditor.tsx`** — Enhanced with smart snapping
+    - Imports snapLayer, drawSnapGuides from snapping.ts
+    - snapGuidesRef stores current snap guides
+    - During drag: calls snapLayer() to get adjusted position + guides
+    - Draws snap guide lines in world space during render
+    - Clears guides on mouse up
+
+12. **`ai-patch.ts`** — 15 new AI intent types (was 20 → now 35)
+    - `add-effect` / `remove-effect` / `update-effect` — 7 effect types with defaults
+    - `set-fill` / `add-gradient-fill` / `add-pattern-fill` — full paint control
+    - `set-stroke` / `remove-stroke` — stroke management
+    - `set-blend-mode` — any of 16 blend modes
+    - `set-corner-radius` — uniform or per-corner
+    - `flip` / `rotate` — transform operations
+    - `set-font` / `set-text-style` — typography control
+    - `set-image-filters` — brightness/contrast/saturation/temperature/blur/grayscale/sepia
+    - `reorder-layer` — up/down/top/bottom
+    - AI prompt updated with new intent types, effect types, gradient types
+
+13. **Barrel exports updated**
+    - `src/lib/editor/index.ts` — added align-distribute + snapping exports
+    - `src/components/editor/index.ts` — added all 6 new component exports
 
 2. **`commands.ts`** (~300 lines): Command-based undo/redo with coalescing
    - Command interface: label, category, coalesceKey, execute, undo
@@ -493,15 +571,16 @@ VideoCompressor, VoiceCloner
 VideoEditor, TextToSpeech, LogoReveal, AIVideoGenerator, MotionGraphics, CalendarDesigner
 
 ## Next Steps (Priority Order)
-1. **M2: BusinessCard Migration** — Convert from procedural CardConfig to layer-based DesignDocumentV2 + shared CanvasEditor (reference implementation)
-2. **M3: Roll to Other Workspaces** — Replicate pattern to 60+ canvas workspaces
-3. **M5: Pro Features** — Blend modes, masks/clipping, gradients per-layer, text-on-path (infrastructure already in schema)
-4. **Spot-check remaining agent-built workspaces** — 16 of 19 still unchecked
-5. **Fix Math.random() flicker** — WhitePaper + MediaKit
-6. **Enhance remaining thin workspaces** — 15 needs-enhancement workspaces
-7. **Build missing tools (~90)** — video, audio, content-writing, marketing, web-ui, utilities
-8. **Backend integrations** — Real video/audio/PDF processing
-9. **Phase 5: Platform Maturity** — Auth, DB, payments, deployment
+1. **Roll vNext editor to remaining canvas workspaces** — ~50+ workspaces still use legacy canvas rendering only (no editor toggle)
+2. **Pro Features** — Blend modes, masks/clipping, gradients per-layer, text-on-path (infrastructure already in schema)
+3. **AI revision via ai-patch for migrated workspaces** — PosterFlyer/BannerAd/SocialMediaPost need `handleEditorRevision()` like BusinessCard
+4. **Architecture: Parametric layer system** — Explore combinatorial template builder (layer pools × color themes × layout grids) for infinite unique outputs without 1,000s of static templates
+5. **Spot-check remaining agent-built workspaces** — 16 of 19 still unchecked
+6. **Fix Math.random() flicker** — WhitePaper + MediaKit
+7. **Enhance remaining thin workspaces** — 15 needs-enhancement workspaces
+8. **Build missing tools (~90)** — video, audio, content-writing, marketing, web-ui, utilities
+9. **Backend integrations** — Real video/audio/PDF processing
+10. **Phase 5: Platform Maturity** — Auth, DB, payments, deployment
 
 ## Active Decisions
 - **Tool-by-tool approach** — No shortcuts, no routing tools to wrong workspaces
@@ -510,7 +589,7 @@ VideoEditor, TextToSpeech, LogoReveal, AIVideoGenerator, MotionGraphics, Calenda
 - **Dual AI modes** — PatchOps for precision, EditIntents for natural language ("make logo bigger")
 - **Intent compiler is deterministic** — Common edits need NO AI call (make-bigger, center, change-color)
 - **Backward compatible migration** — Old canvas-layers.ts kept; workspaces migrate one at a time
-- **BusinessCard first** — Reference implementation, then roll pattern to all canvas workspaces
+- **4 workspaces now have editor mode** — BusinessCard (M3), PosterFlyer, BannerAd, SocialMediaPost (M5)
 - **Stock images** — Must integrate `/api/images` in design workspaces
 - **Print-ready exports** — PDFs with crop marks, high-res PNGs, editable SVGs
 - **AI generates real content** — Not placeholder text

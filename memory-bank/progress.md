@@ -1,6 +1,6 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 96/194 tools with workspaces (49%) — ~90 tools still need building — Build passes ✅ — Full audit complete ✅ — vNext Editor M0-M2 Complete ✅
+## Overall Status: 96/194 tools with workspaces (49%) — ~90 tools still need building — Build passes ✅ — Full audit complete ✅ — vNext Editor M0-M5 Complete ✅ — M3.5 Pro Editor + AI Full Control ✅ — M3.7 Business Card Full AI Sync ✅
 
 ---
 
@@ -80,6 +80,64 @@
   - Canvas preview, PNG export, clipboard, PDF export, batch export — all use vNext pipeline
   - Legacy template renderers preserved but unused (can be removed later)
 - [x] Build verified clean (`tsc --noEmit` + `next build` both pass)
+
+### M3: BusinessCard Interactive CanvasEditor ✅ (Session 30)
+- [x] **`StickyCanvasLayout.tsx`** — Added `canvasSlot?: ReactNode` prop for CanvasEditor integration
+  - `canvasRef`/`displayWidth`/`displayHeight` now optional, zoom controls hidden when canvasSlot used
+- [x] **`BusinessCardWorkspace.tsx`** — Full editor mode wiring
+  - `editorMode` state + `editorStore` via useEditorStore
+  - Config→doc sync useEffect using `cardConfigToDocument()`
+  - Render useEffect skips when editorMode true
+  - Export functions (PNG, Copy, PDF) use `renderToCanvas(editorStore.doc)` in editor mode
+  - `handleEditorRevision()` via ai-patch: buildAIPatchPrompt → AI → parseAIRevisionResponse → processIntent
+  - Toolbar: EditorToolbar + "Exit Editor" ↔ info bar + "Edit Layers"
+  - Right panel: LayersListPanel + LayerPropertiesPanel in editor mode
+  - StickyCanvasLayout: conditional canvasSlot with CanvasEditor
+- [x] Build verified clean (`tsc --noEmit` + `next build` both pass)
+
+### M5: Multi-Workspace vNext Migration ✅ (Session 30)
+- [x] **`v1-migration.ts`** (~468 lines) — v1 DesignDocument → v2 DesignDocumentV2 bridge
+  - Per-layer converters: text, shape, image, cta (→ shape+text), decorative, group
+  - `migrateDocumentV1toV2(doc, { toolId, dpi, fontStyle, bleedMm, safeAreaMm })`
+  - Exported from barrel `src/lib/editor/index.ts`
+- [x] **PosterFlyerWorkspace** — editorMode + v1→v2 sync + editor panels + canvas slot
+- [x] **BannerAdWorkspace** — editorMode + v1→v2 sync + editor panels + canvas slot
+- [x] **SocialMediaPostWorkspace** — editorMode + v1→v2 sync + editor panels + canvas slot
+- [x] All 3 workspaces use identical pattern: editorMode toggle, migrateDocumentV1toV2 sync, render skip, EditorToolbar/LayersListPanel/LayerPropertiesPanel, conditional canvasSlot
+- [x] Build verified clean (`tsc --noEmit` + `next build` both pass)
+- [x] Committed: aeb767b — "M3+M5: Interactive CanvasEditor on BusinessCard, PosterFlyer, BannerAd, SocialMediaPost"
+
+### M3.5: Pro Canvas Editor + AI Full Control ✅ (Session 31)
+- [x] **`src/lib/editor/align-distribute.ts`** (~220 lines) — align/distribute/space/flip commands
+- [x] **`src/lib/editor/snapping.ts`** (~310 lines) — smart snapping engine with visual guides
+- [x] **`src/components/editor/ColorPickerPopover.tsx`** (~290 lines) — full HSV picker with presets
+- [x] **`src/components/editor/FillStrokeEditor.tsx`** (~380 lines) — multi-fill/stroke with gradient/pattern
+- [x] **`src/components/editor/TextStyleEditor.tsx`** (~270 lines) — comprehensive text styling panel
+- [x] **`src/components/editor/TransformEditor.tsx`** (~210 lines) — position/size/rotation/skew/opacity
+- [x] **`src/components/editor/EffectsEditor.tsx`** (~280 lines) — 7 stackable non-destructive effects
+- [x] **`src/components/editor/AlignDistributeBar.tsx`** (~120 lines) — alignment toolbar
+- [x] **`LayerPropertiesPanel.tsx`** — REWRITTEN to integrate all sub-editors (TransformEditor, TextStyleEditor, FillEditor, StrokeEditor, EffectsEditor, ColorPickerPopover, CornerRadiiEditor, ImagePropertiesV2)
+- [x] **`EditorToolbar.tsx`** — Enhanced with contextual AlignDistributeBar
+- [x] **`CanvasEditor.tsx`** — Enhanced with smart snapping (snapLayer → visual guides during drag)
+- [x] **`ai-patch.ts`** — 15 new AI intent types (35 total): add-effect, remove-effect, update-effect, set-fill, add-gradient-fill, add-pattern-fill, set-stroke, remove-stroke, set-blend-mode, set-corner-radius, flip, rotate, set-font, set-text-style, set-image-filters, reorder-layer
+- [x] Both barrel exports updated (lib/editor/index.ts + components/editor/index.ts)
+- [x] Build verified clean (`tsc --noEmit` + `next build` both pass)
+
+### M3.6: AI Pipeline Deep Fix ✅ (Session 32)
+- [x] Fixed `opToCommand` nested-path clobbering — replaced `setNestedValue` with `deepSetOnLayer`, `deepPushToLayer`, `deepRemoveFromLayer`
+- [x] AI prompt enhanced with full property-path schema per layer type
+- [x] Build verified clean (`tsc --noEmit` zero errors)
+
+### M3.7: Business Card Full AI Sync ✅ (Session 33)
+- [x] **QR Code layer** — new `buildQrCodeLayer()` in business-card-adapter, tagged `["qr-code", "branding", "contact-qr"]`, inserted after template layers
+- [x] **Back-side pattern** — `layoutBackPatternFill()` now actually calls `buildPatternLayer()` with fallback to `"dots"`
+- [x] **Gold Foil colors** — replaced hardcoded `#c9a227`/`#e8d48b` with `cfg.primaryColor`/`cfg.secondaryColor`, added `"accent"` tags
+- [x] **syncColorsToDocument expanded** — from 2 tags (name/accent) to 8+ (title, company, contact-text, tagline, contact-icon, corner, border) with `prevSecondaryColor` fingerprinting
+- [x] **Legacy AI prompt expanded** — added 11 missing CardConfig fields (name, title, company, email, phone, website, address, cardStyle, side, qrCodeUrl), scope-restricted, validated
+- [x] **AI semantic tag map** — `buildAIPatchPrompt` expanded from 8 to 14 entries (added contact-icon, logo, qr-code, pattern, border, corner)
+- [x] **BusinessCardLayerQuickEdit** — 5 new semantic entries (contact-icon, border, corner, logo, qr-code) + icon layer color support
+- [x] **Workspace sync** — `_prevSyncRef` tracks `secondaryColor`, removed legacy QR overlay hack
+- [x] Build verified clean (`tsc --noEmit` zero errors, `get_errors` zero on all 4 files)
 
 ### Asset Bank: Icons ✅ (Session 26 + continued)
 - [x] icon-library.ts (~2,450 lines) — 115 professional vector canvas icons

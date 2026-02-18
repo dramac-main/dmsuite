@@ -1,19 +1,61 @@
 "use client";
 
 // =============================================================================
-// DMSuite — Layer Properties Panel
-// Right-side inspector panel showing properties of the selected layer(s).
-// Provides direct editing controls for transform, fills, strokes, effects, text.
+// DMSuite — Layer Properties Panel (vNext — Full Control)
+// Comprehensive right-side inspector integrating all sub-editors:
+// Transform, Text, Fill/Stroke, Effects, Blend Mode, Constraints, Tags.
+// Every property of every layer type is exposed and editable.
 // =============================================================================
 
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useEditorStore } from "@/stores/editor";
 import type {
   LayerV2, TextLayerV2, ShapeLayerV2, ImageLayerV2, IconLayerV2,
-  LayerId,
+  FrameLayerV2, PathLayerV2,
+  LayerId, BlendMode, Paint, StrokeSpec, Effect, RGBA,
 } from "@/lib/editor/schema";
 import { rgbaToHex, hexToRGBA, solidPaint } from "@/lib/editor/schema";
 import { createUpdateCommand } from "@/lib/editor/commands";
+import TransformEditor from "./TransformEditor";
+import TextStyleEditor from "./TextStyleEditor";
+import { FillEditor, StrokeEditor } from "./FillStrokeEditor";
+import EffectsEditor from "./EffectsEditor";
+import ColorPickerPopover from "./ColorPickerPopover";
+
+// ---------------------------------------------------------------------------
+// Blend Mode Options
+// ---------------------------------------------------------------------------
+
+const BLEND_MODES: BlendMode[] = [
+  "normal", "multiply", "screen", "overlay", "darken", "lighten",
+  "color-dodge", "color-burn", "hard-light", "soft-light",
+  "difference", "exclusion", "hue", "saturation", "color", "luminosity",
+];
+
+// ---------------------------------------------------------------------------
+// Collapsible Section
+// ---------------------------------------------------------------------------
+
+function PanelSection({ title, defaultOpen = true, children }: {
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="border-b border-gray-800">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-gray-800/50 transition-colors"
+      >
+        <h3 className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">{title}</h3>
+        <span className="text-gray-600 text-[10px]">{open ? "▾" : "▸"}</span>
+      </button>
+      {open && <div className="px-3 pb-2.5">{children}</div>}
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -33,6 +75,14 @@ export default function LayerPropertiesPanel() {
     execute(createUpdateCommand(layerId, partial, label));
   }, [execute]);
 
+  const handleLayerChange = useCallback((changes: Partial<LayerV2>) => {
+    if (!selectedLayer) return;
+    // Derive a label from the first key changed
+    const keys = Object.keys(changes);
+    const label = keys.length === 1 ? `Update ${keys[0]}` : "Update layer";
+    updateProp(selectedLayer.id, changes, label);
+  }, [selectedLayer, updateProp]);
+
   if (selectedIds.length === 0) {
     return (
       <div className="p-4 text-gray-500 text-sm text-center">
@@ -45,501 +95,470 @@ export default function LayerPropertiesPanel() {
     return (
       <div className="p-4 text-gray-400 text-sm">
         <p className="font-medium text-gray-300 mb-2">Multiple Selection</p>
-        <p>{selectedIds.length} layers selected</p>
+        <p className="text-xs">{selectedIds.length} layers selected</p>
+        <p className="text-[10px] text-gray-600 mt-1">Use align/distribute tools in the toolbar</p>
       </div>
     );
   }
 
   if (!selectedLayer) return null;
 
+  const layer = selectedLayer;
+  const layerType = layer.type;
+
   return (
-    <div className="flex flex-col gap-0.5 text-sm overflow-y-auto max-h-full">
-      {/* Layer Name & Type */}
-      <Section title={`${selectedLayer.type.toUpperCase()} — ${selectedLayer.name}`}>
-        <Field label="Name">
-          <input
-            type="text"
-            value={selectedLayer.name}
-            onChange={(e) => updateProp(selectedLayer.id, { name: e.target.value } as Partial<LayerV2>, "Rename")}
-            className="w-full bg-gray-800 text-gray-200 rounded px-2 py-1 text-xs border border-gray-700 focus:border-primary-500 outline-none"
-          />
-        </Field>
-        <Field label="Visible">
-          <input
-            type="checkbox"
-            checked={selectedLayer.visible}
-            onChange={(e) => updateProp(selectedLayer.id, { visible: e.target.checked } as Partial<LayerV2>, "Toggle Visibility")}
-            className="accent-primary-500"
-          />
-        </Field>
-        <Field label="Locked">
-          <input
-            type="checkbox"
-            checked={selectedLayer.locked}
-            onChange={(e) => updateProp(selectedLayer.id, { locked: e.target.checked } as Partial<LayerV2>, "Toggle Lock")}
-            className="accent-primary-500"
-          />
-        </Field>
-      </Section>
-
-      {/* Transform */}
-      <Section title="Transform">
-        <div className="grid grid-cols-2 gap-2">
-          <NumberField
-            label="X" value={Math.round(selectedLayer.transform.position.x)}
-            onChange={(v) => updateProp(selectedLayer.id, {
-              transform: { ...selectedLayer.transform, position: { ...selectedLayer.transform.position, x: v } },
-            } as Partial<LayerV2>, "Move X")}
-          />
-          <NumberField
-            label="Y" value={Math.round(selectedLayer.transform.position.y)}
-            onChange={(v) => updateProp(selectedLayer.id, {
-              transform: { ...selectedLayer.transform, position: { ...selectedLayer.transform.position, y: v } },
-            } as Partial<LayerV2>, "Move Y")}
-          />
-          <NumberField
-            label="W" value={Math.round(selectedLayer.transform.size.x)}
-            onChange={(v) => updateProp(selectedLayer.id, {
-              transform: { ...selectedLayer.transform, size: { ...selectedLayer.transform.size, x: Math.max(1, v) } },
-            } as Partial<LayerV2>, "Resize W")}
-          />
-          <NumberField
-            label="H" value={Math.round(selectedLayer.transform.size.y)}
-            onChange={(v) => updateProp(selectedLayer.id, {
-              transform: { ...selectedLayer.transform, size: { ...selectedLayer.transform.size, y: Math.max(1, v) } },
-            } as Partial<LayerV2>, "Resize H")}
-          />
-          <NumberField
-            label="Rotation" value={Math.round(selectedLayer.transform.rotation)}
-            onChange={(v) => updateProp(selectedLayer.id, {
-              transform: { ...selectedLayer.transform, rotation: v },
-            } as Partial<LayerV2>, "Rotate")}
-            suffix="°"
-          />
-          <NumberField
-            label="Opacity" value={Math.round(selectedLayer.opacity * 100)}
-            onChange={(v) => updateProp(selectedLayer.id, {
-              opacity: Math.max(0, Math.min(100, v)) / 100,
-            } as Partial<LayerV2>, "Opacity")}
-            suffix="%"
-            min={0} max={100}
-          />
+    <div className="flex flex-col text-sm overflow-y-auto max-h-full">
+      {/* ---- Layer Identity ---- */}
+      <PanelSection title={`${layerType} Layer`}>
+        <div className="space-y-1.5">
+          <div>
+            <label className="text-[10px] text-gray-500 block mb-0.5">Name</label>
+            <input
+              type="text"
+              value={layer.name}
+              onChange={(e) => handleLayerChange({ name: e.target.value } as Partial<LayerV2>)}
+              className="w-full bg-gray-800 text-gray-200 rounded px-2 py-1 text-xs border border-gray-700 focus:border-primary-500 outline-none"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-1.5 text-xs text-gray-400">
+              <input
+                type="checkbox"
+                checked={layer.visible}
+                onChange={(e) => handleLayerChange({ visible: e.target.checked } as Partial<LayerV2>)}
+                className="accent-primary-500"
+              />
+              Visible
+            </label>
+            <label className="flex items-center gap-1.5 text-xs text-gray-400">
+              <input
+                type="checkbox"
+                checked={layer.locked}
+                onChange={(e) => handleLayerChange({ locked: e.target.checked } as Partial<LayerV2>)}
+                className="accent-primary-500"
+              />
+              Locked
+            </label>
+          </div>
         </div>
-      </Section>
+      </PanelSection>
 
-      {/* Text-specific */}
-      {selectedLayer.type === "text" && (
-        <TextProperties layer={selectedLayer as TextLayerV2} updateProp={updateProp} />
+      {/* ---- Transform ---- */}
+      <PanelSection title="Transform">
+        <TransformEditor layer={layer} onChange={handleLayerChange} />
+      </PanelSection>
+
+      {/* ---- Text (only for text layers) ---- */}
+      {layerType === "text" && (
+        <PanelSection title="Text">
+          <TextStyleEditor
+            layer={layer as TextLayerV2}
+            onChange={handleLayerChange}
+          />
+        </PanelSection>
       )}
 
-      {/* Shape-specific */}
-      {selectedLayer.type === "shape" && (
-        <ShapeProperties layer={selectedLayer as ShapeLayerV2} updateProp={updateProp} />
+      {/* ---- Fill & Stroke (for shapes, frames, paths) ---- */}
+      {(layerType === "shape" || layerType === "frame" || layerType === "path") && (
+        <PanelSection title="Fill & Stroke">
+          <div className="space-y-3">
+            {/* Shape type selector */}
+            {layerType === "shape" && (
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-0.5">Shape Type</label>
+                <select
+                  value={(layer as ShapeLayerV2).shapeType}
+                  onChange={(e) => handleLayerChange({ shapeType: e.target.value } as Partial<LayerV2>)}
+                  className="w-full bg-gray-800 text-gray-200 rounded px-2 py-1 text-xs border border-gray-700 focus:border-primary-500 outline-none"
+                >
+                  {["rectangle", "ellipse", "triangle", "polygon", "star", "line"].map(s => (
+                    <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Fills */}
+            <FillEditor
+              fills={(layer as ShapeLayerV2).fills ?? []}
+              onChange={(fills) => handleLayerChange({ fills } as Partial<LayerV2>)}
+            />
+
+            {/* Strokes */}
+            <StrokeEditor
+              strokes={(layer as ShapeLayerV2).strokes ?? []}
+              onChange={(strokes) => handleLayerChange({ strokes } as Partial<LayerV2>)}
+            />
+
+            {/* Corner Radii (shapes + frames) */}
+            {(layerType === "shape" || layerType === "frame") && (
+              <CornerRadiiEditor
+                radii={
+                  layerType === "shape"
+                    ? (layer as ShapeLayerV2).cornerRadii
+                    : (layer as FrameLayerV2).cornerRadii
+                }
+                onChange={(cornerRadii) => handleLayerChange({ cornerRadii } as Partial<LayerV2>)}
+              />
+            )}
+
+            {/* Polygon/Star sides */}
+            {layerType === "shape" && ((layer as ShapeLayerV2).shapeType === "polygon" || (layer as ShapeLayerV2).shapeType === "star") && (
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-[10px] text-gray-500 block mb-0.5">Sides</label>
+                  <input
+                    type="number"
+                    min={3}
+                    max={24}
+                    value={(layer as ShapeLayerV2).sides}
+                    onChange={(e) => handleLayerChange({ sides: Math.max(3, parseInt(e.target.value) || 3) } as Partial<LayerV2>)}
+                    className="w-full px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs text-gray-200 font-mono focus:outline-none focus:border-primary-500"
+                  />
+                </div>
+                {(layer as ShapeLayerV2).shapeType === "star" && (
+                  <div className="flex-1">
+                    <label className="text-[10px] text-gray-500 block mb-0.5">Inner Ratio</label>
+                    <input
+                      type="range"
+                      min={0.1}
+                      max={0.9}
+                      step={0.05}
+                      value={(layer as ShapeLayerV2).innerRadiusRatio}
+                      onChange={(e) => handleLayerChange({ innerRadiusRatio: parseFloat(e.target.value) } as Partial<LayerV2>)}
+                      className="w-full h-1 accent-primary-500"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </PanelSection>
       )}
 
-      {/* Icon-specific */}
-      {selectedLayer.type === "icon" && (
-        <IconProperties layer={selectedLayer as IconLayerV2} updateProp={updateProp} />
+      {/* ---- Icon (for icon layers) ---- */}
+      {layerType === "icon" && (
+        <PanelSection title="Icon">
+          <div className="space-y-2">
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-0.5">Icon ID</label>
+              <input
+                type="text"
+                value={(layer as IconLayerV2).iconId}
+                onChange={(e) => handleLayerChange({ iconId: e.target.value } as Partial<LayerV2>)}
+                className="w-full bg-gray-800 text-gray-200 rounded px-2 py-1 text-xs border border-gray-700 focus:border-primary-500 outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-gray-500">Color</span>
+              <ColorPickerPopover
+                color={(layer as IconLayerV2).color}
+                onChange={(color) => handleLayerChange({ color } as Partial<LayerV2>)}
+              />
+              <span className="text-xs text-gray-400 font-mono">{rgbaToHex((layer as IconLayerV2).color)}</span>
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-0.5">Stroke Width</label>
+              <input
+                type="number"
+                min={0.5}
+                max={10}
+                step={0.5}
+                value={(layer as IconLayerV2).strokeWidth}
+                onChange={(e) => handleLayerChange({ strokeWidth: parseFloat(e.target.value) || 2 } as Partial<LayerV2>)}
+                className="w-20 px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs text-gray-200 font-mono focus:outline-none focus:border-primary-500"
+              />
+            </div>
+          </div>
+        </PanelSection>
       )}
 
-      {/* Image-specific */}
-      {selectedLayer.type === "image" && (
-        <ImageProperties layer={selectedLayer as ImageLayerV2} updateProp={updateProp} />
+      {/* ---- Image (for image layers) ---- */}
+      {layerType === "image" && (
+        <PanelSection title="Image">
+          <ImagePropertiesV2 layer={layer as ImageLayerV2} onChange={handleLayerChange} />
+        </PanelSection>
       )}
 
-      {/* Blend Mode */}
-      <Section title="Blending">
-        <Field label="Blend Mode">
-          <select
-            value={selectedLayer.blendMode}
-            onChange={(e) => updateProp(selectedLayer.id, { blendMode: e.target.value } as unknown as Partial<LayerV2>, "Blend Mode")}
-            className="w-full bg-gray-800 text-gray-200 rounded px-2 py-1 text-xs border border-gray-700 focus:border-primary-500 outline-none"
-          >
-            {["normal", "multiply", "screen", "overlay", "darken", "lighten", "color-dodge", "color-burn", "hard-light", "soft-light", "difference", "exclusion", "hue", "saturation", "color", "luminosity"].map(m => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
-        </Field>
-      </Section>
+      {/* ---- Effects ---- */}
+      <PanelSection title="Effects" defaultOpen={layer.effects.length > 0}>
+        <EffectsEditor
+          effects={layer.effects}
+          onChange={(effects) => handleLayerChange({ effects } as Partial<LayerV2>)}
+        />
+      </PanelSection>
 
-      {/* Tags */}
-      <Section title="Tags">
-        <Field label="Tags">
+      {/* ---- Appearance (Blend Mode) ---- */}
+      <PanelSection title="Appearance">
+        <div className="space-y-2">
+          <div>
+            <label className="text-[10px] text-gray-500 block mb-0.5">Blend Mode</label>
+            <select
+              value={layer.blendMode}
+              onChange={(e) => handleLayerChange({ blendMode: e.target.value as BlendMode } as Partial<LayerV2>)}
+              className="w-full bg-gray-800 text-gray-200 rounded px-2 py-1 text-xs border border-gray-700 focus:border-primary-500 outline-none"
+            >
+              {BLEND_MODES.map(m => (
+                <option key={m} value={m}>{m.replace(/-/g, " ")}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] text-gray-500 block mb-0.5">Constraints</label>
+            <div className="flex gap-2">
+              <select
+                value={layer.constraints.horizontal}
+                onChange={(e) => handleLayerChange({
+                  constraints: { ...layer.constraints, horizontal: e.target.value as LayerV2["constraints"]["horizontal"] },
+                } as Partial<LayerV2>)}
+                className="flex-1 bg-gray-800 text-gray-200 rounded px-1.5 py-0.5 text-[10px] border border-gray-700 focus:border-primary-500 outline-none"
+              >
+                {["left", "right", "center", "stretch", "scale"].map(c => (
+                  <option key={c} value={c}>H: {c}</option>
+                ))}
+              </select>
+              <select
+                value={layer.constraints.vertical}
+                onChange={(e) => handleLayerChange({
+                  constraints: { ...layer.constraints, vertical: e.target.value as LayerV2["constraints"]["vertical"] },
+                } as Partial<LayerV2>)}
+                className="flex-1 bg-gray-800 text-gray-200 rounded px-1.5 py-0.5 text-[10px] border border-gray-700 focus:border-primary-500 outline-none"
+              >
+                {["top", "bottom", "center", "stretch", "scale"].map(c => (
+                  <option key={c} value={c}>V: {c}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      </PanelSection>
+
+      {/* ---- Tags (AI targeting) ---- */}
+      <PanelSection title="Tags" defaultOpen={false}>
+        <div className="space-y-1.5">
+          <p className="text-[9px] text-gray-600">Tags help AI target specific layers for edits</p>
           <input
             type="text"
-            value={selectedLayer.tags.join(", ")}
+            value={layer.tags.join(", ")}
             onChange={(e) => {
               const tags = e.target.value.split(",").map(t => t.trim()).filter(Boolean);
-              updateProp(selectedLayer.id, { tags } as Partial<LayerV2>, "Update Tags");
+              handleLayerChange({ tags } as Partial<LayerV2>);
             }}
-            placeholder="logo, heading, decorative..."
+            placeholder="logo, headline, contact-email, decorative..."
             className="w-full bg-gray-800 text-gray-200 rounded px-2 py-1 text-xs border border-gray-700 focus:border-primary-500 outline-none"
           />
-        </Field>
-      </Section>
+          {layer.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {layer.tags.map((tag, i) => (
+                <span key={i} className="px-1.5 py-0.5 rounded bg-primary-500/10 text-primary-400 text-[9px] border border-primary-500/20">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </PanelSection>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Text Properties
+// Corner Radii Editor
 // ---------------------------------------------------------------------------
 
-function TextProperties({
-  layer,
-  updateProp,
-}: {
-  layer: TextLayerV2;
-  updateProp: (id: LayerId, partial: Partial<LayerV2>, label: string) => void;
+function CornerRadiiEditor({ radii, onChange }: {
+  radii: [number, number, number, number];
+  onChange: (r: [number, number, number, number]) => void;
 }) {
-  const fillColor = layer.defaultStyle.fill.kind === "solid"
-    ? rgbaToHex(layer.defaultStyle.fill.color)
-    : "#000000";
-
-  return (
-    <Section title="Text">
-      <Field label="Content">
-        <textarea
-          value={layer.text}
-          onChange={(e) => updateProp(layer.id, { text: e.target.value } as Partial<LayerV2>, "Edit Text")}
-          rows={2}
-          className="w-full bg-gray-800 text-gray-200 rounded px-2 py-1 text-xs border border-gray-700 focus:border-primary-500 outline-none resize-none"
-        />
-      </Field>
-      <div className="grid grid-cols-2 gap-2">
-        <Field label="Font Family">
-          <input
-            type="text"
-            value={layer.defaultStyle.fontFamily}
-            onChange={(e) => updateProp(layer.id, {
-              defaultStyle: { ...layer.defaultStyle, fontFamily: e.target.value },
-            } as Partial<LayerV2>, "Font Family")}
-            className="w-full bg-gray-800 text-gray-200 rounded px-2 py-1 text-xs border border-gray-700 focus:border-primary-500 outline-none"
-          />
-        </Field>
-        <NumberField
-          label="Size"
-          value={layer.defaultStyle.fontSize}
-          onChange={(v) => updateProp(layer.id, {
-            defaultStyle: { ...layer.defaultStyle, fontSize: Math.max(4, v) },
-          } as Partial<LayerV2>, "Font Size")}
-          suffix="px"
-        />
-        <NumberField
-          label="Weight"
-          value={layer.defaultStyle.fontWeight}
-          onChange={(v) => updateProp(layer.id, {
-            defaultStyle: { ...layer.defaultStyle, fontWeight: Math.max(100, Math.min(900, v)) },
-          } as Partial<LayerV2>, "Font Weight")}
-          step={100}
-        />
-        <Field label="Color">
-          <div className="flex items-center gap-1">
-            <input
-              type="color"
-              value={fillColor}
-              onChange={(e) => updateProp(layer.id, {
-                defaultStyle: { ...layer.defaultStyle, fill: solidPaint(hexToRGBA(e.target.value)) },
-              } as Partial<LayerV2>, "Text Color")}
-              className="w-6 h-6 rounded border-0 cursor-pointer"
-            />
-            <span className="text-gray-400 text-xs font-mono">{fillColor}</span>
-          </div>
-        </Field>
-      </div>
-      <div className="flex gap-2 mt-1">
-        <ToggleButton
-          active={layer.defaultStyle.italic}
-          onClick={() => updateProp(layer.id, {
-            defaultStyle: { ...layer.defaultStyle, italic: !layer.defaultStyle.italic },
-          } as Partial<LayerV2>, "Toggle Italic")}
-        >
-          I
-        </ToggleButton>
-        <ToggleButton
-          active={layer.defaultStyle.underline}
-          onClick={() => updateProp(layer.id, {
-            defaultStyle: { ...layer.defaultStyle, underline: !layer.defaultStyle.underline },
-          } as Partial<LayerV2>, "Toggle Underline")}
-        >
-          U
-        </ToggleButton>
-        <ToggleButton
-          active={layer.defaultStyle.uppercase}
-          onClick={() => updateProp(layer.id, {
-            defaultStyle: { ...layer.defaultStyle, uppercase: !layer.defaultStyle.uppercase },
-          } as Partial<LayerV2>, "Toggle Uppercase")}
-        >
-          AA
-        </ToggleButton>
-      </div>
-      <Field label="Align">
-        <div className="flex gap-1">
-          {(["left", "center", "right", "justify"] as const).map(align => (
-            <ToggleButton
-              key={align}
-              active={layer.paragraphs[0]?.align === align}
-              onClick={() => updateProp(layer.id, {
-                paragraphs: [{ ...layer.paragraphs[0], align }],
-              } as Partial<LayerV2>, `Align ${align}`)}
-            >
-              {align.charAt(0).toUpperCase()}
-            </ToggleButton>
-          ))}
-        </div>
-      </Field>
-    </Section>
+  const [linked, setLinked] = useState(
+    radii[0] === radii[1] && radii[1] === radii[2] && radii[2] === radii[3]
   );
-}
 
-// ---------------------------------------------------------------------------
-// Shape Properties
-// ---------------------------------------------------------------------------
+  const handleUniform = useCallback((v: number) => {
+    onChange([v, v, v, v]);
+  }, [onChange]);
 
-function ShapeProperties({
-  layer,
-  updateProp,
-}: {
-  layer: ShapeLayerV2;
-  updateProp: (id: LayerId, partial: Partial<LayerV2>, label: string) => void;
-}) {
-  const fillColor = layer.fills[0]?.kind === "solid"
-    ? rgbaToHex(layer.fills[0].color)
-    : "#000000";
-  const strokeColor = layer.strokes[0]?.paint?.kind === "solid"
-    ? rgbaToHex(layer.strokes[0].paint.color)
-    : "#000000";
+  const handleIndividual = useCallback((idx: number, v: number) => {
+    const newRadii = [...radii] as [number, number, number, number];
+    newRadii[idx] = v;
+    onChange(newRadii);
+  }, [radii, onChange]);
+
+  const labels = ["TL", "TR", "BR", "BL"];
 
   return (
-    <Section title="Shape">
-      <Field label="Type">
-        <select
-          value={layer.shapeType}
-          onChange={(e) => updateProp(layer.id, { shapeType: e.target.value } as Partial<LayerV2>, "Shape Type")}
-          className="w-full bg-gray-800 text-gray-200 rounded px-2 py-1 text-xs border border-gray-700 focus:border-primary-500 outline-none"
+    <div className="space-y-1">
+      <div className="flex items-center justify-between">
+        <label className="text-[10px] text-gray-500">Corner Radius</label>
+        <button
+          type="button"
+          onClick={() => setLinked(!linked)}
+          className={`text-[9px] px-1.5 py-0.5 rounded transition-colors ${
+            linked
+              ? "bg-primary-500/10 text-primary-400"
+              : "text-gray-600 hover:text-gray-400"
+          }`}
         >
-          {["rect", "ellipse", "triangle", "polygon", "star", "line"].map(s => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-      </Field>
-      <Field label="Fill">
-        <div className="flex items-center gap-1">
-          <input
-            type="color"
-            value={fillColor}
-            onChange={(e) => updateProp(layer.id, {
-              fills: [solidPaint(hexToRGBA(e.target.value))],
-            } as Partial<LayerV2>, "Shape Fill")}
-            className="w-6 h-6 rounded border-0 cursor-pointer"
-          />
-          <span className="text-gray-400 text-xs font-mono">{fillColor}</span>
-        </div>
-      </Field>
-      {layer.strokes.length > 0 && (
-        <>
-          <Field label="Stroke">
-            <div className="flex items-center gap-1">
+          {linked ? "🔗 Linked" : "Unlinked"}
+        </button>
+      </div>
+      {linked ? (
+        <input
+          type="number"
+          min={0}
+          max={500}
+          value={radii[0]}
+          onChange={(e) => handleUniform(Math.max(0, parseInt(e.target.value) || 0))}
+          className="w-20 px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs text-gray-200 font-mono focus:outline-none focus:border-primary-500"
+        />
+      ) : (
+        <div className="grid grid-cols-4 gap-1">
+          {radii.map((r, i) => (
+            <div key={i}>
+              <label className="text-[8px] text-gray-600 block mb-0.5">{labels[i]}</label>
               <input
-                type="color"
-                value={strokeColor}
-                onChange={(e) => updateProp(layer.id, {
-                  strokes: [{ ...layer.strokes[0], paint: solidPaint(hexToRGBA(e.target.value)) }],
-                } as Partial<LayerV2>, "Stroke Color")}
-                className="w-6 h-6 rounded border-0 cursor-pointer"
-              />
-              <NumberField
-                label=""
-                value={layer.strokes[0]?.width ?? 1}
-                onChange={(v) => updateProp(layer.id, {
-                  strokes: [{ ...layer.strokes[0], width: Math.max(0, v) }],
-                } as Partial<LayerV2>, "Stroke Width")}
-                suffix="px"
+                type="number"
+                min={0}
+                max={500}
+                value={r}
+                onChange={(e) => handleIndividual(i, Math.max(0, parseInt(e.target.value) || 0))}
+                className="w-full px-1 py-0.5 bg-gray-800 border border-gray-700 rounded text-[10px] text-gray-200 font-mono text-center focus:outline-none focus:border-primary-500"
               />
             </div>
-          </Field>
-        </>
-      )}
-      {layer.shapeType === "rectangle" && (
-        <NumberField
-          label="Corner Radius"
-          value={layer.cornerRadii[0]}
-          onChange={(v) => updateProp(layer.id, {
-            cornerRadii: [v, v, v, v],
-          } as Partial<LayerV2>, "Corner Radius")}
-          suffix="px"
-        />
-      )}
-    </Section>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Icon Properties
-// ---------------------------------------------------------------------------
-
-function IconProperties({
-  layer,
-  updateProp,
-}: {
-  layer: IconLayerV2;
-  updateProp: (id: LayerId, partial: Partial<LayerV2>, label: string) => void;
-}) {
-  const color = rgbaToHex(layer.color);
-  return (
-    <Section title="Icon">
-      <Field label="Icon ID">
-        <input
-          type="text"
-          value={layer.iconId}
-          onChange={(e) => updateProp(layer.id, { iconId: e.target.value } as Partial<LayerV2>, "Icon ID")}
-          className="w-full bg-gray-800 text-gray-200 rounded px-2 py-1 text-xs border border-gray-700 focus:border-primary-500 outline-none"
-        />
-      </Field>
-      <Field label="Color">
-        <div className="flex items-center gap-1">
-          <input
-            type="color"
-            value={color}
-            onChange={(e) => updateProp(layer.id, {
-              color: hexToRGBA(e.target.value),
-            } as Partial<LayerV2>, "Icon Color")}
-            className="w-6 h-6 rounded border-0 cursor-pointer"
-          />
-          <span className="text-gray-400 text-xs font-mono">{color}</span>
+          ))}
         </div>
-      </Field>
-    </Section>
+      )}
+    </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Image Properties
+// Image Properties (v2 — full control)
 // ---------------------------------------------------------------------------
 
-function ImageProperties({
-  layer,
-  updateProp,
-}: {
+function ImagePropertiesV2({ layer, onChange }: {
   layer: ImageLayerV2;
-  updateProp: (id: LayerId, partial: Partial<LayerV2>, label: string) => void;
+  onChange: (changes: Partial<LayerV2>) => void;
 }) {
+  const f = layer.imageFilters;
+
   return (
-    <Section title="Image">
-      <Field label="Fit">
+    <div className="space-y-2">
+      <div>
+        <label className="text-[10px] text-gray-500 block mb-0.5">Fit</label>
         <select
           value={layer.fit}
-          onChange={(e) => updateProp(layer.id, { fit: e.target.value } as Partial<LayerV2>, "Image Fit")}
+          onChange={(e) => onChange({ fit: e.target.value } as Partial<LayerV2>)}
           className="w-full bg-gray-800 text-gray-200 rounded px-2 py-1 text-xs border border-gray-700 focus:border-primary-500 outline-none"
         >
           <option value="cover">Cover</option>
           <option value="contain">Contain</option>
+          <option value="stretch">Stretch</option>
           <option value="fill">Fill</option>
-          <option value="none">None</option>
         </select>
-      </Field>
-      {layer.imageFilters && (
-        <>
-          <NumberField
-            label="Brightness"
-            value={Math.round((layer.imageFilters.brightness ?? 100))}
-            onChange={(v) => updateProp(layer.id, {
-              imageFilters: { ...layer.imageFilters, brightness: v },
-            } as Partial<LayerV2>, "Brightness")}
-            suffix="%" min={0} max={200}
-          />
-          <NumberField
-            label="Contrast"
-            value={Math.round((layer.imageFilters.contrast ?? 100))}
-            onChange={(v) => updateProp(layer.id, {
-              imageFilters: { ...layer.imageFilters, contrast: v },
-            } as Partial<LayerV2>, "Contrast")}
-            suffix="%" min={0} max={200}
-          />
-          <NumberField
-            label="Saturation"
-            value={Math.round((layer.imageFilters.saturation ?? 100))}
-            onChange={(v) => updateProp(layer.id, {
-              imageFilters: { ...layer.imageFilters, saturation: v },
-            } as Partial<LayerV2>, "Saturation")}
-            suffix="%" min={0} max={200}
-          />
-        </>
-      )}
-    </Section>
-  );
-}
+      </div>
 
-// ---------------------------------------------------------------------------
-// Reusable UI pieces
-// ---------------------------------------------------------------------------
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="border-b border-gray-800 pb-2 mb-1">
-      <h3 className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold px-3 py-1.5">{title}</h3>
-      <div className="px-3 flex flex-col gap-1.5">{children}</div>
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      {label && <span className="text-gray-400 text-xs min-w-16 shrink-0">{label}</span>}
-      <div className="flex-1">{children}</div>
-    </div>
-  );
-}
-
-function NumberField({
-  label, value, onChange, suffix, min, max, step,
-}: {
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-  suffix?: string;
-  min?: number;
-  max?: number;
-  step?: number;
-}) {
-  return (
-    <Field label={label}>
-      <div className="flex items-center gap-1">
+      <div>
+        <label className="text-[10px] text-gray-500 block mb-0.5">Corner Radius</label>
         <input
           type="number"
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          min={min}
-          max={max}
-          step={step ?? 1}
-          className="w-full bg-gray-800 text-gray-200 rounded px-2 py-1 text-xs border border-gray-700 focus:border-primary-500 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          min={0}
+          max={500}
+          value={layer.cornerRadius}
+          onChange={(e) => onChange({ cornerRadius: Math.max(0, parseInt(e.target.value) || 0) } as Partial<LayerV2>)}
+          className="w-20 px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs text-gray-200 font-mono focus:outline-none focus:border-primary-500"
         />
-        {suffix && <span className="text-gray-500 text-xs">{suffix}</span>}
       </div>
-    </Field>
+
+      {/* Focal Point */}
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <label className="text-[10px] text-gray-500 block mb-0.5">Focal X</label>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={layer.focalPoint.x}
+            onChange={(e) => onChange({ focalPoint: { ...layer.focalPoint, x: parseFloat(e.target.value) } } as Partial<LayerV2>)}
+            className="w-full h-1 accent-primary-500"
+          />
+        </div>
+        <div className="flex-1">
+          <label className="text-[10px] text-gray-500 block mb-0.5">Focal Y</label>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={layer.focalPoint.y}
+            onChange={(e) => onChange({ focalPoint: { ...layer.focalPoint, y: parseFloat(e.target.value) } } as Partial<LayerV2>)}
+            className="w-full h-1 accent-primary-500"
+          />
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="space-y-1">
+        <label className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold block">Filters</label>
+        <FilterSlider label="Brightness" value={f.brightness} min={-100} max={100} onChange={(brightness) => onChange({ imageFilters: { ...f, brightness } } as Partial<LayerV2>)} />
+        <FilterSlider label="Contrast" value={f.contrast} min={-100} max={100} onChange={(contrast) => onChange({ imageFilters: { ...f, contrast } } as Partial<LayerV2>)} />
+        <FilterSlider label="Saturation" value={f.saturation} min={-100} max={100} onChange={(saturation) => onChange({ imageFilters: { ...f, saturation } } as Partial<LayerV2>)} />
+        <FilterSlider label="Temperature" value={f.temperature} min={-100} max={100} onChange={(temperature) => onChange({ imageFilters: { ...f, temperature } } as Partial<LayerV2>)} />
+        <FilterSlider label="Blur" value={f.blur} min={0} max={20} onChange={(blur) => onChange({ imageFilters: { ...f, blur } } as Partial<LayerV2>)} />
+        <div className="flex items-center gap-3 mt-1">
+          <label className="flex items-center gap-1 text-[10px] text-gray-400">
+            <input
+              type="checkbox"
+              checked={f.grayscale}
+              onChange={(e) => onChange({ imageFilters: { ...f, grayscale: e.target.checked } } as Partial<LayerV2>)}
+              className="accent-primary-500"
+            />
+            Grayscale
+          </label>
+          <label className="flex items-center gap-1 text-[10px] text-gray-400">
+            <input
+              type="checkbox"
+              checked={f.sepia}
+              onChange={(e) => onChange({ imageFilters: { ...f, sepia: e.target.checked } } as Partial<LayerV2>)}
+              className="accent-primary-500"
+            />
+            Sepia
+          </label>
+        </div>
+      </div>
+
+      {/* Image overlays */}
+      <FillEditor
+        fills={layer.fills}
+        onChange={(fills) => onChange({ fills } as Partial<LayerV2>)}
+        label="Overlays"
+      />
+      <StrokeEditor
+        strokes={layer.strokes}
+        onChange={(strokes) => onChange({ strokes } as Partial<LayerV2>)}
+      />
+    </div>
   );
 }
 
-function ToggleButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
+function FilterSlider({ label, value, min, max, onChange }: {
+  label: string; value: number; min: number; max: number;
+  onChange: (v: number) => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className={`px-2 py-0.5 rounded text-xs font-medium border transition-colors ${
-        active
-          ? "bg-primary-500/20 text-primary-400 border-primary-500/40"
-          : "bg-gray-800 text-gray-400 border-gray-700 hover:border-gray-600"
-      }`}
-    >
-      {children}
-    </button>
+    <div className="flex items-center gap-1.5">
+      <span className="text-[9px] text-gray-500 w-16 flex-shrink-0">{label}</span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={1}
+        value={value}
+        onChange={(e) => onChange(parseInt(e.target.value))}
+        className="flex-1 h-1 accent-primary-500"
+      />
+      <span className="text-[9px] text-gray-500 w-7 text-right font-mono">{value}</span>
+    </div>
   );
 }
