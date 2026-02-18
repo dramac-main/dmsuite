@@ -13,53 +13,57 @@
 - All workspaces now use global Accordion component (no more local Section+Set<string>)
 - AI Design Engine v2.0 — massively upgraded with 13 sections, 60+ exports
 
-## Recent Changes (Session 27 — Alignment Fix + Advanced Settings)
+## Recent Changes (Session 27b — Global Advanced Settings System, commit abb77c4)
 
-### Business Card Workspace — Major Quality Update (commit 6427c88)
+### Global Advanced Design Settings — Complete System
 
-#### 1. Perfect Icon-Text Alignment (drawContactBlock)
-- **Root cause**: `textBaseline` was never set inside `drawContactBlock`, inheriting whatever the previous template draw left; text was drawn at `y + 1` (band-aid hack)
-- **Fix**: Explicitly set `ctx.textBaseline = "middle"` once before the forEach loop
-- **Icon sizing**: Changed from `fontSize + 3` (arbitrary) → `Math.round(fontSize * 0.85 * iconSizeScale)` (proportional)
-- **Icon gap**: Changed from hardcoded `6px` → `Math.round(fontSize * 0.35)` (proportional to text size)
-- **Text position**: Removed all `y + 1` hacks — text now drawn at exactly `y` (same as icon center)
-- **Right-align formula**: Fixed icon center calculation: `x - textW - iconGap - iconSize/2` (was slightly off)
+#### Architecture: 3 New Files
+1. **`src/stores/advanced-settings.ts`** (~270 lines): Zustand store with `persist` middleware
+   - 6 settings groups, 40 total settings, all multipliers defaulting to 1.0 (zero regression)
+   - Groups: Typography (8), Color/Effects (8), Spacing/Layout (7), Icons/Graphics (7), Borders/Dividers (5), Export/Quality (5)
+   - Methods: `update(section, partial)`, `resetSection(section)`, `resetAll()`, `hasCustomSettings()`
+   - Persisted in localStorage as `"dmsuite-advanced"`
 
-#### 2. Corporate-Stripe Template — Horizontal Contact Fix
-- Added `ctx.textBaseline = "middle"` before the horizontal contact forEach
-- Icon y and text y both set to `H * 0.72` (were split: icon 0.72, text 0.73)
-- Separator dot recentered to `contactY` (was `H * 0.72 - 2`)
-- `iconSizeScale` respected for horizontal-layout icons too
+2. **`src/components/workspaces/AdvancedSettingsPanel.tsx`** (~330 lines): Drop-in shared UI
+   - 6 collapsible AccordionSections with per-section Reset buttons
+   - ~40 controls (SliderRow, ToggleRow, SelectRow helpers)
+   - Props: `sections?` (filter), `standalone?` (card vs inline), `className?`
+   - Master "Reset All to Defaults" button, "⚡ Custom settings active" indicator
 
-#### 3. Advanced Settings Panel (NEW in left panel)
-- New `AccordionSection` with `id="advanced"` and `IconSettings` icon
-- **5 range sliders** with live percentage readout:
-  - **Name & Headline Size** (60–150%, default 100%) — scales name/nameXl in getFontSizes
-  - **Contact & Detail Size** (60–140%, default 100%) — scales contact/contactLg
-  - **Icon Size** (50–160%, default 100%) — scales all contact icons
-  - **Row Spacing** (80–200%, default 100%) — multiplies gap between contact rows
-  - **Pattern Opacity** (1–20%, default 6%) — replaces hardcoded 0.03 opacity
-- **Reset to Defaults** button restores all 5 to defaults
-- Collapsed by default
+3. **`src/stores/advanced-helpers.ts`** (~300 lines): Pure-function canvas helpers
+   - `getAdvancedSettings()` — synchronous store snapshot reader (safe outside React)
+   - `scaledFontSize(base, tier)`, `scaledIconSize()`, `scaledIconGap()`, `scaledElementGap()`
+   - `getPatternOpacity(base)`, `getDecorativeOpacity()`, `getDividerOpacity()`
+   - `scaledBorderWidth()`, `scaledDividerThickness()`, `scaledCornerOrnament()`
+   - `getExportScale()`, `getJpegQuality()`, `getPdfMarginMm()`
+   - `applyCanvasSettings(ctx)`, `applyTextRendering(ctx)`
 
-#### 4. _renderCfg Pattern (NEW Architecture)
-- Module-level `let _renderCfg: CardConfig | null = null` variable
-- Set at the TOP of `renderCard()` before any template rendering
-- Read by `getFontSizes()` and `drawContactBlock()` to access advanced settings
-- Avoids signature changes to all 20 template renderers
-- Thread-safe in browser (single-threaded JS)
+#### BusinessCardWorkspace — Full Global Store Integration
+- **Removed** 5 local CardConfig fields (nameFontScale, contactFontScale, patternOpacity, iconSizeScale, contactLineHeight)
+- **Replaced** with global store reads via advanced-helpers
+- `getFontSizes()` now uses `scaledFontSize(base, "heading"|"body"|"label")`
+- `drawContactBlock()` now uses `scaledIconSize()`, `scaledIconGap()`, `scaledElementGap()`
+- `renderCard()` now calls `applyCanvasSettings(ctx)` and `getPatternOpacity(0.06)`
+- Export handlers use `getExportScale()` instead of hardcoded `2`
+- Local Advanced Settings AccordionSection replaced with `<AdvancedSettingsPanel />`
+- Canvas re-renders on `advancedSettings` change via `useAdvancedSettingsStore` subscription
 
-#### 5. CardConfig Interface Extensions
-5 new fields added:
-- `nameFontScale: number` (default 1.0)
-- `contactFontScale: number` (default 1.0)
-- `patternOpacity: number` (default 0.06)
-- `iconSizeScale: number` (default 1.0)
-- `contactLineHeight: number` (default 1.0)
+#### 61 Canvas Workspaces Integrated
+- All canvas/document/print workspaces now have:
+  - `import AdvancedSettingsPanel` + `import { useAdvancedSettingsStore }`
+  - `const advancedSettings = useAdvancedSettingsStore(s => s.settings)` subscription
+  - `<AdvancedSettingsPanel />` rendered in sidebar/leftPanel
+  - `advancedSettings` in render dependency arrays (where pattern detection succeeded)
+- 32 non-canvas workspaces (text generators, audio, utilities) correctly excluded
 
-#### 6. Pattern Opacity Fix
-- Was hardcoded `0.03` (very subtle, almost invisible)
-- Now `config.patternOpacity ?? 0.06` — double the default visibility, user-controllable
+#### Accordion Component Enhancement
+- `badge` prop type widened from `string | number` to `ReactNode`
+- Enables per-section Reset buttons in the AdvancedSettingsPanel
+
+#### Store Barrel Export Updated
+- `src/stores/index.ts` now exports `useAdvancedSettingsStore` + all 7 type definitions
+
+## Previous Changes (Session 27a — Alignment Fix + Local Settings, commit 6427c88)
 
 ## Previous Changes (Session 26 — AI Icon Placement Pipeline)
 

@@ -45,8 +45,37 @@
 
 ### 3. Client Component Strategy
 - All interactive components use `"use client"` directive
-- State management is local (useState) — Zustand stores planned
-- Sidebar open/close state lifted to dashboard page, passed as props
+- Local config state per workspace via `useState<XxxConfig>()` — workspace-specific settings
+- Global design settings via Zustand `useAdvancedSettingsStore` — shared across all tools
+- Sidebar open/close state in `useSidebarStore`
+
+### 3b. Global Advanced Settings Architecture (NEW)
+```
+Zustand Store (advanced-settings.ts) — persisted in localStorage
+  ├── typography: { headingScale, bodyScale, labelScale, letterSpacing, lineHeight, ... }
+  ├── colorEffects: { patternOpacity, decorativeOpacity, dividerOpacity, textShadow, ... }
+  ├── spacing: { marginH, marginV, padding, sectionGap, elementGap, offsetX/Y }
+  ├── iconGraphic: { iconSize, iconStroke, iconGap, logo, qr, seal, shape }
+  ├── borderDivider: { borderWidth, borderRadius, dividerThickness, dividerLength, corner }
+  └── exportQuality: { exportScale (1/2/3x DPI), jpegQuality, bleed, cropMarks, pdfMargin }
+
+Helpers (advanced-helpers.ts) — pure functions, no React
+  ├── getAdvancedSettings() — synchronous store snapshot reader
+  ├── scaledFontSize(base, tier) — applies heading/body/label scale
+  ├── scaledIconSize/Gap/Stroke() — icon multipliers
+  ├── getPatternOpacity(base) — pattern overlay multiplier
+  └── getExportScale() — DPI multiplier for export handlers
+
+UI Panel (AdvancedSettingsPanel.tsx) — drop-in shared component
+  ├── 6 collapsible AccordionSections
+  ├── ~40 controls (SliderRow, ToggleRow, SelectRow)
+  ├── Per-section Reset + Master Reset All
+  └── Props: sections?, standalone?, className?
+```
+- **All defaults = 1.0 multiplier** — zero visual regression unless user tweaks
+- **Canvas functions read via `getAdvancedSettings()`** — safe outside React (synchronous snapshot)
+- **Re-render triggered via `useAdvancedSettingsStore(s => s.settings)`** subscription in component
+- **61 canvas workspaces** have the panel + subscription integrated
 
 ### 4. Styling Patterns
 - **Tailwind tokens only** — never hex values, never pixel values

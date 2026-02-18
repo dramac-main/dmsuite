@@ -36,6 +36,8 @@
 
 ### State Management ✅
 - [x] Zustand stores: sidebar, chat, preferences, revision-history (all persisted)
+- [x] Global Advanced Settings store: 40 settings, 6 categories, persisted in localStorage
+- [x] Advanced settings helpers: 25+ pure functions for canvas renderers
 
 ### Canvas Infrastructure ✅
 - [x] canvas-utils.ts (~673 lines) — shared canvas drawing utilities
