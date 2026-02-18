@@ -13,9 +13,34 @@
 - All workspaces now use global Accordion component (no more local Section+Set<string>)
 - AI Design Engine v2.0 — massively upgraded with 13 sections, 60+ exports
 
-## Recent Changes (Session 26 — Professional Canvas Icon Library)
+## Recent Changes (Session 26 continued — AI Icon Placement Pipeline)
 
-### Asset Bank Architecture: Icons — The First Global Asset Library
+### Icon Library Enrichment — All 115 Icons Now AI-Ready
+
+#### 1. Rich Descriptions Added to Every Icon
+- Added `description: string` field to `IconMeta` interface
+- Every single icon now has a 1-2 sentence natural language description covering:
+  - **Visual form**: What the icon actually looks like (e.g., "Paper airplane / send arrow pointing right")
+  - **Use cases**: When to use it (e.g., "Use for send buttons, submit actions, email sending")
+  - **Industries/contexts**: What domains it serves (e.g., "customer support, business messaging")
+
+#### 2. Tags Expanded from 3-5 → 15 Per Icon
+- Every icon now has 15 rich tags covering synonyms, related concepts, industry terms, and natural language phrases
+- Example: "phone" went from `["call", "telephone", "dial"]` to `["call", "telephone", "dial", "ring", "mobile", "cell", "contact", "support", "hotline", "customer-service", "number", "receiver", "landline", "voicemail", "business-card"]`
+
+#### 3. AI Icon Placement Pipeline (NEW)
+- **`AIIconPlacement` interface**: `{ iconId, x, y, size, color }` — tells the system exactly WHERE to draw an icon
+- **`drawIconPlacements(ctx, placements[])`**: Renders an array of AI-specified icon placements onto canvas
+- **`matchIconsForContext(userText, maxResults)`**: Semantic matching — scores icons by query word overlap, returns top N
+- Both `buildGraphicDesignPrompt()` and `buildRevisionPrompt()` now include `"iconPlacements"` in their JSON response schemas
+- AI can now specify: which icons, at what position, what size, what color
+
+#### 4. Enhanced Search & AI Functions
+- **`searchIcons(query)`**: Now searches across id, label, tags, AND description (full-text, all-words-must-match)
+- **`getIconListForAI()`**: Now includes full descriptions so the AI understands each icon's visual form and use cases
+- **`getIconListForAICompact()`**: New compact version (IDs + labels only) for token-constrained prompts
+
+### Previous Session 26 Work (Icon Library Creation)
 
 #### 1. New File: `src/lib/icon-library.ts` (~1,200 lines)
 - **115 professional vector icons** drawn with pure Canvas2D path commands (no emoji, no text)

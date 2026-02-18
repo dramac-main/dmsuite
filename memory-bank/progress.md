@@ -45,14 +45,19 @@
 - [x] TemplateSlider — visual template preview
 - [x] AI revision engine with style locking
 
-### Asset Bank: Icons ✅ (Session 26)
-- [x] icon-library.ts (~1,200 lines) — 115 professional vector canvas icons
+### Asset Bank: Icons ✅ (Session 26 + continued)
+- [x] icon-library.ts (~2,450 lines) — 115 professional vector canvas icons
 - [x] 8 categories: Social Media (20), Contact (15), Business (20), Creative (15), Technology (15), Lifestyle (10), Arrows/UI (10), Commerce (10)
 - [x] All icons are pure Canvas2D paths — no emoji, no text, infinitely scalable
 - [x] drawIcon(ctx, iconId, x, y, size, color, strokeWidth?) — single entry point
-- [x] ICON_BANK metadata registry with id, label, category, tags per icon
+- [x] ICON_BANK metadata registry with id, label, category, **description**, tags per icon
+- [x] Rich descriptions on all 115 icons — visual form + use cases + industries
+- [x] 15 tags per icon (expanded from 3-5) — synonyms, concepts, industry terms
 - [x] ICON_REGISTRY O(1) lookup, ICON_CATEGORIES browsable list
-- [x] AI-ready: getIconListForAI(), searchIcons(), getAllIconIds(), getIconsByCategory()
+- [x] AI-ready: getIconListForAI() (with descriptions), getIconListForAICompact(), searchIcons() (full-text), matchIconsForContext()
+- [x] AIIconPlacement type + drawIconPlacements() for AI-driven icon rendering
+- [x] buildGraphicDesignPrompt() includes iconPlacements in JSON schema
+- [x] buildRevisionPrompt() includes iconPlacements in JSON schema
 - [x] Integrated into BusinessCardWorkspace, AI Design Engine, AI Revision Engine
 - [x] Legacy wrappers in graphics-engine.ts (deprecated)
 
