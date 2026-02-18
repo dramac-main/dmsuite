@@ -2070,41 +2070,63 @@ export default function BusinessCardWorkspace() {
     secondaryColor: string;
     logoUrl: string;
   } | null>(null);
-  const _prevEditorModeRef = useRef(false);
-
+  // ── vNext Editor: sync effect ──────────────────────────────────────────────
+  // Runs whenever editorMode, config, or logoImg changes.
+  //
+  // IMPORTANT: We no longer force a full rebuild just because the user toggled
+  // editor mode. That was the bug: it destroyed every manual layer edit the
+  // moment the user clicked "Edit Layers" a second time.
+  //
+  // Rules:
+  //   • Template / fontStyle / cardStyle / side / logo changed → full rebuild
+  //     (structure of the card has changed — safe to lose per-layer tweaks)
+  //   • Text or color only changed → incremental sync (preserves layer overrides)
+  //   • editorMode = false AND doc exists → still sync so re-entering editor mode
+  //     sees the latest config without needing a destructive rebuild
   useEffect(() => {
-    if (!editorMode) {
-      _prevEditorModeRef.current = false;
-      return;
-    }
-
-    const justEntered = !_prevEditorModeRef.current;
-    _prevEditorModeRef.current = true;
-
-    // Structural key: any change here forces a full document rebuild.
     const templateKey = `${config.template}|${config.fontStyle}|${config.cardStyle}|${config.side}`;
     const logoUrl = logoImg?.src ?? "";
     const prev = _prevSyncRef.current;
 
+    if (!editorMode) {
+      // In normal mode: keep the doc in sync with config changes so that the NEXT
+      // entry into editor mode can do an incremental sync rather than a full rebuild
+      // (which would destroy any manual layer edits from the previous session).
+      const hasDoc = Object.keys(editorStore.doc?.layersById ?? {}).length > 1;
+      if (!hasDoc) return; // no doc yet — nothing to preserve
+
+      if (!prev || prev.templateKey !== templateKey || prev.logoUrl !== logoUrl) {
+        const doc = cardConfigToDocument(config as unknown as CardConfigV2, { logoImg: logoImg ?? undefined });
+        editorStore.setDoc(doc);
+      } else {
+        let updatedDoc = syncTextToDocument(editorStore.doc, config as unknown as CardConfigV2);
+        updatedDoc = syncColorsToDocument(updatedDoc, config as unknown as CardConfigV2, {
+          prevTextColor:      prev.textColor,
+          prevPrimaryColor:   prev.primaryColor,
+          prevSecondaryColor: prev.secondaryColor,
+        });
+        editorStore.setDoc(updatedDoc);
+      }
+      _prevSyncRef.current = { templateKey, textColor: config.textColor, primaryColor: config.primaryColor, secondaryColor: config.secondaryColor, logoUrl };
+      return;
+    }
+
+    // ── Editor mode ──────────────────────────────────────────────────────────
+    // Only rebuild when something structural actually changed.
     const needsFullRebuild =
-      justEntered ||
       !prev ||
       prev.templateKey !== templateKey ||
       prev.logoUrl !== logoUrl;
 
     if (needsFullRebuild) {
-      // Full rebuild: entering editor mode, template/style/logo changed.
       const doc = cardConfigToDocument(
         config as unknown as CardConfigV2,
         { logoImg: logoImg ?? undefined }
       );
       editorStore.setDoc(doc);
     } else {
-      // Incremental sync — only update what config describes, leave manual per-layer
-      // overrides untouched.
-      //   • syncTextToDocument → updates text content only (never touches colors)
-      //   • syncColorsToDocument → updates global-color-tagged layers, but skips any
-      //     layer whose fill was manually changed (fingerprint comparison via prevTextColor)
+      // Incremental sync — preserves any per-layer color/position overrides the
+      // user set manually; only updates layers tagged with global semantic tags.
       let updatedDoc = syncTextToDocument(editorStore.doc, config as unknown as CardConfigV2);
       updatedDoc = syncColorsToDocument(updatedDoc, config as unknown as CardConfigV2, {
         prevTextColor:      prev.textColor,
@@ -2125,19 +2147,43 @@ export default function BusinessCardWorkspace() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editorMode, config, logoImg]);
 
-  // Render canvas — vNext layer-based renderer (raw canvas mode only)
+  // ── Normal-mode canvas render ───────────────────────────────────────────────
+  // CanvasEditor runs its own RAF loop in editor mode — this effect only fires
+  // when editorMode is false.
+  //
+  // KEY FIX: When a doc exists (the user has used Edit Layers at least once),
+  // render from the doc — NOT from config — so that any layer-level edits remain
+  // visible after clicking "Exit Editor".  Fall back to config-based rendering
+  // only when there is no doc yet (first load before entering editor mode).
   useEffect(() => {
-    if (editorMode) return; // CanvasEditor handles rendering in editor mode
-    const doRender = (canvas: HTMLCanvasElement, cfg: CardConfig) => {
-      const bleedSafe = showBleed || showSafeZone;
-      renderCardV2(canvas, cfg, logoImg, 1, { showBleedSafe: bleedSafe });
-    };
+    if (editorMode) return; // CanvasEditor owns rendering while in editor mode
 
-    if (canvasRef.current) doRender(canvasRef.current, config);
-    if (sideBySide && backCanvasRef.current) {
-      doRender(backCanvasRef.current, { ...config, side: config.side === "front" ? "back" : "front" });
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const hasDoc = Object.keys(editorStore.doc?.layersById ?? {}).length > 1;
+
+    if (hasDoc) {
+      // Doc exists → render from layer document so editor-mode changes stay visible
+      const offscreen = renderToCanvas(editorStore.doc, 1);
+      canvas.width  = offscreen.width;
+      canvas.height = offscreen.height;
+      const ctx = canvas.getContext("2d");
+      if (ctx) ctx.drawImage(offscreen, 0, 0);
+    } else {
+      // No doc yet (user has never entered editor mode) → config-based render
+      renderCardV2(canvas, config, logoImg, 1, { showBleedSafe: showBleed || showSafeZone });
     }
-  }, [editorMode, config, showBleed, showSafeZone, sideBySide, logoImg, advancedSettings]);
+
+    // Side-by-side back canvas always uses config (back layout lives outside the doc)
+    if (sideBySide && backCanvasRef.current) {
+      renderCardV2(
+        backCanvasRef.current,
+        { ...config, side: config.side === "front" ? "back" : "front" },
+        logoImg, 1, { showBleedSafe: showBleed || showSafeZone }
+      );
+    }
+  }, [editorMode, editorStore.doc, config, showBleed, showSafeZone, sideBySide, logoImg, advancedSettings]);
 
   /* ==================================================================
      AI DESIGN ENGINE - Full generation
@@ -3503,7 +3549,7 @@ JSON:`;
           onZoomFit: () => setZoom(1),
         }
       )}
-      label={`${currentSize.label} \u00b7 Export: ${currentSize.w * 2}\u00d7${currentSize.h * 2}px \u00b7 600 DPI`}
+      label={`${currentSize.label} \u00b7 Export: ${currentSize.w * getExportScale()}\u00d7${currentSize.h * getExportScale()}px \u00b7 ${getExportScale() * 300} DPI`}
       toolbar={toolbar}
       mobileTabs={["Canvas", "Settings"]}
       actionsBar={

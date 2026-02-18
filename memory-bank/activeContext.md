@@ -1,9 +1,9 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** M3.7 Complete — Business Card Full AI Sync Audit + Gap Fixes
+**Phase:** M3.9 Complete — Generator overlap fix, AI Director upgrade, CSV batch import, 300 DPI, logo scale fix, front-only mode
 
-### Actual State (Session 33 Updated)
+### Actual State (Session 34 Updated)
 - **194 total tools** defined in tools.ts
 - **96 tools** have dedicated workspace routes in page.tsx → status: "ready"  
 - **~90 tools** have NO workspace → status: "coming-soon"
@@ -19,8 +19,50 @@
 - **M3.5 Pro Editor + AI Full Control** — 8 new pro UI components, rewritten LayerPropertiesPanel, 15 new AI intent types, smart snapping, align/distribute (Session 31)
 - **M3.6 AI Pipeline Deep Fix** — critical `opToCommand` nested-path bug fixed, AI prompt with full path schema (Session 32)
 - **M3.7 Business Card Full AI Sync** — QR code layer, back-side pattern, Gold Foil cfg colors, expanded syncColorsToDocument, expanded legacy AI prompt, expanded Quick Edit panel (Session 33)
+- **M3.8 Infinite Designs Generator** — 40 recipes × 60 themes × 12 accent kits = 28,800 base designs; template-generator.ts (~1376 lines); InfiniteDesigns AccordionSection wired into BusinessCardWorkspace (Session 33/34 previous)
+- **M3.9 UX Polish & Power Features** — overlap-safe generator, AI Director full designs, CSV batch import, 300 DPI default, logo scale fix, front-only mode (Session 34)
 
-## Recent Changes (Session 33 — M3.7 Business Card Full AI Sync)
+## Recent Changes (Session 34 — M3.9)
+
+### 6 User Concerns → All Resolved
+
+1. **Overlapping elements in generator designs** (`template-generator.ts`)
+   - **Root cause**: `buildRecipeLayers` placed contact block at `recipe.contactYFrac * H` regardless of how tall the name/title/company text cluster was.
+   - **Fix**: Complete rewrite of `buildRecipeLayers` (~150 lines):
+     - Tracks `textClusterBottom` (lowest rendered edge of name+title+company)
+     - Pushes contact block to `max(rawContactY, textClusterBottom + 22px)` — guaranteed 22px safety gap
+     - Divider placed 8px below text cluster (dynamic, not font-math)
+     - Tagline floated below contact block; **dropped entirely** if it won't fit on card
+     - Zero overlaps across all 40 recipes × 60 themes
+
+2. **Logo resizer not working** (`template-generator.ts` + `business-card-adapter.ts`)
+   - **Root cause**: Generator called `Math.round(Math.min(W, H) * recipe.logoSizeFrac)` directly, bypassing `scaledLogoSize()` from Advanced Settings.
+   - **Fix**: Changed to `scaledLogoSize(Math.round(Math.min(W, H) * recipe.logoSizeFrac))`. Added `scaledLogoSize` re-export in `business-card-adapter.ts` → `@/stores/advanced-helpers`.
+
+3. **AI Design Director — now generates full designs** (`BusinessCardWorkspace.tsx`)
+   - Was: only updated `CardConfig` fields (colors, font, template name) — no visual design produced
+   - Now: after parsing AI colors/style, calls `suggestCombination(resolvedStyle, aiMood, Date.now())` then `generateCardDocument({ useCfgColors: true, ... })`, loads DesignDocumentV2 into `editorStore`, switches to `editorMode = true`
+   - Result: clicking "Generate with AI" produces a full parametric design you can immediately edit layer-by-layer
+
+4. **Front-only mode** (`BusinessCardWorkspace.tsx`)
+   - New `frontOnly` state (`useState(false)`)
+   - Checkbox: "Front card only — no back needed" — locks `config.side = "front"`, disables Back+Both buttons, collapses Back Design selector
+   - For users/companies that only need a single-sided card
+
+5. **300 DPI default** (`advanced-settings.ts`, `BusinessCardWorkspace.tsx`)
+   - Changed `DEFAULT_EXPORT_QUALITY.exportScale: 2 → 1` (300 DPI is the professional print standard)
+   - Card Info panel "Export" line now dynamic: `{currentSize.w * getExportScale()}×{currentSize.h * getExportScale()}px ({getExportScale() * 300} DPI)`
+   - User can still raise to 600 DPI or 900 DPI via Advanced Settings → Export DPI
+
+6. **CSV batch import** (`BusinessCardWorkspace.tsx`)
+   - `handleCsvImport` callback: reads File → FileReader → text → auto-detects header row → parses Name/Title/Email/Phone columns (handles quoted CSV fields) → caps at 200 entries → `setBatchEntries()` + `setBatchMode(true)`
+   - UI: import label+hidden file input (`.csv,.txt`) + "Template ↓" download link (pre-filled sample CSV)
+   - Users can fill in Excel → Save As CSV → import all 200 names in one click
+
+## Commit
+- **M3.9 commit**: `a338b3e` — 4 files changed, 224 insertions(+), 53 deletions(-)
+
+
 
 ### Deep Audit → 5 Gaps Found and Fixed
 

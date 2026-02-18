@@ -1,6 +1,6 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 96/194 tools with workspaces (49%) — ~90 tools still need building — Build passes ✅ — Full audit complete ✅ — vNext Editor M0-M5 Complete ✅ — M3.5 Pro Editor + AI Full Control ✅ — M3.7 Business Card Full AI Sync ✅
+## Overall Status: 96/194 tools with workspaces (49%) — ~90 tools still need building — Build passes ✅ — Full audit complete ✅ — vNext Editor M0-M5 Complete ✅ — M3.5 Pro Editor + AI Full Control ✅ — M3.7 Business Card Full AI Sync ✅ — M3.8 Infinite Designs Generator ✅ — M3.9 UX Polish & Power Features ✅
 
 ---
 
@@ -138,6 +138,27 @@
 - [x] **BusinessCardLayerQuickEdit** — 5 new semantic entries (contact-icon, border, corner, logo, qr-code) + icon layer color support
 - [x] **Workspace sync** — `_prevSyncRef` tracks `secondaryColor`, removed legacy QR overlay hack
 - [x] Build verified clean (`tsc --noEmit` zero errors, `get_errors` zero on all 4 files)
+
+### M3.8: Infinite Designs Generator ✅ (Session 33/34)
+- [x] **`src/lib/editor/template-generator.ts`** (~1,376 lines) — parametric design engine
+- [x] 40 LayoutRecipes across 5 style families (minimal/modern/classic/creative/luxury)
+- [x] 60 CardThemes with bgColor/primaryColor/textColor/accentColor, 4 moods
+- [x] 12 AccentKits (border radii, divider thickness, spacing multipliers, ornament scale)
+- [x] `generateCardDocument()` — wires recipe+theme+accent into a DesignDocumentV2
+- [x] `suggestCombination()` — style/mood-filtered pseudorandom combination picker
+- [x] `getCombinationCount()` — 40×60×12 = 28,800 base designs
+- [x] InfiniteDesigns AccordionSection wired into BusinessCardWorkspace
+- [x] Recipe shuffler: grid of 6 cards, each showing a different random combination
+- [x] "Apply to Editor" loads selected combination into editorStore
+
+### M3.9: UX Polish & Power Features ✅ (Session 34, commit a338b3e)
+- [x] **Overlap-safe buildRecipeLayers** — tracks `textClusterBottom`, pushes contact block to `max(rawContactY, textClusterBottom+22px)`, floats tagline below contact, drops tagline if overflow — zero overlaps in all 40 recipes
+- [x] **Logo scale fix** — `scaledLogoSize()` now applied in template-generator (was bypassing Advanced Settings logo slider)
+- [x] **AI Design Director upgrade** — after parsing AI colors+style, calls `suggestCombination()` + `generateCardDocument(useCfgColors:true)` → loads full DesignDocumentV2 into editorStore → enters editorMode; no longer just updates CardConfig fields
+- [x] **CSV batch import** — `handleCsvImport` parses Name/Title/Email/Phone columns, auto-detects header, handles quotes, caps 200, auto-enables batchMode; import button + template download in batch UI
+- [x] **300 DPI default** — `DEFAULT_EXPORT_QUALITY.exportScale: 2 → 1` (print-ready standard); user can raise to 2×/3× via Advanced Settings
+- [x] **Dynamic DPI label** — Card Info panel shows `{w × scale}×{h × scale}px ({scale×300} DPI)` using actual `getExportScale()`
+- [x] **Front-only mode** — checkbox locks side to front, disables Back/Both buttons, collapses Back Design selector
 
 ### Asset Bank: Icons ✅ (Session 26 + continued)
 - [x] icon-library.ts (~2,450 lines) — 115 professional vector canvas icons
