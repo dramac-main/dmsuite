@@ -1885,6 +1885,9 @@ export default function BusinessCardWorkspace() {
   const [genThemeId,     setGenThemeId]     = useState<string>(CARD_THEMES[0].id);
   const [genAccentKitId, setGenAccentKitId] = useState<string>(ACCENT_KITS[0].id);
 
+  // ── Front-only mode (no back card needed) ──
+  const [frontOnly, setFrontOnly] = useState(false);
+
   // Revision State
   const [revisionPrompt, setRevisionPrompt] = useState("");
   const [revisionScope, setRevisionScope] = useState<RevisionScope>("full-redesign");
@@ -1966,6 +1969,48 @@ export default function BusinessCardWorkspace() {
     };
     reader.readAsDataURL(file);
   }, [updateConfig]);
+
+  /** Parse a CSV file into batch entries.
+   *  Expected columns (in order): Name, Title, Email, Phone
+   *  A header row is auto-detected and skipped if the first cell is
+   *  non-numeric text that matches common header words.
+   */
+  const handleCsvImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset the input so the same file can be re-imported
+    e.target.value = "";
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = typeof reader.result === "string" ? reader.result : "";
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      if (!lines.length) return;
+
+      // Detect header row (first cell looks like a label, not a name)
+      const headerWords = /^(name|full.?name|person|member|employee|staff|title|role|job|email|phone|contact)/i;
+      const firstCell = lines[0].split(",")[0].trim().replace(/^"|"$/g, "");
+      const startIdx = headerWords.test(firstCell) ? 1 : 0;
+
+      const parsed: ContactEntry[] = lines.slice(startIdx).map((line, idx) => {
+        // Handle quoted CSV fields
+        const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
+          .map(c => c.trim().replace(/^"|"$/g, ""));
+        return {
+          id:    String(Date.now() + idx),
+          name:  cols[0] ?? "",
+          title: cols[1] ?? "",
+          email: cols[2] ?? "",
+          phone: cols[3] ?? "",
+        };
+      }).filter(e => e.name.trim());
+
+      if (parsed.length > 0) {
+        setBatchEntries(parsed.slice(0, 200)); // cap at 200 for performance
+        setBatchMode(true);
+      }
+    };
+    reader.readAsText(file);
+  }, []);
 
   const getCardSize = useCallback(() => {
     if (config.cardStyle === "custom") {
@@ -2135,7 +2180,8 @@ BG: #hex (background color)
 FONT: modern | classic | bold | elegant | minimal
 PATTERN: ${patternIds}
 BACK_STYLE: logo-center | pattern-fill | minimal | info-repeat | gradient-brand
-TAGLINE: A short tagline for the company (if none provided)`;
+TAGLINE: A short tagline for the company (if none provided)
+STYLE: minimal | modern | classic | creative | luxury`;
 
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -2163,6 +2209,7 @@ TAGLINE: A short tagline for the company (if none provided)`;
       const patternMatch = fullText.match(/PATTERN:\s*(\S+)/i);
       const backMatch = fullText.match(/BACK_STYLE:\s*(\S+)/i);
       const taglineMatch = fullText.match(/TAGLINE:\s*(.+)/i);
+      const styleMatch = fullText.match(/STYLE:\s*(\S+)/i);
 
       if (templateMatch) {
         const t = templateMatch[1].toLowerCase();
@@ -2188,12 +2235,45 @@ TAGLINE: A short tagline for the company (if none provided)`;
         updates.tagline = taglineMatch[1].trim().replace(/^["']|["']$/g, "");
       }
       updateConfig(updates);
+
+      // ── Generate a full parametric design using the AI's style choice ──────
+      const aiStyle = styleMatch?.[1]?.toLowerCase() as Parameters<typeof suggestCombination>[0] | undefined;
+      const validStyles = ["minimal", "modern", "classic", "creative", "luxury"] as const;
+      const resolvedStyle: typeof validStyles[number] =
+        validStyles.includes(aiStyle as typeof validStyles[number])
+          ? (aiStyle as typeof validStyles[number])
+          : "modern";
+      const validMoods = ["light", "dark", "vibrant", "muted", "metallic"] as const;
+      // Pick mood from bg brightness
+      const bgHex = bgMatch?.[1] ?? "#1a1a1a";
+      const bgLum = parseInt(bgHex.slice(1, 3), 16) * 0.299
+                  + parseInt(bgHex.slice(3, 5), 16) * 0.587
+                  + parseInt(bgHex.slice(5, 7), 16) * 0.114;
+      const aiMood: typeof validMoods[number] = bgLum < 80 ? "dark" : bgLum > 200 ? "light" : "vibrant";
+      const combo = suggestCombination(resolvedStyle, aiMood, Date.now());
+      setGenRecipeId(combo.recipeId);
+      setGenThemeId(combo.themeId);
+      setGenAccentKitId(combo.accentKitId);
+
+      // Merge AI color picks into the parametric generation (useCfgColors=true)
+      const cfgWithUpdates = { ...config, ...updates } as unknown as CardConfigV2;
+      const doc = generateCardDocument({
+        cfg: cfgWithUpdates,
+        recipeId:    combo.recipeId,
+        themeId:     combo.themeId,
+        accentKitId: combo.accentKitId,
+        useCfgColors: true,
+        logoImg:     logoImg ?? undefined,
+      });
+      editorStore.setDoc(doc);
+      setEditorMode(true);
+
     } catch (err) {
       console.error("AI generation error:", err);
     } finally {
       setIsGenerating(false);
     }
-  }, [config, updateConfig]);
+  }, [config, updateConfig, logoImg, editorStore]);
 
   /* ==================================================================
      AI REVISION ENGINE - Deep Reasoning + Hard Scope Enforcement
@@ -3066,12 +3146,29 @@ JSON:`;
             <div className="flex gap-1.5">
               <button onClick={() => updateConfig({ side: "front" })}
                 className={`flex-1 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${config.side === "front" ? "border-primary-500 bg-primary-500/5 text-primary-500 ring-1 ring-primary-500/30" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400"}`}>Front</button>
-              <button onClick={() => updateConfig({ side: "back" })}
-                className={`flex-1 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${config.side === "back" ? "border-primary-500 bg-primary-500/5 text-primary-500 ring-1 ring-primary-500/30" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400"}`}>Back</button>
-              <button onClick={() => setSideBySide(!sideBySide)}
-                className={`flex-1 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${sideBySide ? "border-secondary-500 bg-secondary-500/5 text-secondary-500 ring-1 ring-secondary-500/30" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400"}`}>Both</button>
+              <button onClick={() => updateConfig({ side: "back" })} disabled={frontOnly}
+                className={`flex-1 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${config.side === "back" ? "border-primary-500 bg-primary-500/5 text-primary-500 ring-1 ring-primary-500/30" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400"}`}>Back</button>
+              <button onClick={() => setSideBySide(!sideBySide)} disabled={frontOnly}
+                className={`flex-1 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${sideBySide && !frontOnly ? "border-secondary-500 bg-secondary-500/5 text-secondary-500 ring-1 ring-secondary-500/30" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400"}`}>Both</button>
             </div>
-            {/* Back Style */}
+            {/* Front-only mode */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={frontOnly}
+                onChange={(e) => {
+                  setFrontOnly(e.target.checked);
+                  if (e.target.checked) {
+                    updateConfig({ side: "front" });
+                    setSideBySide(false);
+                  }
+                }}
+                className="size-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-500 focus:ring-primary-500/30"
+              />
+              <span className="text-xs text-gray-600 dark:text-gray-300">Front card only — no back needed</span>
+            </label>
+            {/* Back Style — hidden in front-only mode */}
+            {!frontOnly && (
             <div>
               <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 mb-1">Back Design</p>
               <div className="flex flex-wrap gap-1">
@@ -3084,6 +3181,7 @@ JSON:`;
                 ))}
               </div>
             </div>
+            )}
             {/* Print options */}
             <div className="space-y-1.5 pt-1">
               <label className="flex items-center gap-2 cursor-pointer">
@@ -3261,6 +3359,22 @@ JSON:`;
               className="w-full flex items-center justify-center gap-1.5 h-8 rounded-lg border border-dashed border-gray-600 text-gray-400 text-xs hover:border-primary-500 hover:text-primary-500 transition-colors">
               <IconPlus className="size-3" /> Add Person
             </button>
+            {/* CSV / Excel import — auto-populates all entries from a spreadsheet */}
+            <div className="flex items-center gap-1.5">
+              <label className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-lg border border-dashed border-secondary-500/40 text-secondary-500 text-xs hover:bg-secondary-500/5 cursor-pointer transition-colors">
+                <IconDownload className="size-3 rotate-180" />
+                Import CSV / Excel
+                <input type="file" accept=".csv,.txt" onChange={handleCsvImport} className="sr-only" />
+              </label>
+              <a
+                href={`data:text/csv;charset=utf-8,${encodeURIComponent("Name,Title,Email,Phone\nJohn Doe,CEO,john@company.com,+260 977 000 001\nJane Smith,CTO,jane@company.com,+260 977 000 002")}`}
+                download="batch-template.csv"
+                className="px-2.5 py-1.5 rounded-lg border border-gray-700 text-gray-400 text-[0.5625rem] hover:text-gray-200 hover:border-gray-500 transition-colors whitespace-nowrap"
+                title="Download a CSV template you can fill in and re-import"
+              >
+                Template ↓
+              </a>
+            </div>
             <button onClick={exportBatchPdf}
               disabled={batchExporting || batchEntries.filter(e => e.name.trim()).length === 0}
               className="w-full flex items-center justify-center gap-2 h-9 rounded-xl bg-primary-500 text-gray-950 text-xs font-bold hover:bg-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -3291,7 +3405,7 @@ JSON:`;
           <p>Back: <span className="text-gray-300 capitalize">{config.backStyle.replace(/-/g, " ")}</span></p>
           <p>Side: <span className="text-gray-300 capitalize">{config.side}</span></p>
           <p>Canvas: <span className="text-gray-300">{currentSize.w}{"\u00d7"}{currentSize.h}px</span></p>
-          <p>Export: <span className="text-primary-500 font-semibold">{currentSize.w * 2}{"\u00d7"}{currentSize.h * 2}px (600 DPI)</span></p>
+          <p>Export: <span className="text-primary-500 font-semibold">{currentSize.w * getExportScale()}{"\u00d7"}{currentSize.h * getExportScale()}px ({getExportScale() * 300} DPI)</span></p>
           <p>Quality: <span className="text-primary-500 font-semibold">Print-Ready</span></p>
         </div>
       </div>

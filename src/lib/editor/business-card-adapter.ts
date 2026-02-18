@@ -2147,7 +2147,10 @@ export {
  * template generator can compose them without importing the full template
  * layout functions (which would cause a circular dependency).
  */
-export const buildLogoLayerFn = buildLogoLayer;
+export const buildLogoLayerFn    = buildLogoLayer;
 export const buildContactLayersFn = buildContactLayers;
-export const buildPatternLayerFn = buildPatternLayer;
-export const buildQrCodeLayerFn = buildQrCodeLayer;
+export const buildPatternLayerFn  = buildPatternLayer;
+export const buildQrCodeLayerFn   = buildQrCodeLayer;
+
+/** Re-export so template-generator can apply the user's logo scale setting */
+export { scaledLogoSize } from "@/stores/advanced-helpers";

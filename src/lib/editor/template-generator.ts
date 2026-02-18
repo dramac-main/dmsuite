@@ -34,6 +34,7 @@ import {
   getFontSizes, getFontFamily, getContactEntries, getContrastColor,
   CARD_SIZES, MM_PX, BLEED_MM, SAFE_MM,
   buildLogoLayerFn, buildContactLayersFn, buildPatternLayerFn, buildQrCodeLayerFn,
+  scaledLogoSize,
 } from "./business-card-adapter";
 
 // ============================================================================
@@ -1130,7 +1131,7 @@ export function generateCardDocument(params: GenerateParams): DesignDocumentV2 {
   return doc;
 }
 
-/** Build all text/logo/contact layers for a given recipe */
+/** Build all text/logo/contact layers for a given recipe — overlap-safe */
 function buildRecipeLayers(
   recipe: LayoutRecipe,
   W: number, H: number,
@@ -1138,7 +1139,7 @@ function buildRecipeLayers(
   fs: FontSizes,
   ff: string,
   p: string, s: string, t: string,
-  useCfg: boolean,
+  _useCfg: boolean,   // reserved for future per-layer color override; colors come from theme upstream
 ): LayerV2[] {
   const layers: LayerV2[] = [];
 
@@ -1153,38 +1154,40 @@ function buildRecipeLayers(
     }
   }
 
-  // Text slots
-  const textSlots: SlotName[] = ["name", "title", "company", "tagline"];
-  for (const slotName of textSlots) {
+  // ── 1. Main text slots (name / title / company) — track bottom edge ──────
+  // We render these first and track where they end so contact + tagline
+  // never collide with them.
+  const mainSlots: SlotName[] = ["name", "title", "company"];
+  let textClusterBottom = 0; // lowest rendered pixel of name/title/company
+
+  for (const slotName of mainSlots) {
     const spec = recipe.slots[slotName];
     if (!spec) continue;
     const text = slotText(slotName);
     if (!text) continue;
 
-    const sizeVal: number = spec.sizeKey ? fs[spec.sizeKey] : fs.name;
+    const sizeVal: number = spec.sizeKey ? (fs[spec.sizeKey] ?? fs.name) : fs.name;
+    const layerH           = Math.round(sizeVal * 1.6);
+    const layerY           = spec.yFrac * H;
+    textClusterBottom = Math.max(textClusterBottom, layerY + layerH);
 
-    // Choose color: name→text, title→primary, company→text (alpha 0.5), tagline→text (alpha 0.3)
     let color: string;
-    let alpha: number = spec.alpha ?? 1;
-    if (slotName === "title")   color = p;
+    let alpha = spec.alpha ?? 1;
+    if      (slotName === "title")   { color = p; }
     else if (slotName === "company") { color = t; alpha = spec.alpha ?? 0.5; }
-    else if (slotName === "tagline") { color = t; alpha = spec.alpha ?? 0.32; }
-    else                             color = t;
+    else                             { color = t; }
 
-    const baseTags: string[] = slotName === "name"
-      ? ["name", "primary-text"]
-      : slotName === "title"
-        ? ["title"]
-        : slotName === "company"
-          ? ["company"]
-          : ["tagline"];
+    const baseTags: string[] =
+      slotName === "name"    ? ["name", "primary-text"]
+      : slotName === "title" ? ["title"]
+      : ["company"];
 
     layers.push(rText({
       name:          slotName.charAt(0).toUpperCase() + slotName.slice(1),
       x:             spec.xFrac * W,
-      y:             spec.yFrac * H,
+      y:             layerY,
       w:             spec.wFrac * W,
-      h:             Math.round(sizeVal * 1.6),
+      h:             layerH,
       text,
       fontSize:      sizeVal,
       ff,
@@ -1199,37 +1202,43 @@ function buildRecipeLayers(
     }));
   }
 
-  // Divider line (below name/title area)
-  const nameSpec = recipe.slots.name;
-  if (nameSpec) {
-    const divY = nameSpec.yFrac * H + (fs[nameSpec.sizeKey ?? "name"] ?? fs.name) + fs.title + 14;
-    if (divY < H * 0.55) {
+  // ── 2. Contact block — pushed below text cluster if necessary ────────────
+  const contactEntries = getContactEntries(cfg);
+  const lineGap        = Math.round(fs.contact * (recipe.contactGapFrac / 0.10));
+  const contactBlockH  = contactEntries.length > 0
+    ? (contactEntries.length - 1) * lineGap + Math.round(fs.contact * 1.6)
+    : 0;
+
+  const SAFE_GAP        = 22; // minimum px gap between text cluster and contact
+  const rawContactY     = recipe.contactYFrac * H;
+  const effectiveContactY = textClusterBottom > 0
+    ? Math.max(rawContactY, textClusterBottom + SAFE_GAP)
+    : rawContactY;
+  const contactEndY     = effectiveContactY + contactBlockH;
+
+  // ── 3. Divider — a short horizontal rule between text cluster & contact ──
+  if (recipe.slots.name && textClusterBottom > 0 && contactEntries.length > 0) {
+    const divY = Math.round(textClusterBottom + SAFE_GAP * 0.35); // 8 px below text
+    // Only draw if it actually sits between the two zones and the card is tall enough
+    if (divY > H * 0.12 && divY < effectiveContactY - 8) {
       layers.push(rLine({
-        name: "Separator",
-        x: recipe.contactXFrac * W,
-        y: divY,
-        w: W * 0.35,
+        name:  "Separator",
+        x:     recipe.contactXFrac * W,
+        y:     divY,
+        w:     W * 0.32,
         color: p, alpha: 0.2,
-        tags: ["decorative", "divider"],
+        tags:  ["decorative", "divider"],
       }));
     }
   }
 
-  // Logo
-  const logoSize = Math.round(Math.min(W, H) * recipe.logoSizeFrac);
-  const logoX    = Math.round(recipe.logoXFrac * W);
-  const logoY    = Math.round(recipe.logoYFrac * H);
-  const logoLayer = buildLogoLayerFn(cfg, logoX, logoY, logoSize, logoSize, p, ff);
-  layers.push(logoLayer);
-
-  // Contact block
-  const contactEntries = getContactEntries(cfg);
+  // ── 4. Contact entries ────────────────────────────────────────────────────
   if (contactEntries.length > 0) {
     const contactLayers = buildContactLayersFn(
       cfg,
       recipe.contactXFrac * W,
-      recipe.contactYFrac * H,
-      Math.round(fs.contact * (recipe.contactGapFrac / 0.10)),
+      effectiveContactY,
+      lineGap,
       recipe.contactAlign,
       t, 0.65,
       p, 0.5,
@@ -1237,6 +1246,51 @@ function buildRecipeLayers(
     );
     layers.push(...contactLayers);
   }
+
+  // ── 5. Tagline — floated below contact block; dropped if no room ─────────
+  const taglineSpec = recipe.slots.tagline;
+  if (taglineSpec) {
+    const taglineText = slotText("tagline");
+    if (taglineText) {
+      const taglineSize = fs.tagline;
+      const taglineH    = Math.round(taglineSize * 1.6);
+
+      // Raw desired position vs. pushed-down-below-contact position
+      const rawTaglineY       = taglineSpec.yFrac * H;
+      const pushedTaglineY    = contactEndY + 14;
+      const effectiveTaglineY = Math.max(rawTaglineY, pushedTaglineY);
+
+      // Only render if it actually fits on the card (4 px bottom buffer)
+      if (effectiveTaglineY + taglineH < H - 4) {
+        layers.push(rText({
+          name:          "Tagline",
+          x:             taglineSpec.xFrac * W,
+          y:             effectiveTaglineY,
+          w:             taglineSpec.wFrac * W,
+          h:             taglineH,
+          text:          taglineText,
+          fontSize:      taglineSize,
+          ff,
+          weight:        taglineSpec.weight ?? 300,
+          color:         t,
+          alpha:         taglineSpec.alpha ?? 0.32,
+          align:         taglineSpec.align ?? "left",
+          tags:          taglineSpec.tags ?? ["tagline"],
+          uppercase:     taglineSpec.uppercase,
+          italic:        taglineSpec.italic,
+          letterSpacing: taglineSpec.letterSpacing,
+        }));
+      }
+    }
+  }
+
+  // ── 6. Logo — size from recipe fraction × user's logo scale setting ──────
+  const baseLogoSize = Math.round(Math.min(W, H) * recipe.logoSizeFrac);
+  const logoSize     = scaledLogoSize(baseLogoSize);   // respects Advanced Settings
+  const logoX        = Math.round(recipe.logoXFrac * W);
+  const logoY        = Math.round(recipe.logoYFrac * H);
+  const logoLayer    = buildLogoLayerFn(cfg, logoX, logoY, logoSize, logoSize, p, ff);
+  layers.push(logoLayer);
 
   return layers;
 }

@@ -183,7 +183,7 @@ export const DEFAULT_BORDER_DIVIDER: BorderDividerSettings = {
 };
 
 export const DEFAULT_EXPORT_QUALITY: ExportQualitySettings = {
-  exportScale: 2,
+  exportScale: 1,   // 300 DPI — print-ready standard for business cards; user can raise to 2× or 3× if needed
   jpegQuality: 1.0,
   includeBleed: false,
   includeCropMarks: false,
