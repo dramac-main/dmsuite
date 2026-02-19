@@ -1,9 +1,9 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** M3.12 Complete — Business Card Deep Audit + 12 Critical Fixes
+**Phase:** Session 40 — Premium Template Overhaul Complete
 
-### Actual State (Session 38 Updated)
+### Actual State (Session 40 Updated)
 - **194 total tools** defined in tools.ts
 - **96 tools** have dedicated workspace routes in page.tsx → status: "ready"  
 - **~90 tools** have NO workspace → status: "coming-soon"
@@ -25,61 +25,38 @@
 - **M3.11 Business Card Deep Enhancement** — 11 improvements: social media contacts, auto-fit text, 12 AI intents, 32 color presets, registry-aware AI, expanded batch with 11 fields, ZIP batch export, CSV 11-column parser (Session 36)
 - **Full AI Connectivity Audit** — every card tool asset/field now wired into both AI engines (Session 37)
 - **M3.12 Deep Audit + 12 Critical Fixes** — comprehensive 50-issue audit, 12 fixes implemented across 5 files (Session 38)
+- **Session 40 — Premium Template Overhaul** — complete replacement of 20 old templates with 30 premium designs inspired by professional reference images; updated in both business-card-adapter.ts (~2611 lines) and BusinessCardWorkspace.tsx (~3795 lines)
 
-## Recent Changes (Session 38 — M3.12 Deep Audit + 12 Critical Fixes)
+## Recent Changes (Session 40 — Premium Template Overhaul)
 
-### Comprehensive Business Card Designer Audit — 12 Fixes Across 5 Files
+### Complete Template Replacement — 20 Old → 30 New Premium Designs
 
-**Modified: `src/lib/editor/schema.ts`** (2 changes)
-1. **`flipX?: boolean` + `flipY?: boolean`** — added to Transform interface for true mirror reflection
-2. **`defaultTransform()` updated** — includes `flipX: false, flipY: false` defaults
+Inspired by 30+ professional business card reference images provided by user. All old templates (executive-clean, swiss-grid, mono-type, nordic-frost, bold-split, neon-edge, geometric-modern, gradient-wave, corporate-stripe, diplomat, heritage-crest, engraved, diagonal-cut, layered-card, photo-overlay, dot-matrix, gold-foil, marble-luxe, velvet-noir, art-deco) completely removed and replaced.
 
-**Modified: `src/lib/editor/renderer.ts`** (1 change)
-1. **Flip rendering** — `renderLayer()` now applies `ctx.scale(-1, 1)` / `ctx.scale(1, -1)` around pivot when flipX/flipY are set, combined with rotation
+#### 30 New Template IDs (5 categories × 6 templates):
+- **Minimal**: ultra-minimal, monogram-luxe, geometric-mark, frame-minimal, split-vertical, diagonal-mono
+- **Modern**: cyan-tech, corporate-chevron, zigzag-overlay, hex-split, dot-circle, wave-gradient
+- **Classic**: circle-brand, full-color-back, engineering-pro, clean-accent, nature-clean, diamond-brand
+- **Creative**: flowing-lines, neon-watermark, blueprint-tech, skyline-silhouette, world-map, diagonal-gold
+- **Luxury**: luxury-divider, social-band, organic-pattern, celtic-stripe, premium-crest, gold-construct
 
-**Modified: `src/lib/editor/business-card-adapter.ts`** (6 changes)
-1. **`syncTextToDocument` social media** — added `contact-linkedin`, `contact-twitter`, `contact-instagram` to textMap for bi-directional sync
-2. **`documentToCardConfig` social extraction** — reverse sync now extracts linkedin, twitter, instagram from tagged layers
-3. **`syncColorsToDocument` QR code** — adapts QR code layer color to background luminance (dark bg → light QR, light bg → dark QR)
-4. **`buildContactLayers` overflow prevention** — integrates `fitContactBlock()` to auto-clamp visible contact count and adjust line gap when entries overflow card height
-5. **`buildContactLayers` H parameter** — added optional `H` param for available height calculation (6% bottom margin)
-6. **All 21 layout functions** — now pass `H` to `buildContactLayers()` for overflow prevention
+#### Modified: `src/lib/editor/business-card-adapter.ts` (~2611 lines)
+1. **COLOR_PRESETS**: 12 → 32 entries (added 20 industry-inspired themes)
+2. **TEMPLATE_DEFAULT_THEMES**: 20 → 30 entries (new template→theme mappings)
+3. **TEMPLATE_LIST**: 20 → 30 entries (new id, label, description, category for each)
+4. **30 new layout functions**: Each creates semantic LayerV2[] trees with responsive sizing, proper contact blocks, logos, gradients, decorative elements; replaces 20 old functions
+5. **LAYOUT_MAP**: Updated with 30 new entries mapping template IDs to layout functions
+6. **Fallback template**: Changed from "executive-clean" to "ultra-minimal"
 
-**Modified: `src/lib/editor/ai-patch.ts`** (8 changes)
-1. **`flip` intent fixed** — replaced broken skewX/skewY (did nothing) with proper flipX/flipY toggle on Transform
-2. **`add-gradient-fill` fixed** — now creates valid `GradientPaint` with `gradientType`, angle-to-transform matrix, `spread` field (was using non-existent `type` and `angle` properties)
-3. **`set-stroke` fixed** — uses correct `dash: []` (not `dashArray`), adds `miterLimit: 10`, uses schema-correct cap/join defaults
-4. **`set-text-content` intent added** — AI can now change text content of text layers via `/text` path
-5. **`duplicate-layer` intent added** — AI can clone layers with positional offset, auto-naming
-6. **IntentType union expanded** — added `set-text-content`, `duplicate-layer` to M3.12 group
-7. **`GradientPaint` + `StrokeSpec` type imports** — added to type imports for schema correctness
-8. **`parseAIRevisionResponse` validation** — validates patchOps (op/layerId/path required, op must be add/replace/remove) and intents (type required, must be string); returns null if both empty
-
-**Modified: `src/components/editor/BusinessCardLayerQuickEdit.tsx`** (4 changes)
-1. **Batch color commands** — `handleColorChange` now collects all sub-commands and wraps in `createBatchCommand` for single undo entry (was creating N separate undo entries)
-2. **Gradient background fallback** — shows first gradient stop color instead of white when background uses gradient paint
-3. **`IconLayerV2` type import** — replaced unsafe `(layer as unknown as { color: RGBA })` with proper `(layer as IconLayerV2)`
-4. **`createBatchCommand` import** — added from commands.ts
-
-## Recent Changes (Session 36 — M3.11)
-
-### Business Card Deep Enhancement — 11 Improvements
-
-**Modified: `src/components/workspaces/BusinessCardWorkspace.tsx`** (~3900 lines after edits)
-1. **ContactEntry expanded** — added website, address, linkedin, twitter, instagram, department, qrUrl, logoOverride fields (all optional)
-2. **CardConfig extended** — linkedin, twitter, instagram string fields
-3. **Social media contact fields in UI** — LinkedIn, Twitter/X, Instagram inputs in Contact Details sidebar section
-4. **32 color presets** (was 12) — added Rose Gold, Copper, Platinum, Emerald, Royal Blue, Sunset, Lavender, Teal Pro, Carbon, Ice Blue, Mauve, Olive, Terracotta, Mint Fresh, Electric, Blush, Mahogany, Steel, Violet Ink, Warm Sand
-5. **Registry-aware AI generation** — prompt now includes full LAYOUT_RECIPES/CARD_THEMES/ACCENT_KITS listings; AI can pick specific recipe/theme/accent by ID; response parsed with regex + validated against registries; fallback to suggestCombination()
-6. **Expanded batch UI** — collapsible "More fields" `<details>` section with website, address, linkedin, twitter, instagram, department, QR URL inputs per person
-7. **CSV parser upgraded** — 11 columns: Name, Title, Email, Phone, Website, Address, LinkedIn, Twitter, Instagram, Department, QR URL
-8. **CSV template upgraded** — 11-column template with example data
-9. **ZIP batch export** — JSZip-based export renders each person's front+back card as 300 DPI PNGs, bundles into a ZIP with `{name}-front.png`/`{name}-back.png` naming; progress bar shared with PDF export
-10. **Batch `renderBatchCard()`** — passes extended fields (website, address, linkedin, twitter, instagram) and per-person QR override
-
-**Modified: `src/lib/editor/business-card-adapter.ts`** (~2340 lines after edits)
-1. **CardConfig extended** — linkedin, twitter, instagram string fields
-2. **ContactEntry type expanded** — includes "linkedin" | "twitter" | "instagram" contact types
+#### Modified: `src/components/workspaces/BusinessCardWorkspace.tsx` (~3795 lines)
+1. **TEMPLATES array**: 20 → 30 entries (id, label, description for each)
+2. **TEMPLATE_DEFAULT_THEMES**: 20 → 30 entries
+3. **TEMPLATE_RENDERERS**: 30 new canvas renderer functions for thumbnail previews (each draws a visual representation of the template)
+4. **styleMap**: Updated with 30 new template IDs mapped to thumbnail rendering styles
+5. **Default config template**: Changed from "executive-clean" to "ultra-minimal"
+6. **Renderer fallback**: Changed from "executive-clean" to "ultra-minimal"
+7. **`logoShapeFor()` helper**: New function mapping fontStyle ("modern"→"square", "classic"→"circle", "elegant"→"circle", "bold"→"square", "minimal"→"none") to fix type mismatch in drawLogo calls
+8. **All 21 drawLogo calls**: Updated to use `logoShapeFor(c.fontStyle)` instead of raw `c.fontStyle`
 3. **`getContactEntries()`** — adds linkedin (iconId:"linkedin"), twitter (iconId:"twitter-x"), instagram (iconId:"instagram")
 4. **Auto-fit text overflow prevention**:
    - `autoFitFontSize()` — char-width heuristic (0.55 sans-serif, 0.50 serif), scales proportionally, min 60% or 14px

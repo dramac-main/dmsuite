@@ -1,6 +1,6 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 96/194 tools with workspaces (49%) — ~90 tools still need building — Build passes ✅ — Full audit complete ✅ — vNext Editor M0-M5 Complete ✅ — M3.5 Pro Editor + AI Full Control ✅ — M3.7 Business Card Full AI Sync ✅ — M3.8 Infinite Designs Generator ✅ — M3.9 UX Polish & Power Features ✅ — M3.10 Abstract Asset Library ✅ — M3.11 Business Card Deep Enhancement ✅ — Full AI Connectivity Audit ✅ — M3.12 Deep Audit + 12 Critical Fixes ✅
+## Overall Status: 96/194 tools with workspaces (49%) — ~90 tools still need building — Build passes ✅ — Full audit complete ✅ — vNext Editor M0-M5 Complete ✅ — M3.5 Pro Editor + AI Full Control ✅ — M3.7 Business Card Full AI Sync ✅ — M3.8 Infinite Designs Generator ✅ — M3.9 UX Polish & Power Features ✅ — M3.10 Abstract Asset Library ✅ — M3.11 Business Card Deep Enhancement ✅ — Full AI Connectivity Audit ✅ — M3.12 Deep Audit + 12 Critical Fixes ✅ — Session 40 Premium Template Overhaul ✅
 
 ---
 
@@ -246,7 +246,7 @@
 | BannerAdWorkspace | 88KB | banner-ad | Layer-based, IAB sizes |
 | PosterFlyerWorkspace | 81KB | poster, flyer | Layer-based, print bleed |
 | ResumeCVWorkspace | 75KB | resume-cv | 6 templates, 4 page sizes |
-| BusinessCardWorkspace | ~130KB | business-card | **SESSION 25 QUALITY OVERHAUL**: 20 unique color themes per template, AI Revision deep reasoning + hard scope enforcement + diff validation, 600 DPI export (2x scale), enhanced template visuals (gradients, glows, accents). Previous: 20 templates, AI Director, batch processing, 5 back styles, 12 color presets, 9 patterns, 5 card sizes |
+| BusinessCardWorkspace | ~140KB | business-card | **SESSION 40 PREMIUM TEMPLATE OVERHAUL**: 30 premium templates (5 categories × 6) replacing 20 old templates, inspired by professional reference images. 32 color presets, AI Director, batch processing, 5 back styles, 9 patterns, 5 card sizes, 300 DPI export, social media contacts, ZIP batch export, abstract assets, infinite designs generator |
 | InvoiceDesignerWorkspace | 71KB | invoice-designer | 7 currencies, 6 templates |
 | PresentationWorkspace | 69KB | presentation | Slide management, themes |
 | BrandIdentityWorkspace | 64KB | brand-identity | Brand board, patterns |
@@ -479,3 +479,27 @@ These workspaces work but simulate backend processing or have limited canvas ren
 - ✅ Fixed 2 TypeScript type errors (Paint union narrowing, TextLayerV2.text)
 - ✅ Build verified clean (`tsc --noEmit` zero errors)
 - ✅ Updated memory bank
+
+### Session 40 — Premium Template Overhaul (Complete)
+- ✅ Analyzed 30+ professional business card reference images provided by user
+- ✅ **Adapter — COLOR_PRESETS**: 12 → 32 entries (20 industry-inspired themes added)
+- ✅ **Adapter — TEMPLATE_DEFAULT_THEMES**: 20 → 30 entries (new template→theme mappings)
+- ✅ **Adapter — TEMPLATE_LIST**: 20 → 30 entries (5 categories × 6 each: Minimal, Modern, Classic, Creative, Luxury)
+- ✅ **Adapter — 30 new layout functions**: Each creates semantic LayerV2[] trees; responsive sizing, proper contact blocks, logos, gradients, decorative elements
+- ✅ **Adapter — LAYOUT_MAP**: Updated with 30 new entries
+- ✅ **Adapter — Fallback**: Changed from "executive-clean" to "ultra-minimal"
+- ✅ **Adapter — Old code cleanup**: Removed residual 20 old layout functions via PowerShell surgery
+- ✅ **Adapter — Build verified**: `tsc --noEmit` zero errors
+- ✅ **Workspace — TEMPLATES array**: 20 → 30 entries
+- ✅ **Workspace — TEMPLATE_DEFAULT_THEMES**: 20 → 30 entries
+- ✅ **Workspace — TEMPLATE_RENDERERS**: 30 new canvas renderer functions for thumbnail previews
+- ✅ **Workspace — styleMap**: Updated with 30 new template IDs → thumbnail rendering styles
+- ✅ **Workspace — Default config**: Changed from "executive-clean" to "ultra-minimal"
+- ✅ **Workspace — Renderer fallback**: Changed from "executive-clean" to "ultra-minimal"
+- ✅ **Workspace — `logoShapeFor()` helper**: Maps fontStyle to drawLogo shape param (fixes TS2345 type errors)
+- ✅ **Workspace — 21 drawLogo calls**: All updated to use `logoShapeFor(c.fontStyle)`
+- ✅ **Workspace — Old code cleanup**: Removed residual 20 old renderer functions via PowerShell surgery
+- ✅ **Full build verified**: `tsc --noEmit` zero TypeScript errors
+- ✅ **Straggler grep**: No old template IDs remain in adapter/workspace files (only in template-generator.ts which has independent recipe system)
+- ✅ Updated memory bank
+- 📋 **30 New Template IDs**: ultra-minimal, monogram-luxe, geometric-mark, frame-minimal, split-vertical, diagonal-mono, cyan-tech, corporate-chevron, zigzag-overlay, hex-split, dot-circle, wave-gradient, circle-brand, full-color-back, engineering-pro, clean-accent, nature-clean, diamond-brand, flowing-lines, neon-watermark, blueprint-tech, skyline-silhouette, world-map, diagonal-gold, luxury-divider, social-band, organic-pattern, celtic-stripe, premium-crest, gold-construct
