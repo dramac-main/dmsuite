@@ -409,18 +409,29 @@ function buildContactLayers(
   align: "left" | "center" | "right",
   textColor: string, textAlpha: number,
   iconColor: string, iconAlpha: number,
-  fontSize: number, ff: string, W: number
+  fontSize: number, ff: string, W: number,
+  /** Card height — used for overflow prevention via fitContactBlock */
+  H?: number
 ): LayerV2[] {
   const entries = getContactEntries(cfg);
   if (entries.length === 0) return [];
 
   const layers: LayerV2[] = [];
   const adv = getAdvancedSettings();
-  const lineGap = scaledElementGap(gap, adv);
+  let lineGap = scaledElementGap(gap, adv);
   const icoSize = scaledIconSize(Math.round(fontSize * 0.85), adv);
   const icoGap = scaledIconGap(Math.round(fontSize * 0.35), adv);
 
-  for (let i = 0; i < entries.length; i++) {
+  // --- Overflow prevention: auto-fit contact block to available space ---
+  const availableH = H ? H - startY - (H * 0.06) : undefined; // 6% bottom margin
+  let visibleCount = entries.length;
+  if (availableH && availableH > 0) {
+    const fitted = fitContactBlock(entries.length, availableH, lineGap, fontSize);
+    visibleCount = fitted.count;
+    lineGap = fitted.gap;
+  }
+
+  for (let i = 0; i < visibleCount; i++) {
     const entry = entries[i];
     const lineY = startY + i * lineGap;
 
@@ -636,7 +647,7 @@ function layoutExecutiveClean(W: number, H: number, cfg: CardConfig, fs: FontSiz
   // Contact
   layers.push(...buildContactLayers(
     cfg, mx, H * 0.62, Math.round(fs.contact * 1.5), "left",
-    cfg.textColor, 0.65, cfg.primaryColor, 0.5, fs.contact, ff, W
+    cfg.textColor, 0.65, cfg.primaryColor, 0.5, fs.contact, ff, W, H
   ));
 
   // Tagline
@@ -691,7 +702,7 @@ function layoutSwissGrid(W: number, H: number, cfg: CardConfig, fs: FontSizes, f
   // Contact (right side of grid)
   layers.push(...buildContactLayers(
     cfg, W * 0.42, H * 0.42, Math.round(fs.contact * 1.5), "left",
-    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W
+    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W, H
   ));
 
   return layers;
@@ -724,7 +735,7 @@ function layoutMonoType(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff
   // Contact
   layers.push(...buildContactLayers(
     cfg, mx, H * 0.62, Math.round(fs.contact * 1.45), "left",
-    cfg.textColor, 0.55, cfg.primaryColor, 0.3, fs.contact, ff, W
+    cfg.textColor, 0.55, cfg.primaryColor, 0.3, fs.contact, ff, W, H
   ));
 
   // Logo (bottom-right)
@@ -777,7 +788,7 @@ function layoutNordicFrost(W: number, H: number, cfg: CardConfig, fs: FontSizes,
   // Contact
   layers.push(...buildContactLayers(
     cfg, mx, H * 0.6, Math.round(fs.contact * 1.45), "left",
-    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W
+    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W, H
   ));
 
   // Company (bottom-right)
@@ -859,7 +870,7 @@ function layoutBoldSplit(W: number, H: number, cfg: CardConfig, fs: FontSizes, f
   // Contact (right panel)
   layers.push(...buildContactLayers(
     cfg, rx, H * 0.35, Math.round(fs.contactLg * 1.6), "left",
-    cfg.textColor, 0.65, cfg.primaryColor, 0.45, fs.contactLg, ff, W
+    cfg.textColor, 0.65, cfg.primaryColor, 0.45, fs.contactLg, ff, W, H
   ));
 
   // Tagline
@@ -902,7 +913,7 @@ function layoutNeonEdge(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff
   // Contact
   layers.push(...buildContactLayers(
     cfg, mx, H * 0.6, Math.round(fs.contact * 1.45), "left",
-    cfg.textColor, 0.6, cfg.primaryColor, 0.5, fs.contact, ff, W
+    cfg.textColor, 0.6, cfg.primaryColor, 0.5, fs.contact, ff, W, H
   ));
 
   // Company (bottom-right)
@@ -955,7 +966,7 @@ function layoutGeometricModern(W: number, H: number, cfg: CardConfig, fs: FontSi
   // Contact
   layers.push(...buildContactLayers(
     cfg, mx, H * 0.6, Math.round(fs.contact * 1.45), "left",
-    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W
+    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W, H
   ));
 
   // Company
@@ -1003,7 +1014,7 @@ function layoutGradientWave(W: number, H: number, cfg: CardConfig, fs: FontSizes
   // Contact
   layers.push(...buildContactLayers(
     cfg, mx, H * 0.6, Math.round(fs.contact * 1.45), "left",
-    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W
+    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W, H
   ));
 
   // Company
@@ -1066,7 +1077,7 @@ function layoutCorporateStripe(W: number, H: number, cfg: CardConfig, fs: FontSi
   // Contact (horizontal layout — unique to this template)
   layers.push(...buildContactLayers(
     cfg, mx, H * 0.72, Math.round(fs.contact * 1.5), "left",
-    cfg.textColor, 0.55, cfg.primaryColor, 0.4, fs.contact, ff, W
+    cfg.textColor, 0.55, cfg.primaryColor, 0.4, fs.contact, ff, W, H
   ));
 
   return layers;
@@ -1106,7 +1117,7 @@ function layoutDiplomat(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff
   // Contact (centered)
   layers.push(...buildContactLayers(
     cfg, W / 2, H * 0.64, Math.round(fs.contact * 1.45), "center",
-    cfg.textColor, 0.55, cfg.primaryColor, 0.35, fs.contact, ff, W
+    cfg.textColor, 0.55, cfg.primaryColor, 0.35, fs.contact, ff, W, H
   ));
 
   // Company (bottom center)
@@ -1155,7 +1166,7 @@ function layoutHeritageCrest(W: number, H: number, cfg: CardConfig, fs: FontSize
   // Contact (centered)
   layers.push(...buildContactLayers(
     cfg, W / 2, H * 0.66, Math.round(fs.contact * 1.4), "center",
-    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W
+    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W, H
   ));
 
   // Company
@@ -1207,7 +1218,7 @@ function layoutEngraved(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff
   // Contact (centered)
   layers.push(...buildContactLayers(
     cfg, W / 2, H * 0.72, Math.round(fs.contact * 1.4), "center",
-    cfg.textColor, 0.55, cfg.primaryColor, 0.35, fs.contact, ff, W
+    cfg.textColor, 0.55, cfg.primaryColor, 0.35, fs.contact, ff, W, H
   ));
 
   // Company
@@ -1269,7 +1280,7 @@ function layoutDiagonalCut(W: number, H: number, cfg: CardConfig, fs: FontSizes,
   // Contact (right side on diagonal, right-aligned)
   layers.push(...buildContactLayers(
     cfg, W - mx, H * 0.3, Math.round(fs.contact * 1.5), "right",
-    contrastC, 0.85, contrastC, 0.5, fs.contact, ff, W
+    contrastC, 0.85, contrastC, 0.5, fs.contact, ff, W, H
   ));
 
   return layers;
@@ -1318,7 +1329,7 @@ function layoutLayeredCard(W: number, H: number, cfg: CardConfig, fs: FontSizes,
   // Contact
   layers.push(...buildContactLayers(
     cfg, mx, H * 0.55, Math.round(fs.contact * 1.5), "left",
-    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W
+    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W, H
   ));
 
   // Tagline
@@ -1368,7 +1379,7 @@ function layoutPhotoOverlay(W: number, H: number, cfg: CardConfig, fs: FontSizes
   // Contact
   layers.push(...buildContactLayers(
     cfg, mx, H * 0.63, Math.round(fs.contact * 1.5), "left",
-    cfg.textColor, 0.65, cfg.primaryColor, 0.45, fs.contact, ff, W
+    cfg.textColor, 0.65, cfg.primaryColor, 0.45, fs.contact, ff, W, H
   ));
 
   // Company
@@ -1415,7 +1426,7 @@ function layoutDotMatrix(W: number, H: number, cfg: CardConfig, fs: FontSizes, f
   // Contact
   layers.push(...buildContactLayers(
     cfg, mx, H * 0.58, Math.round(fs.contact * 1.45), "left",
-    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W
+    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W, H
   ));
 
   // Company
@@ -1485,7 +1496,7 @@ function layoutGoldFoil(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff
   // Contact (centered)
   layers.push(...buildContactLayers(
     cfg, W / 2, H * 0.65, Math.round(fs.contact * 1.45), "center",
-    cfg.textColor, 0.55, gold1, 0.4, fs.contact, ff, W
+    cfg.textColor, 0.55, gold1, 0.4, fs.contact, ff, W, H
   ));
 
   // Company (bottom center)
@@ -1541,7 +1552,7 @@ function layoutMarbleLuxe(W: number, H: number, cfg: CardConfig, fs: FontSizes, 
   // Contact
   layers.push(...buildContactLayers(
     cfg, mx, H * 0.58, Math.round(fs.contact * 1.45), "left",
-    cfg.textColor, 0.55, cfg.primaryColor, 0.3, fs.contact, ff, W
+    cfg.textColor, 0.55, cfg.primaryColor, 0.3, fs.contact, ff, W, H
   ));
 
   // Company
@@ -1605,7 +1616,7 @@ function layoutVelvetNoir(W: number, H: number, cfg: CardConfig, fs: FontSizes, 
   // Contact
   layers.push(...buildContactLayers(
     cfg, mx, H * 0.76, Math.round(fs.contact * 1.4), "left",
-    cfg.textColor, 0.5, cfg.primaryColor, 0.35, fs.contact, ff, W
+    cfg.textColor, 0.5, cfg.primaryColor, 0.35, fs.contact, ff, W, H
   ));
 
   return layers;
@@ -1668,7 +1679,7 @@ function layoutArtDeco(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff:
   // Contact (centered)
   layers.push(...buildContactLayers(
     cfg, W / 2, H * 0.63, Math.round(fs.contact * 1.4), "center",
-    cfg.textColor, 0.55, gold, 0.35, fs.contact, ff, W
+    cfg.textColor, 0.55, gold, 0.35, fs.contact, ff, W, H
   ));
 
   // Company (bottom center)
@@ -1829,7 +1840,7 @@ function layoutBackInfoRepeat(W: number, H: number, cfg: CardConfig, fs: FontSiz
   // Contact (centered below)
   layers.push(...buildContactLayers(
     cfg, W / 2, H * 0.55, Math.round(fs.contact * 1.5), "center",
-    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W
+    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W, H
   ));
 
   return layers;
@@ -2082,6 +2093,9 @@ export function syncTextToDocument(
     "contact-email": cfg.email || "",
     "contact-website": cfg.website || "",
     "contact-address": cfg.address || "",
+    "contact-linkedin": cfg.linkedin || "",
+    "contact-twitter": cfg.twitter || "",
+    "contact-instagram": cfg.instagram || "",
   };
 
   for (const layer of layers) {
@@ -2239,6 +2253,15 @@ export function syncColorsToDocument(
       }
     }
 
+    // ── QR code layer: darken on light backgrounds, lighten on dark backgrounds ──
+    if (layer.tags.includes("qr-code") && layer.type === "shape") {
+      const bgLum = (() => { const c = hexToRGBA(cfg.bgColor); return (0.299 * c.r + 0.587 * c.g + 0.114 * c.b) / 255; })();
+      const qrColor = bgLum > 0.5 ? "#1a1a1a" : "#e0e0e0";
+      updated = updateLayer(updated, layer.id, {
+        fills: [solidPaintHex(qrColor, 0.12)],
+      } as Partial<LayerV2>);
+    }
+
     // ── Abstract asset layers: color-primary → primaryColor, color-secondary → secondaryColor ──
     if (layer.tags.includes("abstract-asset")) {
       if (layer.tags.includes("color-primary") && (layer.type === "shape" || layer.type === "path")) {
@@ -2305,6 +2328,9 @@ export function documentToCardConfig(doc: DesignDocumentV2): Partial<CardConfig>
     if (layer.tags.includes("contact-email")) result.email = (layer as TextLayerV2).text;
     if (layer.tags.includes("contact-website")) result.website = (layer as TextLayerV2).text;
     if (layer.tags.includes("contact-address")) result.address = (layer as TextLayerV2).text;
+    if (layer.tags.includes("contact-linkedin")) result.linkedin = (layer as TextLayerV2).text;
+    if (layer.tags.includes("contact-twitter")) result.twitter = (layer as TextLayerV2).text;
+    if (layer.tags.includes("contact-instagram")) result.instagram = (layer as TextLayerV2).text;
   }
 
   return result;

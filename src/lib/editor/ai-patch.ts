@@ -9,7 +9,7 @@ import type {
   DesignDocumentV2, LayerV2, LayerId,
   TextLayerV2, ShapeLayerV2, ImageLayerV2, FrameLayerV2,
   IconLayerV2,
-  Paint, RGBA,
+  Paint, RGBA, GradientPaint, StrokeSpec,
 } from "./schema";
 import {
   getLayerOrder,
@@ -438,7 +438,9 @@ export type IntentType =
   | "improve-name-hierarchy" | "add-visual-accent"
   | "refine-contact-layout" | "modernize-design"
   | "add-brand-consistency" | "improve-whitespace"
-  | "swap-icon";
+  | "swap-icon"
+  // ---- Content & layout intents (M3.12) ----
+  | "set-text-content" | "duplicate-layer";
 
 export interface EditIntent {
   type: IntentType;
@@ -824,11 +826,16 @@ export function intentToPatchOps(doc: DesignDocumentV2, intent: EditIntent): Pat
       const angle = (intent.params?.angle as number) ?? 180;
       const stops = (intent.params?.stops as Array<{ offset: number; color: string }>) ??
         [{ offset: 0, color: "#a3e635" }, { offset: 1, color: "#06b6d4" }];
-      const gradient = {
-        kind: "gradient" as const,
-        type: gradType,
-        angle,
+      // Convert angle to gradient transform matrix
+      const rad = (angle * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+      const gradient: GradientPaint = {
+        kind: "gradient",
+        gradientType: gradType as GradientPaint["gradientType"],
         stops: stops.map(s => ({ offset: s.offset, color: hexToRGBA(s.color) })),
+        transform: [cos, sin, -sin, cos, 0, 0],
+        spread: (intent.params?.spread as GradientPaint["spread"]) ?? "pad",
       };
       for (const id of layerIds) {
         const layer = doc.layersById[id];
@@ -870,13 +877,14 @@ export function intentToPatchOps(doc: DesignDocumentV2, intent: EditIntent): Pat
       const width = (intent.params?.width as number) ?? 2;
       const align = (intent.params?.align as string) ?? "center";
       if (!color) break;
-      const stroke = {
+      const stroke: StrokeSpec = {
         paint: solidPaint(hexToRGBA(color)),
         width,
-        align,
-        cap: "round" as const,
-        join: "round" as const,
-        dashArray: [] as number[],
+        align: align as StrokeSpec["align"],
+        cap: (intent.params?.cap as StrokeSpec["cap"]) ?? "butt",
+        join: (intent.params?.join as StrokeSpec["join"]) ?? "miter",
+        dash: (intent.params?.dash as number[]) ?? [],
+        miterLimit: (intent.params?.miterLimit as number) ?? 10,
       };
       for (const id of layerIds) {
         const layer = doc.layersById[id];
@@ -922,11 +930,11 @@ export function intentToPatchOps(doc: DesignDocumentV2, intent: EditIntent): Pat
       for (const id of layerIds) {
         const layer = doc.layersById[id];
         if (!layer) continue;
-        // Flip by adjusting skew (180° on relevant axis simulates flip)
+        // Toggle flipX / flipY boolean for true mirror reflection
         if (axis === "horizontal") {
-          ops.push({ op: "replace", layerId: id, path: "/transform/skewY", value: layer.transform.skewY === 0 ? 180 : 0 });
+          ops.push({ op: "replace", layerId: id, path: "/transform/flipX", value: !layer.transform.flipX });
         } else {
-          ops.push({ op: "replace", layerId: id, path: "/transform/skewX", value: layer.transform.skewX === 0 ? 180 : 0 });
+          ops.push({ op: "replace", layerId: id, path: "/transform/flipY", value: !layer.transform.flipY });
         }
       }
       break;
@@ -1375,6 +1383,42 @@ export function intentToPatchOps(doc: DesignDocumentV2, intent: EditIntent): Pat
       }
       break;
     }
+
+    case "set-text-content": {
+      // Change the actual text content of text layers
+      const newText = intent.params?.text as string;
+      if (!newText) break;
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer || layer.type !== "text") continue;
+        ops.push({ op: "replace", layerId: id, path: "/text", value: newText });
+      }
+      break;
+    }
+
+    case "duplicate-layer": {
+      // Duplicate targeted layers with an optional positional offset
+      const offsetX = (intent.params?.offsetX as number) ?? 20;
+      const offsetY = (intent.params?.offsetY as number) ?? 20;
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer) continue;
+        // Deep-clone the layer with a new ID and shifted position
+        const cloneId = `${layer.id}-copy-${Date.now()}` as LayerId;
+        const cloned = JSON.parse(JSON.stringify(layer)) as LayerV2;
+        cloned.id = cloneId;
+        cloned.name = `${cloned.name} copy`;
+        cloned.transform = {
+          ...cloned.transform,
+          position: {
+            x: cloned.transform.position.x + offsetX,
+            y: cloned.transform.position.y + offsetY,
+          },
+        };
+        ops.push({ op: "add", layerId: cloneId, path: "", value: cloned });
+      }
+      break;
+    }
   }
 
   return ops;
@@ -1408,6 +1452,7 @@ export interface AIRevisionResponse {
 
 /**
  * Parse an AI response string into structured patch ops / intents.
+ * Validates the structure of each patch op and intent before returning.
  */
 export function parseAIRevisionResponse(raw: string): AIRevisionResponse | null {
   try {
@@ -1418,9 +1463,36 @@ export function parseAIRevisionResponse(raw: string): AIRevisionResponse | null 
     const jsonStr = jsonMatch[1] ?? jsonMatch[0];
     const parsed = JSON.parse(jsonStr);
 
+    // Validate patchOps structure
+    let patchOps: PatchOp[] | undefined;
+    if (Array.isArray(parsed.patchOps)) {
+      patchOps = parsed.patchOps.filter((op: unknown): op is PatchOp => {
+        if (!op || typeof op !== "object") return false;
+        const o = op as Record<string, unknown>;
+        if (!o.op || !o.layerId || typeof o.path !== "string") return false;
+        if (!["add", "replace", "remove"].includes(o.op as string)) return false;
+        return true;
+      });
+      if (patchOps!.length === 0) patchOps = undefined;
+    }
+
+    // Validate intents structure
+    let intents: EditIntent[] | undefined;
+    if (Array.isArray(parsed.intents)) {
+      intents = parsed.intents.filter((i: unknown): i is EditIntent => {
+        if (!i || typeof i !== "object") return false;
+        const intent = i as Record<string, unknown>;
+        if (!intent.type || typeof intent.type !== "string") return false;
+        return true;
+      });
+      if (intents!.length === 0) intents = undefined;
+    }
+
+    if (!patchOps && !intents) return null;
+
     return {
-      patchOps: Array.isArray(parsed.patchOps) ? parsed.patchOps : undefined,
-      intents: Array.isArray(parsed.intents) ? parsed.intents : undefined,
+      patchOps,
+      intents,
       summary: parsed.summary ?? "AI revision applied",
     };
   } catch {

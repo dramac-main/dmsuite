@@ -277,6 +277,8 @@ export interface Transform {
   rotation: number; // degrees
   skewX: number;    // degrees
   skewY: number;    // degrees
+  flipX?: boolean;  // horizontal mirror
+  flipY?: boolean;  // vertical mirror
   pivot: Vec2;      // 0-1 normalized (0.5, 0.5 = center)
 }
 
@@ -287,6 +289,8 @@ export function defaultTransform(x = 0, y = 0, w = 100, h = 100): Transform {
     rotation: 0,
     skewX: 0,
     skewY: 0,
+    flipX: false,
+    flipY: false,
     pivot: { x: 0.5, y: 0.5 },
   };
 }

@@ -11,9 +11,9 @@
 
 import React, { useCallback, useMemo } from "react";
 import { useEditorStore } from "@/stores/editor";
-import type { TextLayerV2, ShapeLayerV2, FrameLayerV2, RGBA, Paint, LayerV2 } from "@/lib/editor/schema";
+import type { TextLayerV2, ShapeLayerV2, FrameLayerV2, IconLayerV2, RGBA, Paint, LayerV2 } from "@/lib/editor/schema";
 import { getLayerOrder, rgbaToHex, solidPaint } from "@/lib/editor/schema";
-import { createUpdateCommand } from "@/lib/editor/commands";
+import { createUpdateCommand, createBatchCommand } from "@/lib/editor/commands";
 import ColorPickerPopover from "./ColorPickerPopover";
 
 // ---------------------------------------------------------------------------
@@ -56,7 +56,9 @@ export default function BusinessCardLayerQuickEdit() {
   const rootFrame = doc.layersById[doc.rootFrameId] as FrameLayerV2 | undefined;
   const bgColor: RGBA = rootFrame?.fills?.[0]?.kind === "solid"
     ? rootFrame.fills[0].color
-    : { r: 255, g: 255, b: 255, a: 1 };
+    : rootFrame?.fills?.[0]?.kind === "gradient" && rootFrame.fills[0].stops.length > 0
+      ? rootFrame.fills[0].stops[0].color
+      : { r: 255, g: 255, b: 255, a: 1 };
 
   // Find the first layer matching each semantic tag
   const findLayerByTag = useCallback((tag: string) => {
@@ -74,30 +76,36 @@ export default function BusinessCardLayerQuickEdit() {
       return fill?.kind === "solid" ? fill.color : null;
     }
     if (layer.type === "icon") {
-      return (layer as unknown as { color: RGBA }).color ?? null;
+      return (layer as IconLayerV2).color ?? null;
     }
     return null;
   }, []);
 
-  // Apply a color change to ALL layers sharing the same tag
+  // Apply a color change to ALL layers sharing the same tag (batched for single undo)
   const handleColorChange = useCallback((tag: string, color: RGBA) => {
     const matching = layers.filter((l) => l.tags.includes(tag));
+    if (matching.length === 0) return;
+
+    const subCommands: ReturnType<typeof createUpdateCommand>[] = [];
     for (const layer of matching) {
       if (layer.type === "text") {
         const t = layer as TextLayerV2;
-        execute(createUpdateCommand(layer.id, {
+        subCommands.push(createUpdateCommand(layer.id, {
           defaultStyle: { ...t.defaultStyle, fill: solidPaint(color) },
         } as Partial<LayerV2>, `Color: ${tag}`));
       } else if (layer.type === "shape") {
         const s = layer as ShapeLayerV2;
-        execute(createUpdateCommand(layer.id, {
+        subCommands.push(createUpdateCommand(layer.id, {
           fills: s.fills.map((f, i) => i === 0 ? solidPaint(color) : f) as Paint[],
         } as Partial<LayerV2>, `Color: ${tag}`));
       } else if (layer.type === "icon") {
-        execute(createUpdateCommand(layer.id, {
+        subCommands.push(createUpdateCommand(layer.id, {
           color,
         } as Partial<LayerV2>, `Color: ${tag}`));
       }
+    }
+    if (subCommands.length > 0) {
+      execute(subCommands.length === 1 ? subCommands[0] : createBatchCommand(subCommands, `Color: ${tag}`));
     }
   }, [layers, execute]);
 

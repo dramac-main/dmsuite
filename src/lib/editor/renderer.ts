@@ -137,13 +137,15 @@ function renderLayerV2(
     ctx.globalCompositeOperation = BLEND_MODE_TO_COMPOSITE[layer.blendMode] as GlobalCompositeOperation;
   }
 
-  // Apply transform (rotation around pivot)
+  // Apply transform (flip + rotation around pivot)
   const t = layer.transform;
-  if (t.rotation !== 0) {
+  const needsFlip = t.flipX || t.flipY;
+  if (t.rotation !== 0 || needsFlip) {
     const cx = t.position.x + t.size.x * t.pivot.x;
     const cy = t.position.y + t.size.y * t.pivot.y;
     ctx.translate(cx, cy);
-    ctx.rotate((t.rotation * Math.PI) / 180);
+    if (needsFlip) ctx.scale(t.flipX ? -1 : 1, t.flipY ? -1 : 1);
+    if (t.rotation !== 0) ctx.rotate((t.rotation * Math.PI) / 180);
     ctx.translate(-cx, -cy);
   }
 
