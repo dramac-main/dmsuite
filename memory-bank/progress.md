@@ -1,6 +1,6 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 96/194 tools with workspaces (49%) — ~90 tools still need building — Build passes ✅ — Full audit complete ✅ — vNext Editor M0-M5 Complete ✅ — M3.5 Pro Editor + AI Full Control ✅ — M3.7 Business Card Full AI Sync ✅ — M3.8 Infinite Designs Generator ✅ — M3.9 UX Polish & Power Features ✅ — M3.10 Abstract Asset Library ✅ — M3.11 Business Card Deep Enhancement ✅ — Full AI Connectivity Audit ✅
+## Overall Status: 96/194 tools with workspaces (49%) — ~90 tools still need building — Build passes ✅ — Full audit complete ✅ — vNext Editor M0-M5 Complete ✅ — M3.5 Pro Editor + AI Full Control ✅ — M3.7 Business Card Full AI Sync ✅ — M3.8 Infinite Designs Generator ✅ — M3.9 UX Polish & Power Features ✅ — M3.10 Abstract Asset Library ✅ — M3.11 Business Card Deep Enhancement ✅ — Full AI Connectivity Audit ✅ — M3.12 Deep Audit + 12 Critical Fixes ✅
 
 ---
 
@@ -187,6 +187,25 @@
 - [x] **Contact details UI** — LinkedIn, Twitter/X, Instagram inputs in sidebar
 - [x] **TypeScript fixes** — Paint union narrowing (SolidPaint intermediate), TextLayerV2.text (not .content.text)
 - [x] Build verified clean (`tsc --noEmit` zero errors)
+
+### M3.12: Deep Audit + 12 Critical Fixes ✅ (Session 38, commit 9ecd2ac)
+- [x] **50-issue audit** — comprehensive line-by-line scan of BusinessCardWorkspace (3954 lines), business-card-adapter (2341 lines), ai-patch (1828 lines), BusinessCardLayerQuickEdit (200 lines), editor store, renderer
+- [x] **flipX/flipY support** — added to Transform interface in schema.ts, `defaultTransform()` updated, renderer applies `ctx.scale()` around pivot; fixes previously broken flip (was using non-functional skew 180°)
+- [x] **flip intent fixed** — ai-patch now toggles flipX/flipY booleans instead of setting useless skewX/skewY values
+- [x] **add-gradient-fill fixed** — creates valid `GradientPaint` matching schema (gradientType, transform matrix from angle, spread); was using non-existent `type` and `angle` properties
+- [x] **set-stroke fixed** — uses correct `dash: []` (not `dashArray`), includes `miterLimit`, uses schema-correct StrokeSpec type
+- [x] **set-text-content intent** — new AI intent for changing text content on text layers
+- [x] **duplicate-layer intent** — new AI intent for cloning layers with positional offset
+- [x] **parseAIRevisionResponse validation** — validates patchOp structure (op/layerId/path required), validates intent structure (type required); returns null if both empty after filtering
+- [x] **fitContactBlock integration** — all 21 buildContactLayers call sites now pass H for overflow prevention; function auto-clamps visible count and adjusts gap via fitContactBlock()
+- [x] **Social media sync** — syncTextToDocument + documentToCardConfig now handle linkedin, twitter, instagram in both directions
+- [x] **QR code color sync** — syncColorsToDocument adapts QR code color based on background luminance
+- [x] **QuickEdit batch commands** — handleColorChange wraps sub-commands in createBatchCommand for single undo entry
+- [x] **QuickEdit gradient fallback** — shows first gradient stop color instead of white when bg is gradient
+- [x] **QuickEdit type safety** — uses proper IconLayerV2 type cast (was `unknown`)
+- [x] **GradientPaint + StrokeSpec imports** — added to ai-patch.ts type imports
+- [x] Build verified clean (`tsc --noEmit` zero errors)
+- [x] Committed and pushed (9ecd2ac, 5 files, 163 insertions, 51 deletions)
 
 ### Asset Bank: Icons ✅ (Session 26 + continued)
 - [x] icon-library.ts (~2,450 lines) — 115 professional vector canvas icons

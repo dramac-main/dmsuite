@@ -1,9 +1,9 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** M3.11 Complete + Full AI Connectivity Audit Complete
+**Phase:** M3.12 Complete — Business Card Deep Audit + 12 Critical Fixes
 
-### Actual State (Session 37 Updated)
+### Actual State (Session 38 Updated)
 - **194 total tools** defined in tools.ts
 - **96 tools** have dedicated workspace routes in page.tsx → status: "ready"  
 - **~90 tools** have NO workspace → status: "coming-soon"
@@ -24,31 +24,42 @@
 - **M3.10 Abstract Asset Library** — 90 decorative abstract assets across 9 categories; abstract-library.ts (~2400 lines); full integration into adapter, AI patch, generator, quick edit, workspace UI (Session 35)
 - **M3.11 Business Card Deep Enhancement** — 11 improvements: social media contacts, auto-fit text, 12 AI intents, 32 color presets, registry-aware AI, expanded batch with 11 fields, ZIP batch export, CSV 11-column parser (Session 36)
 - **Full AI Connectivity Audit** — every card tool asset/field now wired into both AI engines (Session 37)
+- **M3.12 Deep Audit + 12 Critical Fixes** — comprehensive 50-issue audit, 12 fixes implemented across 5 files (Session 38)
 
-## Recent Changes (Session 37 — Full AI Connectivity Audit)
+## Recent Changes (Session 38 — M3.12 Deep Audit + 12 Critical Fixes)
 
-### All Card Tool Assets Wired to AI Engines
+### Comprehensive Business Card Designer Audit — 12 Fixes Across 5 Files
 
-**Modified: `src/lib/editor/ai-patch.ts`** (8 changes, all applied)
-1. **Import `getIconListForAICompact`** — icon library (115+ icons) now visible to AI engine
-2. **`swap-icon` IntentType** — AI can now change which icon appears on any icon layer
-3. **`swap-icon` handler** in `intentToPatchOps` — pushes `/iconId` replace op on icon layers
-4. **`iconCatalog` variable** — compact icon list built at prompt-generation time
-5. **`## ICON LIBRARY` section** — injected into buildAIPatchPrompt after ABSTRACT ASSET CATALOG
-6. **Social media semantic tags** — added `contact-linkedin`, `contact-twitter`, `contact-instagram` rows to semantic tag map
-7. **`/iconId` editable path** — added to ICON layer paths table so AI knows it can swap icons
-8. **`swap-icon` in intent list + table** — documented in Available Intent Types and Card Design Intents
+**Modified: `src/lib/editor/schema.ts`** (2 changes)
+1. **`flipX?: boolean` + `flipY?: boolean`** — added to Transform interface for true mirror reflection
+2. **`defaultTransform()` updated** — includes `flipX: false, flipY: false` defaults
 
-**Modified: `src/components/workspaces/BusinessCardWorkspace.tsx`** (9 changes applied)
-1. **`isElementSpecificRequest` keywords expanded** — added: linkedin, twitter, instagram, social media, social, logo, brand mark, icon, contact icon, qr, qr code, pattern, texture, overlay, abstract, decorative, decoration
-2. **`generateWithAI` prompt expanded** — added Website, LinkedIn, Twitter, Instagram, Show Contact Icons context to PERSON & COMPANY section
-3. **`generateWithAI` new response keys** — CARD_FORMAT, SHOW_ICONS, QR_CODE, ABSTRACT with top-18 abstract asset options
-4. **`generateWithAI` new parsers** — cardFormatMatch, showIconsMatch, qrCodeMatch, abstractAssetMatch regex parsers
-5. **`generateWithAI` applies new values** — cardStyle from CARD_FORMAT, showContactIcons from SHOW_ICONS, qrCodeUrl from QR_CODE, abstractAssets from ABSTRACT
-6. **`handleRevision` currentDesign** — added linkedin, twitter, instagram fields so AI has full context
-7. **`handleRevision` SCOPE_ALLOWED_FIELDS** — added linkedin, twitter, instagram to text-only, element-specific, full-redesign scopes
-8. **`handleRevision` validation** — added typeof checks for linkedin, twitter, instagram string passthroughs
-9. **`handleRevision` prompt** — documents linkedin, twitter, instagram as settable fields with removal instructions
+**Modified: `src/lib/editor/renderer.ts`** (1 change)
+1. **Flip rendering** — `renderLayer()` now applies `ctx.scale(-1, 1)` / `ctx.scale(1, -1)` around pivot when flipX/flipY are set, combined with rotation
+
+**Modified: `src/lib/editor/business-card-adapter.ts`** (6 changes)
+1. **`syncTextToDocument` social media** — added `contact-linkedin`, `contact-twitter`, `contact-instagram` to textMap for bi-directional sync
+2. **`documentToCardConfig` social extraction** — reverse sync now extracts linkedin, twitter, instagram from tagged layers
+3. **`syncColorsToDocument` QR code** — adapts QR code layer color to background luminance (dark bg → light QR, light bg → dark QR)
+4. **`buildContactLayers` overflow prevention** — integrates `fitContactBlock()` to auto-clamp visible contact count and adjust line gap when entries overflow card height
+5. **`buildContactLayers` H parameter** — added optional `H` param for available height calculation (6% bottom margin)
+6. **All 21 layout functions** — now pass `H` to `buildContactLayers()` for overflow prevention
+
+**Modified: `src/lib/editor/ai-patch.ts`** (8 changes)
+1. **`flip` intent fixed** — replaced broken skewX/skewY (did nothing) with proper flipX/flipY toggle on Transform
+2. **`add-gradient-fill` fixed** — now creates valid `GradientPaint` with `gradientType`, angle-to-transform matrix, `spread` field (was using non-existent `type` and `angle` properties)
+3. **`set-stroke` fixed** — uses correct `dash: []` (not `dashArray`), adds `miterLimit: 10`, uses schema-correct cap/join defaults
+4. **`set-text-content` intent added** — AI can now change text content of text layers via `/text` path
+5. **`duplicate-layer` intent added** — AI can clone layers with positional offset, auto-naming
+6. **IntentType union expanded** — added `set-text-content`, `duplicate-layer` to M3.12 group
+7. **`GradientPaint` + `StrokeSpec` type imports** — added to type imports for schema correctness
+8. **`parseAIRevisionResponse` validation** — validates patchOps (op/layerId/path required, op must be add/replace/remove) and intents (type required, must be string); returns null if both empty
+
+**Modified: `src/components/editor/BusinessCardLayerQuickEdit.tsx`** (4 changes)
+1. **Batch color commands** — `handleColorChange` now collects all sub-commands and wraps in `createBatchCommand` for single undo entry (was creating N separate undo entries)
+2. **Gradient background fallback** — shows first gradient stop color instead of white when background uses gradient paint
+3. **`IconLayerV2` type import** — replaced unsafe `(layer as unknown as { color: RGBA })` with proper `(layer as IconLayerV2)`
+4. **`createBatchCommand` import** — added from commands.ts
 
 ## Recent Changes (Session 36 — M3.11)
 
