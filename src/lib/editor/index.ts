@@ -122,3 +122,17 @@ export {
   getCombinationCount, getRecipesForStyle, getThemesByMood, getThemesByCategory,
   suggestCombination, applyThemeToConfig,
 } from "./template-generator";
+
+// ---- Abstract Asset Library ----
+export type {
+  AbstractCategory, AbstractAssetType, AbstractMood,
+  AbstractCustomizable, AbstractColorRoles, AbstractBuildParams,
+  AbstractAsset, AbstractLayerConfig,
+} from "./abstract-library";
+export {
+  ABSTRACT_ASSETS, ABSTRACT_REGISTRY,
+  ABSTRACT_CATEGORIES, ABSTRACT_CATEGORY_LABELS,
+  getAllAbstractIds, getAbstractsByCategory, getAbstractsByMood,
+  getAbstractsByType, searchAbstractAssets, buildAbstractAsset,
+  getAbstractListForAI, getAbstractCountByCategory,
+} from "./abstract-library";

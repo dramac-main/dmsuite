@@ -36,6 +36,7 @@ const SEMANTIC_ELEMENTS: SemanticEntry[] = [
   { tag: "accent",       label: "Accent",      description: "Decorative shapes & highlights" },
   { tag: "border",       label: "Border",      description: "Frame borders & outlines" },
   { tag: "corner",       label: "Corners",     description: "Corner accent marks" },
+  { tag: "abstract-asset", label: "Abstract",  description: "Abstract decorative assets" },
   { tag: "logo",         label: "Logo",        description: "Logo or brand initials" },
   { tag: "qr-code",      label: "QR Code",     description: "QR code element" },
 ];

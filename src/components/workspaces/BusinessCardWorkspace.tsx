@@ -37,6 +37,7 @@ import StickyCanvasLayout from "./StickyCanvasLayout";
 import TemplateSlider, { type TemplatePreview } from "./TemplateSlider";
 import AdvancedSettingsPanel from "./AdvancedSettingsPanel";
 import { jsPDF } from "jspdf";
+import JSZip from "jszip";
 import { Accordion, AccordionSection } from "@/components/ui";
 import { useAdvancedSettingsStore } from "@/stores";
 import {
@@ -66,6 +67,11 @@ import BusinessCardLayerQuickEdit from "@/components/editor/BusinessCardLayerQui
 import { useEditorStore } from "@/stores/editor";
 import { buildAIPatchPrompt, parseAIRevisionResponse, processIntent } from "@/lib/editor/ai-patch";
 import type { RevisionScope as EditorRevisionScope } from "@/lib/editor/ai-patch";
+import {
+  ABSTRACT_ASSETS, ABSTRACT_CATEGORIES, ABSTRACT_CATEGORY_LABELS,
+  ABSTRACT_REGISTRY, getAbstractsByCategory,
+  type AbstractCategory, type AbstractAsset,
+} from "@/lib/editor/abstract-library";
 
 /* ====================================================================
    BUSINESS CARD TYPOGRAPHY STANDARDS (Industry Research)
@@ -98,6 +104,17 @@ interface ContactEntry {
   title: string;
   email: string;
   phone: string;
+  /* ── Extended batch fields ─────────────────────── */
+  website?: string;
+  address?: string;
+  linkedin?: string;
+  twitter?: string;
+  instagram?: string;
+  department?: string;
+  /** Per-person QR code URL (overrides the card-level qrCodeUrl) */
+  qrUrl?: string;
+  /** Per-person logo override (data-url or URL) — e.g. branch logos */
+  logoOverride?: string;
 }
 
 interface CardConfig {
@@ -110,6 +127,10 @@ interface CardConfig {
   phone: string;
   website: string;
   address: string;
+  /* Social Media */
+  linkedin: string;
+  twitter: string;
+  instagram: string;
   /* Visual */
   template: string;
   primaryColor: string;
@@ -127,6 +148,18 @@ interface CardConfig {
   qrCodeUrl: string;
   /* Back card */
   backStyle: "logo-center" | "pattern-fill" | "minimal" | "info-repeat" | "gradient-brand";
+  /* Abstract assets */
+  abstractAssets?: Array<{
+    assetId: string;
+    opacity?: number;
+    scale?: number;
+    rotation?: number;
+    xOffset?: number;
+    yOffset?: number;
+    colorOverride?: string;
+    blendMode?: string;
+    zPosition?: "behind-content" | "above-content";
+  }>;
 }
 
 /* -- Revision Types -------------------------------------------------- */
@@ -180,6 +213,7 @@ const TEMPLATE_CATEGORIES = [
 ];
 
 const COLOR_PRESETS = [
+  /* ── Original 12 ─────────────────────────────────────────────── */
   { name: "Lime Pro",    primary: "#8ae600", secondary: "#06b6d4", text: "#ffffff", bg: "#0a0a0a" },
   { name: "Navy",        primary: "#1e3a5f", secondary: "#4a90d9", text: "#ffffff", bg: "#0c1929" },
   { name: "Charcoal",    primary: "#2d2d2d", secondary: "#6b6b6b", text: "#333333", bg: "#ffffff" },
@@ -192,6 +226,27 @@ const COLOR_PRESETS = [
   { name: "Slate",       primary: "#475569", secondary: "#94a3b8", text: "#f1f5f9", bg: "#0f172a" },
   { name: "Coral",       primary: "#ff6b6b", secondary: "#ffd93d", text: "#ffffff", bg: "#1a1a2e" },
   { name: "Sage",        primary: "#6b8f71", secondary: "#aab89e", text: "#ffffff", bg: "#1c2a1e" },
+  /* ── Extended 20+ Industry-Inspired Presets ──────────────────── */
+  { name: "Rose Gold",   primary: "#b76e79", secondary: "#f0d5d8", text: "#ffffff", bg: "#1a1218" },
+  { name: "Copper",      primary: "#b87333", secondary: "#daa06d", text: "#faf0e6", bg: "#1c1410" },
+  { name: "Platinum",    primary: "#e5e4e2", secondary: "#bfc0c0", text: "#1a1a1a", bg: "#2d2d2d" },
+  { name: "Emerald",     primary: "#50c878", secondary: "#2e8b57", text: "#ffffff", bg: "#0d1f14" },
+  { name: "Royal Blue",  primary: "#4169e1", secondary: "#6495ed", text: "#ffffff", bg: "#0a0e2a" },
+  { name: "Sunset",      primary: "#ff7e5f", secondary: "#feb47b", text: "#ffffff", bg: "#1a0f14" },
+  { name: "Lavender",    primary: "#9b59b6", secondary: "#d2b4de", text: "#ffffff", bg: "#1a0f25" },
+  { name: "Teal Pro",    primary: "#008080", secondary: "#20b2aa", text: "#ffffff", bg: "#0a1a1a" },
+  { name: "Carbon",      primary: "#333333", secondary: "#4a4a4a", text: "#e0e0e0", bg: "#111111" },
+  { name: "Ice Blue",    primary: "#a8dadc", secondary: "#457b9d", text: "#1d3557", bg: "#f1faee" },
+  { name: "Mauve",       primary: "#c08497", secondary: "#e8b4b8", text: "#ffffff", bg: "#2a1520" },
+  { name: "Olive",       primary: "#808000", secondary: "#bdb76b", text: "#ffffff", bg: "#1a1c0a" },
+  { name: "Terracotta",  primary: "#cb6843", secondary: "#e09070", text: "#ffffff", bg: "#1f140e" },
+  { name: "Mint Fresh",  primary: "#3eb489", secondary: "#98fb98", text: "#1a3a2a", bg: "#f0fff0" },
+  { name: "Electric",    primary: "#7df9ff", secondary: "#00ffff", text: "#0a0a2e", bg: "#050520" },
+  { name: "Blush",       primary: "#de6fa1", secondary: "#f5b7d0", text: "#1a1a2e", bg: "#fff0f5" },
+  { name: "Mahogany",    primary: "#c04000", secondary: "#cd853f", text: "#faebd7", bg: "#1a0e08" },
+  { name: "Steel",       primary: "#71797e", secondary: "#b0c4de", text: "#ffffff", bg: "#1c2526" },
+  { name: "Violet Ink",  primary: "#7c3aed", secondary: "#a78bfa", text: "#ffffff", bg: "#0f0a25" },
+  { name: "Warm Sand",   primary: "#c2b280", secondary: "#d2b48c", text: "#3a3020", bg: "#faf5eb" },
 ];
 
 const PATTERN_OPTIONS = [
@@ -307,7 +362,7 @@ function getFont(weight: number, size: number, style: CardConfig["fontStyle"]): 
 
 function drawContactIcon(
   ctx: CanvasRenderingContext2D,
-  type: "email" | "phone" | "website" | "address",
+  type: "email" | "phone" | "website" | "address" | "linkedin" | "twitter" | "instagram",
   x: number, y: number, size: number, color: string
 ) {
   const iconMap: Record<string, string> = {
@@ -315,16 +370,22 @@ function drawContactIcon(
     phone: "phone",
     website: "globe",
     address: "map-pin",
+    linkedin: "linkedin",
+    twitter: "twitter-x",
+    instagram: "instagram",
   };
   drawIcon(ctx, iconMap[type] || type, x, y, size, color);
 }
 
-function getContactEntries(c: CardConfig): Array<{ type: "email" | "phone" | "website" | "address"; value: string }> {
-  const entries: Array<{ type: "email" | "phone" | "website" | "address"; value: string }> = [];
-  if (c.phone)   entries.push({ type: "phone",   value: c.phone });
-  if (c.email)   entries.push({ type: "email",   value: c.email });
-  if (c.website) entries.push({ type: "website", value: c.website });
-  if (c.address) entries.push({ type: "address", value: c.address });
+function getContactEntries(c: CardConfig): Array<{ type: "email" | "phone" | "website" | "address" | "linkedin" | "twitter" | "instagram"; value: string }> {
+  const entries: Array<{ type: "email" | "phone" | "website" | "address" | "linkedin" | "twitter" | "instagram"; value: string }> = [];
+  if (c.phone)     entries.push({ type: "phone",     value: c.phone });
+  if (c.email)     entries.push({ type: "email",     value: c.email });
+  if (c.website)   entries.push({ type: "website",   value: c.website });
+  if (c.linkedin)  entries.push({ type: "linkedin",  value: c.linkedin });
+  if (c.twitter)   entries.push({ type: "twitter",   value: c.twitter });
+  if (c.instagram) entries.push({ type: "instagram", value: c.instagram });
+  if (c.address)   entries.push({ type: "address",   value: c.address });
   return entries;
 }
 
@@ -1824,8 +1885,18 @@ function renderBatchCard(
     title: entry.title,
     email: entry.email,
     phone: entry.phone,
+    // Extended batch fields — override only if the person has them
+    ...(entry.website  ? { website: entry.website }   : {}),
+    ...(entry.address  ? { address: entry.address }   : {}),
+    ...(entry.linkedin ? { linkedin: entry.linkedin } : {}),
+    ...(entry.twitter  ? { twitter: entry.twitter }   : {}),
+    ...(entry.instagram? { instagram: entry.instagram }: {}),
     side,
   };
+  // Per-person QR override
+  if (entry.qrUrl) {
+    batchConfig.qrCodeUrl = entry.qrUrl;
+  }
   renderCardV2(offscreen, batchConfig, logoImg, scale);
   // QR overlay (use logical dimensions since ctx may have scale transform)
   if (batchConfig.qrCodeUrl) {
@@ -1860,6 +1931,7 @@ export default function BusinessCardWorkspace() {
   const [config, setConfig] = useState<CardConfig>({
     name: "", title: "", company: "", tagline: "",
     email: "", phone: "", website: "", address: "",
+    linkedin: "", twitter: "", instagram: "",
     template: "executive-clean",
     primaryColor: "#2c3e50", secondaryColor: "#7f8c8d",
     textColor: "#2c3e50", bgColor: "#faf8f5",
@@ -1971,7 +2043,7 @@ export default function BusinessCardWorkspace() {
   }, [updateConfig]);
 
   /** Parse a CSV file into batch entries.
-   *  Expected columns (in order): Name, Title, Email, Phone
+   *  Expected columns (in order): Name, Title, Email, Phone, Website, Address, LinkedIn, Twitter, Instagram, Department, QR URL
    *  A header row is auto-detected and skipped if the first cell is
    *  non-numeric text that matches common header words.
    */
@@ -1987,7 +2059,7 @@ export default function BusinessCardWorkspace() {
       if (!lines.length) return;
 
       // Detect header row (first cell looks like a label, not a name)
-      const headerWords = /^(name|full.?name|person|member|employee|staff|title|role|job|email|phone|contact)/i;
+      const headerWords = /^(name|full.?name|person|member|employee|staff|title|role|job|email|phone|contact|website|linkedin|department)/i;
       const firstCell = lines[0].split(",")[0].trim().replace(/^"|"$/g, "");
       const startIdx = headerWords.test(firstCell) ? 1 : 0;
 
@@ -1996,11 +2068,18 @@ export default function BusinessCardWorkspace() {
         const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
           .map(c => c.trim().replace(/^"|"$/g, ""));
         return {
-          id:    String(Date.now() + idx),
-          name:  cols[0] ?? "",
-          title: cols[1] ?? "",
-          email: cols[2] ?? "",
-          phone: cols[3] ?? "",
+          id:         String(Date.now() + idx),
+          name:       cols[0] ?? "",
+          title:      cols[1] ?? "",
+          email:      cols[2] ?? "",
+          phone:      cols[3] ?? "",
+          website:    cols[4] || undefined,
+          address:    cols[5] || undefined,
+          linkedin:   cols[6] || undefined,
+          twitter:    cols[7] || undefined,
+          instagram:  cols[8] || undefined,
+          department: cols[9] || undefined,
+          qrUrl:      cols[10] || undefined,
         };
       }).filter(e => e.name.trim());
 
@@ -2195,6 +2274,9 @@ export default function BusinessCardWorkspace() {
       const templateList = TEMPLATES.map(t => `${t.id}: ${t.desc}`).join("\n");
       const templateIds = TEMPLATES.map(t => t.id).join(" | ");
       const patternIds = PATTERN_OPTIONS.map(p => p.id).join(" | ");
+      const recipeIds = LAYOUT_RECIPES.map(r => `${r.id}: ${r.label} — ${r.description}`).join("\n");
+      const themeIds = CARD_THEMES.map(t => `${t.id}: ${t.label} (${t.mood})`).join("\n");
+      const accentKitIds = ACCENT_KITS.map(k => `${k.id}: ${k.label}`).join("\n");
 
       const prompt = `You are an elite professional business card designer with 20 years of experience. Design a stunning, market-ready business card.
 
@@ -2203,6 +2285,10 @@ Name: ${config.name || "Not provided"}
 Title: ${config.title || "Not provided"}
 Company: ${config.company || "Not provided"}
 Tagline: ${config.tagline || "Not provided"}
+Website: ${config.website || "Not provided"}
+LinkedIn: ${config.linkedin || "Not provided"}
+Twitter: ${config.twitter || "Not provided"}
+Instagram: ${config.instagram || "Not provided"}
 Industry: Infer from company/title
 
 DESIGN REQUIREMENTS:
@@ -2217,6 +2303,16 @@ DESIGN REQUIREMENTS:
 AVAILABLE TEMPLATES:
 ${templateList}
 
+PARAMETRIC ENGINE (pick the best combination for this industry):
+--- Layout Recipes ---
+${recipeIds}
+
+--- Color Themes ---
+${themeIds}
+
+--- Accent Kits ---
+${accentKitIds}
+
 RESPOND WITH EACH VALUE ON ITS OWN LINE (use EXACTLY these keys):
 TEMPLATE: ${templateIds}
 PRIMARY: #hex (brand/accent color - must be bold and identifiable)
@@ -2227,7 +2323,17 @@ FONT: modern | classic | bold | elegant | minimal
 PATTERN: ${patternIds}
 BACK_STYLE: logo-center | pattern-fill | minimal | info-repeat | gradient-brand
 TAGLINE: A short tagline for the company (if none provided)
-STYLE: minimal | modern | classic | creative | luxury`;
+STYLE: minimal | modern | classic | creative | luxury
+RECIPE: Pick the best recipe ID from the list above
+THEME: Pick the best theme ID from the list above
+ACCENT_KIT: Pick the best accent kit ID from the list above
+CARD_FORMAT: standard | eu | jp | square | rounded (best format for this industry/brand)
+SHOW_ICONS: yes | no (should contact lines have leading icons?)
+QR_CODE: (optional — a relevant URL to embed as QR code, or "none")
+ABSTRACT: (optional — pick ONE abstract asset ID below that fits this brand's personality, or "none")
+
+ABSTRACT ASSET OPTIONS (pick 1 that fits the brand aesthetic):
+${ABSTRACT_ASSETS.slice(0, 18).map(a => `  ${a.id}: [${a.category}] ${a.label}`).join("\n")}`;
 
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -2256,6 +2362,13 @@ STYLE: minimal | modern | classic | creative | luxury`;
       const backMatch = fullText.match(/BACK_STYLE:\s*(\S+)/i);
       const taglineMatch = fullText.match(/TAGLINE:\s*(.+)/i);
       const styleMatch = fullText.match(/STYLE:\s*(\S+)/i);
+      const recipeMatch = fullText.match(/RECIPE:\s*(\S+)/i);
+      const themeMatch2 = fullText.match(/THEME:\s*(\S+)/i);
+      const accentKitMatch = fullText.match(/ACCENT_KIT:\s*(\S+)/i);
+      const cardFormatMatch = fullText.match(/CARD_FORMAT:\s*(\S+)/i);
+      const showIconsMatch = fullText.match(/SHOW_ICONS:\s*(\S+)/i);
+      const qrCodeMatch = fullText.match(/QR_CODE:\s*(\S+)/i);
+      const abstractAssetMatch = fullText.match(/ABSTRACT:\s*(\S+)/i);
 
       if (templateMatch) {
         const t = templateMatch[1].toLowerCase();
@@ -2280,6 +2393,21 @@ STYLE: minimal | modern | classic | creative | luxury`;
       if (taglineMatch && !config.tagline) {
         updates.tagline = taglineMatch[1].trim().replace(/^["']|["']$/g, "");
       }
+      if (cardFormatMatch) {
+        const f = cardFormatMatch[1].toLowerCase();
+        if (["standard", "eu", "jp", "square", "rounded"].includes(f)) updates.cardStyle = f as CardConfig["cardStyle"];
+      }
+      if (showIconsMatch) {
+        updates.showContactIcons = showIconsMatch[1].toLowerCase() === "yes";
+      }
+      if (qrCodeMatch) {
+        const qrVal = qrCodeMatch[1].trim();
+        if (qrVal.toLowerCase() !== "none" && qrVal.startsWith("http")) updates.qrCodeUrl = qrVal;
+      }
+      if (abstractAssetMatch && abstractAssetMatch[1].toLowerCase() !== "none") {
+        const assetId = abstractAssetMatch[1].toLowerCase();
+        if (ABSTRACT_REGISTRY[assetId]) updates.abstractAssets = [{ assetId }];
+      }
       updateConfig(updates);
 
       // ── Generate a full parametric design using the AI's style choice ──────
@@ -2296,18 +2424,28 @@ STYLE: minimal | modern | classic | creative | luxury`;
                   + parseInt(bgHex.slice(3, 5), 16) * 0.587
                   + parseInt(bgHex.slice(5, 7), 16) * 0.114;
       const aiMood: typeof validMoods[number] = bgLum < 80 ? "dark" : bgLum > 200 ? "light" : "vibrant";
-      const combo = suggestCombination(resolvedStyle, aiMood, Date.now());
-      setGenRecipeId(combo.recipeId);
-      setGenThemeId(combo.themeId);
-      setGenAccentKitId(combo.accentKitId);
+
+      // Use AI-picked recipe/theme/accent if valid, otherwise fallback to suggestion
+      const aiRecipeId = recipeMatch?.[1]?.toLowerCase();
+      const aiThemeId = themeMatch2?.[1]?.toLowerCase();
+      const aiAccentKitId = accentKitMatch?.[1]?.toLowerCase();
+
+      const fallbackCombo = suggestCombination(resolvedStyle, aiMood, Date.now());
+      const finalRecipeId = (aiRecipeId && LAYOUT_RECIPES.some(r => r.id === aiRecipeId)) ? aiRecipeId : fallbackCombo.recipeId;
+      const finalThemeId = (aiThemeId && CARD_THEMES.some(t => t.id === aiThemeId)) ? aiThemeId : fallbackCombo.themeId;
+      const finalAccentKitId = (aiAccentKitId && ACCENT_KITS.some(k => k.id === aiAccentKitId)) ? aiAccentKitId : fallbackCombo.accentKitId;
+
+      setGenRecipeId(finalRecipeId);
+      setGenThemeId(finalThemeId);
+      setGenAccentKitId(finalAccentKitId);
 
       // Merge AI color picks into the parametric generation (useCfgColors=true)
       const cfgWithUpdates = { ...config, ...updates } as unknown as CardConfigV2;
       const doc = generateCardDocument({
         cfg: cfgWithUpdates,
-        recipeId:    combo.recipeId,
-        themeId:     combo.themeId,
-        accentKitId: combo.accentKitId,
+        recipeId:    finalRecipeId,
+        themeId:     finalThemeId,
+        accentKitId: finalAccentKitId,
         useCfgColors: true,
         logoImg:     logoImg ?? undefined,
       });
@@ -2336,6 +2474,12 @@ STYLE: minimal | modern | classic | creative | luxury`;
       "company", "company name", "business name", "organisation", "organization",
       "tagline", "slogan", "subtitle",
       "contact", "email", "phone", "website", "address",
+      "linkedin", "twitter", "instagram", "social media", "social",
+      "logo", "brand mark",
+      "icon", "contact icon",
+      "qr", "qr code",
+      "pattern", "texture", "overlay",
+      "abstract", "decorative", "decoration",
       "accent", "line", "divider", "bar", "stripe",
       "background", "card background",
     ];
@@ -2355,6 +2499,9 @@ STYLE: minimal | modern | classic | creative | luxury`;
         phone: config.phone,
         website: config.website,
         address: config.address,
+        linkedin: config.linkedin,
+        twitter: config.twitter,
+        instagram: config.instagram,
         template: config.template,
         primaryColor: config.primaryColor,
         secondaryColor: config.secondaryColor,
@@ -2371,11 +2518,11 @@ STYLE: minimal | modern | classic | creative | luxury`;
 
       // ── HARD SCOPE ENFORCEMENT: define exactly which fields each scope may touch ──
       const SCOPE_ALLOWED_FIELDS: Record<RevisionScope, string[]> = {
-        "text-only":        ["name", "title", "company", "tagline", "email", "phone", "website", "address", "fontStyle", "showContactIcons"],
+        "text-only":        ["name", "title", "company", "tagline", "email", "phone", "website", "address", "linkedin", "twitter", "instagram", "fontStyle", "showContactIcons"],
         "colors-only":      ["primaryColor", "secondaryColor", "textColor", "bgColor"],
         "layout-only":      ["template", "patternType", "backStyle", "cardStyle", "side"],
-        "element-specific": ["name", "title", "company", "tagline", "email", "phone", "website", "address", "fontStyle", "showContactIcons", "primaryColor", "secondaryColor", "textColor", "bgColor", "template", "patternType", "backStyle", "cardStyle", "side", "qrCodeUrl"],
-        "full-redesign":    ["name", "title", "company", "tagline", "email", "phone", "website", "address", "fontStyle", "showContactIcons", "primaryColor", "secondaryColor", "textColor", "bgColor", "template", "patternType", "backStyle", "cardStyle", "side", "qrCodeUrl"],
+        "element-specific": ["name", "title", "company", "tagline", "email", "phone", "website", "address", "linkedin", "twitter", "instagram", "fontStyle", "showContactIcons", "primaryColor", "secondaryColor", "textColor", "bgColor", "template", "patternType", "backStyle", "cardStyle", "side", "qrCodeUrl"],
+        "full-redesign":    ["name", "title", "company", "tagline", "email", "phone", "website", "address", "linkedin", "twitter", "instagram", "fontStyle", "showContactIcons", "primaryColor", "secondaryColor", "textColor", "bgColor", "template", "patternType", "backStyle", "cardStyle", "side", "qrCodeUrl"],
       };
 
       const allowedFields = SCOPE_ALLOWED_FIELDS[revisionScope];
@@ -2422,6 +2569,9 @@ Available back styles: logo-center, pattern-fill, minimal, info-repeat, gradient
 Available card styles: standard, eu, jp, square, rounded, custom
 Available sides: front, back
 qrCodeUrl: set to any URL string to add a QR code, or "" to remove it
+linkedin: set to a LinkedIn URL or @handle, or "" to remove
+twitter: set to a Twitter/X handle or URL, or "" to remove
+instagram: set to an Instagram handle or URL, or "" to remove
 
 JSON:`;
 
@@ -2466,6 +2616,9 @@ JSON:`;
         if (typeof rawChanges.phone === "string") validatedChanges.phone = rawChanges.phone;
         if (typeof rawChanges.website === "string") validatedChanges.website = rawChanges.website;
         if (typeof rawChanges.address === "string") validatedChanges.address = rawChanges.address;
+        if (typeof rawChanges.linkedin === "string") validatedChanges.linkedin = rawChanges.linkedin;
+        if (typeof rawChanges.twitter === "string") validatedChanges.twitter = rawChanges.twitter;
+        if (typeof rawChanges.instagram === "string") validatedChanges.instagram = rawChanges.instagram;
         // Layout fields
         if (rawChanges.cardStyle && ["standard", "eu", "jp", "square", "rounded", "custom"].includes(rawChanges.cardStyle)) validatedChanges.cardStyle = rawChanges.cardStyle;
         if (rawChanges.side && ["front", "back"].includes(rawChanges.side)) validatedChanges.side = rawChanges.side;
@@ -2626,12 +2779,12 @@ JSON:`;
   const addBatchEntry = useCallback(() => {
     setBatchEntries(prev => [
       ...prev,
-      { id: Date.now().toString(), name: "", title: "", email: "", phone: "" },
+      { id: Date.now().toString(), name: "", title: "", email: "", phone: "", website: undefined, address: undefined, linkedin: undefined, twitter: undefined, instagram: undefined, department: undefined, qrUrl: undefined },
     ]);
   }, []);
 
   const updateBatchEntry = useCallback((id: string, field: keyof ContactEntry, value: string) => {
-    setBatchEntries(prev => prev.map(e => e.id === id ? { ...e, [field]: value } : e));
+    setBatchEntries(prev => prev.map(e => e.id === id ? { ...e, [field]: value || undefined } : e));
   }, []);
 
   const removeBatchEntry = useCallback((id: string) => {
@@ -2724,6 +2877,61 @@ JSON:`;
       setBatchProgress(0);
     }
   }, [batchEntries, config, bleedInExport, getCardSize, logoImg]);
+
+  // ── Batch ZIP Export ──
+  const exportBatchZip = useCallback(async () => {
+    const validEntries = batchEntries.filter(e => e.name.trim());
+    if (validEntries.length === 0) return;
+    setBatchExporting(true);
+    setBatchProgress(0);
+
+    try {
+      const zip = new JSZip();
+      const folder = zip.folder("business-cards") ?? zip;
+
+      for (let i = 0; i < validEntries.length; i++) {
+        const entry = validEntries[i];
+        setBatchProgress(Math.round(((i + 0.5) / validEntries.length) * 90));
+
+        const safeName = entry.name.trim().replace(/[^a-zA-Z0-9_\-\s]/g, "").replace(/\s+/g, "-") || `person-${i + 1}`;
+
+        // Front PNG (300 DPI quality — scale 4)
+        const frontCanvas = renderBatchCard(config, entry, logoImg, "front", 4);
+        const frontBlob = await new Promise<Blob>((resolve) =>
+          frontCanvas.toBlob(b => resolve(b!), "image/png")
+        );
+        folder.file(`${safeName}-front.png`, frontBlob);
+
+        // Back PNG
+        const backCanvas = renderBatchCard(config, entry, logoImg, "back", 4);
+        const backBlob = await new Promise<Blob>((resolve) =>
+          backCanvas.toBlob(b => resolve(b!), "image/png")
+        );
+        folder.file(`${safeName}-back.png`, backBlob);
+
+        // Small delay to prevent UI freeze
+        await new Promise(r => setTimeout(r, 10));
+      }
+
+      setBatchProgress(95);
+      const zipBlob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+      setBatchProgress(100);
+
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `business-cards-${config.company || "team"}-${validEntries.length}pcs.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Batch ZIP export error:", err);
+    } finally {
+      setBatchExporting(false);
+      setBatchProgress(0);
+    }
+  }, [batchEntries, config, logoImg]);
 
   // Single Export handlers
   const handleDownloadPng = useCallback(() => {
@@ -3037,6 +3245,24 @@ JSON:`;
               onChange={(e) => updateConfig({ address: e.target.value })}
               className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
             />
+            {/* Social Media Links */}
+            <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 pt-1">Social Media</p>
+            <div className="grid grid-cols-1 gap-1.5">
+              <input type="text" placeholder="LinkedIn (e.g. linkedin.com/in/name)" value={config.linkedin}
+                onChange={(e) => updateConfig({ linkedin: e.target.value })}
+                className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+              />
+              <div className="grid grid-cols-2 gap-1.5">
+                <input type="text" placeholder="Twitter / X" value={config.twitter}
+                  onChange={(e) => updateConfig({ twitter: e.target.value })}
+                  className="h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                />
+                <input type="text" placeholder="Instagram" value={config.instagram}
+                  onChange={(e) => updateConfig({ instagram: e.target.value })}
+                  className="h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                />
+              </div>
+            </div>
             <div className="pt-1">
               <label className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 mb-1 block">QR Code URL</label>
               <input type="url" placeholder="https://yoursite.com" value={config.qrCodeUrl}
@@ -3149,6 +3375,114 @@ JSON:`;
               />
               <span className="text-xs text-gray-600 dark:text-gray-300">Show contact icons</span>
             </label>
+          </div>
+        </AccordionSection>
+
+        {/* Abstract Assets */}
+        <AccordionSection icon={<IconSparkles className="size-3.5" />} label="Abstract Assets" id="abstracts" badge={config.abstractAssets?.length ?? 0}>
+          <div className="space-y-3">
+            {/* Category filter */}
+            <div className="flex flex-wrap gap-1">
+              {ABSTRACT_CATEGORIES.map((cat) => (
+                <button key={cat}
+                  onClick={() => {
+                    const first = getAbstractsByCategory(cat)[0];
+                    if (first) {
+                      const existing = config.abstractAssets ?? [];
+                      const alreadyHas = existing.some((a) => a.assetId === first.id);
+                      if (!alreadyHas) {
+                        updateConfig({ abstractAssets: [...existing, { assetId: first.id, zPosition: "behind-content" }] });
+                      }
+                    }
+                  }}
+                  className="px-2 py-1 rounded-lg border text-[0.6rem] font-medium transition-all border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-primary-500 hover:text-primary-500"
+                >
+                  {ABSTRACT_CATEGORY_LABELS[cat]}
+                </button>
+              ))}
+            </div>
+
+            {/* Active abstract assets */}
+            {(config.abstractAssets ?? []).length > 0 && (
+              <div className="space-y-2">
+                <span className="text-[0.6rem] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Active</span>
+                {(config.abstractAssets ?? []).map((ac, idx) => {
+                  const asset = ABSTRACT_REGISTRY[ac.assetId];
+                  if (!asset) return null;
+                  return (
+                    <div key={`${ac.assetId}-${idx}`} className="flex items-center gap-2 p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[0.65rem] font-semibold text-gray-700 dark:text-gray-200 truncate">{asset.label}</p>
+                        <p className="text-[0.55rem] text-gray-500 dark:text-gray-400 truncate">{asset.category} · {ac.zPosition === "above-content" ? "Above" : "Behind"}</p>
+                      </div>
+                      <select
+                        value={ac.assetId}
+                        onChange={(e) => {
+                          const updated = [...(config.abstractAssets ?? [])];
+                          updated[idx] = { ...updated[idx], assetId: e.target.value };
+                          updateConfig({ abstractAssets: updated });
+                        }}
+                        className="text-[0.6rem] bg-transparent border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 text-gray-600 dark:text-gray-300 max-w-25"
+                      >
+                        {getAbstractsByCategory(asset.category).map((a) => (
+                          <option key={a.id} value={a.id}>{a.label}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => {
+                          const updated = [...(config.abstractAssets ?? [])];
+                          updated[idx] = { ...updated[idx], zPosition: ac.zPosition === "above-content" ? "behind-content" : "above-content" };
+                          updateConfig({ abstractAssets: updated });
+                        }}
+                        className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-[0.55rem] text-gray-500 dark:text-gray-400"
+                        title="Toggle layer position"
+                      >
+                        {ac.zPosition === "above-content" ? "↑" : "↓"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          const updated = (config.abstractAssets ?? []).filter((_, i) => i !== idx);
+                          updateConfig({ abstractAssets: updated });
+                        }}
+                        className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500"
+                      >
+                        <IconTrash className="size-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Quick-add popular */}
+            <div>
+              <span className="text-[0.6rem] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quick Add</span>
+              <div className="grid grid-cols-2 gap-1 mt-1">
+                {["modern-shard", "minimal-thin-frame", "corp-header-bar", "geo-golden-spiral", "luxury-foil-shimmer", "vintage-ornamental-corner"].map((id) => {
+                  const asset = ABSTRACT_REGISTRY[id];
+                  if (!asset) return null;
+                  const isActive = (config.abstractAssets ?? []).some((a) => a.assetId === id);
+                  return (
+                    <button key={id}
+                      onClick={() => {
+                        if (isActive) {
+                          updateConfig({ abstractAssets: (config.abstractAssets ?? []).filter((a) => a.assetId !== id) });
+                        } else {
+                          updateConfig({ abstractAssets: [...(config.abstractAssets ?? []), { assetId: id, zPosition: "behind-content" }] });
+                        }
+                      }}
+                      className={`px-2 py-1.5 rounded-lg border text-[0.6rem] font-medium transition-all ${
+                        isActive
+                          ? "border-primary-500 bg-primary-500/5 text-primary-500 ring-1 ring-primary-500/30"
+                          : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-primary-400"
+                      }`}
+                    >
+                      {asset.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </AccordionSection>
 
@@ -3373,7 +3707,7 @@ JSON:`;
               {batchEntries.map((entry, idx) => (
                 <div key={entry.id} className="rounded-lg border border-gray-700/50 bg-gray-800/30 p-2 space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-[0.5625rem] font-bold text-primary-500">Person {idx + 1}</span>
+                    <span className="text-[0.5625rem] font-bold text-primary-500">Person {idx + 1}{entry.department ? ` · ${entry.department}` : ""}</span>
                     {batchEntries.length > 1 && (
                       <button onClick={() => removeBatchEntry(entry.id)} className="p-0.5 text-gray-500 hover:text-error-500 transition-colors">
                         <IconTrash className="size-3" />
@@ -3398,6 +3732,46 @@ JSON:`;
                       className="h-7 px-2 rounded-lg border border-gray-700 bg-gray-800/50 text-white text-[0.625rem] placeholder:text-gray-500 focus:outline-none focus:border-primary-500 transition-all"
                     />
                   </div>
+                  {/* Extended fields — collapsed by default */}
+                  <details className="group">
+                    <summary className="text-[0.5rem] text-gray-500 cursor-pointer hover:text-gray-300 transition-colors select-none">
+                      More fields (website, social, dept, QR) ▸
+                    </summary>
+                    <div className="mt-1.5 space-y-1">
+                      <input type="text" placeholder="Website" value={entry.website ?? ""}
+                        onChange={(e) => updateBatchEntry(entry.id, "website", e.target.value)}
+                        className="w-full h-7 px-2 rounded-lg border border-gray-700 bg-gray-800/50 text-white text-[0.625rem] placeholder:text-gray-500 focus:outline-none focus:border-primary-500 transition-all"
+                      />
+                      <input type="text" placeholder="Address" value={entry.address ?? ""}
+                        onChange={(e) => updateBatchEntry(entry.id, "address", e.target.value)}
+                        className="w-full h-7 px-2 rounded-lg border border-gray-700 bg-gray-800/50 text-white text-[0.625rem] placeholder:text-gray-500 focus:outline-none focus:border-primary-500 transition-all"
+                      />
+                      <div className="grid grid-cols-2 gap-1">
+                        <input type="text" placeholder="LinkedIn" value={entry.linkedin ?? ""}
+                          onChange={(e) => updateBatchEntry(entry.id, "linkedin", e.target.value)}
+                          className="h-7 px-2 rounded-lg border border-gray-700 bg-gray-800/50 text-white text-[0.625rem] placeholder:text-gray-500 focus:outline-none focus:border-primary-500 transition-all"
+                        />
+                        <input type="text" placeholder="Twitter / X" value={entry.twitter ?? ""}
+                          onChange={(e) => updateBatchEntry(entry.id, "twitter", e.target.value)}
+                          className="h-7 px-2 rounded-lg border border-gray-700 bg-gray-800/50 text-white text-[0.625rem] placeholder:text-gray-500 focus:outline-none focus:border-primary-500 transition-all"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-1">
+                        <input type="text" placeholder="Instagram" value={entry.instagram ?? ""}
+                          onChange={(e) => updateBatchEntry(entry.id, "instagram", e.target.value)}
+                          className="h-7 px-2 rounded-lg border border-gray-700 bg-gray-800/50 text-white text-[0.625rem] placeholder:text-gray-500 focus:outline-none focus:border-primary-500 transition-all"
+                        />
+                        <input type="text" placeholder="Department" value={entry.department ?? ""}
+                          onChange={(e) => updateBatchEntry(entry.id, "department", e.target.value)}
+                          className="h-7 px-2 rounded-lg border border-gray-700 bg-gray-800/50 text-white text-[0.625rem] placeholder:text-gray-500 focus:outline-none focus:border-primary-500 transition-all"
+                        />
+                      </div>
+                      <input type="url" placeholder="Personal QR URL (overrides card-level)" value={entry.qrUrl ?? ""}
+                        onChange={(e) => updateBatchEntry(entry.id, "qrUrl", e.target.value)}
+                        className="w-full h-7 px-2 rounded-lg border border-gray-700 bg-gray-800/50 text-white text-[0.625rem] placeholder:text-gray-500 focus:outline-none focus:border-primary-500 transition-all"
+                      />
+                    </div>
+                  </details>
                 </div>
               ))}
             </div>
@@ -3413,7 +3787,7 @@ JSON:`;
                 <input type="file" accept=".csv,.txt" onChange={handleCsvImport} className="sr-only" />
               </label>
               <a
-                href={`data:text/csv;charset=utf-8,${encodeURIComponent("Name,Title,Email,Phone\nJohn Doe,CEO,john@company.com,+260 977 000 001\nJane Smith,CTO,jane@company.com,+260 977 000 002")}`}
+                href={`data:text/csv;charset=utf-8,${encodeURIComponent("Name,Title,Email,Phone,Website,Address,LinkedIn,Twitter,Instagram,Department,QR URL\nJohn Doe,CEO,john@company.com,+260 977 000 001,www.company.com,\"123 Business St\",linkedin.com/in/johndoe,@johndoe,,Executive,https://company.com/john\nJane Smith,CTO,jane@company.com,+260 977 000 002,,,linkedin.com/in/janesmith,,,Engineering,")}`}
                 download="batch-template.csv"
                 className="px-2.5 py-1.5 rounded-lg border border-gray-700 text-gray-400 text-[0.5625rem] hover:text-gray-200 hover:border-gray-500 transition-colors whitespace-nowrap"
                 title="Download a CSV template you can fill in and re-import"
@@ -3430,6 +3804,12 @@ JSON:`;
               ) : (
                 <><IconDownload className="size-3.5" />Export All ({batchEntries.filter(e => e.name.trim()).length} cards) as PDF</>
               )}
+            </button>
+            <button onClick={exportBatchZip}
+              disabled={batchExporting || batchEntries.filter(e => e.name.trim()).length === 0}
+              className="w-full flex items-center justify-center gap-2 h-8 rounded-xl border border-gray-700 text-gray-300 text-xs font-medium hover:border-primary-500 hover:text-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <IconDownload className="size-3.5" />Export All as ZIP (individual PNGs)
             </button>
             {batchExporting && (
               <div className="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">

@@ -20,6 +20,8 @@ import {
 import type { Command } from "./commands";
 import { createBatchCommand, createUpdateCommand, createAddLayerCommand, createDeleteCommand, createReorderCommand } from "./commands";
 import { clampToRange, isWCAG_AA, getReadableColor, contrastRatio } from "./design-rules";
+import { buildAbstractAsset, getAbstractListForAI } from "./abstract-library";
+import { getIconListForAICompact } from "@/lib/icon-library";
 
 // ---------------------------------------------------------------------------
 // 1. Revision Scope (what the AI is allowed to touch)
@@ -67,7 +69,7 @@ const SCOPE_ALLOWED_PATHS: Record<RevisionScope, string[]> = {
 
 export interface PatchOp {
   /** Operation type (RFC 6902 subset + custom) */
-  op: "replace" | "add" | "remove" | "reorder" | "add-layer" | "remove-layer";
+  op: "replace" | "add" | "remove" | "reorder" | "add-layer" | "remove-layer" | "add-layer-v2";
   /** Target layer ID */
   layerId?: LayerId;
   /** JSON pointer path within the layer (e.g., "/defaultStyle/fontSize") */
@@ -78,7 +80,9 @@ export interface PatchOp {
   direction?: "up" | "down" | "top" | "bottom";
   /** For add-layer: the full layer data */
   layerData?: Partial<LayerV2> & { type: string };
-  /** For add-layer: parent ID */
+  /** For add-layer-v2: a fully pre-built LayerV2 (used by abstract asset intents) */
+  layerV2?: LayerV2;
+  /** For add-layer / add-layer-v2: parent ID */
   parentId?: LayerId;
 }
 
@@ -134,7 +138,7 @@ export function validateAndApplyPatch(
     }
 
     // 3. Layer existence check
-    if (op.layerId && op.op !== "add-layer" && !doc.layersById[op.layerId]) {
+    if (op.layerId && op.op !== "add-layer" && op.op !== "add-layer-v2" && !doc.layersById[op.layerId]) {
       rejected.push({ op, reason: `Layer "${op.layerId}" not found` });
       continue;
     }
@@ -388,6 +392,11 @@ function opToCommand(doc: DesignDocumentV2, op: PatchOp): Command | null {
       if (!op.layerId) return null;
       return createDeleteCommand([op.layerId]);
     }
+
+    case "add-layer-v2": {
+      if (!op.layerV2) return null;
+      return createAddLayerCommand(op.layerV2, op.parentId, `Add ${op.layerV2.type} layer`);
+    }
   }
 
   return null;
@@ -419,7 +428,17 @@ export type IntentType =
   | "flip" | "rotate"
   | "set-font" | "set-text-style"
   | "set-image-filters"
-  | "reorder-layer";
+  | "reorder-layer"
+  // ---- Abstract asset intent types (M3.10) ----
+  | "add-abstract-asset" | "remove-abstract-asset"
+  | "swap-abstract-asset" | "configure-abstract-asset"
+  // ---- Card-specific design intents (M3.11) ----
+  | "make-luxurious" | "make-minimalist" | "make-corporate" | "make-creative"
+  | "apply-typographic-scale" | "balance-visual-weight"
+  | "improve-name-hierarchy" | "add-visual-accent"
+  | "refine-contact-layout" | "modernize-design"
+  | "add-brand-consistency" | "improve-whitespace"
+  | "swap-icon";
 
 export interface EditIntent {
   type: IntentType;
@@ -984,6 +1003,378 @@ export function intentToPatchOps(doc: DesignDocumentV2, intent: EditIntent): Pat
       }
       break;
     }
+
+    // ================================================================
+    // Abstract asset intent implementations (M3.10)
+    // ================================================================
+
+    case "add-abstract-asset": {
+      const addAssetId = intent.params?.assetId as string;
+      if (!addAssetId) break;
+      const addFrame = doc.layersById[doc.rootFrameId] as FrameLayerV2;
+      if (!addFrame) break;
+      const addW = addFrame.transform.size.x;
+      const addH = addFrame.transform.size.y;
+      const addBg = addFrame.fills?.[0]?.kind === "solid" ? rgbaToHex(addFrame.fills[0].color) : "#ffffff";
+      // Infer primary color from existing accent/abstract layers in the doc
+      const docLayers = getLayerOrder(doc);
+      const hintLayer = docLayers.find(l => l.tags.includes("accent") || l.tags.includes("abstract-asset"));
+      const hintFill = hintLayer?.type === "shape" ? (hintLayer as ShapeLayerV2).fills?.[0] : undefined;
+      const hintPrimary = hintFill?.kind === "solid" ? rgbaToHex(hintFill.color) : null;
+      const addLayers = buildAbstractAsset(addAssetId, {
+        W: addW, H: addH,
+        primary: (intent.params?.primaryColor as string) ?? hintPrimary ?? "#a3e635",
+        secondary: (intent.params?.secondaryColor as string) ?? "#06b6d4",
+        text: (intent.params?.textColor as string) ?? "#ffffff",
+        bg: addBg,
+        opacity: (intent.params?.opacity as number) ?? 1,
+        scale: (intent.params?.scale as number) ?? 1,
+        rotation: (intent.params?.rotation as number) ?? 0,
+        xOffset: (intent.params?.xOffset as number) ?? 0,
+        yOffset: (intent.params?.yOffset as number) ?? 0,
+        blendMode: intent.params?.blendMode as string | undefined,
+        colorOverride: intent.params?.colorOverride as string | undefined,
+      });
+      for (const layer of addLayers) {
+        ops.push({ op: "add-layer-v2", layerV2: layer });
+      }
+      break;
+    }
+
+    case "remove-abstract-asset": {
+      // Safety guard: only remove layers actually tagged as abstract assets
+      for (const id of layerIds) {
+        if (doc.layersById[id]?.tags.includes("abstract-asset")) {
+          ops.push({ op: "remove-layer", layerId: id });
+        }
+      }
+      break;
+    }
+
+    case "swap-abstract-asset": {
+      const swapAssetId = intent.params?.assetId as string;
+      if (!swapAssetId || layerIds.length === 0) break;
+      const swapFrame = doc.layersById[doc.rootFrameId] as FrameLayerV2;
+      if (!swapFrame) break;
+      const swapW = swapFrame.transform.size.x;
+      const swapH = swapFrame.transform.size.y;
+      const swapBg = swapFrame.fills?.[0]?.kind === "solid" ? rgbaToHex(swapFrame.fills[0].color) : "#ffffff";
+      // Read existing fill color from first matched layer to preserve palette
+      const swapExisting = doc.layersById[layerIds[0]];
+      const swapFill = swapExisting?.type === "shape" ? (swapExisting as ShapeLayerV2).fills?.[0] : undefined;
+      const swapPrimary = swapFill?.kind === "solid" ? rgbaToHex(swapFill.color) : "#a3e635";
+      // Remove all old abstract layers from the target set
+      for (const id of layerIds) {
+        if (doc.layersById[id]?.tags.includes("abstract-asset")) {
+          ops.push({ op: "remove-layer", layerId: id });
+        }
+      }
+      // Build and add the replacement asset
+      const swapLayers = buildAbstractAsset(swapAssetId, {
+        W: swapW, H: swapH,
+        primary: (intent.params?.primaryColor as string) ?? swapPrimary,
+        secondary: (intent.params?.secondaryColor as string) ?? "#06b6d4",
+        text: (intent.params?.textColor as string) ?? "#ffffff",
+        bg: swapBg,
+        opacity: (intent.params?.opacity as number) ?? 1,
+        scale: (intent.params?.scale as number) ?? 1,
+        rotation: (intent.params?.rotation as number) ?? 0,
+      });
+      for (const layer of swapLayers) {
+        ops.push({ op: "add-layer-v2", layerV2: layer });
+      }
+      break;
+    }
+
+    case "configure-abstract-asset": {
+      const cfgOpacity = intent.params?.opacity as number | undefined;
+      const cfgBlend = intent.params?.blendMode as string | undefined;
+      const cfgScale = intent.params?.scale as number | undefined;
+      const cfgRotation = intent.params?.rotation as number | undefined;
+      const cfgColor = intent.params?.color as string | undefined;
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer?.tags.includes("abstract-asset")) continue;
+        if (cfgOpacity !== undefined) {
+          ops.push({ op: "replace", layerId: id, path: "/opacity", value: clampToRange(cfgOpacity, "opacity") });
+        }
+        if (cfgBlend) {
+          ops.push({ op: "replace", layerId: id, path: "/blendMode", value: cfgBlend });
+        }
+        if (cfgRotation !== undefined) {
+          ops.push({ op: "replace", layerId: id, path: "/transform/rotation", value: cfgRotation });
+        }
+        if (cfgScale !== undefined && cfgScale !== 1) {
+          ops.push({ op: "replace", layerId: id, path: "/transform/size", value: { x: Math.round(layer.transform.size.x * cfgScale), y: Math.round(layer.transform.size.y * cfgScale) } });
+        }
+        if (cfgColor) {
+          const cfgRgba = hexToRGBA(cfgColor);
+          if (layer.type === "shape" || layer.type === "path") {
+            ops.push({ op: "replace", layerId: id, path: "/fills", value: [{ kind: "solid", color: cfgRgba, opacity: 1 }] });
+          }
+        }
+      }
+      break;
+    }
+
+    // ================================================================
+    // Card-specific design intents (M3.11)
+    // ================================================================
+
+    case "make-luxurious": {
+      // Boost name weight, add subtle shadow, enrich accent colors
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer) continue;
+        if (layer.type === "text" && layer.tags.includes("name")) {
+          const t = layer as TextLayerV2;
+          ops.push({ op: "replace", layerId: id, path: "/defaultStyle/fontWeight", value: Math.min(900, t.defaultStyle.fontWeight + 100) });
+          ops.push({ op: "replace", layerId: id, path: "/defaultStyle/letterSpacing", value: 1.5 });
+          ops.push({
+            op: "replace", layerId: id, path: "/effects",
+            value: [...layer.effects, {
+              type: "drop-shadow", enabled: true,
+              color: { r: 0, g: 0, b: 0, a: 0.12 },
+              offsetX: 0, offsetY: 2, blur: 6, spread: 0,
+            }],
+          });
+        }
+        if (layer.type === "text" && layer.tags.includes("title")) {
+          ops.push({ op: "replace", layerId: id, path: "/defaultStyle/uppercase", value: true });
+          ops.push({ op: "replace", layerId: id, path: "/defaultStyle/letterSpacing", value: 2.0 });
+        }
+      }
+      break;
+    }
+
+    case "make-minimalist": {
+      // Strip shadows/effects, reduce font weights, increase spacing
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer) continue;
+        if (layer.effects.length > 0) {
+          ops.push({ op: "replace", layerId: id, path: "/effects", value: [] });
+        }
+        if (layer.type === "text") {
+          const t = layer as TextLayerV2;
+          if (t.defaultStyle.fontWeight > 500) {
+            ops.push({ op: "replace", layerId: id, path: "/defaultStyle/fontWeight", value: 400 });
+          }
+        }
+        // Reduce opacity of decorative elements
+        if (layer.tags.includes("decorative") && layer.opacity > 0.3) {
+          ops.push({ op: "replace", layerId: id, path: "/opacity", value: layer.opacity * 0.5 });
+        }
+      }
+      break;
+    }
+
+    case "make-corporate": {
+      // Standardize fonts, ensure clean alignment, conservative colors
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer) continue;
+        if (layer.type === "text") {
+          const t = layer as TextLayerV2;
+          if (layer.tags.includes("name")) {
+            ops.push({ op: "replace", layerId: id, path: "/defaultStyle/fontWeight", value: 600 });
+          }
+          if (layer.tags.includes("title") || layer.tags.includes("company")) {
+            ops.push({ op: "replace", layerId: id, path: "/defaultStyle/fontWeight", value: 400 });
+            ops.push({ op: "replace", layerId: id, path: "/defaultStyle/uppercase", value: true });
+            ops.push({ op: "replace", layerId: id, path: "/defaultStyle/letterSpacing", value: 1.0 });
+          }
+        }
+      }
+      break;
+    }
+
+    case "make-creative": {
+      // Bold weights, add glow effects, increase contrast
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer) continue;
+        if (layer.type === "text" && layer.tags.includes("name")) {
+          const t = layer as TextLayerV2;
+          ops.push({ op: "replace", layerId: id, path: "/defaultStyle/fontWeight", value: 800 });
+          ops.push({ op: "replace", layerId: id, path: "/defaultStyle/fontSize", value: Math.round(t.defaultStyle.fontSize * 1.1) });
+        }
+        // Add glow to accent elements
+        if (layer.tags.includes("accent") || layer.tags.includes("decorative")) {
+          const color = getLayerPrimaryColor(layer);
+          if (color) {
+            ops.push({
+              op: "replace", layerId: id, path: "/effects",
+              value: [...layer.effects, {
+                type: "glow", enabled: true,
+                color: { ...color, a: 0.4 }, inner: false, radius: 6, intensity: 0.3,
+              }],
+            });
+          }
+        }
+      }
+      break;
+    }
+
+    case "apply-typographic-scale": {
+      // Apply a professional typographic scale (1.25 ratio)
+      const rootFrame = doc.layersById[doc.rootFrameId] as FrameLayerV2;
+      if (!rootFrame) break;
+      const baseSize = 21; // ~7pt contact text
+      const scale = (intent.params?.ratio as number) ?? 1.25;
+      const typeSizes = {
+        contact: baseSize,
+        tagline: Math.round(baseSize * scale),
+        title: Math.round(baseSize * scale * scale),
+        company: Math.round(baseSize * scale * scale),
+        name: Math.round(baseSize * scale * scale * scale),
+      };
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (layer?.type !== "text") continue;
+        let newSize: number | undefined;
+        if (layer.tags.includes("name")) newSize = typeSizes.name;
+        else if (layer.tags.includes("title")) newSize = typeSizes.title;
+        else if (layer.tags.includes("company")) newSize = typeSizes.company;
+        else if (layer.tags.includes("tagline")) newSize = typeSizes.tagline;
+        else if (layer.tags.some(t => t.startsWith("contact-"))) newSize = typeSizes.contact;
+        if (newSize) {
+          ops.push({ op: "replace", layerId: id, path: "/defaultStyle/fontSize", value: newSize });
+        }
+      }
+      break;
+    }
+
+    case "balance-visual-weight": {
+      // Even out spacing between text groups
+      const textLayers = layerIds.map(id => doc.layersById[id]).filter(l => l?.type === "text") as TextLayerV2[];
+      if (textLayers.length < 2) break;
+      textLayers.sort((a, b) => a.transform.position.y - b.transform.position.y);
+      const totalSpan = textLayers[textLayers.length - 1].transform.position.y - textLayers[0].transform.position.y;
+      const evenGap = totalSpan / (textLayers.length - 1);
+      for (let i = 1; i < textLayers.length; i++) {
+        const newY = textLayers[0].transform.position.y + evenGap * i;
+        ops.push({
+          op: "replace", layerId: textLayers[i].id, path: "/transform/position",
+          value: { x: textLayers[i].transform.position.x, y: Math.round(newY) },
+        });
+      }
+      break;
+    }
+
+    case "improve-name-hierarchy": {
+      // Make name visually dominant: larger, bolder, more contrast
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer || layer.type !== "text") continue;
+        const t = layer as TextLayerV2;
+        if (layer.tags.includes("name")) {
+          ops.push({ op: "replace", layerId: id, path: "/defaultStyle/fontSize", value: Math.round(t.defaultStyle.fontSize * 1.15) });
+          ops.push({ op: "replace", layerId: id, path: "/defaultStyle/fontWeight", value: Math.min(800, t.defaultStyle.fontWeight + 200) });
+        }
+        // Reduce non-name text slightly
+        if (layer.tags.includes("title") || layer.tags.includes("company")) {
+          ops.push({ op: "replace", layerId: id, path: "/defaultStyle/fontSize", value: Math.round(t.defaultStyle.fontSize * 0.95) });
+        }
+      }
+      break;
+    }
+
+    case "add-visual-accent": {
+      // Add a subtle accent line or glow to decorative elements
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer) continue;
+        if (layer.tags.includes("accent") || layer.tags.includes("decorative")) {
+          ops.push({ op: "replace", layerId: id, path: "/opacity", value: Math.min(1, layer.opacity + 0.15) });
+        }
+      }
+      break;
+    }
+
+    case "refine-contact-layout": {
+      // Improve contact block spacing and alignment
+      const contactLayers = layerIds.map(id => doc.layersById[id]).filter(l => l?.tags.some(t => t.startsWith("contact-")));
+      if (contactLayers.length < 2) break;
+      contactLayers.sort((a, b) => a!.transform.position.y - b!.transform.position.y);
+      const firstY = contactLayers[0]!.transform.position.y;
+      const gap = (intent.params?.gap as number) ?? 32;
+      for (let i = 0; i < contactLayers.length; i++) {
+        const layer = contactLayers[i]!;
+        ops.push({
+          op: "replace", layerId: layer.id, path: "/transform/position",
+          value: { x: layer.transform.position.x, y: Math.round(firstY + i * gap) },
+        });
+      }
+      break;
+    }
+
+    case "modernize-design": {
+      // Reduce border radii, clean up effects, use contemporary spacing
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer) continue;
+        if (layer.type === "shape" && (layer as ShapeLayerV2).cornerRadii) {
+          ops.push({ op: "replace", layerId: id, path: "/cornerRadii", value: [4, 4, 4, 4] });
+        }
+        // Remove heavy shadows, keep light ones
+        if (layer.effects.some(e => e.type === "drop-shadow")) {
+          const modernEffects = layer.effects.map(e =>
+            e.type === "drop-shadow" ? { ...e, blur: 4, offsetY: 2, color: { ...(e as { color: RGBA }).color, a: 0.08 } } : e
+          );
+          ops.push({ op: "replace", layerId: id, path: "/effects", value: modernEffects });
+        }
+      }
+      break;
+    }
+
+    case "add-brand-consistency": {
+      // Find the primary color from accent elements and apply to all accents
+      const accentLayers = layerIds.map(id => doc.layersById[id]).filter(l => l?.tags.includes("accent"));
+      if (accentLayers.length === 0) break;
+      const firstColor = getLayerPrimaryColor(accentLayers[0]!);
+      if (!firstColor) break;
+      for (const layer of accentLayers) {
+        if (!layer) continue;
+        applyColorToLayer(ops, layer.id, layer, firstColor);
+      }
+      break;
+    }
+
+    case "improve-whitespace": {
+      // Increase padding/margins for all content layers
+      const rootFrame = doc.layersById[doc.rootFrameId] as FrameLayerV2;
+      if (!rootFrame) break;
+      const padding = (intent.params?.padding as number) ?? 15;
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer || layer.id === doc.rootFrameId) continue;
+        if (layer.tags.includes("decorative") || layer.tags.includes("background-gradient")) continue;
+        const pos = layer.transform.position;
+        const size = layer.transform.size;
+        const canvasW = rootFrame.transform.size.x;
+        const canvasH = rootFrame.transform.size.y;
+        // Push inward if too close to edges
+        const newX = Math.max(padding, Math.min(pos.x, canvasW - size.x - padding));
+        const newY = Math.max(padding, Math.min(pos.y, canvasH - size.y - padding));
+        if (newX !== pos.x || newY !== pos.y) {
+          ops.push({ op: "replace", layerId: id, path: "/transform/position", value: { x: newX, y: newY } });
+        }
+      }
+      break;
+    }
+
+    case "swap-icon": {
+      // Replace the iconId on target icon layers (e.g. change phone icon style, swap contact icons)
+      const newIconId = intent.params?.iconId as string;
+      if (!newIconId) break;
+      for (const id of layerIds) {
+        const layer = doc.layersById[id];
+        if (!layer || layer.type !== "icon") continue;
+        ops.push({ op: "replace", layerId: id, path: "/iconId", value: newIconId });
+      }
+      break;
+    }
   }
 
   return ops;
@@ -1048,6 +1439,8 @@ export function buildAIPatchPrompt(
 ): string {
   const allLayers = getLayerOrder(doc).filter(l => l.id !== doc.rootFrameId);
   const rootFrame = doc.layersById[doc.rootFrameId] as FrameLayerV2;
+  const abstractCatalog = getAbstractListForAI();
+  const iconCatalog = getIconListForAICompact();
 
   const layerDescriptions = allLayers.map(l => {
     const pos = l.transform.position;
@@ -1099,6 +1492,12 @@ ${scopeDesc[scope]}
 ## USER REQUEST
 "${userInstruction}"
 
+## ABSTRACT ASSET CATALOG (use these IDs for add-abstract-asset / swap-abstract-asset intents)
+${abstractCatalog}
+
+## ICON LIBRARY (use these IDs for swap-icon intent and /iconId path replacements)
+${iconCatalog}
+
 ## SEMANTIC ELEMENT → TAG MAP (BUSINESS CARD)
 Use these tags to target SPECIFIC elements — NEVER use layerType to hit all-text when the user names a specific element:
 | User says…                              | Target selector to use              |
@@ -1109,12 +1508,19 @@ Use these tags to target SPECIFIC elements — NEVER use layerType to hit all-te
 | "tagline", "subtitle", "slogan"         | { "tags": ["tagline"] }             |
 | "contact", "email", "phone", "website"  | { "tags": ["contact-text"] }        |
 | "contact icons"                         | { "tags": ["contact-icon"] }        |
+| "linkedin", "my linkedin"               | { "tags": ["contact-linkedin"] }    |
+| "twitter", "twitter/x", "my twitter"   | { "tags": ["contact-twitter"] }     |
+| "instagram", "my instagram"             | { "tags": ["contact-instagram"] }   |
+| "phone icon", "email icon" (specific)   | { "tags": ["icon-phone"] } / ["icon-email"] etc. |
 | "accent", "line", "bar", "decorative"   | { "tags": ["accent"] }              |
 | "logo", "brand mark"                    | { "tags": ["logo"] }                |
 | "QR code", "qr"                         | { "tags": ["qr-code"] }             |
 | "pattern", "overlay", "texture"         | { "tags": ["pattern"] }             |
 | "border", "frame border"                | { "tags": ["border"] }              |
 | "corner", "corner marks"                | { "tags": ["corner"] }              |
+| "abstract", "abstract element"          | { "tags": ["abstract-asset"] }      |
+| "abstract shard", "diagonal shard"      | { "tags": ["abstract-modern-shard"] }|
+| "decorative element", "decoration"      | { "tags": ["decorative"] }          |
 | "background", "card background"         | { "special": "background" }         |
 | "ALL text", "every text element"        | { "layerType": "text" }  ← ONLY for GLOBAL changes |
 
@@ -1200,6 +1606,7 @@ Use the layer ID from the layer list above. The path is a JSON pointer into the 
 **ICON layer:**
 | Property          | Path                              | Value format                              |
 |-------------------|-----------------------------------|-------------------------------------------|
+| Icon type (swap)  | /iconId                           | string — valid ID from ICON LIBRARY above |
 | Color             | /color                            | { "r": 0, "g": 0, "b": 0, "a": 1 }       |
 | Stroke width      | /strokeWidth                      | number 0.5–10                             |
 | Opacity           | /opacity                          | number 0–1                                |
@@ -1242,7 +1649,37 @@ add-effect, remove-effect, update-effect,
 set-fill, add-gradient-fill, add-pattern-fill,
 set-stroke, remove-stroke, set-blend-mode,
 set-corner-radius, flip, rotate,
-set-font, set-text-style, set-image-filters, reorder-layer
+set-font, set-text-style, set-image-filters, reorder-layer,
+add-abstract-asset, remove-abstract-asset, swap-abstract-asset, configure-abstract-asset,
+make-luxurious, make-minimalist, make-corporate, make-creative,
+apply-typographic-scale, balance-visual-weight, improve-name-hierarchy,
+add-visual-accent, refine-contact-layout, modernize-design,
+add-brand-consistency, improve-whitespace,
+swap-icon
+
+### Card Design Intents (M3.11):
+| Intent                   | Params                          | What it does                                     |
+|--------------------------|---------------------------------|--------------------------------------------------|
+| make-luxurious           | none                            | Boosts name weight, adds shadow, letter-spacing  |
+| make-minimalist          | none                            | Strips effects, reduces weights, dims decoratives|
+| make-corporate           | none                            | Standardizes fonts, adds uppercase titles         |
+| make-creative            | none                            | Bold weights, glow effects, larger name           |
+| apply-typographic-scale  | { ratio?: number }              | Applies professional type scale (default 1.25)   |
+| balance-visual-weight    | none                            | Evenly spaces text elements vertically            |
+| improve-name-hierarchy   | none                            | Makes name larger/bolder, slightly reduces others|
+| add-visual-accent        | none                            | Increases accent/decorative element visibility    |
+| refine-contact-layout    | { gap?: number }                | Re-spaces contact lines evenly                   |
+| modernize-design         | none                            | Cleans up shadows/radii for contemporary look    |
+| add-brand-consistency    | none                            | Unifies accent colors across the card            |
+| improve-whitespace       | { padding?: number }            | Pushes content away from card edges              |
+| swap-icon                | { iconId* (from ICON LIBRARY) } | Swaps icon type on target icon layer(s)          |
+
+### Abstract Asset Intent Params:
+- add-abstract-asset: params { assetId* (ID from ABSTRACT ASSET CATALOG above), primaryColor?, secondaryColor?, textColor?, opacity?, scale?, rotation?, xOffset?, yOffset?, blendMode?, colorOverride? }
+  target: any (asset is added to document)
+- remove-abstract-asset: params {} — target: { "tags": ["abstract-asset"] } or specific abstract tag like "abstract-modern-shard"
+- swap-abstract-asset: params { assetId* } + same optional params as add — target: existing abstract layers to replace
+- configure-abstract-asset: params { opacity?, blendMode?, scale?, rotation?, color? } — target: { "tags": ["abstract-asset"] } or specific abstract tag
 
 ### Effect Types (for add-effect):
 drop-shadow, inner-shadow, blur, glow, outline, color-adjust, noise

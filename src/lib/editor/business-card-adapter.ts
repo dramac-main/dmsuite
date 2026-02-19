@@ -20,6 +20,8 @@ import {
   hexToRGBA, solidPaintHex,
 } from "./schema";
 import { getAdvancedSettings, scaledFontSize, scaledIconSize, scaledIconGap, scaledElementGap } from "@/stores/advanced-helpers";
+import type { AbstractLayerConfig } from "./abstract-library";
+import { ABSTRACT_REGISTRY, buildAbstractAsset } from "./abstract-library";
 
 // =============================================================================
 // 1.  Re-exported Types (standalone — avoids circular deps with workspace)
@@ -34,6 +36,10 @@ export interface CardConfig {
   phone: string;
   website: string;
   address: string;
+  /* Social Media */
+  linkedin: string;
+  twitter: string;
+  instagram: string;
   template: string;
   primaryColor: string;
   secondaryColor: string;
@@ -49,10 +55,12 @@ export interface CardConfig {
   showContactIcons: boolean;
   qrCodeUrl: string;
   backStyle: "logo-center" | "pattern-fill" | "minimal" | "info-repeat" | "gradient-brand";
+  /** Abstract decorative assets placed on the card (behind or above content) */
+  abstractAssets?: AbstractLayerConfig[];
 }
 
 export interface ContactEntry {
-  type: "phone" | "email" | "website" | "address";
+  type: "phone" | "email" | "website" | "address" | "linkedin" | "twitter" | "instagram";
   value: string;
   iconId: string;
 }
@@ -180,12 +188,85 @@ function getFontSizes(W: number): FontSizes {
   };
 }
 
+// =============================================================================
+// 3a. Auto-Fit / Overflow Prevention
+// =============================================================================
+
+/**
+ * Calculates the optimal font size for a text string that fits within `maxWidth`.
+ * Returns the smaller of `desiredSize` and the size that fits.
+ * Uses a quick binary search instead of brute-force decrement.
+ * Minimum returned size = 60% of desired to avoid unreadably small text.
+ */
+function autoFitFontSize(
+  text: string,
+  desiredSize: number,
+  maxWidth: number,
+  fontFamily: string,
+  weight: number = 400,
+): number {
+  if (!text || maxWidth <= 0) return desiredSize;
+
+  // Estimate text width using character-count heuristic (no canvas needed in SSR)
+  // Average character width ≈ 0.55 × fontSize for sans-serif, 0.50 for serif
+  const charWidthRatio = fontFamily.includes("serif") && !fontFamily.includes("sans") ? 0.50 : 0.55;
+  const boldBoost = weight >= 700 ? 1.08 : 1.0;
+
+  const estimatedWidth = text.length * desiredSize * charWidthRatio * boldBoost;
+  if (estimatedWidth <= maxWidth) return desiredSize;
+
+  // Scale down proportionally
+  const scale = maxWidth / estimatedWidth;
+  const minSize = Math.max(Math.round(desiredSize * 0.6), 14); // never below 60% or 14px
+  return Math.max(Math.round(desiredSize * scale), minSize);
+}
+
+/**
+ * Calculates the maximum number of contact lines that fit in the available vertical space.
+ * Returns a capped count and adjusted gap if necessary.
+ */
+function fitContactBlock(
+  entryCount: number,
+  availableHeight: number,
+  desiredGap: number,
+  fontSize: number,
+): { count: number; gap: number } {
+  if (entryCount === 0) return { count: 0, gap: desiredGap };
+
+  const lineHeight = fontSize * 1.2;
+  const totalNeeded = entryCount * lineHeight + (entryCount - 1) * desiredGap;
+
+  if (totalNeeded <= availableHeight) {
+    return { count: entryCount, gap: desiredGap };
+  }
+
+  // Try reducing gap first (minimum gap = fontSize * 0.3)
+  const minGap = fontSize * 0.3;
+  const compactTotal = entryCount * lineHeight + (entryCount - 1) * minGap;
+  if (compactTotal <= availableHeight) {
+    const adjustedGap = Math.max(minGap, (availableHeight - entryCount * lineHeight) / Math.max(1, entryCount - 1));
+    return { count: entryCount, gap: adjustedGap };
+  }
+
+  // Last resort: reduce the number of visible contact lines
+  let maxFit = entryCount;
+  while (maxFit > 1) {
+    const needed = maxFit * lineHeight + (maxFit - 1) * minGap;
+    if (needed <= availableHeight) break;
+    maxFit--;
+  }
+  return { count: maxFit, gap: minGap };
+}
+
 function getContactEntries(cfg: CardConfig): ContactEntry[] {
   const entries: ContactEntry[] = [];
-  if (cfg.phone)   entries.push({ type: "phone",   value: cfg.phone,   iconId: "phone" });
-  if (cfg.email)   entries.push({ type: "email",   value: cfg.email,   iconId: "email" });
-  if (cfg.website) entries.push({ type: "website", value: cfg.website, iconId: "globe" });
-  if (cfg.address) entries.push({ type: "address", value: cfg.address, iconId: "map-pin" });
+  if (cfg.phone)     entries.push({ type: "phone",     value: cfg.phone,     iconId: "phone" });
+  if (cfg.email)     entries.push({ type: "email",     value: cfg.email,     iconId: "email" });
+  if (cfg.website)   entries.push({ type: "website",   value: cfg.website,   iconId: "globe" });
+  if (cfg.linkedin)  entries.push({ type: "linkedin",  value: cfg.linkedin,  iconId: "linkedin" });
+  if (cfg.twitter)   entries.push({ type: "twitter",   value: cfg.twitter,   iconId: "twitter-x" });
+  if (cfg.instagram) entries.push({ type: "instagram", value: cfg.instagram, iconId: "instagram" });
+  if (cfg.address)   entries.push({ type: "address",   value: cfg.address,   iconId: "map-pin" });
   return entries;
 }
 
@@ -242,15 +323,22 @@ function textLayer(opts: {
   color: string; alpha?: number; align?: "left" | "center" | "right";
   tags: string[]; uppercase?: boolean; italic?: boolean;
   letterSpacing?: number; lineHeight?: number;
+  /** When true, automatically shrinks fontSize if text overflows w */
+  autoFit?: boolean;
 }): TextLayerV2 {
+  // Auto-fit: shrink font if text would overflow the available width
+  const effectiveSize = opts.autoFit
+    ? autoFitFontSize(opts.text, opts.fontSize, opts.w, opts.ff, opts.weight ?? 400)
+    : opts.fontSize;
+
   const layer = createTextLayerV2({
     name: opts.name,
     x: opts.x,
     y: opts.y,
     width: opts.w,
-    height: opts.h ?? Math.round(opts.fontSize * 1.6),
+    height: opts.h ?? Math.round(effectiveSize * 1.6),
     text: opts.text,
-    fontSize: opts.fontSize,
+    fontSize: effectiveSize,
     fontFamily: opts.ff,
     fontWeight: opts.weight ?? 400,
     color: hexToRGBA(opts.color, opts.alpha ?? 1),
@@ -1875,8 +1963,46 @@ export function cardConfigToDocument(
     doc = addLayer(doc, patternLayer);
   }
 
+  // Abstract assets: behind-content layers go after pattern, before template
+  const abstractBehind: LayerV2[] = [];
+  const abstractAbove: LayerV2[] = [];
+  if (cfg.abstractAssets?.length) {
+    for (const ac of cfg.abstractAssets) {
+      const asset = ABSTRACT_REGISTRY[ac.assetId];
+      if (!asset) continue;
+      const layers = buildAbstractAsset(ac.assetId, {
+        W, H,
+        primary: cfg.primaryColor,
+        secondary: cfg.secondaryColor,
+        text: cfg.textColor,
+        bg: cfg.bgColor,
+        opacity: ac.opacity,
+        scale: ac.scale,
+        rotation: ac.rotation,
+        xOffset: ac.xOffset,
+        yOffset: ac.yOffset,
+        colorOverride: ac.colorOverride,
+        blendMode: ac.blendMode,
+      });
+      if (ac.zPosition === "above-content") {
+        abstractAbove.push(...layers);
+      } else {
+        abstractBehind.push(...layers);
+      }
+    }
+  }
+
+  for (const layer of abstractBehind) {
+    doc = addLayer(doc, layer);
+  }
+
   // Then template layers (in order: first element = rendered first / bottom)
   for (const layer of templateLayers) {
+    doc = addLayer(doc, layer);
+  }
+
+  // Abstract assets: above-content layers go after template, before QR code
+  for (const layer of abstractAbove) {
     doc = addLayer(doc, layer);
   }
 
@@ -1894,6 +2020,36 @@ export function cardConfigToDocument(
       doc = updateLayer(doc, logoLayer.id, {
         _imageElement: options.logoImg,
       } as Partial<LayerV2>);
+    }
+  }
+
+  // ── Post-process: Auto-fit name & company text layers ──────────────────
+  // Prevents long names from overflowing the card edge.
+  {
+    const allLayers = Object.values(doc.layersById);
+    for (const layer of allLayers) {
+      if (layer.type !== "text") continue;
+      const isNameOrCompany = layer.tags.includes("name") || layer.tags.includes("company");
+      if (!isNameOrCompany) continue;
+
+      const tl = layer as TextLayerV2;
+      const availW = tl.transform.size.x;
+      const fittedSize = autoFitFontSize(
+        tl.text,
+        tl.defaultStyle.fontSize,
+        availW,
+        tl.defaultStyle.fontFamily,
+        tl.defaultStyle.fontWeight ?? 400,
+      );
+      if (fittedSize < tl.defaultStyle.fontSize) {
+        doc = updateLayer(doc, layer.id, {
+          defaultStyle: { ...tl.defaultStyle, fontSize: fittedSize },
+          transform: {
+            ...tl.transform,
+            size: { ...tl.transform.size, y: Math.round(fittedSize * 1.6) },
+          },
+        } as Partial<LayerV2>);
+      }
     }
   }
 
@@ -2079,6 +2235,34 @@ export function syncColorsToDocument(
           updated = updateLayer(updated, layer.id, {
             strokes: sl.strokes.map((s, i) => i === 0 ? { ...s, paint: solidPaintHex(cfg.primaryColor) } : s),
           } as Partial<LayerV2>);
+        }
+      }
+    }
+
+    // ── Abstract asset layers: color-primary → primaryColor, color-secondary → secondaryColor ──
+    if (layer.tags.includes("abstract-asset")) {
+      if (layer.tags.includes("color-primary") && (layer.type === "shape" || layer.type === "path")) {
+        const sl = layer as ShapeLayerV2;
+        const firstFill = sl.fills?.[0];
+        if (firstFill?.kind === "solid") {
+          const shouldUpdate = !prevPrimaryRGBA || _rgbaApprox(firstFill.color, prevPrimaryRGBA);
+          if (shouldUpdate) {
+            updated = updateLayer(updated, layer.id, {
+              fills: [solidPaintHex(cfg.primaryColor, firstFill.color.a)],
+            } as Partial<LayerV2>);
+          }
+        }
+      }
+      if (layer.tags.includes("color-secondary") && (layer.type === "shape" || layer.type === "path")) {
+        const sl = layer as ShapeLayerV2;
+        const firstFill = sl.fills?.[0];
+        if (firstFill?.kind === "solid") {
+          const shouldUpdate = !prevSecondaryRGBA || _rgbaApprox(firstFill.color, prevSecondaryRGBA);
+          if (shouldUpdate) {
+            updated = updateLayer(updated, layer.id, {
+              fills: [solidPaintHex(cfg.secondaryColor, firstFill.color.a)],
+            } as Partial<LayerV2>);
+          }
         }
       }
     }

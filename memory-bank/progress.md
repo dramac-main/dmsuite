@@ -1,6 +1,6 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 96/194 tools with workspaces (49%) — ~90 tools still need building — Build passes ✅ — Full audit complete ✅ — vNext Editor M0-M5 Complete ✅ — M3.5 Pro Editor + AI Full Control ✅ — M3.7 Business Card Full AI Sync ✅ — M3.8 Infinite Designs Generator ✅ — M3.9 UX Polish & Power Features ✅
+## Overall Status: 96/194 tools with workspaces (49%) — ~90 tools still need building — Build passes ✅ — Full audit complete ✅ — vNext Editor M0-M5 Complete ✅ — M3.5 Pro Editor + AI Full Control ✅ — M3.7 Business Card Full AI Sync ✅ — M3.8 Infinite Designs Generator ✅ — M3.9 UX Polish & Power Features ✅ — M3.10 Abstract Asset Library ✅ — M3.11 Business Card Deep Enhancement ✅ — Full AI Connectivity Audit ✅
 
 ---
 
@@ -159,6 +159,34 @@
 - [x] **300 DPI default** — `DEFAULT_EXPORT_QUALITY.exportScale: 2 → 1` (print-ready standard); user can raise to 2×/3× via Advanced Settings
 - [x] **Dynamic DPI label** — Card Info panel shows `{w × scale}×{h × scale}px ({scale×300} DPI)` using actual `getExportScale()`
 - [x] **Front-only mode** — checkbox locks side to front, disables Back/Both buttons, collapses Back Design selector
+
+### M3.10: Abstract Asset Library ✅ (Session 35)
+- [x] **`src/lib/editor/abstract-library.ts`** (~2,400 lines) — 90 decorative abstract assets across 9 categories
+  - Modern (10), Minimalist (10), Vintage (10), Corporate (10), Luxury (10), Organic (10), Tech (10), Bold (10), Geometric (10)
+  - Types, registry (O(1)), category/mood/type filters, search function, AI helpers
+  - Each asset has `build(params)` returning LayerV2[] with full color/scale/rotation/offset/blend support
+  - All layers tagged with `["abstract-asset", "abstract-{id}", color-roles, "decorative"]`
+- [x] **CardConfig extended** — `abstractAssets?: AbstractLayerConfig[]` in business-card-adapter.ts
+- [x] **Layer insertion z-order** — Pattern → Abstract behind-content → Template → Abstract above-content → QR Code
+- [x] **Color sync** — syncColorsToDocument handles abstract layers with "color-primary"/"color-secondary" tags, fingerprint-safe
+- [x] **AI patch** — 4 new IntentTypes (add/remove/swap/configure-abstract-asset), 3 new semantic tag map entries
+- [x] **Template generator** — AccentLayer extended with optional `abstractId?: string`
+- [x] **Quick edit** — abstract-asset entry added to SEMANTIC_ELEMENTS
+- [x] **Workspace UI** — "Abstract Assets" AccordionSection with category filter, active asset manager, quick-add grid
+- [x] **Barrel exports** — 8 types + 10 functions/constants exported from index.ts
+- [x] Build verified clean (zero TypeScript errors on all files)
+
+### M3.11: Business Card Deep Enhancement ✅ (Session 36)
+- [x] **Social media contacts** — ContactEntry expanded with website, address, linkedin, twitter, instagram, department, qrUrl, logoOverride; adapter maps to contact layers with proper icons (linkedin, twitter-x, instagram)
+- [x] **Auto-fit text overflow prevention** — `autoFitFontSize()` char-width heuristic, `fitContactBlock()` height check, `textLayer()` autoFit option, post-processing loop on name/company layers
+- [x] **12 new card-specific AI intents** — make-luxurious, make-minimalist, make-corporate, make-creative, apply-typographic-scale, balance-visual-weight, improve-name-hierarchy, add-visual-accent, refine-contact-layout, modernize-design, add-brand-consistency, improve-whitespace; all with full handler implementations
+- [x] **32 color presets** (was 12) — 20 industry-inspired themes added (Rose Gold, Copper, Platinum, Emerald, Royal Blue, Sunset, Lavender, Teal Pro, Carbon, Ice Blue, Mauve, Olive, Terracotta, Mint Fresh, Electric, Blush, Mahogany, Steel, Violet Ink, Warm Sand)
+- [x] **Registry-aware AI generation** — prompt includes full LAYOUT_RECIPES/CARD_THEMES/ACCENT_KITS listings; AI picks specific IDs; regex parsing with fallback to suggestCombination()
+- [x] **Expanded batch processing** — 11-column CSV parser (Name, Title, Email, Phone, Website, Address, LinkedIn, Twitter, Instagram, Department, QR URL); collapsible "More fields" UI per person; per-person QR override
+- [x] **ZIP batch export** — JSZip-based; renders front+back as 300 DPI PNGs per person; naming convention `{name}-front.png`/`{name}-back.png`; DEFLATE compression; progress bar
+- [x] **Contact details UI** — LinkedIn, Twitter/X, Instagram inputs in sidebar
+- [x] **TypeScript fixes** — Paint union narrowing (SolidPaint intermediate), TextLayerV2.text (not .content.text)
+- [x] Build verified clean (`tsc --noEmit` zero errors)
 
 ### Asset Bank: Icons ✅ (Session 26 + continued)
 - [x] icon-library.ts (~2,450 lines) — 115 professional vector canvas icons
@@ -417,3 +445,18 @@ These workspaces work but simulate backend processing or have limited canvas ren
 - ✅ Committed (ef6db77) and pushed — 15 files, 6,207 insertions
 - ✅ Updated memory bank
 - 🔜 Next: M2 — BusinessCard migration to layer-based editor
+
+### Session 36 — M3.11 Business Card Deep Enhancement
+- ✅ Extended ContactEntry & CardConfig with social media + extended fields (linkedin, twitter, instagram, website, address, department, qrUrl, logoOverride)
+- ✅ Expanded adapter getContactEntries with social media types + icon mapping
+- ✅ Added autoFitFontSize + fitContactBlock auto-fit text overflow prevention
+- ✅ Added 12 new card-specific AI intents with full handler implementations
+- ✅ Expanded from 12 to 32 color presets (20 industry-inspired themes)
+- ✅ Made AI generation registry-aware (LAYOUT_RECIPES/CARD_THEMES/ACCENT_KITS in prompt)
+- ✅ Expanded batch UI with collapsible "More fields" section (11 fields per person)
+- ✅ Upgraded CSV parser to 11 columns with template download
+- ✅ Added JSZip-based batch ZIP export (front+back PNGs per person at 300 DPI)
+- ✅ Added social media inputs to Contact Details sidebar panel
+- ✅ Fixed 2 TypeScript type errors (Paint union narrowing, TextLayerV2.text)
+- ✅ Build verified clean (`tsc --noEmit` zero errors)
+- ✅ Updated memory bank

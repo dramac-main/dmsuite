@@ -1,9 +1,9 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** M3.9 Complete — Generator overlap fix, AI Director upgrade, CSV batch import, 300 DPI, logo scale fix, front-only mode
+**Phase:** M3.11 Complete + Full AI Connectivity Audit Complete
 
-### Actual State (Session 34 Updated)
+### Actual State (Session 37 Updated)
 - **194 total tools** defined in tools.ts
 - **96 tools** have dedicated workspace routes in page.tsx → status: "ready"  
 - **~90 tools** have NO workspace → status: "coming-soon"
@@ -21,63 +21,111 @@
 - **M3.7 Business Card Full AI Sync** — QR code layer, back-side pattern, Gold Foil cfg colors, expanded syncColorsToDocument, expanded legacy AI prompt, expanded Quick Edit panel (Session 33)
 - **M3.8 Infinite Designs Generator** — 40 recipes × 60 themes × 12 accent kits = 28,800 base designs; template-generator.ts (~1376 lines); InfiniteDesigns AccordionSection wired into BusinessCardWorkspace (Session 33/34 previous)
 - **M3.9 UX Polish & Power Features** — overlap-safe generator, AI Director full designs, CSV batch import, 300 DPI default, logo scale fix, front-only mode (Session 34)
+- **M3.10 Abstract Asset Library** — 90 decorative abstract assets across 9 categories; abstract-library.ts (~2400 lines); full integration into adapter, AI patch, generator, quick edit, workspace UI (Session 35)
+- **M3.11 Business Card Deep Enhancement** — 11 improvements: social media contacts, auto-fit text, 12 AI intents, 32 color presets, registry-aware AI, expanded batch with 11 fields, ZIP batch export, CSV 11-column parser (Session 36)
+- **Full AI Connectivity Audit** — every card tool asset/field now wired into both AI engines (Session 37)
 
-## Recent Changes (Session 34 — M3.9)
+## Recent Changes (Session 37 — Full AI Connectivity Audit)
 
-### 6 User Concerns → All Resolved
+### All Card Tool Assets Wired to AI Engines
 
-1. **Overlapping elements in generator designs** (`template-generator.ts`)
-   - **Root cause**: `buildRecipeLayers` placed contact block at `recipe.contactYFrac * H` regardless of how tall the name/title/company text cluster was.
-   - **Fix**: Complete rewrite of `buildRecipeLayers` (~150 lines):
-     - Tracks `textClusterBottom` (lowest rendered edge of name+title+company)
-     - Pushes contact block to `max(rawContactY, textClusterBottom + 22px)` — guaranteed 22px safety gap
-     - Divider placed 8px below text cluster (dynamic, not font-math)
-     - Tagline floated below contact block; **dropped entirely** if it won't fit on card
-     - Zero overlaps across all 40 recipes × 60 themes
+**Modified: `src/lib/editor/ai-patch.ts`** (8 changes, all applied)
+1. **Import `getIconListForAICompact`** — icon library (115+ icons) now visible to AI engine
+2. **`swap-icon` IntentType** — AI can now change which icon appears on any icon layer
+3. **`swap-icon` handler** in `intentToPatchOps` — pushes `/iconId` replace op on icon layers
+4. **`iconCatalog` variable** — compact icon list built at prompt-generation time
+5. **`## ICON LIBRARY` section** — injected into buildAIPatchPrompt after ABSTRACT ASSET CATALOG
+6. **Social media semantic tags** — added `contact-linkedin`, `contact-twitter`, `contact-instagram` rows to semantic tag map
+7. **`/iconId` editable path** — added to ICON layer paths table so AI knows it can swap icons
+8. **`swap-icon` in intent list + table** — documented in Available Intent Types and Card Design Intents
 
-2. **Logo resizer not working** (`template-generator.ts` + `business-card-adapter.ts`)
-   - **Root cause**: Generator called `Math.round(Math.min(W, H) * recipe.logoSizeFrac)` directly, bypassing `scaledLogoSize()` from Advanced Settings.
-   - **Fix**: Changed to `scaledLogoSize(Math.round(Math.min(W, H) * recipe.logoSizeFrac))`. Added `scaledLogoSize` re-export in `business-card-adapter.ts` → `@/stores/advanced-helpers`.
+**Modified: `src/components/workspaces/BusinessCardWorkspace.tsx`** (9 changes applied)
+1. **`isElementSpecificRequest` keywords expanded** — added: linkedin, twitter, instagram, social media, social, logo, brand mark, icon, contact icon, qr, qr code, pattern, texture, overlay, abstract, decorative, decoration
+2. **`generateWithAI` prompt expanded** — added Website, LinkedIn, Twitter, Instagram, Show Contact Icons context to PERSON & COMPANY section
+3. **`generateWithAI` new response keys** — CARD_FORMAT, SHOW_ICONS, QR_CODE, ABSTRACT with top-18 abstract asset options
+4. **`generateWithAI` new parsers** — cardFormatMatch, showIconsMatch, qrCodeMatch, abstractAssetMatch regex parsers
+5. **`generateWithAI` applies new values** — cardStyle from CARD_FORMAT, showContactIcons from SHOW_ICONS, qrCodeUrl from QR_CODE, abstractAssets from ABSTRACT
+6. **`handleRevision` currentDesign** — added linkedin, twitter, instagram fields so AI has full context
+7. **`handleRevision` SCOPE_ALLOWED_FIELDS** — added linkedin, twitter, instagram to text-only, element-specific, full-redesign scopes
+8. **`handleRevision` validation** — added typeof checks for linkedin, twitter, instagram string passthroughs
+9. **`handleRevision` prompt** — documents linkedin, twitter, instagram as settable fields with removal instructions
 
-3. **AI Design Director — now generates full designs** (`BusinessCardWorkspace.tsx`)
-   - Was: only updated `CardConfig` fields (colors, font, template name) — no visual design produced
-   - Now: after parsing AI colors/style, calls `suggestCombination(resolvedStyle, aiMood, Date.now())` then `generateCardDocument({ useCfgColors: true, ... })`, loads DesignDocumentV2 into `editorStore`, switches to `editorMode = true`
-   - Result: clicking "Generate with AI" produces a full parametric design you can immediately edit layer-by-layer
+## Recent Changes (Session 36 — M3.11)
 
-4. **Front-only mode** (`BusinessCardWorkspace.tsx`)
-   - New `frontOnly` state (`useState(false)`)
-   - Checkbox: "Front card only — no back needed" — locks `config.side = "front"`, disables Back+Both buttons, collapses Back Design selector
-   - For users/companies that only need a single-sided card
+### Business Card Deep Enhancement — 11 Improvements
 
-5. **300 DPI default** (`advanced-settings.ts`, `BusinessCardWorkspace.tsx`)
-   - Changed `DEFAULT_EXPORT_QUALITY.exportScale: 2 → 1` (300 DPI is the professional print standard)
-   - Card Info panel "Export" line now dynamic: `{currentSize.w * getExportScale()}×{currentSize.h * getExportScale()}px ({getExportScale() * 300} DPI)`
-   - User can still raise to 600 DPI or 900 DPI via Advanced Settings → Export DPI
+**Modified: `src/components/workspaces/BusinessCardWorkspace.tsx`** (~3900 lines after edits)
+1. **ContactEntry expanded** — added website, address, linkedin, twitter, instagram, department, qrUrl, logoOverride fields (all optional)
+2. **CardConfig extended** — linkedin, twitter, instagram string fields
+3. **Social media contact fields in UI** — LinkedIn, Twitter/X, Instagram inputs in Contact Details sidebar section
+4. **32 color presets** (was 12) — added Rose Gold, Copper, Platinum, Emerald, Royal Blue, Sunset, Lavender, Teal Pro, Carbon, Ice Blue, Mauve, Olive, Terracotta, Mint Fresh, Electric, Blush, Mahogany, Steel, Violet Ink, Warm Sand
+5. **Registry-aware AI generation** — prompt now includes full LAYOUT_RECIPES/CARD_THEMES/ACCENT_KITS listings; AI can pick specific recipe/theme/accent by ID; response parsed with regex + validated against registries; fallback to suggestCombination()
+6. **Expanded batch UI** — collapsible "More fields" `<details>` section with website, address, linkedin, twitter, instagram, department, QR URL inputs per person
+7. **CSV parser upgraded** — 11 columns: Name, Title, Email, Phone, Website, Address, LinkedIn, Twitter, Instagram, Department, QR URL
+8. **CSV template upgraded** — 11-column template with example data
+9. **ZIP batch export** — JSZip-based export renders each person's front+back card as 300 DPI PNGs, bundles into a ZIP with `{name}-front.png`/`{name}-back.png` naming; progress bar shared with PDF export
+10. **Batch `renderBatchCard()`** — passes extended fields (website, address, linkedin, twitter, instagram) and per-person QR override
 
-6. **CSV batch import** (`BusinessCardWorkspace.tsx`)
-   - `handleCsvImport` callback: reads File → FileReader → text → auto-detects header row → parses Name/Title/Email/Phone columns (handles quoted CSV fields) → caps at 200 entries → `setBatchEntries()` + `setBatchMode(true)`
-   - UI: import label+hidden file input (`.csv,.txt`) + "Template ↓" download link (pre-filled sample CSV)
-   - Users can fill in Excel → Save As CSV → import all 200 names in one click
+**Modified: `src/lib/editor/business-card-adapter.ts`** (~2340 lines after edits)
+1. **CardConfig extended** — linkedin, twitter, instagram string fields
+2. **ContactEntry type expanded** — includes "linkedin" | "twitter" | "instagram" contact types
+3. **`getContactEntries()`** — adds linkedin (iconId:"linkedin"), twitter (iconId:"twitter-x"), instagram (iconId:"instagram")
+4. **Auto-fit text overflow prevention**:
+   - `autoFitFontSize()` — char-width heuristic (0.55 sans-serif, 0.50 serif), scales proportionally, min 60% or 14px
+   - `fitContactBlock()` — calculates max visible contact lines, adjusts gap
+   - `textLayer()` helper — optional `autoFit` boolean parameter
+   - Post-processing in `cardConfigToDocument()` — auto-fits all "name" and "company" tagged TextLayerV2 layers
 
-## Commit
-- **M3.9 commit**: `a338b3e` — 4 files changed, 224 insertions(+), 53 deletions(-)
+**Modified: `src/lib/editor/ai-patch.ts`** (~1804 lines after edits)
+1. **12 new card-specific AI intents**: make-luxurious, make-minimalist, make-corporate, make-creative, apply-typographic-scale, balance-visual-weight, improve-name-hierarchy, add-visual-accent, refine-contact-layout, modernize-design, add-brand-consistency, improve-whitespace
+2. **Full intent handlers** — each generates appropriate PatchOps targeting tags/transforms/styles
+3. **buildAIPatchPrompt expanded** — new "Card Design Intents (M3.11)" table documenting all 12 intents with params
+4. **Type fix** — Paint union narrowed properly with intermediate variable for SolidPaint access
 
+### Abstract Asset Library — Full Implementation
 
+**New File: `src/lib/editor/abstract-library.ts`** (~2,400 lines)
+- **90 abstract decorative assets** across 9 categories:
+  - Modern (10): shard, floating-dots, gradient-orb, edge-glow, parallel-lines, split-plane, corner-radius, noise-field, stacked-bars, intersect
+  - Minimalist (10): thin-frame, rule-set, dot-grid, negative-space, circle-accent, baseline-rule, l-bracket, margin-lines, fine-cross, silent-bar
+  - Vintage (10): sunburst, ornamental-corner, art-deco-fan, filigree-line, halftone-fade, decorative-border, typographic-rule, laurel-arc, aged-texture, cameo-frame
+  - Corporate (10): header-bar, block-accent, sidebar-band, power-band, pinstripe, corner-mark, rule-pair, diagonal-slice, grid-watermark, data-bar
+  - Luxury (10): gold-vine, foil-shimmer, pearl-border, silk-wave, monogram-frame, diamond-dust, ribbon-accent, crystal-edge, emboss-line, filigree-panel
+  - Organic (10): wave-form, leaf-motif, petal-scatter, root-tendril, stone-texture, water-ripple, moss-patch, branch-line, seed-pod, cloud-drift
+  - Tech (10): circuit-node, binary-rain, hex-grid, data-stream, glitch-bar, scan-line, pixel-cluster, fiber-optic, hologram-strip, signal-wave
+  - Bold (10): color-block, diagonal-slash, pop-circle, halftone-dots, drip-edge, zigzag-border, spray-scatter, brush-stroke, tape-strip, explosion-burst
+  - Geometric (10): golden-spiral, tessellation, penrose-tile, fractal-branch, voronoi-cell, isometric-cube, moiré-ring, star-polygon, concentric-squares, radial-burst
+- **Types**: AbstractCategory, AbstractAssetType (8 types), AbstractMood, AbstractCustomizable, AbstractColorRoles, AbstractBuildParams, AbstractAsset, AbstractLayerConfig
+- **Registry**: O(1) lookup via ABSTRACT_REGISTRY, category/mood/type filters, search function
+- **AI helpers**: getAbstractListForAI(), searchAbstractAssets(), getAbstractCountByCategory()
+- **Builder**: buildAbstractAsset() — resolves asset by ID, calls its build() function with full params (W, H, colors, opacity, scale, rotation, offsets, blendMode, colorOverride)
+- **Tags**: Every layer tagged with ["abstract-asset", "abstract-{id}", color-role-tags, "decorative"]
 
-### Deep Audit → 5 Gaps Found and Fixed
+**Modified: `src/lib/editor/business-card-adapter.ts`**
+- CardConfig extended with `abstractAssets?: AbstractLayerConfig[]`
+- `cardConfigToDocument()` builds and inserts abstract layers with z-ordering: Pattern → Abstract behind-content → Template → Abstract above-content → QR Code
+- `syncColorsToDocument()` handles abstract layers tagged "color-primary"/"color-secondary" with fingerprint-safe previous-color checking and alpha preservation
 
-1. **Dead `qrCodeUrl` field → now builds a QR Code layer** (`business-card-adapter.ts`)
-   - New `buildQrCodeLayer()` function creates a shape layer with tags `["qr-code", "branding", "contact-qr"]`
-   - Positioned front (bottom-right) or back (center) based on `side`
-   - Added to document in `cardConfigToDocument()` after all template layers
-   - Removed legacy QR overlay from raw canvas render (was outside layer model)
+**Modified: `src/lib/editor/ai-patch.ts`**
+- 4 new IntentTypes: add-abstract-asset, remove-abstract-asset, swap-abstract-asset, configure-abstract-asset
+- 3 new semantic tag map entries: abstract → ["abstract-asset"], abstract shard → ["abstract-modern-shard"], decorative element → ["decorative"]
 
-2. **Back-side `pattern-fill` layout was missing its pattern** (`business-card-adapter.ts`)
-   - `layoutBackPatternFill` had a comment "will be added separately" but never called `buildPatternLayer`
-   - Now actually creates a pattern overlay with fallback to `"dots"` if no patternType set
-   - Pattern layer properly tagged with `["pattern", "decorative", "back-element"]`
+**Modified: `src/lib/editor/template-generator.ts`**
+- AccentLayer interface extended with optional `abstractId?: string` — allows AccentKits to reference abstract assets by ID
 
-3. **Gold Foil template had hardcoded `#c9a227`/`#e8d48b`** (`business-card-adapter.ts`)
+**Modified: `src/components/editor/BusinessCardLayerQuickEdit.tsx`**
+- New semantic element entry: { tag: "abstract-asset", label: "Abstract", description: "Abstract decorative assets" }
+
+**Modified: `src/components/workspaces/BusinessCardWorkspace.tsx`**
+- Abstract library imports added
+- Local CardConfig extended with `abstractAssets` field
+- New "Abstract Assets" AccordionSection between "Style & Colors" and "Card Size & Print":
+  - Category filter buttons (9 categories)
+  - Active asset manager with swap/z-position toggle/remove
+  - Quick-add grid with 6 popular assets
+
+**Modified: `src/lib/editor/index.ts`**
+- Full barrel exports: 8 types + 10 functions/constants from abstract-library.ts
    - Replaced `gold1`/`gold2` constants with `cfg.primaryColor`/`cfg.secondaryColor`
    - AI color changes now properly propagate to borders, corners, dividers, titles
    - Corner marks now tagged `"accent"` so they're targetable by color sync

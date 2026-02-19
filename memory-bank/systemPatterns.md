@@ -39,7 +39,12 @@
 ### 2b. Asset Bank Architecture Pattern
 - Global shared asset libraries stored in `src/lib/` as standalone modules
 - Each asset bank exports: items array (with metadata), registry (O(1) lookup), category list, AI helper functions
-- First bank: Icon Library (115 icons). Future banks: Patterns, Textures, Illustrations, Shapes, etc.
+- First bank: Icon Library (115 icons, `src/lib/icon-library.ts`)
+- Second bank: Abstract Asset Library (90 decorative assets, `src/lib/editor/abstract-library.ts`)
+  - 9 categories: modern, minimalist, vintage, corporate, luxury, organic, tech, bold, geometric
+  - Each asset has `build(params) → LayerV2[]` with full customization (color, scale, rotation, offset, blend)
+  - All layers tagged with `["abstract-asset", "abstract-{id}", color-role-tags]`
+  - Integrated into: business-card-adapter (CardConfig + sync), ai-patch (4 intent types), template-generator (AccentLayer), BusinessCardWorkspace (AccordionSection UI)
 - Asset banks have ZERO dependencies on other modules (no circular imports)
 - All workspaces and AI engines consume asset banks via simple imports
 

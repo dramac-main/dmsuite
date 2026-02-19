@@ -117,6 +117,8 @@ export interface AccentLayer {
   strokeAlpha?: number;
   strokeWidth?: number;
   radii?: [number, number, number, number];
+  /** Optional link to an abstract asset from abstract-library.ts */
+  abstractId?: string;
 }
 
 /** A set of decorative elements applied on top of a recipe */
