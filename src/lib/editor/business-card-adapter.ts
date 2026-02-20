@@ -5012,267 +5012,904 @@ registerBackLayout("diagonal-gold", (W, H, cfg, theme) => {
   return layers;
 });
 
+// ---------------------------------------------------------------------------
+// #25  Luxury Divider – BACK: teal bg, gold company + accent line + website
+// ---------------------------------------------------------------------------
+
+registerBackLayout("luxury-divider", (W, H, cfg, theme) => {
+  const t = theme;
+  const layers: LayerV2[] = [];
+
+  // ── Background: dark teal (color-inverted from front) ──
+  layers.push(filledRect({ name: "BG", x: 0, y: 0, w: W, h: H, fill: solidPaintHex(t.backBg), tags: ["background"] }));
+
+  // ── Geometric logo element – angular triangle ──
+  layers.push(pathLayer({
+    name: "Geometric Logo", x: 0, y: 0, w: W, h: H,
+    commands: [
+      M(W * 0.15, H * 0.49),
+      L(W * 0.19, H * 0.35),
+      L(W * 0.23, H * 0.49),
+      Z(),
+    ],
+    fill: solidPaintHex(t.backText ?? "#F4D58D"),
+    tags: ["decorative", "logo"],
+  }));
+
+  // ── Watermark logo ──
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company, W * 0.15, H * 0.35, Math.round(H * 0.14),
+    t.backText ?? "#F4D58D", 1.0, cfg.fontFamily
+  ));
+
+  // ── Company ──
+  layers.push(styledText({
+    name: "Company", x: 0, y: H * 0.45, w: W,
+    text: cfg.company || "Company", fontSize: Math.round(H * 0.08),
+    fontFamily: cfg.fontFamily, weight: 700,
+    color: t.backText ?? "#F4D58D", align: "center",
+    uppercase: true, letterSpacing: 4,
+    tags: ["company", "primary-text"],
+  }));
+
+  // ── Horizontal accent line ──
+  layers.push(divider({
+    name: "Accent Line", x: W * 0.20, y: H * 0.65,
+    length: W * 0.60, thickness: 3,
+    color: t.backText ?? "#F4D58D",
+    tags: ["decorative", "accent"],
+  }));
+
+  // ── Website ──
+  if (cfg.contacts.website) {
+    layers.push(styledText({
+      name: "Website", x: 0, y: H * 0.75, w: W,
+      text: cfg.contacts.website, fontSize: Math.round(H * 0.025),
+      fontFamily: cfg.fontFamily, weight: 400,
+      color: t.backText ?? "#F4D58D", align: "center",
+      tags: ["contact-website", "back"],
+    }));
+  }
+
+  return layers;
+});
+
+
+// ---------------------------------------------------------------------------
+// #26  Social Band – BACK: full green, script watermark, centered brand
+// ---------------------------------------------------------------------------
+
+registerBackLayout("social-band", (W, H, cfg, theme) => {
+  const t = theme;
+  const layers: LayerV2[] = [];
+
+  // ── Background: full forest green ──
+  layers.push(filledRect({ name: "BG", x: 0, y: 0, w: W, h: H, fill: solidPaintHex(t.backBg), tags: ["background"] }));
+
+  // ── Script monogram watermark ──
+  const initial = (cfg.company || "V").charAt(0).toUpperCase();
+  layers.push(styledText({
+    name: "Watermark", x: 0, y: H * 0.20, w: W,
+    text: initial, fontSize: Math.round(H * 0.35),
+    fontFamily: "Georgia, serif", weight: 400,
+    color: t.accent ?? "#4A6B5A", alpha: 0.3,
+    align: "center", italic: true,
+    tags: ["decorative", "watermark"],
+  }));
+
+  // ── Company / Brand ──
+  layers.push(styledText({
+    name: "Company", x: 0, y: H * 0.50, w: W,
+    text: cfg.company || "Company", fontSize: Math.round(H * 0.08),
+    fontFamily: cfg.fontFamily, weight: 300,
+    color: t.backText ?? "#FFFFFF", align: "center",
+    uppercase: true, letterSpacing: 6,
+    tags: ["company", "primary-text"],
+  }));
+
+  // ── Subtitle / Title ──
+  layers.push(styledText({
+    name: "Subtitle", x: 0, y: H * 0.58, w: W,
+    text: cfg.title || "Title", fontSize: Math.round(H * 0.025),
+    fontFamily: cfg.fontFamily, weight: 300,
+    color: t.backText ?? "#FFFFFF", alpha: 0.7,
+    align: "center", uppercase: true, letterSpacing: 4,
+    tags: ["title"],
+  }));
+
+  return layers;
+});
+
+
+// ---------------------------------------------------------------------------
+// #27  Organic Pattern – BACK: full green, topographic contours, gold logo
+// ---------------------------------------------------------------------------
+
+registerBackLayout("organic-pattern", (W, H, cfg, theme) => {
+  const t = theme;
+  const layers: LayerV2[] = [];
+
+  // ── Background: forest green ──
+  layers.push(filledRect({ name: "BG", x: 0, y: 0, w: W, h: H, fill: solidPaintHex(t.backBg), tags: ["background"] }));
+
+  // ── Topographic contour lines – 6 organic bezier paths ──
+  const topoColor = t.accentAlt ?? "#3A4A42";
+  const contours: Array<{ cx: number; cy: number; rx: number; ry: number }> = [
+    { cx: W * 0.50, cy: H * 0.50, rx: W * 0.42, ry: H * 0.38 },
+    { cx: W * 0.48, cy: H * 0.48, rx: W * 0.36, ry: H * 0.32 },
+    { cx: W * 0.52, cy: H * 0.52, rx: W * 0.30, ry: H * 0.26 },
+    { cx: W * 0.50, cy: H * 0.46, rx: W * 0.24, ry: H * 0.20 },
+    { cx: W * 0.48, cy: H * 0.50, rx: W * 0.18, ry: H * 0.14 },
+    { cx: W * 0.52, cy: H * 0.54, rx: W * 0.12, ry: H * 0.10 },
+  ];
+  contours.forEach((c, i) => {
+    // Approximate each contour as an ellipse using bezier curves
+    const kx = c.rx * 0.5523;
+    const ky = c.ry * 0.5523;
+    layers.push(pathLayer({
+      name: `Contour ${i + 1}`, x: 0, y: 0, w: W, h: H,
+      commands: [
+        M(c.cx, c.cy - c.ry),
+        C(c.cx + kx, c.cy - c.ry,  c.cx + c.rx, c.cy - ky,  c.cx + c.rx, c.cy),
+        C(c.cx + c.rx, c.cy + ky,  c.cx + kx, c.cy + c.ry,  c.cx, c.cy + c.ry),
+        C(c.cx - kx, c.cy + c.ry,  c.cx - c.rx, c.cy + ky,  c.cx - c.rx, c.cy),
+        C(c.cx - c.rx, c.cy - ky,  c.cx - kx, c.cy - c.ry,  c.cx, c.cy - c.ry),
+        Z(),
+      ],
+      closed: true,
+      stroke: makeStroke(topoColor, 1.5),
+      opacity: 0.20,
+      tags: ["decorative", "pattern"],
+    }));
+  });
+
+  // ── Logo – centered large ──
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company, W * 0.50 - Math.round(W * 0.075), H * 0.40 - Math.round(W * 0.075),
+    Math.round(W * 0.15), t.backText ?? "#B8A882", 1.0, cfg.fontFamily
+  ));
+
+  // ── Company ──
+  layers.push(styledText({
+    name: "Company", x: 0, y: H * 0.55, w: W,
+    text: cfg.company || "Company", fontSize: Math.round(H * 0.04),
+    fontFamily: cfg.fontFamily, weight: 500,
+    color: t.backText ?? "#B8A882", align: "center",
+    uppercase: true, letterSpacing: 3,
+    tags: ["company", "primary-text"],
+  }));
+
+  // ── Tagline ──
+  if (cfg.tagline) {
+    layers.push(styledText({
+      name: "Tagline", x: 0, y: H * 0.62, w: W,
+      text: cfg.tagline, fontSize: Math.round(H * 0.02),
+      fontFamily: cfg.fontFamily, weight: 300,
+      color: t.backText ?? "#B8A882", alpha: 0.7,
+      align: "center", uppercase: true, letterSpacing: 5,
+      tags: ["tagline"],
+    }));
+  }
+
+  return layers;
+});
+
+
+// ---------------------------------------------------------------------------
+// #28  Celtic Stripe – BACK: dark bg, pattern strip on RIGHT, white company
+// ---------------------------------------------------------------------------
+
+registerBackLayout("celtic-stripe", (W, H, cfg, theme) => {
+  const t = theme;
+  const layers: LayerV2[] = [];
+
+  // ── Background: dark charcoal ──
+  layers.push(filledRect({ name: "BG", x: 0, y: 0, w: W, h: H, fill: solidPaintHex(t.backBg), tags: ["background"] }));
+
+  // ── Pattern strip background – RIGHT 25% ──
+  const stripX = W * 0.75;
+  const stripW = W * 0.25;
+  const stripCx = stripX + stripW / 2;
+  layers.push(filledRect({ name: "Strip BG", x: stripX, y: 0, w: stripW, h: H, fill: solidPaintHex("#FFFFFF"), tags: ["decorative", "panel"] }));
+
+  // ── Interlaced pattern on right strip ──
+  const unitH = 75;
+  for (let y = 0; y < H; y += unitH) {
+    // Horizontal ovals
+    layers.push(strokeEllipse({
+      name: `Oval A y${y}`, cx: stripCx, cy: y + 18, rx: 50, ry: 18,
+      color: t.accent ?? "#2C2C2C", width: 2,
+    }));
+    layers.push(strokeEllipse({
+      name: `Oval B y${y}`, cx: stripCx, cy: y + 56, rx: 50, ry: 18,
+      color: t.accent ?? "#2C2C2C", width: 2,
+    }));
+    // Diamond connector
+    layers.push(pathLayer({
+      name: `Diamond y${y}`, x: 0, y: 0, w: W, h: H,
+      commands: [
+        M(stripCx - 50, y + 37),
+        L(stripCx, y + 22),
+        L(stripCx + 50, y + 37),
+        L(stripCx, y + 52),
+        Z(),
+      ],
+      stroke: makeStroke(t.accent ?? "#2C2C2C", 2),
+      tags: ["decorative", "pattern"],
+    }));
+  }
+
+  // ── Company name – left side ──
+  layers.push(styledText({
+    name: "Company", x: W * 0.08, y: H * 0.65, w: W * 0.55,
+    text: cfg.company || "Company", fontSize: Math.round(H * 0.05),
+    fontFamily: cfg.fontFamily, weight: 700,
+    color: t.backText ?? "#FFFFFF",
+    uppercase: true, letterSpacing: 3,
+    tags: ["company", "primary-text"],
+  }));
+
+  return layers;
+});
+
+
+// ---------------------------------------------------------------------------
+// #29  Premium Crest – BACK: cream bg, full-width skyline, name + contact
+// ---------------------------------------------------------------------------
+
+registerBackLayout("premium-crest", (W, H, cfg, theme) => {
+  const t = theme;
+  const layers: LayerV2[] = [];
+
+  // ── Background: cream ──
+  layers.push(filledRect({ name: "BG", x: 0, y: 0, w: W, h: H, fill: solidPaintHex(t.backBg), tags: ["background"] }));
+
+  // ── City skyline silhouette – full width, top 50% ──
+  layers.push(pathLayer({
+    name: "Skyline", x: 0, y: 0, w: W, h: H,
+    commands: [
+      M(0, 0), L(W, 0), L(W, H * 0.33),
+      // Roofline right to left – 12+ buildings
+      L(W * 0.96, H * 0.33), L(W * 0.96, H * 0.22), L(W * 0.92, H * 0.22),
+      L(W * 0.92, H * 0.38), L(W * 0.87, H * 0.38),
+      L(W * 0.87, H * 0.15), L(W * 0.84, H * 0.12), L(W * 0.81, H * 0.15),
+      L(W * 0.81, H * 0.42), L(W * 0.76, H * 0.42),
+      L(W * 0.76, H * 0.28), L(W * 0.72, H * 0.28),
+      L(W * 0.72, H * 0.45), L(W * 0.66, H * 0.45),
+      L(W * 0.66, H * 0.18), L(W * 0.63, H * 0.14), L(W * 0.60, H * 0.18),
+      L(W * 0.60, H * 0.40), L(W * 0.55, H * 0.40),
+      L(W * 0.55, H * 0.30), L(W * 0.50, H * 0.30),
+      L(W * 0.50, H * 0.48), L(W * 0.45, H * 0.48),
+      L(W * 0.45, H * 0.20), L(W * 0.42, H * 0.16), L(W * 0.39, H * 0.20),
+      L(W * 0.39, H * 0.35), L(W * 0.34, H * 0.35),
+      L(W * 0.34, H * 0.42), L(W * 0.28, H * 0.42),
+      L(W * 0.28, H * 0.25), L(W * 0.24, H * 0.25),
+      L(W * 0.24, H * 0.38), L(W * 0.18, H * 0.38),
+      L(W * 0.18, H * 0.30), L(W * 0.14, H * 0.30),
+      L(W * 0.14, H * 0.45), L(W * 0.08, H * 0.45),
+      L(W * 0.08, H * 0.35), L(W * 0.04, H * 0.35),
+      L(W * 0.04, H * 0.42), L(0, H * 0.42),
+      Z(),
+    ],
+    fill: solidPaintHex(t.backAccent ?? "#1A1A1A"),
+    tags: ["decorative", "skyline"],
+  }));
+
+  // ── Name ──
+  layers.push(styledText({
+    name: "Name", x: W * 0.08, y: H * 0.58, w: W * 0.50,
+    text: cfg.name || "Your Name", fontSize: Math.round(H * 0.08),
+    fontFamily: cfg.fontFamily, weight: 700,
+    color: t.backText ?? "#2A2A2A",
+    uppercase: true, letterSpacing: 4,
+    tags: ["name", "primary-text"],
+  }));
+
+  // ── Contact with icons ──
+  if (cfg.showContactIcons) {
+    layers.push(...contactWithIcons({
+      contacts: cfg.contacts,
+      x: W * 0.50, startY: H * 0.72,
+      lineGap: Math.round(H * 0.06),
+      textColor: t.contactText ?? "#4A4A4A",
+      iconColor: t.contactIcon ?? "#4A4A4A",
+      fontSize: Math.round(H * 0.025),
+      fontFamily: cfg.fontFamily,
+      tags: ["back"],
+    }));
+  }
+
+  return layers;
+});
+
+
+// ---------------------------------------------------------------------------
+// #30  Gold Construct – BACK: dark bg, world map dots, corner accents, company
+// ---------------------------------------------------------------------------
+
+registerBackLayout("gold-construct", (W, H, cfg, theme) => {
+  const t = theme;
+  const layers: LayerV2[] = [];
+
+  // ── Background: dark charcoal ──
+  layers.push(filledRect({ name: "BG", x: 0, y: 0, w: W, h: H, fill: solidPaintHex(t.backBg), tags: ["background"] }));
+
+  // ── World map dot pattern (simplified continental outlines) ──
+  const mapColor = t.accentAlt ?? "#1A1A1A";
+  // Simplified dot grid representing major landmasses
+  const dotR = 2;
+  const continents: Array<[number, number]> = [
+    // North America
+    [0.18, 0.22], [0.20, 0.20], [0.22, 0.18], [0.24, 0.20], [0.16, 0.28],
+    [0.18, 0.30], [0.20, 0.28], [0.22, 0.26], [0.24, 0.28], [0.26, 0.30],
+    [0.14, 0.34], [0.16, 0.36], [0.18, 0.34], [0.20, 0.36], [0.22, 0.34],
+    // South America
+    [0.26, 0.50], [0.28, 0.48], [0.30, 0.52], [0.28, 0.56], [0.26, 0.60],
+    [0.28, 0.62], [0.30, 0.58], [0.28, 0.66], [0.26, 0.70],
+    // Europe
+    [0.46, 0.18], [0.48, 0.16], [0.50, 0.18], [0.48, 0.22], [0.50, 0.24],
+    [0.46, 0.26], [0.48, 0.28], [0.44, 0.24],
+    // Africa
+    [0.48, 0.36], [0.50, 0.34], [0.52, 0.38], [0.50, 0.42], [0.48, 0.46],
+    [0.50, 0.50], [0.52, 0.48], [0.50, 0.54], [0.48, 0.58], [0.50, 0.62],
+    // Asia
+    [0.56, 0.18], [0.58, 0.16], [0.60, 0.18], [0.62, 0.20], [0.64, 0.18],
+    [0.66, 0.22], [0.68, 0.24], [0.70, 0.22], [0.72, 0.26], [0.74, 0.28],
+    [0.56, 0.26], [0.58, 0.28], [0.60, 0.30], [0.62, 0.32], [0.64, 0.30],
+    [0.66, 0.34], [0.68, 0.32], [0.70, 0.36], [0.72, 0.34],
+    [0.60, 0.38], [0.62, 0.40], [0.64, 0.42], [0.66, 0.38],
+    // Australia
+    [0.76, 0.54], [0.78, 0.52], [0.80, 0.54], [0.82, 0.56],
+    [0.78, 0.58], [0.80, 0.60], [0.82, 0.58],
+  ];
+  continents.forEach(([px, py], i) => {
+    layers.push(filledEllipse({
+      name: `Map Dot ${i}`, cx: W * px, cy: H * py,
+      rx: dotR, ry: dotR,
+      fill: solidPaintHex(mapColor, 0.3),
+      tags: ["decorative", "pattern"],
+    }));
+  });
+
+  // ── Corner accent triangles ──
+  const cs = 21; // corner triangle size
+  const ci = 32; // corner inset
+  // Top-left
+  layers.push(pathLayer({
+    name: "Corner TL", x: 0, y: 0, w: W, h: H,
+    commands: [M(ci, ci), L(ci + cs, ci), L(ci, ci + cs), Z()],
+    fill: solidPaintHex(t.backText ?? "#FFFFFF"),
+    tags: ["decorative", "corner"],
+  }));
+  // Top-right
+  layers.push(pathLayer({
+    name: "Corner TR", x: 0, y: 0, w: W, h: H,
+    commands: [M(W - ci, ci), L(W - ci - cs, ci), L(W - ci, ci + cs), Z()],
+    fill: solidPaintHex(t.backText ?? "#FFFFFF"),
+    tags: ["decorative", "corner"],
+  }));
+  // Bottom-left
+  layers.push(pathLayer({
+    name: "Corner BL", x: 0, y: 0, w: W, h: H,
+    commands: [M(ci, H - ci), L(ci + cs, H - ci), L(ci, H - ci - cs), Z()],
+    fill: solidPaintHex(t.backText ?? "#FFFFFF"),
+    tags: ["decorative", "corner"],
+  }));
+  // Bottom-right
+  layers.push(pathLayer({
+    name: "Corner BR", x: 0, y: 0, w: W, h: H,
+    commands: [M(W - ci, H - ci), L(W - ci - cs, H - ci), L(W - ci, H - ci - cs), Z()],
+    fill: solidPaintHex(t.backText ?? "#FFFFFF"),
+    tags: ["decorative", "corner"],
+  }));
+
+  // ── Logo placeholder ──
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company, W * 0.35, H * 0.25, Math.round(W * 0.08),
+    t.backText ?? "#FFFFFF", 1.0, cfg.fontFamily
+  ));
+
+  // ── Company ──
+  layers.push(styledText({
+    name: "Company", x: 0, y: H * 0.55, w: W,
+    text: cfg.company || "Company", fontSize: Math.round(H * 0.06),
+    fontFamily: cfg.fontFamily, weight: 700,
+    color: t.backText ?? "#FFFFFF", align: "center",
+    uppercase: true, letterSpacing: 2,
+    tags: ["company", "primary-text"],
+  }));
+
+  // ── Tagline ──
+  if (cfg.tagline) {
+    layers.push(styledText({
+      name: "Tagline", x: 0, y: H * 0.625, w: W,
+      text: cfg.tagline, fontSize: Math.round(H * 0.022),
+      fontFamily: cfg.fontFamily, weight: 300,
+      color: t.backAccent ?? "#CCCCCC", align: "center",
+      uppercase: true, letterSpacing: 3,
+      tags: ["tagline"],
+    }));
+  }
+
+  return layers;
+});
+
+
 // ===================== LUXURY TEMPLATES =====================
 
-/** Luxury Divider â€” Inspired by Charles Jones: Dark teal + gold accents + vertical dividers */
+// ---------------------------------------------------------------------------
+// #25  Luxury Divider – Gold front / teal text, two-color inversion design
+// ---------------------------------------------------------------------------
+
 function layoutLuxuryDivider(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const mx = W * 0.08;
-  const my = H * 0.12;
+  const t = TEMPLATE_FIXED_THEMES["luxury-divider"];
   const layers: LayerV2[] = [];
 
-  // Vertical gold dividers
-  layers.push(rect({ name: "V-Divider 1", x: W * 0.5, y: my, w: 1.5, h: H - 2 * my, fill: solidPaintHex(cfg.primaryColor, 0.3), tags: ["decorative", "divider"] }));
-  layers.push(rect({ name: "V-Divider 2", x: W * 0.75, y: my, w: 1.5, h: H - 2 * my, fill: solidPaintHex(cfg.primaryColor, 0.15), tags: ["decorative", "divider"] }));
-  // Logo â€” top right
-  const logoS = H * 0.2;
-  layers.push(buildLogoLayer(cfg, W - mx - logoS, my, logoS, logoS, cfg.primaryColor, ff));
-  // Company vertical text area (right of second divider)
-  layers.push(textLayer({
-    name: "Company", x: W * 0.76, y: my + logoS + 14, w: W * 0.16,
-    text: cfg.company || "Company", fontSize: fs.label, ff, weight: 500,
-    color: cfg.textColor, alpha: 0.5, tags: ["company"], uppercase: true, letterSpacing: 3,
+  // ── Background: warm cream/gold ──
+  layers.push(filledRect({ name: "BG", x: 0, y: 0, w: W, h: H, fill: solidPaintHex(t.frontBg), tags: ["background"] }));
+
+  // ── QR Code placeholder – upper right (teal on gold) ──
+  // QR is rendered externally; we create a placeholder area
+  if (cfg.qrCodeUrl) {
+    layers.push(filledRect({
+      name: "QR Area", x: W * 0.75, y: H * 0.15,
+      w: W * 0.18, h: H * 0.30,
+      fill: solidPaintHex(t.frontBg), // same as bg
+      tags: ["qr-placeholder"],
+    }));
+  }
+
+  // ── Name ──
+  layers.push(styledText({
+    name: "Name", x: W * 0.20, y: H * 0.38, w: W * 0.50,
+    text: cfg.name || "Your Name", fontSize: Math.round(H * 0.06),
+    fontFamily: ff, weight: 700,
+    color: t.frontText, uppercase: true, letterSpacing: 3,
+    tags: ["name", "primary-text"],
   }));
-  // Name â€” left side, large
-  layers.push(textLayer({
-    name: "Name", x: mx, y: H * 0.4, w: W * 0.42,
-    text: cfg.name || "Your Name", fontSize: fs.nameXl, ff, weight: 700,
-    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true,
+
+  // ── Title ──
+  layers.push(styledText({
+    name: "Title", x: W * 0.20, y: H * 0.48, w: W * 0.40,
+    text: cfg.title || "Job Title", fontSize: Math.round(H * 0.03),
+    fontFamily: ff, weight: 500,
+    color: t.frontText, uppercase: true,
+    tags: ["title"],
   }));
-  // Title â€” in primary/gold color
-  layers.push(textLayer({
-    name: "Title", x: mx, y: H * 0.4 + fs.nameXl + 4, w: W * 0.4,
-    text: cfg.title || "Job Title", fontSize: fs.label, ff, weight: 400,
-    color: cfg.primaryColor, tags: ["title"], uppercase: true, letterSpacing: 2,
+
+  // ── Contact with icons ──
+  const contacts = extractContacts(cfg);
+  layers.push(...contactWithIcons({
+    contacts, x: W * 0.20, startY: H * 0.60,
+    lineGap: Math.round(H * 0.05),
+    textColor: t.contactText ?? t.frontText,
+    iconColor: t.contactIcon ?? t.frontText,
+    fontSize: Math.round(H * 0.025),
+    fontFamily: ff,
+    tags: ["front"],
   }));
-  // Contact â€” between dividers
-  layers.push(...buildContactLayers(cfg, W * 0.52, H * 0.42, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.65, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
+
   return layers;
 }
 
-/** Social Band â€” Inspired by Visionary Vogue: Dark bg + cream social media band */
+
+// ---------------------------------------------------------------------------
+// #26  Social Band – 70/30 green/cream split, brand-focused
+// ---------------------------------------------------------------------------
+
 function layoutSocialBand(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const mx = W * 0.1;
-  const my = H * 0.15;
+  const t = TEMPLATE_FIXED_THEMES["social-band"];
   const layers: LayerV2[] = [];
-  const bandH = H * 0.2;
-  const bandY = H - bandH;
 
-  // Bottom band (lighter color)
-  layers.push(rect({
-    name: "Social Band", x: 0, y: bandY, w: W, h: bandH,
-    fill: solidPaintHex(cfg.secondaryColor, 0.5), tags: ["decorative", "accent", "panel"],
+  // ── Green top section (70%) ──
+  layers.push(filledRect({ name: "Green Zone", x: 0, y: 0, w: W, h: H * 0.70, fill: solidPaintHex(t.frontBg), tags: ["background"] }));
+
+  // ── Cream bottom section (30%) ──
+  layers.push(filledRect({ name: "Cream Zone", x: 0, y: H * 0.70, w: W, h: H * 0.30, fill: solidPaintHex(t.frontBgAlt ?? "#E8E6E1"), tags: ["background", "panel"] }));
+
+  // ── Brand name – centered on green, Light weight, very wide tracking ──
+  layers.push(styledText({
+    name: "Brand", x: 0, y: H * 0.32, w: W,
+    text: cfg.company || "Company", fontSize: Math.round(H * 0.08),
+    fontFamily: ff, weight: 300,
+    color: t.frontText, align: "center",
+    uppercase: true, letterSpacing: 6,
+    tags: ["company", "primary-text"],
   }));
-  // Company â€” centered top
-  layers.push(textLayer({
-    name: "Company", x: 0, y: my, w: W,
-    text: cfg.company || "Company", fontSize: fs.companyLg, ff, weight: 400,
-    color: cfg.textColor, align: "center", tags: ["company"], uppercase: true, letterSpacing: 5,
+
+  // ── Subtitle / Title – centered, light ──
+  layers.push(styledText({
+    name: "Subtitle", x: 0, y: H * 0.45, w: W,
+    text: cfg.title || "Title", fontSize: Math.round(H * 0.025),
+    fontFamily: ff, weight: 300,
+    color: t.frontText, alpha: 0.7,
+    align: "center", uppercase: true, letterSpacing: 4,
+    tags: ["title"],
   }));
-  // Title centered
-  layers.push(textLayer({
-    name: "Title", x: 0, y: my + fs.companyLg + 6, w: W,
-    text: cfg.title || "Title", fontSize: fs.label, ff, weight: 400,
-    color: cfg.textColor, alpha: 0.5, align: "center", tags: ["title"], uppercase: true, letterSpacing: 3,
+
+  // ── Vertical divider in cream section ──
+  layers.push(divider({
+    name: "V-Divider", x: W * 0.55, y: H * 0.75,
+    length: H * 0.22, thickness: 1,
+    color: t.divider ?? "#2C2C2C",
+    direction: "vertical",
+    tags: ["decorative", "divider"],
   }));
-  // Divider
-  layers.push(line({ name: "Divider", x: W * 0.35, y: my + fs.companyLg + fs.label + 18, w: W * 0.3, color: cfg.primaryColor, alpha: 0.3 }));
-  // Name â€” centered middle
-  layers.push(textLayer({
-    name: "Name", x: 0, y: H * 0.48, w: W,
-    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 600,
-    color: cfg.textColor, align: "center", tags: ["name", "primary-text"], autoFit: true,
+
+  // ── Social handle text – left of divider in cream ──
+  layers.push(styledText({
+    name: "Social Handle", x: W * 0.08, y: H * 0.82, w: W * 0.40,
+    text: "@" + (cfg.company || "social").toLowerCase().replace(/\s+/g, ""),
+    fontSize: Math.round(H * 0.02), fontFamily: ff, weight: 400,
+    color: t.frontTextAlt ?? "#2C2C2C",
+    uppercase: true, tags: ["contact-social"],
   }));
-  // Social / Contact on band
-  const bandTextColor = getContrastColor(cfg.secondaryColor);
-  layers.push(...buildContactLayers(cfg, W / 2, bandY + bandH * 0.2, Math.round(fs.contact * 1.4), "center", bandTextColor, 0.7, bandTextColor, 0.5, fs.contact, ff, W, H));
-  // Logo
-  const logoS = H * 0.12;
-  layers.push(buildLogoLayer(cfg, (W - logoS) / 2, H * 0.48 + fs.name + 10, logoS, logoS, cfg.primaryColor, ff));
+
+  // ── Contact text – right of divider in cream ──
+  const contacts = extractContacts(cfg);
+  if (contacts.website) {
+    layers.push(styledText({
+      name: "Website", x: W * 0.62, y: H * 0.78, w: W * 0.32,
+      text: contacts.website, fontSize: Math.round(H * 0.02),
+      fontFamily: ff, weight: 400,
+      color: t.frontTextAlt ?? "#2C2C2C", uppercase: true,
+      tags: ["contact-website"],
+    }));
+  }
+  if (contacts.email) {
+    layers.push(styledText({
+      name: "Email", x: W * 0.62, y: H * 0.86, w: W * 0.32,
+      text: contacts.email, fontSize: Math.round(H * 0.02),
+      fontFamily: ff, weight: 400,
+      color: t.frontTextAlt ?? "#2C2C2C", uppercase: true,
+      tags: ["contact-email"],
+    }));
+  }
+  if (contacts.phone) {
+    layers.push(styledText({
+      name: "Phone", x: W * 0.62, y: H * 0.94, w: W * 0.32,
+      text: contacts.phone, fontSize: Math.round(H * 0.02),
+      fontFamily: ff, weight: 400,
+      color: t.frontTextAlt ?? "#2C2C2C", uppercase: true,
+      tags: ["contact-phone"],
+    }));
+  }
+
   return layers;
 }
 
-/** Organic Pattern â€” Inspired by Company Logo Green: Topographic/organic pattern bg */
+
+// ---------------------------------------------------------------------------
+// #27  Organic Pattern – 60/40 vertical split, green/white, gold icon strip
+// ---------------------------------------------------------------------------
+
 function layoutOrganicPattern(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const mx = W * 0.1;
-  const my = H * 0.15;
+  const t = TEMPLATE_FIXED_THEMES["organic-pattern"];
   const layers: LayerV2[] = [];
 
-  // Subtle topographic lines (simplified as concentric rounded rects)
-  for (let i = 0; i < 6; i++) {
-    layers.push(rect({
-      name: `Topo Line ${i + 1}`,
-      x: W * (0.02 + i * 0.06), y: H * (0.05 + i * 0.04),
-      w: W * (0.96 - i * 0.12), h: H * (0.9 - i * 0.08),
-      fill: solidPaintHex(cfg.primaryColor, 0),
-      stroke: stroke(cfg.primaryColor, 0.8, 0.06 + i * 0.01),
-      tags: ["decorative", "pattern"],
-      radii: [20 + i * 8, 20 + i * 8, 20 + i * 8, 20 + i * 8],
-    }));
-  }
-  // Left panel for contact/name
-  layers.push(rect({
-    name: "Content Panel", x: 0, y: 0, w: W * 0.42, h: H,
-    fill: solidPaintHex(cfg.bgColor, 0.85), tags: ["decorative", "panel"],
+  // ── Green left section (60%) ──
+  layers.push(filledRect({ name: "Green Zone", x: 0, y: 0, w: W * 0.60, h: H, fill: solidPaintHex(t.frontBg), tags: ["background"] }));
+
+  // ── White right section (40%) ──
+  layers.push(filledRect({ name: "White Zone", x: W * 0.60, y: 0, w: W * 0.40, h: H, fill: solidPaintHex(t.frontBgAlt ?? "#FFFFFF"), tags: ["background", "panel"] }));
+
+  // ── Vertical gold icon strip at divider ──
+  layers.push(filledRect({
+    name: "Icon Strip", x: W * 0.58, y: H * 0.325,
+    w: W * 0.04, h: H * 0.35,
+    fill: solidPaintHex(t.accent ?? "#B8A882"),
+    tags: ["decorative", "accent"],
   }));
-  // Name on panel
-  layers.push(textLayer({
-    name: "Name", x: mx, y: my, w: W * 0.32,
-    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 700,
-    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true,
+
+  // ── Name – on green ──
+  layers.push(styledText({
+    name: "Name", x: W * 0.08, y: H * 0.30, w: W * 0.45,
+    text: cfg.name || "Your Name", fontSize: Math.round(H * 0.05),
+    fontFamily: ff, weight: 700,
+    color: t.frontText, uppercase: true, letterSpacing: 3,
+    tags: ["name", "primary-text"],
   }));
-  // Title
-  layers.push(textLayer({
-    name: "Title", x: mx, y: my + fs.name + 4, w: W * 0.3,
-    text: cfg.title || "Job Title", fontSize: fs.label, ff, weight: 400,
-    color: cfg.textColor, alpha: 0.5, tags: ["title"],
+
+  // ── Position/Title – on green ──
+  layers.push(styledText({
+    name: "Title", x: W * 0.08, y: H * 0.38, w: W * 0.45,
+    text: cfg.title || "Job Title", fontSize: Math.round(H * 0.025),
+    fontFamily: ff, weight: 300,
+    color: t.frontText, alpha: 0.8,
+    tags: ["title"],
   }));
-  // Contact
-  layers.push(...buildContactLayers(cfg, mx, my + fs.name + fs.label + 20, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.65, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
-  // Logo â€” right side
-  const logoS = H * 0.2;
-  layers.push(buildLogoLayer(cfg, W * 0.6, (H - logoS) / 2, logoS, logoS, cfg.primaryColor, ff));
-  // Company
-  layers.push(textLayer({
-    name: "Company", x: W * 0.5, y: H - my, w: W * 0.42,
-    text: cfg.company || "Company", fontSize: fs.label, ff, weight: 500,
-    color: cfg.textColor, alpha: 0.6, align: "right", tags: ["company"], uppercase: true, letterSpacing: 2,
+
+  // ── Contact – on green, gold text ──
+  const contacts = extractContacts(cfg);
+  layers.push(...contactWithIcons({
+    contacts, x: W * 0.08, startY: H * 0.52,
+    lineGap: Math.round(H * 0.06),
+    textColor: t.contactText ?? t.frontText,
+    iconColor: t.contactIcon ?? t.accent ?? "#B8A882",
+    fontSize: Math.round(H * 0.02),
+    fontFamily: ff,
+    tags: ["front"],
   }));
+
+  // ── Company logo – on white section ──
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company, W * 0.72, H * 0.15, Math.round(W * 0.08),
+    t.frontTextAlt ?? "#6B7B73", 1.0, ff
+  ));
+
+  // ── Company text – on white section ──
+  layers.push(styledText({
+    name: "Company", x: W * 0.65, y: H * 0.32, w: W * 0.30,
+    text: cfg.company || "Company", fontSize: Math.round(H * 0.028),
+    fontFamily: ff, weight: 500,
+    color: t.frontTextAlt ?? "#6B7B73",
+    uppercase: true, letterSpacing: 2,
+    tags: ["company"],
+  }));
+
   return layers;
 }
 
-/** Celtic Stripe â€” Inspired by Celtic Pattern: Ornamental pattern stripe on one side */
+
+// ---------------------------------------------------------------------------
+// #28  Celtic Stripe – White front, 25% interlaced pattern strip on left
+// ---------------------------------------------------------------------------
+
 function layoutCelticStripe(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const mx = W * 0.1;
-  const my = H * 0.15;
+  const t = TEMPLATE_FIXED_THEMES["celtic-stripe"];
   const layers: LayerV2[] = [];
-  const stripeW = W * 0.06;
 
-  // Left ornamental stripe
-  layers.push(rect({
-    name: "Ornament Stripe", x: mx * 0.5, y: my * 0.5, w: stripeW, h: H - my,
-    fill: lg(0, [cfg.primaryColor, 0], [cfg.secondaryColor, 0.5], [cfg.primaryColor, 1]),
-    tags: ["decorative", "accent", "border"],
-  }));
-  // Stripe inner pattern (dots)
-  for (let i = 0; i < 8; i++) {
-    layers.push(ellipse({
-      name: `Stripe Dot ${i + 1}`, cx: mx * 0.5 + stripeW / 2, cy: my + i * ((H - 2 * my) / 8),
-      rx: stripeW * 0.2, ry: stripeW * 0.2,
-      fill: solidPaintHex(cfg.bgColor, 0.3), tags: ["decorative"],
+  // ── Background: white ──
+  layers.push(filledRect({ name: "BG", x: 0, y: 0, w: W, h: H, fill: solidPaintHex(t.frontBg), tags: ["background"] }));
+
+  // ── Pattern strip background – LEFT 25% ──
+  const stripW = W * 0.25;
+  const stripCx = stripW / 2;
+  layers.push(filledRect({ name: "Strip BG", x: 0, y: 0, w: stripW, h: H, fill: solidPaintHex(t.frontBgAlt ?? "#F8F8F8"), tags: ["decorative", "panel"] }));
+
+  // ── Interlaced oval-diamond pattern ──
+  const unitH = 75;
+  for (let y = 0; y < H; y += unitH) {
+    // Horizontal ovals
+    layers.push(strokeEllipse({
+      name: `Oval A y${y}`, cx: stripCx, cy: y + 18, rx: 50, ry: 18,
+      color: t.accent ?? "#2C2C2C", width: 2,
+    }));
+    layers.push(strokeEllipse({
+      name: `Oval B y${y}`, cx: stripCx, cy: y + 56, rx: 50, ry: 18,
+      color: t.accent ?? "#2C2C2C", width: 2,
+    }));
+    // Diamond connector
+    layers.push(pathLayer({
+      name: `Diamond y${y}`, x: 0, y: 0, w: W, h: H,
+      commands: [
+        M(stripCx - 50, y + 37),
+        L(stripCx, y + 22),
+        L(stripCx + 50, y + 37),
+        L(stripCx, y + 52),
+        Z(),
+      ],
+      stroke: makeStroke(t.accent ?? "#2C2C2C", 2),
+      tags: ["decorative", "pattern"],
     }));
   }
-  // Name â€” right of stripe
-  const contentX = mx * 0.5 + stripeW + mx;
-  layers.push(textLayer({
-    name: "Name", x: contentX, y: my, w: W - contentX - mx,
-    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 600,
-    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true, uppercase: true, letterSpacing: 2,
+
+  // ── Name – right of stripe ──
+  layers.push(styledText({
+    name: "Name", x: W * 0.35, y: H * 0.48, w: W * 0.55,
+    text: cfg.name || "Your Name", fontSize: Math.round(H * 0.06),
+    fontFamily: ff, weight: 700,
+    color: t.frontText, uppercase: true, letterSpacing: 3,
+    tags: ["name", "primary-text"],
   }));
-  // Divider
-  layers.push(line({ name: "Divider", x: contentX, y: my + fs.name + 10, w: W * 0.3, color: cfg.primaryColor, alpha: 0.25, thickness: 1 }));
-  // Contact
-  layers.push(...buildContactLayers(cfg, contentX, my + fs.name + 20, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.6, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
-  // Company â€” bottom right
-  layers.push(textLayer({
-    name: "Company", x: contentX, y: H - my, w: W - contentX - mx,
-    text: cfg.company || "Company", fontSize: fs.label, ff, weight: 500,
-    color: cfg.textColor, alpha: 0.4, align: "right", tags: ["company"], uppercase: true, letterSpacing: 3,
+
+  // ── Contact with icons ──
+  const contacts = extractContacts(cfg);
+  layers.push(...contactWithIcons({
+    contacts, x: W * 0.38, startY: H * 0.68,
+    lineGap: Math.round(H * 0.03),
+    textColor: t.contactText ?? "#666666",
+    iconColor: t.contactIcon ?? "#666666",
+    fontSize: Math.round(H * 0.025),
+    fontFamily: ff,
+    tags: ["front"],
   }));
+
   return layers;
 }
 
-/** Premium Crest â€” Inspired by Company Green Dark: Dark front + triangle accent area */
+
+// ---------------------------------------------------------------------------
+// #29  Premium Crest – Dark front with key-skyline logo, cream text
+// ---------------------------------------------------------------------------
+
 function layoutPremiumCrest(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const mx = W * 0.1;
-  const my = H * 0.15;
+  const t = TEMPLATE_FIXED_THEMES["premium-crest"];
   const layers: LayerV2[] = [];
 
-  // Right accent bar
-  layers.push(rect({
-    name: "Right Accent", x: W - mx * 0.6, y: H * 0.2, w: 3, h: H * 0.6,
-    fill: solidPaintHex(cfg.primaryColor, 0.5), tags: ["decorative", "accent"],
+  // ── Background: dark charcoal ──
+  layers.push(filledRect({ name: "BG", x: 0, y: 0, w: W, h: H, fill: solidPaintHex(t.frontBg), tags: ["background"] }));
+
+  // ── Key-skyline composite logo – right 40% zone ──
+  const keyColor = t.accent ?? "#F5F1E8";
+
+  // Key shaft
+  layers.push(filledRect({
+    name: "Key Shaft", x: W * 0.77, y: H * 0.53,
+    w: W * 0.048, h: H * 0.37,
+    fill: solidPaintHex(keyColor),
+    tags: ["decorative", "logo"],
   }));
-  // Logo â€” centered top
-  const logoS = H * 0.22;
-  layers.push(buildLogoLayer(cfg, (W - logoS) / 2, my * 0.8, logoS, logoS, cfg.primaryColor, ff));
-  // Company â€” centered below logo
-  layers.push(textLayer({
-    name: "Company", x: 0, y: my * 0.8 + logoS + 8, w: W,
-    text: cfg.company || "Company", fontSize: fs.companyLg, ff, weight: 700,
-    color: cfg.textColor, align: "center", tags: ["company"], autoFit: true,
+
+  // Key head circle
+  layers.push(filledEllipse({
+    name: "Key Head", cx: W * 0.794, cy: H * 0.42,
+    rx: W * 0.086, ry: W * 0.086,
+    fill: solidPaintHex(keyColor),
+    tags: ["decorative", "logo"],
   }));
-  if (cfg.tagline) {
-    layers.push(textLayer({
-      name: "Tagline", x: 0, y: my * 0.8 + logoS + 8 + fs.companyLg + 4, w: W,
-      text: cfg.tagline, fontSize: fs.tagline, ff, weight: 300,
-      color: cfg.textColor, alpha: 0.4, align: "center", tags: ["tagline"],
+
+  // Skyline buildings cut into key head (dark circles/rects to simulate cutouts)
+  const bldgColor = t.frontBg ?? "#1A1A1A";
+  const bldgs: Array<{ x: number; y: number; w: number; h: number }> = [
+    { x: W * 0.735, y: H * 0.36, w: W * 0.018, h: H * 0.12 },
+    { x: W * 0.755, y: H * 0.32, w: W * 0.015, h: H * 0.16 },
+    { x: W * 0.775, y: H * 0.28, w: W * 0.012, h: H * 0.20 },
+    { x: W * 0.790, y: H * 0.34, w: W * 0.018, h: H * 0.14 },
+    { x: W * 0.812, y: H * 0.30, w: W * 0.015, h: H * 0.18 },
+    { x: W * 0.830, y: H * 0.38, w: W * 0.018, h: H * 0.10 },
+  ];
+  bldgs.forEach((b, i) => {
+    layers.push(filledRect({
+      name: `Bldg ${i + 1}`, x: b.x, y: b.y, w: b.w, h: b.h,
+      fill: solidPaintHex(bldgColor),
+      tags: ["decorative", "logo"],
+    }));
+  });
+
+  // Key hole
+  layers.push(filledEllipse({
+    name: "Key Hole", cx: W * 0.794, cy: H * 0.47,
+    rx: W * 0.007, ry: W * 0.007,
+    fill: solidPaintHex(bldgColor),
+    tags: ["decorative", "logo"],
+  }));
+
+  // ── Company text – left zone ──
+  layers.push(styledText({
+    name: "Company", x: W * 0.08, y: H * 0.40, w: W * 0.50,
+    text: cfg.company || "Real Estate", fontSize: Math.round(H * 0.06),
+    fontFamily: ff, weight: 700,
+    color: t.frontTextAlt ?? "#F5F1E8",
+    uppercase: true, letterSpacing: 3,
+    tags: ["company", "primary-text"],
+  }));
+
+  // ── Subtitle ──
+  layers.push(styledText({
+    name: "Subtitle", x: W * 0.08, y: H * 0.50, w: W * 0.50,
+    text: cfg.tagline || cfg.title || "Lorem Ipsum", fontSize: Math.round(H * 0.03),
+    fontFamily: ff, weight: 400,
+    color: t.frontTextAlt ?? "#F5F1E8", alpha: 0.6,
+    uppercase: true, letterSpacing: 5,
+    tags: ["tagline"],
+  }));
+
+  return layers;
+}
+
+
+// ---------------------------------------------------------------------------
+// #30  Gold Construct – 60/40 horizontal split, 3-column contact strip
+// ---------------------------------------------------------------------------
+
+function layoutGoldConstruct(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const t = TEMPLATE_FIXED_THEMES["gold-construct"];
+  const layers: LayerV2[] = [];
+
+  // ── Top section: dark gray (60%) ──
+  layers.push(filledRect({ name: "Dark Zone", x: 0, y: 0, w: W, h: H * 0.60, fill: solidPaintHex(t.frontBg), tags: ["background"] }));
+
+  // ── Bottom section: light gray (40%) ──
+  layers.push(filledRect({ name: "Light Zone", x: 0, y: H * 0.60, w: W, h: H * 0.40, fill: solidPaintHex(t.frontBgAlt ?? "#F5F5F5"), tags: ["background", "panel"] }));
+
+  // ── Name – white on dark, left-aligned ──
+  layers.push(styledText({
+    name: "Name", x: W * 0.15, y: H * 0.20, w: W * 0.65,
+    text: cfg.name || "Your Name", fontSize: Math.round(H * 0.08),
+    fontFamily: ff, weight: 700,
+    color: t.frontText, uppercase: true, letterSpacing: 3,
+    tags: ["name", "primary-text"],
+  }));
+
+  // ── Title – light gray, very wide tracking ──
+  layers.push(styledText({
+    name: "Title", x: W * 0.15, y: H * 0.30, w: W * 0.65,
+    text: cfg.title || "Job Title", fontSize: Math.round(H * 0.025),
+    fontFamily: ff, weight: 300,
+    color: t.frontTextAlt ?? "#CCCCCC",
+    uppercase: true, letterSpacing: 5,
+    tags: ["title"],
+  }));
+
+  // ── 3-column contact strip in bottom section ──
+  const contacts = extractContacts(cfg);
+  const colW = W / 3;
+  const contactY = H * 0.78;
+  const iconR = 16;
+  const iconY = H * 0.76;
+  const textY = H * 0.84;
+  const contactFontSize = Math.round(H * 0.02);
+
+  // Column 1: Phone
+  if (contacts.phone) {
+    layers.push(strokeEllipse({
+      name: "Phone Icon Circle", cx: W * 0.08, cy: iconY,
+      rx: iconR, ry: iconR,
+      color: t.accent ?? "#333333", width: 1,
+    }));
+    layers.push(styledText({
+      name: "Phone", x: W * 0.04, y: textY, w: colW * 0.85,
+      text: contacts.phone, fontSize: contactFontSize,
+      fontFamily: ff, weight: 400,
+      color: t.contactText ?? "#333333",
+      tags: ["contact-phone"],
     }));
   }
-  // Divider
-  layers.push(line({ name: "Divider", x: W * 0.3, y: H * 0.58, w: W * 0.4, color: cfg.primaryColor, alpha: 0.25 }));
-  // Name â€” centered
-  layers.push(textLayer({
-    name: "Name", x: 0, y: H * 0.62, w: W,
-    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 600,
-    color: cfg.textColor, align: "center", tags: ["name", "primary-text"], autoFit: true,
+
+  // Column divider 1
+  layers.push(divider({
+    name: "Col Div 1", x: colW, y: H * 0.64,
+    length: H * 0.28, thickness: 1,
+    color: t.divider ?? "#DDDDDD", alpha: 0.8,
+    direction: "vertical",
+    tags: ["decorative", "divider"],
   }));
-  // Title
-  layers.push(textLayer({
-    name: "Title", x: 0, y: H * 0.62 + fs.name + 4, w: W,
-    text: cfg.title || "Job Title", fontSize: fs.label, ff, weight: 400,
-    color: cfg.primaryColor, align: "center", tags: ["title"], uppercase: true, letterSpacing: 2,
+
+  // Column 2: Email
+  if (contacts.email) {
+    layers.push(strokeEllipse({
+      name: "Email Icon Circle", cx: colW + W * 0.04, cy: iconY,
+      rx: iconR, ry: iconR,
+      color: t.accent ?? "#333333", width: 1,
+    }));
+    layers.push(styledText({
+      name: "Email", x: colW + W * 0.02, y: textY, w: colW * 0.85,
+      text: contacts.email, fontSize: contactFontSize,
+      fontFamily: ff, weight: 400,
+      color: t.contactText ?? "#333333",
+      tags: ["contact-email"],
+    }));
+  }
+
+  // Column divider 2
+  layers.push(divider({
+    name: "Col Div 2", x: colW * 2, y: H * 0.64,
+    length: H * 0.28, thickness: 1,
+    color: t.divider ?? "#DDDDDD", alpha: 0.8,
+    direction: "vertical",
+    tags: ["decorative", "divider"],
   }));
-  // Contact â€” centered
-  layers.push(...buildContactLayers(cfg, W / 2, H * 0.62 + fs.name + fs.label + 16, Math.round(fs.contact * 1.4), "center", cfg.textColor, 0.6, cfg.primaryColor, 0.45, fs.contact, ff, W, H));
+
+  // Column 3: Address
+  if (contacts.address) {
+    layers.push(strokeEllipse({
+      name: "Address Icon Circle", cx: colW * 2 + W * 0.04, cy: iconY,
+      rx: iconR, ry: iconR,
+      color: t.accent ?? "#333333", width: 1,
+    }));
+    layers.push(styledText({
+      name: "Address", x: colW * 2 + W * 0.02, y: textY, w: colW * 0.85,
+      text: contacts.address, fontSize: contactFontSize,
+      fontFamily: ff, weight: 400,
+      color: t.contactText ?? "#333333",
+      tags: ["contact-address"],
+    }));
+  }
+
   return layers;
 }
 
-/** Gold Construct â€” Inspired by News Business: Teal/gold, vertical text, construction/premium feel */
-function layoutGoldConstruct(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const mx = W * 0.08;
-  const my = H * 0.12;
-  const layers: LayerV2[] = [];
-
-  // Top gold accent bar
-  layers.push(rect({
-    name: "Gold Top Bar", x: mx, y: my * 0.5, w: W - 2 * mx, h: 3,
-    fill: solidPaintHex(cfg.primaryColor, 0.6), tags: ["decorative", "accent", "border"],
-  }));
-  // Bottom gold accent bar
-  layers.push(rect({
-    name: "Gold Bottom Bar", x: mx, y: H - my * 0.5 - 3, w: W - 2 * mx, h: 3,
-    fill: solidPaintHex(cfg.primaryColor, 0.6), tags: ["decorative", "accent", "border"],
-  }));
-  // Left thin gold divider
-  layers.push(rect({
-    name: "V-Divider", x: W * 0.35, y: my, w: 1.5, h: H - 2 * my,
-    fill: solidPaintHex(cfg.primaryColor, 0.3), tags: ["decorative", "divider"],
-  }));
-  // Logo â€” top right
-  const logoS = H * 0.2;
-  layers.push(buildLogoLayer(cfg, W - mx - logoS, my, logoS, logoS, cfg.primaryColor, ff));
-  // Company next to logo
-  layers.push(textLayer({
-    name: "Company", x: W * 0.37, y: my + 4, w: W * 0.35,
-    text: cfg.company || "Company", fontSize: fs.company, ff, weight: 700,
-    color: cfg.textColor, tags: ["company"], autoFit: true,
-  }));
-  // Name â€” left of divider, bold
-  layers.push(textLayer({
-    name: "Name", x: mx, y: H * 0.42, w: W * 0.25,
-    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 700,
-    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true,
-  }));
-  // Title â€” in gold
-  layers.push(textLayer({
-    name: "Title", x: mx, y: H * 0.42 + fs.name + 4, w: W * 0.25,
-    text: cfg.title || "Job Title", fontSize: fs.label, ff, weight: 400,
-    color: cfg.primaryColor, tags: ["title"], uppercase: true, letterSpacing: 1,
-  }));
-  // Contact â€” right of divider
-  layers.push(...buildContactLayers(cfg, W * 0.37, H * 0.45, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.65, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
-  return layers;
-}
 
 // --- Template dispatcher ---
 
