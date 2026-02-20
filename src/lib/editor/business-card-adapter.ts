@@ -891,6 +891,13 @@ function layoutMonogramLuxe(W: number, H: number, cfg: CardConfig, fs: FontSizes
     y += contactLineH;
   }
 
+
+  // -- Logo watermark --
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company || "Co",
+    Math.round(W * 0.48), Math.round(H * 0.72),
+    Math.round(H * 0.10), t.frontText, 1.0, ff
+  ));
   return layers;
 }
 
@@ -1089,6 +1096,13 @@ function layoutGeometricMark(W: number, H: number, cfg: CardConfig, fs: FontSize
     }));
   }
 
+
+  // -- Logo watermark --
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company || "Co",
+    Math.round(W * 0.09), Math.round(H * 0.06),
+    Math.round(H * 0.06), t.frontText, 1.0, ff
+  ));
   return layers;
 
 }
@@ -1323,6 +1337,13 @@ function layoutFrameMinimal(W: number, H: number, cfg: CardConfig, fs: FontSizes
     }));
   }
 
+
+  // -- Logo watermark --
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company || "Co",
+    Math.round(W * 0.75), Math.round(H * 0.08),
+    Math.round(H * 0.08), t.frontText, 1.0, ff
+  ));
   return layers;
 }
 
@@ -1513,6 +1534,13 @@ function layoutSplitVertical(W: number, H: number, cfg: CardConfig, fs: FontSize
     }));
   }
 
+
+  // -- Logo watermark --
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company || "Co",
+    Math.round(W * 0.70), Math.round(H * 0.10),
+    Math.round(H * 0.10), "#FFFFFF", 1.0, ff
+  ));
   return layers;
 
 }
@@ -1715,6 +1743,13 @@ function layoutDiagonalMono(W: number, H: number, cfg: CardConfig, fs: FontSizes
     }));
   }
 
+
+  // -- Logo watermark --
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company || "Co",
+    Math.round(W * 0.06), Math.round(H * 0.08),
+    Math.round(H * 0.08), t.frontText, 1.0, ff
+  ));
   return layers;
 }
 
@@ -1878,51 +1913,69 @@ function layoutCyanTech(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff
     tags: ["logo", "icon"],
   }));
 
-  // Company name — below gear
+  // Logo — below gear
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company || "Co",
+    Math.round(W * 0.05), Math.round(H * 0.30),
+    Math.round(H * 0.08), t.frontText, 1.0, ff
+  ));
+
+  // Company name — below logo (hidden when logo present)
+  if (!cfg.logoUrl) {
+    layers.push(styledText({
+      name: "Company",
+      x: W * 0.05, y: H * 0.32,
+      w: W * 0.38,
+      text: (cfg.company || "CODE PRO").toUpperCase(),
+      fontSize: Math.round(H * 0.04),
+      fontFamily: ff,
+      weight: 600,
+      color: t.frontText,
+      letterSpacing: 3,
+      tags: ["company"],
+    }));
+  }
+
+  // Name — prominent below logo/company area
   layers.push(styledText({
-    name: "Company",
-    x: W * 0.05, y: H * 0.32,
-    w: W * 0.38,
-    text: (cfg.company || "CODE PRO").toUpperCase(),
+    name: "Name",
+    x: W * 0.05, y: H * 0.44,
+    w: W * 0.42,
+    text: cfg.name || "Your Name",
     fontSize: Math.round(H * 0.055),
     fontFamily: ff,
-    weight: 600,
+    weight: 700,
     color: t.frontText,
-    letterSpacing: 3,
-    tags: ["company"],
+    tags: ["name", "primary-text"],
   }));
 
-  // Tagline — below company
-  if (cfg.tagline) {
-    layers.push(styledText({
-      name: "Tagline",
-      x: W * 0.05, y: H * 0.40,
-      w: W * 0.38,
-      text: cfg.tagline.toUpperCase(),
-      fontSize: Math.round(H * 0.022),
-      fontFamily: ff,
-      weight: 300,
-      color: t.frontText,
-      alpha: 0.7,
-      letterSpacing: 5,
-      tags: ["tagline"],
-    }));
-  }
+  // Title — below name
+  layers.push(styledText({
+    name: "Title",
+    x: W * 0.05, y: H * 0.53,
+    w: W * 0.42,
+    text: cfg.title || "Job Title",
+    fontSize: Math.round(H * 0.025),
+    fontFamily: ff,
+    weight: 400,
+    color: t.frontText,
+    alpha: 0.7,
+    tags: ["title"],
+  }));
 
-  // Email text placed ON the wave curve
-  if (cfg.email) {
-    layers.push(styledText({
-      name: "Email",
-      x: W * 0.55, y: H * 0.82,
-      w: W * 0.40,
-      text: cfg.email,
-      fontSize: Math.round(H * 0.022),
-      fontFamily: ff,
-      weight: 400,
-      color: "#FFFFFF",
-      tags: ["contact-text"],
-    }));
-  }
+  // Contact block — left side, below title
+  const contacts = extractContacts(cfg);
+  layers.push(...contactWithIcons({
+    contacts,
+    x: W * 0.05, startY: H * 0.65,
+    lineGap: Math.round(H * 0.045),
+    fontSize: Math.round(H * 0.022),
+    fontFamily: ff,
+    textColor: t.contactText ?? t.frontText,
+    iconColor: t.contactIcon ?? (t.accent || "#2DB5E5"),
+    maxY: H * 0.95,
+    tags: ["front"],
+  }));
 
   return layers;
 }
@@ -2103,6 +2156,7 @@ function layoutCorporateChevron(W: number, H: number, cfg: CardConfig, fs: FontS
     tags: ["contact-text"],
   }));
 
+  if (!cfg.logoUrl) {
   // Company branding — right zone, moderate size
   layers.push(styledText({
     name: "Company Branding",
@@ -2116,7 +2170,15 @@ function layoutCorporateChevron(W: number, H: number, cfg: CardConfig, fs: FontS
     letterSpacing: 4,
     tags: ["company", "branding"],
   }));
+  }
 
+
+  // -- Logo watermark --
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company || "Co",
+    Math.round(W * 0.07), Math.round(H * 0.42),
+    Math.round(H * 0.06), t.accent || "#1C1C1E", 1.0, ff
+  ));
   return layers;
 }
 
@@ -2321,6 +2383,7 @@ function layoutZigzagOverlay(W: number, H: number, cfg: CardConfig, fs: FontSize
     tags: ["title"],
   }));
 
+  if (!cfg.logoUrl) {
   // Company — on the gradient bar (white text)
   layers.push(styledText({
     name: "Company",
@@ -2334,6 +2397,7 @@ function layoutZigzagOverlay(W: number, H: number, cfg: CardConfig, fs: FontSize
     letterSpacing: 3,
     tags: ["company"],
   }));
+  }
 
   // Contact block on the dark triangle area (light text)
   const contacts = extractContacts(cfg);
@@ -2349,6 +2413,13 @@ function layoutZigzagOverlay(W: number, H: number, cfg: CardConfig, fs: FontSize
     tags: ["contact-text"],
   }));
 
+
+  // -- Logo watermark --
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company || "Co",
+    Math.round(W * 0.03), Math.round(H * 0.07),
+    Math.round(H * 0.06), "#FFFFFF", 1.0, ff
+  ));
   return layers;
 }
 
@@ -2570,6 +2641,13 @@ function layoutHexSplit(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff
     }));
   }
 
+
+  // -- Logo watermark --
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company || "Co",
+    Math.round(W * 0.45), Math.round(H * 0.06),
+    Math.round(H * 0.10), t.frontText, 1.0, ff
+  ));
   return layers;
 
 }
@@ -2718,6 +2796,7 @@ function layoutDotCircle(W: number, H: number, cfg: CardConfig, fs: FontSizes, f
     tags: ["logo", "panel"],
   }));
 
+  if (!cfg.logoUrl) {
   // Logo text inside block
   layers.push(styledText({
     name: "Logo Text",
@@ -2732,6 +2811,7 @@ function layoutDotCircle(W: number, H: number, cfg: CardConfig, fs: FontSizes, f
     align: "center",
     tags: ["company", "logo"],
   }));
+  }
 
   // Name � left-aligned
   layers.push(styledText({
@@ -2845,6 +2925,13 @@ function layoutDotCircle(W: number, H: number, cfg: CardConfig, fs: FontSizes, f
     }));
   }
 
+
+  // -- Logo watermark --
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company || "Co",
+    Math.round(W * 0.67), Math.round(H * 0.14),
+    Math.round(H * 0.10), "#FFFFFF", 1.0, ff
+  ));
   return layers;
 }
 
@@ -3283,14 +3370,16 @@ function layoutFullColorBack(W: number, H: number, cfg: CardConfig, fs: FontSize
     tags: ["title"],
   }));
 
-  // -- company --
-  layers.push(styledText({
-    name: "Company", x: W * 0.08, y: H * 0.42,
-    w: W * 0.50, text: cfg.company || "Company",
-    fontSize: Math.round(H * 0.04), fontFamily: ff,
-    weight: 500, color: t.accent,
-    tags: ["company"],
-  }));
+  // -- company (hidden when logo present) --
+  if (!cfg.logoUrl) {
+    layers.push(styledText({
+      name: "Company", x: W * 0.08, y: H * 0.42,
+      w: W * 0.50, text: cfg.company || "Company",
+      fontSize: Math.round(H * 0.04), fontFamily: ff,
+      weight: 500, color: t.accent,
+      tags: ["company"],
+    }));
+  }
 
   // -- address --
   if (cfg.address) {
@@ -4124,6 +4213,13 @@ function layoutFlowingLines(W: number, H: number, cfg: CardConfig, fs: FontSizes
     maxY: H * 0.95,
   }));
 
+
+  // -- Logo watermark --
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company || "Co",
+    Math.round(W * 0.08), Math.round(H * 0.08),
+    Math.round(H * 0.10), t.frontText ?? t.frontBg, 1.0, ff
+  ));
   return layers;
 
 }
@@ -4279,6 +4375,13 @@ function layoutNeonWatermark(W: number, H: number, cfg: CardConfig, fs: FontSize
     maxY: H * 0.95,
   }));
 
+
+  // -- Logo watermark --
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company || "Co",
+    Math.round(W * 0.08), Math.round(H * 0.08),
+    Math.round(H * 0.10), t.accent, 1.0, ff
+  ));
   return layers;
 }
 
@@ -4435,6 +4538,13 @@ function layoutBlueprintTech(W: number, H: number, cfg: CardConfig, fs: FontSize
     maxY: H * 0.95,
   }));
 
+
+  // -- Logo watermark --
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company || "Co",
+    Math.round(W * 0.15), Math.round(H * 0.06),
+    Math.round(H * 0.10), t.frontText, 1.0, ff
+  ));
   return layers;
 
 }
@@ -4531,12 +4641,14 @@ function layoutSkylineSilhouette(W: number, H: number, cfg: CardConfig, fs: Font
 
   // Left panel branding
   layers.push(...buildWatermarkLogo(cfg.logoUrl, cfg.company || "Co", W * 0.10, H * 0.28, 32, t.frontText ?? "#2C2C2C", 0.9, ff));
-  layers.push(styledText({
-    name: "Left Company", x: W * 0.10 + 40, y: H * 0.28, w: W * 0.30,
-    text: cfg.company || "Company", fontSize: Math.round(H * 0.04), fontFamily: ff,
-    weight: 700, color: t.frontText ?? "#2C2C2C",
-    tags: ["company"],
-  }));
+  if (!cfg.logoUrl) {
+    layers.push(styledText({
+      name: "Left Company", x: W * 0.10 + 40, y: H * 0.28, w: W * 0.30,
+      text: cfg.company || "Company", fontSize: Math.round(H * 0.04), fontFamily: ff,
+      weight: 700, color: t.frontText ?? "#2C2C2C",
+      tags: ["company"],
+    }));
+  }
 
   // -- RIGHT PANEL � solid dark --
   layers.push(filledRect({
@@ -4920,6 +5032,13 @@ function layoutDiagonalGold(W: number, H: number, cfg: CardConfig, fs: FontSizes
     tags: ["qr-code"],
   }));
 
+
+  // -- Logo watermark --
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company || "Co",
+    Math.round(W * 0.05), Math.round(H * 0.05),
+    Math.round(H * 0.12), t.accent, 1.0, ff
+  ));
   return layers;
 }
 
@@ -5055,7 +5174,7 @@ registerBackLayout("social-band", (W, H, cfg, theme) => {
   layers.push(styledText({
     name: "Watermark", x: 0, y: H * 0.20, w: W,
     text: initial, fontSize: Math.round(H * 0.35),
-    fontFamily: "Georgia, serif", weight: 400,
+    fontFamily: cfg.fontFamily, weight: 400,
     color: t.accent ?? "#4A6B5A", alpha: 0.3,
     align: "center", italic: true,
     tags: ["decorative", "watermark"],
@@ -5469,6 +5588,13 @@ function layoutLuxuryDivider(W: number, H: number, cfg: CardConfig, fs: FontSize
     maxY: H * 0.95,
   }));
 
+
+  // -- Logo watermark --
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company || "Co",
+    Math.round(W * 0.20), Math.round(H * 0.12),
+    Math.round(H * 0.12), t.frontText, 1.0, ff
+  ));
   return layers;
 }
 
@@ -5487,14 +5613,33 @@ function layoutSocialBand(W: number, H: number, cfg: CardConfig, fs: FontSizes, 
   // -- Cream bottom section (30%) --
   layers.push(filledRect({ name: "Cream Zone", x: 0, y: H * 0.70, w: W, h: H * 0.30, fill: solidPaintHex(t.frontBgAlt ?? "#E8E6E1"), tags: ["background", "panel"] }));
 
-  // -- Brand name � centered on green, Light weight, very wide tracking --
+  // -- Logo centered on green zone --
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company || "Co",
+    Math.round(W * 0.50 - H * 0.04), Math.round(H * 0.08),
+    Math.round(H * 0.08), t.frontText, 1.0, ff
+  ));
+
+  // -- Brand name (hidden when logo present) --
+  if (!cfg.logoUrl) {
+    layers.push(styledText({
+      name: "Brand", x: 0, y: H * 0.22, w: W,
+      text: cfg.company || "Company", fontSize: Math.round(H * 0.07),
+      fontFamily: ff, weight: 300,
+      color: t.frontText, align: "center",
+      uppercase: true, letterSpacing: 6,
+      tags: ["company", "primary-text"],
+    }));
+  }
+
+  // -- Name -- centered, strong weight --
   layers.push(styledText({
-    name: "Brand", x: 0, y: H * 0.32, w: W,
-    text: cfg.company || "Company", fontSize: Math.round(H * 0.08),
-    fontFamily: ff, weight: 300,
+    name: "Name", x: 0, y: H * 0.35, w: W,
+    text: cfg.name || "Your Name", fontSize: Math.round(H * 0.05),
+    fontFamily: ff, weight: 600,
     color: t.frontText, align: "center",
-    uppercase: true, letterSpacing: 6,
-    tags: ["company", "primary-text"],
+    uppercase: true, letterSpacing: 3,
+    tags: ["name", "primary-text"],
   }));
 
   // -- Subtitle / Title � centered, light --
@@ -5677,19 +5822,35 @@ function layoutCelticStripe(W: number, H: number, cfg: CardConfig, fs: FontSizes
     }));
   }
 
-  // -- Name � right of stripe --
+  // -- Logo -- right of stripe, upper area --
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company || "Co",
+    Math.round(W * 0.35), Math.round(H * 0.12),
+    Math.round(H * 0.10), t.frontText, 1.0, ff
+  ));
+
+  // -- Name -- right of stripe --
   layers.push(styledText({
-    name: "Name", x: W * 0.35, y: H * 0.48, w: W * 0.55,
+    name: "Name", x: W * 0.35, y: H * 0.32, w: W * 0.55,
     text: cfg.name || "Your Name", fontSize: Math.round(H * 0.06),
     fontFamily: ff, weight: 700,
     color: t.frontText, uppercase: true, letterSpacing: 3,
     tags: ["name", "primary-text"],
   }));
 
+  // -- Title -- below name --
+  layers.push(styledText({
+    name: "Title", x: W * 0.35, y: H * 0.42, w: W * 0.55,
+    text: cfg.title || "Job Title", fontSize: Math.round(H * 0.025),
+    fontFamily: ff, weight: 400,
+    color: t.contactText ?? "#666666",
+    tags: ["title"],
+  }));
+
   // -- Contact with icons --
   const contacts = extractContacts(cfg);
   layers.push(...contactWithIcons({
-    contacts, x: W * 0.38, startY: H * 0.68,
+    contacts, x: W * 0.38, startY: H * 0.55,
     lineGap: Math.round(H * 0.03),
     textColor: t.contactText ?? "#666666",
     iconColor: t.contactIcon ?? "#666666",
@@ -5898,6 +6059,13 @@ function layoutGoldConstruct(W: number, H: number, cfg: CardConfig, fs: FontSize
     }));
   }
 
+
+  // -- Logo watermark --
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company || "Co",
+    Math.round(W * 0.15), Math.round(H * 0.05),
+    Math.round(H * 0.10), "#FFFFFF", 1.0, ff
+  ));
   return layers;
 }
 
@@ -6293,12 +6461,11 @@ export function cardConfigToDocument(
     doc = addLayer(doc, qrLayer);
   }
 
-  // Set logo image ref if available
+  // Set logo image ref on ALL image layers tagged "logo" (front + back)
   if (options?.logoImg && cfg.logoUrl) {
-    // Find logo layer and set the image element
     const layers = Object.values(doc.layersById);
-    const logoLayer = layers.find(l => l.tags.includes("logo") && l.type === "image");
-    if (logoLayer && logoLayer.type === "image") {
+    const logoLayers = layers.filter(l => l.tags.includes("logo") && l.type === "image");
+    for (const logoLayer of logoLayers) {
       doc = updateLayer(doc, logoLayer.id, {
         _imageElement: options.logoImg,
       } as Partial<LayerV2>);
