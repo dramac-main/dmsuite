@@ -1,10 +1,10 @@
-// =============================================================================
-// DMSuite — Business Card Adapter
-// Converts CardConfig → DesignDocumentV2 with fully semantic, AI-targetable
+﻿// =============================================================================
+// DMSuite â€” Business Card Adapter
+// Converts CardConfig â†’ DesignDocumentV2 with fully semantic, AI-targetable
 // layers. Every text, icon, logo, shape, and decorative element becomes a
 // separate layer with tags for AI revision.
 //
-// This is the M2 reference implementation for workspace→vNext migration.
+// This is the M2 reference implementation for workspaceâ†’vNext migration.
 // =============================================================================
 
 import type {
@@ -23,8 +23,21 @@ import { getAdvancedSettings, scaledFontSize, scaledIconSize, scaledIconGap, sca
 import type { AbstractLayerConfig } from "./abstract-library";
 import { ABSTRACT_REGISTRY, buildAbstractAsset } from "./abstract-library";
 
+// ── Card Template Helpers (pixel-perfect infrastructure) ──
+import {
+  M, L, C, Q, Z,
+  pathLayer, divider, filledRect, filledEllipse, strokeRect, strokeEllipse,
+  styledText, linearGradient, multiStopGradient,
+  TEMPLATE_FIXED_THEMES, type TemplateColorTheme,
+  FONT_STACKS,
+  cornerBracketPath, diagonalSplitPath, circlePath,
+  registerBackLayout, getBackLayout, extractContacts, type ContactInfo,
+  buildWatermarkLogo, contactWithIcons,
+  makeStroke,
+} from "./card-template-helpers";
+
 // =============================================================================
-// 1.  Re-exported Types (standalone — avoids circular deps with workspace)
+// 1.  Re-exported Types (standalone â€” avoids circular deps with workspace)
 // =============================================================================
 
 export interface CardConfig {
@@ -74,11 +87,11 @@ export const BLEED_MM = 3;
 export const SAFE_MM = 5;
 
 export const CARD_SIZES: Record<string, { w: number; h: number; label: string; mmW: number; mmH: number }> = {
-  standard: { w: 1050, h: 600, label: "US Standard (3.5×2\")", mmW: 89, mmH: 51 },
-  eu:       { w: 1012, h: 638, label: "EU/ISO (85×54mm)",       mmW: 85, mmH: 54 },
-  jp:       { w: 1087, h: 661, label: "Japan (91×55mm)",        mmW: 91, mmH: 55 },
-  square:   { w: 750,  h: 750, label: "Square (2.5×2.5\")",     mmW: 63, mmH: 63 },
-  rounded:  { w: 1050, h: 600, label: "Rounded (3.5×2\")",      mmW: 89, mmH: 51 },
+  standard: { w: 1050, h: 600, label: "US Standard (3.5Ã—2\")", mmW: 89, mmH: 51 },
+  eu:       { w: 1012, h: 638, label: "EU/ISO (85Ã—54mm)",       mmW: 85, mmH: 54 },
+  jp:       { w: 1087, h: 661, label: "Japan (91Ã—55mm)",        mmW: 91, mmH: 55 },
+  square:   { w: 750,  h: 750, label: "Square (2.5Ã—2.5\")",     mmW: 63, mmH: 63 },
+  rounded:  { w: 1050, h: 600, label: "Rounded (3.5Ã—2\")",      mmW: 89, mmH: 51 },
 };
 
 export const FONT_FAMILIES: Record<string, string> = {
@@ -90,70 +103,122 @@ export const FONT_FAMILIES: Record<string, string> = {
 };
 
 export const COLOR_PRESETS = [
-  { name: "Lime Pro",    primary: "#8ae600", secondary: "#6bb800", text: "#1a1a2e", bg: "#ffffff" },
-  { name: "Navy",        primary: "#1e3a5f", secondary: "#4a90d9", text: "#ffffff", bg: "#0f1c2e" },
-  { name: "Charcoal",    primary: "#333333", secondary: "#666666", text: "#ffffff", bg: "#1a1a1a" },
-  { name: "Midnight",    primary: "#6c5ce7", secondary: "#a29bfe", text: "#e8e8e8", bg: "#0a0a1a" },
-  { name: "Gold Rush",   primary: "#d4af37", secondary: "#f4e5b2", text: "#1a1410", bg: "#faf8f5" },
-  { name: "Forest",      primary: "#2d6a4f", secondary: "#52b788", text: "#ffffff", bg: "#1b4332" },
-  { name: "Ocean",       primary: "#0077b6", secondary: "#00b4d8", text: "#ffffff", bg: "#023e8a" },
-  { name: "White Linen", primary: "#6b705c", secondary: "#a5a58d", text: "#3a3a3a", bg: "#fefae0" },
-  { name: "Burgundy",    primary: "#800020", secondary: "#c41e3a", text: "#f5f0e1", bg: "#1a0a10" },
-  { name: "Slate",       primary: "#64748b", secondary: "#94a3b8", text: "#e2e8f0", bg: "#1e293b" },
-  { name: "Coral",       primary: "#ff6b6b", secondary: "#ffa07a", text: "#ffffff", bg: "#2d2d2d" },
-  { name: "Sage",        primary: "#6b8f71", secondary: "#a3c9a8", text: "#2d2d2d", bg: "#f0f5f1" },
+  // â€” Core â€”
+  { name: "Lime Pro",       primary: "#8ae600", secondary: "#6bb800", text: "#1a1a2e", bg: "#ffffff" },
+  { name: "Navy",           primary: "#1e3a5f", secondary: "#4a90d9", text: "#ffffff", bg: "#0f1c2e" },
+  { name: "Charcoal",       primary: "#333333", secondary: "#666666", text: "#ffffff", bg: "#1a1a1a" },
+  { name: "Midnight",       primary: "#6c5ce7", secondary: "#a29bfe", text: "#e8e8e8", bg: "#0a0a1a" },
+  { name: "Gold Rush",      primary: "#d4af37", secondary: "#f4e5b2", text: "#1a1410", bg: "#faf8f5" },
+  { name: "Forest",         primary: "#2d6a4f", secondary: "#52b788", text: "#ffffff", bg: "#1b4332" },
+  { name: "Ocean",          primary: "#0077b6", secondary: "#00b4d8", text: "#ffffff", bg: "#023e8a" },
+  { name: "White Linen",    primary: "#6b705c", secondary: "#a5a58d", text: "#3a3a3a", bg: "#fefae0" },
+  { name: "Burgundy",       primary: "#800020", secondary: "#c41e3a", text: "#f5f0e1", bg: "#1a0a10" },
+  { name: "Slate",          primary: "#64748b", secondary: "#94a3b8", text: "#e2e8f0", bg: "#1e293b" },
+  { name: "Coral",          primary: "#ff6b6b", secondary: "#ffa07a", text: "#ffffff", bg: "#2d2d2d" },
+  { name: "Sage",           primary: "#6b8f71", secondary: "#a3c9a8", text: "#2d2d2d", bg: "#f0f5f1" },
+  // â€” Industry â€”
+  { name: "Rose Gold",      primary: "#b76e79", secondary: "#e8c4c8", text: "#2d1f21", bg: "#fdf6f6" },
+  { name: "Copper",         primary: "#b87333", secondary: "#da9f5b", text: "#1a1410", bg: "#faf5ef" },
+  { name: "Platinum",       primary: "#8c9196", secondary: "#c0c5ca", text: "#1a1c1e", bg: "#f4f5f6" },
+  { name: "Emerald",        primary: "#009b72", secondary: "#41d9a5", text: "#ffffff", bg: "#003b2d" },
+  { name: "Royal Blue",     primary: "#2b59c3", secondary: "#5a8dee", text: "#ffffff", bg: "#0e1e45" },
+  { name: "Sunset",         primary: "#e65c00", secondary: "#f9d423", text: "#ffffff", bg: "#1a1008" },
+  { name: "Lavender",       primary: "#7c6bc4", secondary: "#b8a9e8", text: "#2d2640", bg: "#f5f3fb" },
+  { name: "Teal Pro",       primary: "#00838f", secondary: "#4dd0e1", text: "#ffffff", bg: "#00363b" },
+  { name: "Carbon",         primary: "#2a2a2a", secondary: "#4a4a4a", text: "#e0e0e0", bg: "#111111" },
+  { name: "Ice Blue",       primary: "#42a5f5", secondary: "#90caf9", text: "#0d2137", bg: "#e8f4fd" },
+  { name: "Mauve",          primary: "#8e4585", secondary: "#c27ab8", text: "#ffffff", bg: "#1f0e1d" },
+  { name: "Olive",          primary: "#6b8e23", secondary: "#9acd32", text: "#1a1f0e", bg: "#f5f8ec" },
+  { name: "Terracotta",     primary: "#c75b39", secondary: "#e8936e", text: "#ffffff", bg: "#1f110d" },
+  { name: "Mint Fresh",     primary: "#2ec4b6", secondary: "#7ee8d1", text: "#0a2e2a", bg: "#edf9f7" },
+  { name: "Electric",       primary: "#e040fb", secondary: "#ea80fc", text: "#ffffff", bg: "#12001a" },
+  { name: "Blush",          primary: "#d4727e", secondary: "#f0b8be", text: "#3a1f23", bg: "#fdf2f3" },
+  { name: "Mahogany",       primary: "#6e352c", secondary: "#a0524a", text: "#f5ebe8", bg: "#1a0e0c" },
+  { name: "Steel",          primary: "#607d8b", secondary: "#90a4ae", text: "#ffffff", bg: "#1c2830" },
+  { name: "Violet Ink",     primary: "#5c1f99", secondary: "#9b59b6", text: "#f0e6f6", bg: "#0e0618" },
+  { name: "Warm Sand",      primary: "#c4a35a", secondary: "#e0ca8e", text: "#2d2515", bg: "#faf6eb" },
 ];
 
 export const TEMPLATE_DEFAULT_THEMES: Record<string, {
   primary: string; secondary: string; text: string; bg: string;
   pattern: string; font: CardConfig["fontStyle"];
 }> = {
-  "executive-clean":   { primary: "#2c3e50", secondary: "#7f8c8d", text: "#2c3e50", bg: "#faf8f5", pattern: "none", font: "modern" },
-  "swiss-grid":        { primary: "#e63946", secondary: "#457b9d", text: "#1d3557", bg: "#f1faee", pattern: "none", font: "bold" },
-  "mono-type":         { primary: "#111111", secondary: "#555555", text: "#111111", bg: "#ffffff", pattern: "none", font: "minimal" },
-  "nordic-frost":      { primary: "#5e81ac", secondary: "#88c0d0", text: "#2e3440", bg: "#eceff4", pattern: "none", font: "elegant" },
-  "bold-split":        { primary: "#ff6347", secondary: "#ffa07a", text: "#ffffff", bg: "#1a2332", pattern: "dots", font: "bold" },
-  "neon-edge":         { primary: "#00ff87", secondary: "#60efff", text: "#e8e8e8", bg: "#0a0a0a", pattern: "none", font: "modern" },
-  "geometric-modern":  { primary: "#6c5ce7", secondary: "#a29bfe", text: "#ffffff", bg: "#2d3436", pattern: "none", font: "bold" },
-  "gradient-wave":     { primary: "#ff6b6b", secondary: "#feca57", text: "#ffffff", bg: "#1a1a2e", pattern: "waves", font: "modern" },
-  "corporate-stripe":  { primary: "#1e3a5f", secondary: "#4a90d9", text: "#ffffff", bg: "#0f1c2e", pattern: "lines", font: "classic" },
-  "diplomat":          { primary: "#c9a227", secondary: "#e8d48b", text: "#1a1a1a", bg: "#f5f0e1", pattern: "none", font: "elegant" },
-  "heritage-crest":    { primary: "#8b1a2b", secondary: "#c4a882", text: "#f5f0e1", bg: "#1e0f14", pattern: "none", font: "classic" },
-  "engraved":          { primary: "#64748b", secondary: "#94a3b8", text: "#e2e8f0", bg: "#1e293b", pattern: "lines", font: "elegant" },
-  "diagonal-cut":      { primary: "#ff006e", secondary: "#8338ec", text: "#ffffff", bg: "#14213d", pattern: "diagonal-lines", font: "bold" },
-  "layered-card":      { primary: "#06d6a0", secondary: "#118ab2", text: "#ffffff", bg: "#073b4c", pattern: "none", font: "modern" },
-  "photo-overlay":     { primary: "#f77f00", secondary: "#fcbf49", text: "#ffffff", bg: "#003049", pattern: "none", font: "bold" },
-  "dot-matrix":        { primary: "#ef476f", secondary: "#ffd166", text: "#ffffff", bg: "#073b4c", pattern: "dots", font: "modern" },
-  "gold-foil":         { primary: "#d4af37", secondary: "#f4e5b2", text: "#f5f0e1", bg: "#1a1410", pattern: "none", font: "elegant" },
-  "marble-luxe":       { primary: "#2d2d2d", secondary: "#9e9e9e", text: "#2d2d2d", bg: "#f5f0eb", pattern: "none", font: "elegant" },
-  "velvet-noir":       { primary: "#9b1b30", secondary: "#c41e3a", text: "#e8d5b7", bg: "#0a0a0a", pattern: "none", font: "elegant" },
-  "art-deco":          { primary: "#d4af37", secondary: "#b8860b", text: "#f5f0e1", bg: "#1a1a2e", pattern: "diamond", font: "elegant" },
+  // â€” Minimal â€”
+  "ultra-minimal":      { primary: "#3a3a3a", secondary: "#9a9a9a", text: "#2a2a2a", bg: "#f8f8f8",  pattern: "none",  font: "minimal" },
+  "monogram-luxe":      { primary: "#1a1a1a", secondary: "#666666", text: "#1a1a1a", bg: "#ededed",  pattern: "none",  font: "elegant" },
+  "geometric-mark":     { primary: "#2d2d2d", secondary: "#888888", text: "#333333", bg: "#f5f5f5",  pattern: "none",  font: "modern"  },
+  "frame-minimal":      { primary: "#e65100", secondary: "#888888", text: "#333333", bg: "#ffffff",  pattern: "none",  font: "modern"  },
+  "split-vertical":     { primary: "#333333", secondary: "#777777", text: "#333333", bg: "#f0f0f0",  pattern: "none",  font: "minimal" },
+  "diagonal-mono":      { primary: "#1a1a1a", secondary: "#808080", text: "#1a1a1a", bg: "#f2f2f2",  pattern: "none",  font: "minimal" },
+  // â€” Modern â€”
+  "cyan-tech":          { primary: "#00bcd4", secondary: "#0097a7", text: "#ffffff", bg: "#37474f",  pattern: "none",  font: "modern"  },
+  "corporate-chevron":  { primary: "#1e3a5f", secondary: "#3a6ea5", text: "#ffffff", bg: "#1a2e4a",  pattern: "none",  font: "bold"    },
+  "zigzag-overlay":     { primary: "#1a237e", secondary: "#3f51b5", text: "#ffffff", bg: "#1a2040",  pattern: "none",  font: "bold"    },
+  "hex-split":          { primary: "#1565c0", secondary: "#42a5f5", text: "#333333", bg: "#f5f7fa",  pattern: "none",  font: "modern"  },
+  "dot-circle":         { primary: "#333333", secondary: "#888888", text: "#333333", bg: "#fafafa",  pattern: "dots",  font: "bold"    },
+  "wave-gradient":      { primary: "#5e35b1", secondary: "#e8a735", text: "#333333", bg: "#ffffff",  pattern: "none",  font: "modern"  },
+  // â€” Classic / Corporate â€”
+  "circle-brand":       { primary: "#1565c0", secondary: "#42a5f5", text: "#333333", bg: "#ffffff",  pattern: "none",  font: "modern"  },
+  "full-color-back":    { primary: "#1565c0", secondary: "#42a5f5", text: "#333333", bg: "#ffffff",  pattern: "none",  font: "classic" },
+  "engineering-pro":    { primary: "#0288d1", secondary: "#29b6f6", text: "#333333", bg: "#ffffff",  pattern: "none",  font: "bold"    },
+  "clean-accent":       { primary: "#e65100", secondary: "#ff8a50", text: "#333333", bg: "#ffffff",  pattern: "lines", font: "modern"  },
+  "nature-clean":       { primary: "#689f63", secondary: "#8bc34a", text: "#333333", bg: "#ffffff",  pattern: "none",  font: "modern"  },
+  "diamond-brand":      { primary: "#1565c0", secondary: "#e65100", text: "#333333", bg: "#ffffff",  pattern: "none",  font: "bold"    },
+  // â€” Creative â€”
+  "flowing-lines":      { primary: "#2e7d32", secondary: "#66bb6a", text: "#ffffff", bg: "#1b4332",  pattern: "none",  font: "modern"  },
+  "neon-watermark":     { primary: "#c6ff00", secondary: "#76ff03", text: "#e0e0e0", bg: "#0d0d0d",  pattern: "none",  font: "modern"  },
+  "blueprint-tech":     { primary: "#e65100", secondary: "#757575", text: "#333333", bg: "#eeeeee",  pattern: "lines", font: "modern"  },
+  "skyline-silhouette": { primary: "#333333", secondary: "#757575", text: "#333333", bg: "#f5f5f0",  pattern: "none",  font: "bold"    },
+  "world-map":          { primary: "#555555", secondary: "#999999", text: "#e0e0e0", bg: "#2a2a2a",  pattern: "none",  font: "modern"  },
+  "diagonal-gold":      { primary: "#c5a54e", secondary: "#1b4b6b", text: "#ffffff", bg: "#0d3b56",  pattern: "none",  font: "modern"  },
+  // â€” Luxury â€”
+  "luxury-divider":     { primary: "#c5a54e", secondary: "#1a5c4f", text: "#ffffff", bg: "#0a3a30",  pattern: "none",  font: "elegant" },
+  "social-band":        { primary: "#4a5240", secondary: "#9a9580", text: "#dddacf", bg: "#3d4435",  pattern: "none",  font: "elegant" },
+  "organic-pattern":    { primary: "#8a9a6c", secondary: "#bcc9a0", text: "#ffffff", bg: "#3a4a2f",  pattern: "none",  font: "modern"  },
+  "celtic-stripe":      { primary: "#1a1a1a", secondary: "#666666", text: "#1a1a1a", bg: "#ffffff",  pattern: "none",  font: "classic" },
+  "premium-crest":      { primary: "#c5a54e", secondary: "#1a5c4f", text: "#ffffff", bg: "#0f4a3c",  pattern: "none",  font: "elegant" },
+  "gold-construct":     { primary: "#c5a54e", secondary: "#8a7030", text: "#ffffff", bg: "#0a3530",  pattern: "none",  font: "modern"  },
 };
 
 export const TEMPLATE_LIST = [
-  { id: "executive-clean", label: "Executive Clean", category: "minimal" },
-  { id: "swiss-grid",      label: "Swiss Grid",      category: "minimal" },
-  { id: "mono-type",       label: "Mono Type",       category: "minimal" },
-  { id: "nordic-frost",    label: "Nordic Frost",    category: "minimal" },
-  { id: "bold-split",      label: "Bold Split",      category: "modern" },
-  { id: "neon-edge",       label: "Neon Edge",       category: "modern" },
-  { id: "geometric-modern",label: "Geometric",       category: "modern" },
-  { id: "gradient-wave",   label: "Gradient Wave",   category: "modern" },
-  { id: "corporate-stripe",label: "Corporate Stripe",category: "classic" },
-  { id: "diplomat",        label: "Diplomat",         category: "classic" },
-  { id: "heritage-crest",  label: "Heritage Crest",  category: "classic" },
-  { id: "engraved",        label: "Engraved",        category: "classic" },
-  { id: "diagonal-cut",    label: "Diagonal Cut",    category: "creative" },
-  { id: "layered-card",    label: "Layered Card",    category: "creative" },
-  { id: "photo-overlay",   label: "Photo Overlay",   category: "creative" },
-  { id: "dot-matrix",      label: "Dot Matrix",      category: "creative" },
-  { id: "gold-foil",       label: "Gold Foil",       category: "luxury" },
-  { id: "marble-luxe",     label: "Marble Luxe",     category: "luxury" },
-  { id: "velvet-noir",     label: "Velvet Noir",     category: "luxury" },
-  { id: "art-deco",        label: "Art Deco",        category: "luxury" },
+  // â€” Minimal (6) â€”
+  { id: "ultra-minimal",      label: "Ultra Minimal",      category: "minimal" },
+  { id: "monogram-luxe",      label: "Monogram",           category: "minimal" },
+  { id: "geometric-mark",     label: "Geometric Mark",     category: "minimal" },
+  { id: "frame-minimal",      label: "Frame Minimal",      category: "minimal" },
+  { id: "split-vertical",     label: "Split Vertical",     category: "minimal" },
+  { id: "diagonal-mono",      label: "Diagonal Mono",      category: "minimal" },
+  // â€” Modern (6) â€”
+  { id: "cyan-tech",          label: "Cyan Tech",          category: "modern" },
+  { id: "corporate-chevron",  label: "Corporate Chevron",  category: "modern" },
+  { id: "zigzag-overlay",     label: "Zigzag Overlay",     category: "modern" },
+  { id: "hex-split",          label: "Hex Split",          category: "modern" },
+  { id: "dot-circle",         label: "Dot Circle",         category: "modern" },
+  { id: "wave-gradient",      label: "Wave Gradient",      category: "modern" },
+  // â€” Classic / Corporate (6) â€”
+  { id: "circle-brand",       label: "Circle Brand",       category: "classic" },
+  { id: "full-color-back",    label: "Full Color Back",    category: "classic" },
+  { id: "engineering-pro",    label: "Engineering Pro",     category: "classic" },
+  { id: "clean-accent",       label: "Clean Accent",       category: "classic" },
+  { id: "nature-clean",       label: "Nature Clean",       category: "classic" },
+  { id: "diamond-brand",      label: "Diamond Brand",      category: "classic" },
+  // â€” Creative (6) â€”
+  { id: "flowing-lines",      label: "Flowing Lines",      category: "creative" },
+  { id: "neon-watermark",     label: "Neon Watermark",     category: "creative" },
+  { id: "blueprint-tech",     label: "Blueprint Tech",     category: "creative" },
+  { id: "skyline-silhouette", label: "Skyline",            category: "creative" },
+  { id: "world-map",          label: "World Map",          category: "creative" },
+  { id: "diagonal-gold",      label: "Diagonal Gold",      category: "creative" },
+  // â€” Luxury (6) â€”
+  { id: "luxury-divider",     label: "Luxury Divider",     category: "luxury" },
+  { id: "social-band",        label: "Social Band",        category: "luxury" },
+  { id: "organic-pattern",    label: "Organic Pattern",    category: "luxury" },
+  { id: "celtic-stripe",      label: "Celtic Stripe",      category: "luxury" },
+  { id: "premium-crest",      label: "Premium Crest",      category: "luxury" },
+  { id: "gold-construct",     label: "Gold Construct",     category: "luxury" },
 ];
 
-// Contact icon IDs: phone→"phone", email→"email", website→"globe", address→"map-pin"
+// Contact icon IDs: phoneâ†’"phone", emailâ†’"email", websiteâ†’"globe", addressâ†’"map-pin"
 
 // =============================================================================
 // 3.  Helpers
@@ -208,7 +273,7 @@ function autoFitFontSize(
   if (!text || maxWidth <= 0) return desiredSize;
 
   // Estimate text width using character-count heuristic (no canvas needed in SSR)
-  // Average character width ≈ 0.55 × fontSize for sans-serif, 0.50 for serif
+  // Average character width â‰ˆ 0.55 Ã— fontSize for sans-serif, 0.50 for serif
   const charWidthRatio = fontFamily.includes("serif") && !fontFamily.includes("sans") ? 0.50 : 0.55;
   const boldBoost = weight >= 700 ? 1.08 : 1.0;
 
@@ -410,7 +475,7 @@ function buildContactLayers(
   textColor: string, textAlpha: number,
   iconColor: string, iconAlpha: number,
   fontSize: number, ff: string, W: number,
-  /** Card height — used for overflow prevention via fitContactBlock */
+  /** Card height â€” used for overflow prevention via fitContactBlock */
   H?: number
 ): LayerV2[] {
   const entries = getContactEntries(cfg);
@@ -450,7 +515,7 @@ function buildContactLayers(
         textW = x - icoSize - icoGap;
         iconX = x - icoSize;
       } else {
-        // center — icon left of center text
+        // center â€” icon left of center text
         iconX = x - icoSize - icoGap;
         textX = x;
         textW = W;
@@ -593,1128 +658,2233 @@ function buildQrCodeLayer(
 
 type LayoutFn = (W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string) => LayerV2[];
 
-// --- Minimal ---
+// ===================== MINIMAL TEMPLATES =====================
+// Pixel-perfect rewrites based on TEMPLATE-SPECIFICATIONS.md reference images.
+// Each function uses TEMPLATE_FIXED_THEMES colors and card-template-helpers.
 
-function layoutExecutiveClean(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+/**
+ * Template #1 — Ultra Minimal (M.U.N reference)
+ * FRONT: Off-white #f8f9fa bg, centered tiny accent line + brand initials only.
+ * Zero decoration — the emptiness IS the design.
+ */
+function layoutUltraMinimal(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const t = TEMPLATE_FIXED_THEMES["ultra-minimal"];
+  const font = FONT_STACKS.geometric;
+  const layers: LayerV2[] = [];
+
+  // Background: very light gray / off-white
+  layers.push(filledRect({
+    name: "Background", x: 0, y: 0, w: W, h: H,
+    fill: solidPaintHex(t.frontBg), tags: ["background"],
+  }));
+
+  // Accent line: thin horizontal, centered, 44% down, 4% card width
+  const lineW = Math.round(W * 0.04);
+  const lineY = Math.round(H * 0.44);
+  layers.push(filledRect({
+    name: "Accent Line", x: Math.round((W - lineW) / 2), y: lineY, w: lineW, h: 1,
+    fill: solidPaintHex(t.frontText), tags: ["decorative", "accent"],
+  }));
+
+  // Brand initials: ≤4 chars = full name, else initials
+  const companyRaw = cfg.company || cfg.name || "DM";
+  const brandText = companyRaw.length <= 4
+    ? companyRaw.toUpperCase()
+    : companyRaw.split(/\s+/).map(w => w[0]).join("").toUpperCase();
+  const brandSize = Math.round(H * 0.08); // 48px at 600H
+  layers.push(styledText({
+    name: "Brand Initials",
+    x: 0, y: Math.round(H * 0.47), w: W,
+    text: brandText,
+    fontSize: brandSize,
+    fontFamily: font,
+    weight: 500,
+    color: t.frontText,
+    align: "center",
+    uppercase: true,
+    letterSpacing: 7, // ~0.15em
+    tags: ["company", "branding", "primary-text"],
+  }));
+
+  return layers;
+}
+
+// Register ultra-minimal back layout
+registerBackLayout("ultra-minimal", (W, H, cfg, theme) => {
+  const font = FONT_STACKS.geometric;
+  const layers: LayerV2[] = [];
+
+  // Background: pure white
+  layers.push(filledRect({
+    name: "Back Background", x: 0, y: 0, w: W, h: H,
+    fill: solidPaintHex("#ffffff"), tags: ["background", "back-element"],
+  }));
+
+  // Content block starts at 52% W, creating asymmetric right-of-center layout
+  const contentLeft = Math.round(W * 0.52);
+  let y = Math.round(H * 0.20);
+
+  // Tier 1: Name (semibold, darkest gray #2c2c2c)
+  const nameSize = Math.round(H * 0.035); // 21px
+  layers.push(styledText({
+    name: "Name",
+    x: contentLeft, y, w: Math.round(W * 0.40),
+    text: (cfg.name || "PERSON NAME").toUpperCase(),
+    fontSize: nameSize,
+    fontFamily: font,
+    weight: 600,
+    color: "#2c2c2c",
+    uppercase: true,
+    letterSpacing: 4, // ~0.10em
+    tags: ["name", "primary-text", "back-element"],
+  }));
+  y += nameSize + Math.round(H * 0.015);
+
+  // Tier 5: Divider line
+  layers.push(filledRect({
+    name: "Back Divider",
+    x: contentLeft, y, w: Math.round(W * 0.08), h: 1,
+    fill: solidPaintHex("#e0e0e0"), tags: ["decorative", "divider", "back-element"],
+  }));
+  y += 1 + Math.round(H * 0.02);
+
+  // Tier 2: Title (light weight, mid-gray #6a6a6a, wide spacing)
+  const titleSize = Math.round(H * 0.025); // 15px
+  layers.push(styledText({
+    name: "Title",
+    x: contentLeft, y, w: Math.round(W * 0.40),
+    text: (cfg.company ? `${cfg.title || "Title"} / ${cfg.company}` : cfg.title || "TITLE / POSITION").toUpperCase(),
+    fontSize: titleSize,
+    fontFamily: font,
+    weight: 300,
+    color: "#6a6a6a",
+    uppercase: true,
+    letterSpacing: 6, // ~0.20em
+    tags: ["title", "back-element"],
+  }));
+  y += titleSize + Math.round(H * 0.03);
+
+  // Tier 3: Contact lines (light weight, light gray #8a8a8a)
+  const contactSize = Math.round(H * 0.02); // 12px
+  const contactLineH = Math.round(contactSize * 1.6);
+  const contactLines = [cfg.contacts.phone, cfg.contacts.email, cfg.contacts.website, cfg.contacts.address].filter(Boolean);
+  for (const line of contactLines) {
+    layers.push(styledText({
+      name: `Contact`,
+      x: contentLeft, y, w: Math.round(W * 0.40),
+      text: line!,
+      fontSize: contactSize,
+      fontFamily: font,
+      weight: 300,
+      color: "#8a8a8a",
+      tags: ["contact-text", "back-element"],
+    }));
+    y += contactLineH;
+  }
+
+  // Tier 4: Watermark logo/initials in lower-left
+  layers.push(...buildWatermarkLogo(
+    cfg.logoUrl, cfg.company,
+    Math.round(W * 0.14), Math.round(H * 0.70),
+    Math.round(H * 0.15),
+    "#b0b0b0", 1.0, font,
+  ));
+
+  return layers;
+});
+
+/**
+ * Template #2 — Monogram Luxe (Samira Hadid reference)
+ * FRONT: Warm lavender-gray #eae8eb bg, massive Didone serif monogram LEFT,
+ * name/title/contact RIGHT starting at 48%.
+ */
+function layoutMonogramLuxe(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const t = TEMPLATE_FIXED_THEMES["monogram-luxe"];
+  const sansFont = FONT_STACKS.geometric;
+  const serifFont = FONT_STACKS.serif; // Didone/Modern serif for monogram
+  const layers: LayerV2[] = [];
+
+  // Background: warm lavender-gray
+  layers.push(filledRect({
+    name: "Background", x: 0, y: 0, w: W, h: H,
+    fill: solidPaintHex(t.frontBg), tags: ["background"],
+  }));
+
+  // Massive monogram letter — first letter of person's name
+  const personInitial = ((cfg.name || "S")[0] || "S").toUpperCase();
+  const monoSize = Math.round(H * 0.55); // 330px at 600H
+  layers.push(styledText({
+    name: "Monogram",
+    x: Math.round(W * 0.08), y: Math.round(H * 0.50 - monoSize * 0.55),
+    w: Math.round(W * 0.38), h: monoSize,
+    text: personInitial,
+    fontSize: monoSize,
+    fontFamily: serifFont,
+    weight: 400,
+    color: t.frontText, // #2c2c2c
+    align: "left",
+    tags: ["decorative", "monogram", "branding"],
+  }));
+
+  // Right content column starts at 48% W
+  const nameX = Math.round(W * 0.48);
+  const rightW = Math.round(W * 0.44); // ~8% right margin
+  let y = Math.round(H * 0.35);
+
+  // Name — semibold, dark
+  const nameSize = Math.round(H * 0.03); // 18px
+  layers.push(styledText({
+    name: "Name",
+    x: nameX, y, w: rightW,
+    text: (cfg.name || "Your Name").toUpperCase(),
+    fontSize: nameSize,
+    fontFamily: sansFont,
+    weight: 600,
+    color: t.frontText,
+    uppercase: true,
+    letterSpacing: 4, // ~0.12em
+    tags: ["name", "primary-text"],
+  }));
+  y += nameSize + Math.round(H * 0.01);
+
+  // Title — light, mid-gray
+  const titleSize = Math.round(H * 0.02); // 12px
+  layers.push(styledText({
+    name: "Title",
+    x: nameX, y, w: rightW,
+    text: cfg.title || "Job Title",
+    fontSize: titleSize,
+    fontFamily: sansFont,
+    weight: 300,
+    color: "#6a6a6a",
+    letterSpacing: 2, // ~0.08em
+    tags: ["title"],
+  }));
+  y += titleSize + Math.round(H * 0.025);
+
+  // Divider
+  layers.push(filledRect({
+    name: "Divider",
+    x: nameX, y, w: Math.round(W * 0.06), h: 1,
+    fill: solidPaintHex("#d0d0d0"), tags: ["decorative", "divider"],
+  }));
+  y += 1 + Math.round(H * 0.02);
+
+  // Contact lines — light, light gray
+  const contactSize = Math.round(H * 0.018); // 11px
+  const contactLineH = Math.round(contactSize * 1.7);
+  const contactEntries = getContactEntries(cfg);
+  for (let i = 0; i < Math.min(contactEntries.length, 4); i++) {
+    layers.push(styledText({
+      name: contactEntries[i].type,
+      x: nameX, y, w: rightW,
+      text: contactEntries[i].value,
+      fontSize: contactSize,
+      fontFamily: sansFont,
+      weight: 300,
+      color: "#8a8a8a",
+      tags: [`contact-${contactEntries[i].type}`, "contact-text"],
+    }));
+    y += contactLineH;
+  }
+
+  return layers;
+}
+
+// Register monogram-luxe back layout
+registerBackLayout("monogram-luxe", (W, H, cfg, theme) => {
+  const sansFont = FONT_STACKS.geometric;
+  const serifFont = FONT_STACKS.serif;
+  const layers: LayerV2[] = [];
+
+  // Background: dark charcoal (inverted from front)
+  layers.push(filledRect({
+    name: "Back Background", x: 0, y: 0, w: W, h: H,
+    fill: solidPaintHex(theme.backBg), // #2c2c2c
+    tags: ["background", "back-element"],
+  }));
+
+  // Centered monogram — same initial, lighter color, slightly smaller
+  const personInitial = ((cfg.name || "S")[0] || "S").toUpperCase();
+  const monoSize = Math.round(H * 0.35); // 210px
+  layers.push(styledText({
+    name: "Back Monogram",
+    x: 0, y: Math.round(H * 0.40 - monoSize * 0.5), w: W, h: monoSize,
+    text: personInitial,
+    fontSize: monoSize,
+    fontFamily: serifFont,
+    weight: 400,
+    color: theme.backText, // #d8d6d9
+    align: "center",
+    tags: ["decorative", "monogram", "branding", "back-element"],
+  }));
+
+  // Name split into words, each on own line, wide letter-spacing, centered
+  const nameWords = (cfg.name || "SAMIRA HADID").toUpperCase().split(/\s+/);
+  const nameSize = Math.round(H * 0.035); // 21px
+  let nameY = Math.round(H * 0.40 + monoSize * 0.35);
+  for (const word of nameWords) {
+    layers.push(styledText({
+      name: `Name Word`,
+      x: 0, y: nameY, w: W,
+      text: word,
+      fontSize: nameSize,
+      fontFamily: sansFont,
+      weight: 600,
+      color: theme.backText,
+      align: "center",
+      uppercase: true,
+      letterSpacing: 8, // ~0.25em — very wide
+      tags: ["name", "back-element"],
+    }));
+    nameY += nameSize + Math.round(H * 0.01);
+  }
+
+  return layers;
+});
+
+/**
+ * Template #3 — Geometric Mark (Rob Simax / AV reference)
+ * FRONT: Dark horizontal gradient bg, centered interlocking AV monogram
+ * with 45° white hatching. NO text on front.
+ * Note: The hatching effect is approximated with diagonal line paths since
+ * we can't do true Canvas2D clipping in the layer system.
+ */
+function layoutGeometricMark(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const t = TEMPLATE_FIXED_THEMES["geometric-mark"];
+  const layers: LayerV2[] = [];
+
+  // Background: dark horizontal gradient with cool-blue tint
+  layers.push(filledRect({
+    name: "Background", x: 0, y: 0, w: W, h: H,
+    fill: multiStopGradient(0, [
+      { color: "#252628", offset: 0 },
+      { color: "#3b3c3e", offset: 0.50 },
+      { color: "#4b4c4e", offset: 0.65 },
+      { color: "#3e3f41", offset: 1.0 },
+    ]),
+    tags: ["background"],
+  }));
+
+  // Interlocking monogram — build as a compound path representing the
+  // AV ribbon bands. We use the simplified silhouette approach:
+  // two overlapping V-shapes that create the interlocking illusion.
+  const cx = W * 0.50;
+  const cy = H * 0.505;
+  const mW = W * 0.308; // 30.8% of W
+  const mH = H * 0.33;  // 33% of H
+
+  // Band A (left-leaning "A" shape)
+  const bandA: import("./schema").PathCommand[] = [
+    M(cx - mW * 0.05, cy - mH * 0.50),  // top center-left
+    L(cx - mW * 0.50, cy + mH * 0.50),  // bottom left
+    L(cx - mW * 0.30, cy + mH * 0.50),  // bottom inner-left
+    L(cx + mW * 0.05, cy - mH * 0.20),  // mid right
+    L(cx + mW * 0.15, cy - mH * 0.50),  // top right
+    Z(),
+  ];
+
+  // Band B (right-leaning "V" shape)
+  const bandB: import("./schema").PathCommand[] = [
+    M(cx + mW * 0.05, cy - mH * 0.50),  // top center-right
+    L(cx + mW * 0.50, cy + mH * 0.50),  // bottom right
+    L(cx + mW * 0.30, cy + mH * 0.50),  // bottom inner-right
+    L(cx - mW * 0.05, cy - mH * 0.20),  // mid left
+    L(cx - mW * 0.15, cy - mH * 0.50),  // top left
+    Z(),
+  ];
+
+  // Render bands as white paths to approximate the hatched monogram
+  layers.push(pathLayer({
+    name: "Monogram Band A",
+    commands: bandA,
+    fill: solidPaintHex("#ffffff", 0.85),
+    tags: ["decorative", "monogram", "branding"],
+    opacity: 0.85,
+  }));
+  layers.push(pathLayer({
+    name: "Monogram Band B",
+    commands: bandB,
+    fill: solidPaintHex("#ffffff", 0.85),
+    tags: ["decorative", "monogram", "branding"],
+    opacity: 0.85,
+  }));
+
+  // Hatching lines overlay (45° diagonal pattern across monogram area)
+  // We create several parallel diagonal lines covering the monogram bounds
+  const hatchCmds: import("./schema").PathCommand[] = [];
+  const hatchSpacing = Math.round(W * 0.015); // ~16px
+  const hatchW = mW * 1.2;
+  const hatchH = mH * 1.2;
+  const startX = cx - hatchW / 2;
+  const startY = cy - hatchH / 2;
+
+  for (let offset = -hatchW; offset < hatchW + hatchH; offset += hatchSpacing) {
+    hatchCmds.push(
+      M(startX + offset, startY),
+      L(startX + offset - hatchH, startY + hatchH),
+    );
+  }
+
+  if (hatchCmds.length > 0) {
+    layers.push(pathLayer({
+      name: "Hatching Pattern",
+      commands: hatchCmds,
+      stroke: makeStroke("#ffffff", Math.round(W * 0.003), 0.4),
+      fill: solidPaintHex("#000000", 0),
+      closed: false,
+      tags: ["decorative", "hatching", "monogram"],
+      opacity: 0.4,
+    }));
+  }
+
+  return layers;
+}
+
+// Register geometric-mark back layout
+registerBackLayout("geometric-mark", (W, H, cfg, theme) => {
+  const font = FONT_STACKS.geometric;
+  const layers: LayerV2[] = [];
+
+  // Background: cool pale white
+  layers.push(filledRect({
+    name: "Back Background", x: 0, y: 0, w: W, h: H,
+    fill: solidPaintHex("#f8f9fb"), tags: ["background", "back-element"],
+  }));
+
+  // Watermark monogram (ghosted, shifted right, large)
+  // Simplified as a large semi-transparent AV mark
+  const wmCx = W * 0.64;
+  const wmCy = H * 0.48;
+  const wmW = W * 0.40;
+  const wmH = H * 0.70;
+
+  const wmBandA: import("./schema").PathCommand[] = [
+    M(wmCx - wmW * 0.05, wmCy - wmH * 0.50),
+    L(wmCx - wmW * 0.50, wmCy + wmH * 0.50),
+    L(wmCx - wmW * 0.30, wmCy + wmH * 0.50),
+    L(wmCx + wmW * 0.05, wmCy - wmH * 0.20),
+    L(wmCx + wmW * 0.15, wmCy - wmH * 0.50),
+    Z(),
+  ];
+  const wmBandB: import("./schema").PathCommand[] = [
+    M(wmCx + wmW * 0.05, wmCy - wmH * 0.50),
+    L(wmCx + wmW * 0.50, wmCy + wmH * 0.50),
+    L(wmCx + wmW * 0.30, wmCy + wmH * 0.50),
+    L(wmCx - wmW * 0.05, wmCy - wmH * 0.20),
+    L(wmCx - wmW * 0.15, wmCy - wmH * 0.50),
+    Z(),
+  ];
+
+  layers.push(pathLayer({
+    name: "Watermark Band A",
+    commands: wmBandA,
+    fill: solidPaintHex("#b8b8ba", 0.25),
+    tags: ["decorative", "watermark", "back-element"],
+    opacity: 0.25,
+  }));
+  layers.push(pathLayer({
+    name: "Watermark Band B",
+    commands: wmBandB,
+    fill: solidPaintHex("#b8b8ba", 0.25),
+    tags: ["decorative", "watermark", "back-element"],
+    opacity: 0.25,
+  }));
+
+  // Name (bold, near-black, top-left)
+  const nameSize = Math.round(H * 0.033); // 20px
+  layers.push(styledText({
+    name: "Name",
+    x: Math.round(W * 0.088), y: Math.round(H * 0.126), w: Math.round(W * 0.50),
+    text: (cfg.name || "ROB SIMAX").toUpperCase(),
+    fontSize: nameSize,
+    fontFamily: font,
+    weight: 700,
+    color: "#1c1d1e",
+    uppercase: true,
+    letterSpacing: 4, // ~0.12em
+    tags: ["name", "primary-text", "back-element"],
+  }));
+
+  // Title (light, mid-gray, very wide spacing)
+  const titleSize = Math.round(H * 0.020); // 12px
+  layers.push(styledText({
+    name: "Title",
+    x: Math.round(W * 0.090), y: Math.round(H * 0.210), w: Math.round(W * 0.50),
+    text: (cfg.company || cfg.title || "ARTIST").toUpperCase(),
+    fontSize: titleSize,
+    fontFamily: font,
+    weight: 300,
+    color: "#838587",
+    uppercase: true,
+    letterSpacing: 6, // ~0.25em
+    tags: ["title", "back-element"],
+  }));
+
+  // Address (light, medium gray, bottom-left)
+  const contactSize = Math.round(H * 0.020);
+  layers.push(styledText({
+    name: "Address",
+    x: Math.round(W * 0.090), y: Math.round(H * 0.772), w: Math.round(W * 0.55),
+    text: (cfg.contacts.address || "BOULEVARD 01234").toUpperCase(),
+    fontSize: contactSize,
+    fontFamily: font,
+    weight: 300,
+    color: "#8a8b8d",
+    uppercase: true,
+    letterSpacing: 2,
+    tags: ["contact-address", "back-element"],
+  }));
+
+  // Contact line 1: phone (right-aligned)
+  if (cfg.contacts.phone) {
+    layers.push(styledText({
+      name: "Phone",
+      x: Math.round(W * 0.09), y: Math.round(H * 0.825), w: Math.round(W * 0.64),
+      text: cfg.contacts.phone,
+      fontSize: contactSize,
+      fontFamily: font,
+      weight: 400,
+      color: "#939495",
+      align: "right",
+      tags: ["contact-phone", "back-element"],
+    }));
+  }
+
+  // Contact line 2: email + website
+  if (cfg.contacts.email) {
+    layers.push(styledText({
+      name: "Email",
+      x: Math.round(W * 0.09), y: Math.round(H * 0.878), w: Math.round(W * 0.35),
+      text: cfg.contacts.email,
+      fontSize: contactSize,
+      fontFamily: font,
+      weight: 400,
+      color: "#7c7d7f",
+      tags: ["contact-email", "back-element"],
+    }));
+  }
+  if (cfg.contacts.website) {
+    layers.push(styledText({
+      name: "Website",
+      x: Math.round(W * 0.09), y: Math.round(H * 0.878), w: Math.round(W * 0.67),
+      text: cfg.contacts.website,
+      fontSize: contactSize,
+      fontFamily: font,
+      weight: 400,
+      color: "#7c7d7f",
+      align: "right",
+      tags: ["contact-website", "back-element"],
+    }));
+  }
+
+  return layers;
+});
+
+/**
+ * Template #4 — Frame Minimal (Adika Saputra reference)
+ * FRONT: Pure white bg, 2 diagonal L-brackets (TL + BR only),
+ * 5-level gray text hierarchy, color-coded contact dots, QR code.
+ */
+function layoutFrameMinimal(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const t = TEMPLATE_FIXED_THEMES["frame-minimal"];
+  const font = FONT_STACKS.geometric;
+  const layers: LayerV2[] = [];
+
+  // Background: pure white
+  layers.push(filledRect({
+    name: "Background", x: 0, y: 0, w: W, h: H,
+    fill: solidPaintHex("#FFFFFF"), tags: ["background"],
+  }));
+
+  // L-Bracket: top-left corner
+  const bracketArmH = Math.round(W * 0.076); // 7.6% W horizontal arm
+  const bracketArmV = Math.round(H * 0.10);  // 10% H vertical arm
+  const bracketThick = 1.5;
+  const tlX = Math.round(W * 0.10);
+  const tlY = Math.round(H * 0.16);
+
+  layers.push(pathLayer({
+    name: "TL Bracket",
+    commands: cornerBracketPath("tl", tlX, tlY, Math.max(bracketArmH, bracketArmV), bracketThick),
+    fill: solidPaintHex("#CCCCCC"),
+    tags: ["decorative", "corner", "corner-bracket"],
+  }));
+
+  // L-Bracket: bottom-right corner (mirror)
+  const brX = Math.round(W * 0.90);
+  const brY = Math.round(H * 0.84);
+  layers.push(pathLayer({
+    name: "BR Bracket",
+    commands: cornerBracketPath("br", brX, brY, Math.max(bracketArmH, bracketArmV), bracketThick),
+    fill: solidPaintHex("#CCCCCC"),
+    tags: ["decorative", "corner", "corner-bracket"],
+  }));
+
+  // Name — semibold, dark
+  const textLeft = Math.round(W * 0.143);
+  let y = Math.round(H * 0.24);
+  const nameSize = Math.round(H * 0.045); // 27px
+  layers.push(styledText({
+    name: "Name",
+    x: textLeft, y, w: Math.round(W * 0.55),
+    text: (cfg.name || "ADIKA SAPUTRA").toUpperCase(),
+    fontSize: nameSize,
+    fontFamily: font,
+    weight: 600,
+    color: "#2D2D2D",
+    uppercase: true,
+    letterSpacing: 5, // ~0.18em
+    tags: ["name", "primary-text"],
+  }));
+  y += nameSize + Math.round(H * 0.06);
+
+  // Title — light, mid-gray, Title Case
+  const titleSize = Math.round(H * 0.025); // 15px
+  layers.push(styledText({
+    name: "Title",
+    x: textLeft, y, w: Math.round(W * 0.50),
+    text: cfg.title || "Graphic Designer",
+    fontSize: titleSize,
+    fontFamily: font,
+    weight: 300,
+    color: "#888888",
+    letterSpacing: 1,
+    tags: ["title"],
+  }));
+  y += titleSize + Math.round(H * 0.16); // big breathing room before contacts
+
+  // Color-coded contact dots + text
+  const dotRadius = 3;
+  const dotColors = ["#FF6B35", "#4CAF50", "#2196F3"]; // orange, green, blue
+  const contactTypes = [
+    { field: cfg.phone, type: "phone" },
+    { field: cfg.email, type: "email" },
+    { field: cfg.address, type: "address" },
+  ];
+  const contactSize = Math.round(H * 0.020); // 12px
+  const contactGap = Math.round(H * 0.06);
+
+  for (let i = 0; i < contactTypes.length; i++) {
+    const entry = contactTypes[i];
+    if (!entry.field) continue;
+    const lineY = y + i * contactGap;
+
+    // Colored dot
+    layers.push(filledEllipse({
+      name: `${entry.type} Dot`,
+      cx: textLeft + dotRadius, cy: lineY + contactSize / 2,
+      rx: dotRadius, ry: dotRadius,
+      fill: solidPaintHex(dotColors[i]),
+      tags: ["decorative", "contact-dot"],
+    }));
+
+    // Contact text
+    layers.push(styledText({
+      name: entry.type,
+      x: textLeft + 25, y: lineY, w: Math.round(W * 0.50),
+      text: entry.field,
+      fontSize: contactSize,
+      fontFamily: font,
+      weight: 400,
+      color: "#999999",
+      tags: [`contact-${entry.type}`, "contact-text"],
+    }));
+  }
+
+  // Website (lighter gray)
+  if (cfg.website) {
+    const webY = y + contactTypes.length * contactGap;
+    layers.push(styledText({
+      name: "Website",
+      x: textLeft + 25, y: webY, w: Math.round(W * 0.50),
+      text: cfg.website,
+      fontSize: Math.round(H * 0.018), // 11px
+      fontFamily: font,
+      weight: 400,
+      color: "#AAAAAA",
+      tags: ["contact-website", "contact-text"],
+    }));
+  }
+
+  // QR Code placeholder (top-right)
+  if (cfg.qrCodeUrl) {
+    const qrSize = Math.round(W * 0.13); // 137px
+    layers.push(filledRect({
+      name: "QR Code Area",
+      x: Math.round(W * 0.80), y: Math.round(H * 0.20), w: qrSize, h: qrSize,
+      fill: solidPaintHex("#000000", 0.05),
+      tags: ["qr-code", "branding"],
+    }));
+  }
+
+  return layers;
+}
+
+// Register frame-minimal back layout
+registerBackLayout("frame-minimal", (W, H, cfg, theme) => {
+  const font = FONT_STACKS.geometric;
+  const layers: LayerV2[] = [];
+
+  // Background: near-black
+  layers.push(filledRect({
+    name: "Back Background", x: 0, y: 0, w: W, h: H,
+    fill: solidPaintHex("#1A1A1A"), tags: ["background", "back-element"],
+  }));
+
+  // Closed rectangular frame (58% W × 30% H, centered)
+  const frameW = Math.round(W * 0.58);
+  const frameH = Math.round(H * 0.30);
+  const frameX = Math.round((W - frameW) / 2);
+  const frameY = Math.round(H * 0.47 - frameH / 2);
+  layers.push(strokeRect({
+    name: "Back Frame",
+    x: frameX, y: frameY, w: frameW, h: frameH,
+    color: "#FFFFFF", alpha: 0.6, width: 1,
+    tags: ["decorative", "border", "back-element"],
+  }));
+
+  // "MINIMAL" text — bold, extremely wide tracking
+  layers.push(styledText({
+    name: "Main Title",
+    x: frameX, y: frameY + Math.round(frameH * 0.33), w: frameW,
+    text: (cfg.company || "MINIMAL").toUpperCase(),
+    fontSize: Math.round(H * 0.085), // 51px
+    fontFamily: font,
+    weight: 700,
+    color: "#FFFFFF",
+    align: "center",
+    uppercase: true,
+    letterSpacing: 12, // ~0.35em
+    tags: ["company", "back-element"],
+  }));
+
+  // Subtitle — light, muted
+  layers.push(styledText({
+    name: "Subtitle",
+    x: frameX, y: frameY + Math.round(frameH * 0.70), w: frameW,
+    text: cfg.tagline || "Business Card",
+    fontSize: Math.round(H * 0.030), // 18px
+    fontFamily: font,
+    weight: 300,
+    color: "#AAAAAA",
+    align: "center",
+    letterSpacing: 3,
+    tags: ["tagline", "back-element"],
+  }));
+
+  // White QR code (top-right corner)
+  if (cfg.qrCodeUrl) {
+    const qrSize = Math.round(W * 0.09);
+    layers.push(filledRect({
+      name: "QR Code Area",
+      x: Math.round(W * 0.85), y: Math.round(H * 0.08), w: qrSize, h: qrSize,
+      fill: solidPaintHex("#FFFFFF", 0.08),
+      tags: ["qr-code", "back-element"],
+    }));
+  }
+
+  return layers;
+});
+
+/**
+ * Template #5 — Split Vertical (Pathetic Studio reference)
+ * FRONT: Diagonal trapezoid split (58% top → 38% bottom), dark left + warm
+ * off-white right. 5 geometric logo bars, company name, tagline — ALL on dark.
+ * Light zone is EMPTY.
+ */
+function layoutSplitVertical(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const t = TEMPLATE_FIXED_THEMES["split-vertical"];
+  const font = FONT_STACKS.geometric;
+  const layers: LayerV2[] = [];
+
+  // Background: warm off-white #F5F5F0
+  layers.push(filledRect({
+    name: "Background", x: 0, y: 0, w: W, h: H,
+    fill: solidPaintHex(t.frontBg), tags: ["background"],
+  }));
+
+  // Dark diagonal trapezoid: (0,0) → (58%W, 0) → (38%W, H) → (0, H)
+  layers.push(pathLayer({
+    name: "Dark Trapezoid",
+    commands: [
+      M(0, 0),
+      L(Math.round(W * 0.58), 0),
+      L(Math.round(W * 0.38), H),
+      L(0, H),
+      Z(),
+    ],
+    fill: solidPaintHex(t.frontBgAlt!), // #2C2C2C
+    tags: ["decorative", "accent", "panel"],
+  }));
+
+  // 5 geometric logo bars (white, varying widths)
+  const barWidths = [0.022, 0.018, 0.027, 0.015, 0.020]; // % of W
+  const barH = Math.round(H * 0.015);
+  const barGap = Math.round(H * 0.01);
+  const barX = Math.round(W * 0.22);
+  let barY = Math.round(H * 0.30);
+
+  for (let i = 0; i < barWidths.length; i++) {
+    layers.push(filledRect({
+      name: `Logo Bar ${i + 1}`,
+      x: barX, y: barY, w: Math.round(W * barWidths[i]), h: barH,
+      fill: solidPaintHex("#FFFFFF"),
+      tags: ["decorative", "logo-mark", "branding"],
+    }));
+    barY += barH + barGap;
+  }
+
+  // Studio name (white, semibold, wide tracking)
+  const nameSize = Math.round(H * 0.055); // 33px
+  layers.push(styledText({
+    name: "Company",
+    x: Math.round(W * 0.22), y: Math.round(H * 0.42), w: Math.round(W * 0.30),
+    text: (cfg.company || "PATHETIC STUDIO").toUpperCase(),
+    fontSize: nameSize,
+    fontFamily: font,
+    weight: 600,
+    color: "#FFFFFF",
+    uppercase: true,
+    letterSpacing: 7, // ~0.20em
+    tags: ["company", "branding", "primary-text"],
+  }));
+
+  // Tagline (white @ 65% alpha, light, very wide tracking)
+  layers.push(styledText({
+    name: "Tagline",
+    x: Math.round(W * 0.22), y: Math.round(H * 0.52), w: Math.round(W * 0.30),
+    text: (cfg.tagline || "YOUR DESIGN STUDIO").toUpperCase(),
+    fontSize: Math.round(H * 0.022), // 13px
+    fontFamily: font,
+    weight: 300,
+    color: "#FFFFFF",
+    alpha: 0.65,
+    uppercase: true,
+    letterSpacing: 8, // ~0.30em
+    tags: ["tagline"],
+  }));
+
+  return layers;
+}
+
+// Register split-vertical back layout
+registerBackLayout("split-vertical", (W, H, cfg, theme) => {
+  const font = FONT_STACKS.geometric;
+  const layers: LayerV2[] = [];
+
+  // Background: warm off-white
+  layers.push(filledRect({
+    name: "Back Background", x: 0, y: 0, w: W, h: H,
+    fill: solidPaintHex("#F5F5F0"), tags: ["background", "back-element"],
+  }));
+
+  // Dark trapezoid mirrored: (42%W, 0) → (W, 0) → (W, H) → (62%W, H)
+  layers.push(pathLayer({
+    name: "Back Dark Trapezoid",
+    commands: [
+      M(Math.round(W * 0.42), 0),
+      L(W, 0),
+      L(W, H),
+      L(Math.round(W * 0.62), H),
+      Z(),
+    ],
+    fill: solidPaintHex("#2C2C2C"),
+    tags: ["decorative", "accent", "panel", "back-element"],
+  }));
+
+  // Contact details in light zone (left side)
+  const iconR = Math.round(H * 0.0175);
+  const iconCX = Math.round(W * 0.08);
+  const contactTextX = Math.round(W * 0.14);
+  const contactSize = Math.round(H * 0.025); // 15px
+  const contactFields = [
+    cfg.contacts.address || "Your Address",
+    cfg.contacts.phone || "+012 345 678",
+    cfg.contacts.email || "email@mail.com",
+    cfg.contacts.website || "www.website.com",
+  ];
+  const contactYs = [0.22, 0.30, 0.38, 0.46];
+
+  for (let i = 0; i < contactFields.length; i++) {
+    if (!contactFields[i]) continue;
+    const cY = Math.round(H * contactYs[i]);
+
+    // Circle icon outline
+    layers.push(strokeEllipse({
+      name: `Contact Icon ${i + 1}`,
+      cx: iconCX, cy: cY,
+      rx: iconR, ry: iconR,
+      color: "#888888", width: 1,
+      tags: ["contact-icon", "back-element"],
+    }));
+
+    // Contact text
+    layers.push(styledText({
+      name: `Contact ${i + 1}`,
+      x: contactTextX, y: cY - contactSize / 2, w: Math.round(W * 0.28),
+      text: contactFields[i],
+      fontSize: contactSize,
+      fontFamily: font,
+      weight: 400,
+      color: "#444444",
+      letterSpacing: 1,
+      tags: ["contact-text", "back-element"],
+    }));
+  }
+
+  // Separator line
+  layers.push(filledRect({
+    name: "Separator",
+    x: Math.round(W * 0.08), y: Math.round(H * 0.63),
+    w: Math.round(W * 0.25), h: 1,
+    fill: solidPaintHex("#CCCCCC", 0.6),
+    tags: ["decorative", "divider", "back-element"],
+  }));
+
+  // Name (bold, dark — ties visually to dark zone)
+  const nameSize = Math.round(H * 0.05); // 30px
+  layers.push(styledText({
+    name: "Name",
+    x: Math.round(W * 0.08), y: Math.round(H * 0.68), w: Math.round(W * 0.35),
+    text: cfg.name || "Person Name",
+    fontSize: nameSize,
+    fontFamily: font,
+    weight: 700,
+    color: "#2C2C2C",
+    letterSpacing: 1,
+    tags: ["name", "primary-text", "back-element"],
+  }));
+
+  // Title (light, medium gray, moderate tracking)
+  layers.push(styledText({
+    name: "Title",
+    x: Math.round(W * 0.08), y: Math.round(H * 0.75), w: Math.round(W * 0.35),
+    text: cfg.title || "Graphic Designer",
+    fontSize: Math.round(H * 0.025),
+    fontFamily: font,
+    weight: 300,
+    color: "#888888",
+    letterSpacing: 3,
+    tags: ["title", "back-element"],
+  }));
+
+  // Social icons on dark zone (right side) — white circle outlines
+  const socialX = Math.round(W * 0.85);
+  const socialR = Math.round(H * 0.018);
+  const socialYs = [0.25, 0.33, 0.41, 0.49, 0.57];
+
+  for (let i = 0; i < socialYs.length; i++) {
+    layers.push(strokeEllipse({
+      name: `Social Icon ${i + 1}`,
+      cx: socialX, cy: Math.round(H * socialYs[i]),
+      rx: socialR, ry: socialR,
+      color: "#FFFFFF", width: 1,
+      tags: ["decorative", "social-icon", "back-element"],
+    }));
+  }
+
+  return layers;
+});
+
+/**
+ * Template #6 — Diagonal Mono (Henry Soaz reference)
+ * FRONT: Multi-angle 7-segment zigzag polygon dividing charcoal and warm off-white,
+ * white accent triangle on Segment 1, large rotated decorative name on light side,
+ * name + title in chevron notch on dark side, contact info on light side.
+ */
+function layoutDiagonalMono(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const t = TEMPLATE_FIXED_THEMES["diagonal-mono"];
+  const font = FONT_STACKS.geometric;
+  const layers: LayerV2[] = [];
+
+  // Background: warm off-white #E2E2E2
+  layers.push(filledRect({
+    name: "Background", x: 0, y: 0, w: W, h: H,
+    fill: solidPaintHex(t.frontBg), tags: ["background"],
+  }));
+
+  // Dark polygon: 7-segment zigzag with chevron notch
+  layers.push(pathLayer({
+    name: "Dark Zigzag Polygon",
+    commands: [
+      M(0, 0),
+      L(Math.round(W * 0.43), 0),                   // top edge to boundary start
+      L(Math.round(W * 0.46), Math.round(H * 0.20)), // Seg 1: gentle lean right
+      L(Math.round(W * 0.29), Math.round(H * 0.30)), // Seg 2: sharp chevron cut
+      L(Math.round(W * 0.30), Math.round(H * 0.38)), // Seg 3: narrow hold
+      L(Math.round(W * 0.49), Math.round(H * 0.39)), // Seg 4: step right
+      L(Math.round(W * 0.15), Math.round(H * 0.63)), // Seg 5: steep diagonal sweep
+      L(Math.round(W * 0.47), Math.round(H * 0.64)), // Seg 6: step right
+      L(Math.round(W * 0.57), H),                    // Seg 7: gentle lean to bottom
+      L(0, H),                                        // bottom-left corner
+      Z(),
+    ],
+    fill: solidPaintHex(t.frontBgAlt!), // #232323
+    tags: ["decorative", "accent", "panel"],
+  }));
+
+  // White accent triangle along Segment 1
+  layers.push(pathLayer({
+    name: "Accent Triangle",
+    commands: [
+      M(Math.round(W * 0.43), 0),
+      L(Math.round(W * 0.475), 0),
+      L(Math.round(W * 0.46), Math.round(H * 0.20)),
+      Z(),
+    ],
+    fill: solidPaintHex("#FFFFFF"),
+    tags: ["decorative", "accent"],
+  }));
+
+  // Name in chevron notch (white on dark)
+  const nameSize = Math.round(H * 0.10); // 60px
+  layers.push(styledText({
+    name: "Name",
+    x: Math.round(W * 0.08), y: Math.round(H * 0.22), w: Math.round(W * 0.34),
+    text: (cfg.name || "HENRY SOAZ").toUpperCase(),
+    fontSize: nameSize,
+    fontFamily: font,
+    weight: 700,
+    color: "#FFFFFF",
+    uppercase: true,
+    letterSpacing: 4, // ~0.12em
+    lineHeight: 1.1,
+    tags: ["name", "primary-text"],
+  }));
+
+  // Title below name (white on dark, lowercase)
+  layers.push(styledText({
+    name: "Title",
+    x: Math.round(W * 0.10), y: Math.round(H * 0.36), w: Math.round(W * 0.28),
+    text: cfg.title || "title / position",
+    fontSize: Math.round(H * 0.04), // 24px
+    fontFamily: font,
+    weight: 300,
+    color: "#FFFFFF",
+    tags: ["title"],
+  }));
+
+  // Large rotated decorative name on light side (~32° CW)
+  // Note: rotation is applied via the layer's transform property
+  const rotatedSize = Math.round(H * 0.16); // 96px
+  const rotatedLayer = styledText({
+    name: "Decorative Name",
+    x: Math.round(W * 0.50), y: Math.round(H * 0.10), w: Math.round(W * 0.50),
+    text: (cfg.name || "HENRY SOAZ").toUpperCase(),
+    fontSize: rotatedSize,
+    fontFamily: font,
+    weight: 700,
+    color: "#232323",
+    uppercase: true,
+    tags: ["decorative", "name-decorative"],
+  });
+  // Apply rotation transform: ~32° clockwise
+  rotatedLayer.transform.rotation = 32;
+  layers.push(rotatedLayer);
+
+  // Contact information on light side (right of boundary)
+  const contactX = Math.round(W * 0.50);
+  const contactSize = Math.round(H * 0.025); // 15px
+  const contactLines = [
+    { text: cfg.address || "Main Street, Your Location", y: 0.40 },
+    { text: cfg.address ? "" : "Number 123A, 56478", y: 0.44 },
+    { text: cfg.email || "hr@email.com", y: 0.54 },
+    { text: cfg.phone || "+92 94 56 789", y: 0.59 },
+    { text: cfg.website || "www.company.com", y: 0.64 },
+  ];
+
+  for (const cl of contactLines) {
+    if (!cl.text) continue;
+    layers.push(styledText({
+      name: "Contact",
+      x: contactX, y: Math.round(H * cl.y), w: Math.round(W * 0.40),
+      text: cl.text,
+      fontSize: contactSize,
+      fontFamily: font,
+      weight: 400,
+      color: "#232323",
+      tags: ["contact-text"],
+    }));
+  }
+
+  return layers;
+}
+
+// Register diagonal-mono back layout
+registerBackLayout("diagonal-mono", (W, H, cfg, theme) => {
+  const font = FONT_STACKS.geometric;
+  const layers: LayerV2[] = [];
+
+  // Background: warm off-white
+  layers.push(filledRect({
+    name: "Back Background", x: 0, y: 0, w: W, h: H,
+    fill: solidPaintHex("#E2E2E2"), tags: ["background", "back-element"],
+  }));
+
+  // Complex 5-zone dark polygon
+  layers.push(pathLayer({
+    name: "Back Dark Polygon",
+    commands: [
+      M(Math.round(W * 0.35), 0),
+      L(W, 0),
+      L(W, Math.round(H * 0.65)),
+      L(Math.round(W * 0.62), Math.round(H * 0.72)),
+      L(Math.round(W * 0.65), H),
+      L(0, H),
+      L(0, Math.round(H * 0.46)),
+      L(Math.round(W * 0.38), Math.round(H * 0.28)),
+      Z(),
+    ],
+    fill: solidPaintHex("#232323"),
+    tags: ["decorative", "accent", "panel", "back-element"],
+  }));
+
+  // Geometric logo: 2 crossing white lines forming X
+  const logoStroke = makeStroke("#FFFFFF", Math.round(W * 0.01));
+
+  // Line A
+  layers.push(pathLayer({
+    name: "Logo Line A",
+    commands: [
+      M(Math.round(W * 0.50), Math.round(H * 0.48)),
+      L(Math.round(W * 0.35), Math.round(H * 0.61)),
+    ],
+    fill: solidPaintHex("#000000", 0),
+    stroke: logoStroke,
+    closed: false,
+    tags: ["logo-mark", "branding", "back-element"],
+  }));
+
+  // Line B
+  layers.push(pathLayer({
+    name: "Logo Line B",
+    commands: [
+      M(Math.round(W * 0.67), Math.round(H * 0.50)),
+      L(Math.round(W * 0.46), Math.round(H * 0.65)),
+    ],
+    fill: solidPaintHex("#000000", 0),
+    stroke: logoStroke,
+    closed: false,
+    tags: ["logo-mark", "branding", "back-element"],
+  }));
+
+  // Satellite dots
+  const dotR = Math.round(W * 0.004);
+  layers.push(filledEllipse({
+    name: "Satellite Dot 1",
+    cx: Math.round(W * 0.505), cy: Math.round(H * 0.53), rx: dotR, ry: dotR,
+    fill: solidPaintHex("#FFFFFF"),
+    tags: ["decorative", "back-element"],
+  }));
+  layers.push(filledEllipse({
+    name: "Satellite Dot 2",
+    cx: Math.round(W * 0.595), cy: Math.round(H * 0.535), rx: dotR, ry: dotR,
+    fill: solidPaintHex("#FFFFFF"),
+    tags: ["decorative", "back-element"],
+  }));
+
+  // "COMPANY" text (white, bold, wide tracking)
+  layers.push(styledText({
+    name: "Company",
+    x: Math.round(W * 0.55), y: Math.round(H * 0.55), w: Math.round(W * 0.35),
+    text: (cfg.company || "COMPANY").toUpperCase(),
+    fontSize: Math.round(H * 0.04), // 24px
+    fontFamily: font,
+    weight: 700,
+    color: "#FFFFFF",
+    uppercase: true,
+    letterSpacing: 5, // ~0.15em
+    tags: ["company", "branding", "back-element"],
+  }));
+
+  return layers;
+});
+
+// ===================== MODERN TEMPLATES =====================
+
+/** Cyan Tech â€” Inspired by Code Pro: Dark bg + colored accent right panel with circular contact icons */
+function layoutCyanTech(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.08;
+  const my = H * 0.14;
+  const layers: LayerV2[] = [];
+  const panelW = W * 0.38;
+  const panelX = W - panelW;
+
+  // Accent panel (right side with subtle gradient)
+  layers.push(rect({
+    name: "Accent Panel", x: panelX, y: 0, w: panelW, h: H,
+    fill: lg(180, [cfg.primaryColor, 0], [cfg.secondaryColor, 1]),
+    tags: ["decorative", "accent", "panel"],
+  }));
+  // Curved cutout overlay (simulate wave cut between panel and main)
+  layers.push(ellipse({
+    name: "Panel Curve", cx: panelX, cy: H * 0.45, rx: W * 0.04, ry: H * 0.35,
+    fill: solidPaintHex(cfg.bgColor, 1), tags: ["decorative"],
+  }));
+  // Logo â€” top left
+  const logoS = H * 0.18;
+  layers.push(buildLogoLayer(cfg, mx, my, logoS, logoS, cfg.primaryColor, ff));
+  // Company + tagline under logo
+  layers.push(textLayer({
+    name: "Company", x: mx + logoS + 10, y: my, w: W * 0.35,
+    text: cfg.company || "Company", fontSize: fs.company, ff, weight: 700,
+    color: cfg.textColor, tags: ["company"], autoFit: true,
+  }));
+  if (cfg.tagline) {
+    layers.push(textLayer({
+      name: "Tagline", x: mx + logoS + 10, y: my + fs.company + 2, w: W * 0.35,
+      text: cfg.tagline, fontSize: fs.tagline, ff, weight: 300,
+      color: cfg.textColor, alpha: 0.4, tags: ["tagline"], italic: true,
+    }));
+  }
+  // Website on main side
+  if (cfg.website) {
+    layers.push(textLayer({
+      name: "website", x: mx, y: H - my, w: W * 0.4,
+      text: cfg.website, fontSize: fs.label, ff, weight: 400,
+      color: cfg.textColor, alpha: 0.5, tags: ["contact-website", "contact-text"],
+    }));
+  }
+  // Right panel content
+  const panelTextColor = getContrastColor(cfg.primaryColor);
+  // Name â€” on panel
+  layers.push(textLayer({
+    name: "Name", x: panelX + panelW * 0.12, y: my, w: panelW * 0.8,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 700,
+    color: panelTextColor, tags: ["name", "primary-text"], autoFit: true,
+  }));
+  // Title
+  layers.push(textLayer({
+    name: "Title", x: panelX + panelW * 0.12, y: my + fs.name + 4, w: panelW * 0.8,
+    text: cfg.title || "Job Title", fontSize: fs.label, ff, weight: 400,
+    color: panelTextColor, alpha: 0.7, tags: ["title"],
+  }));
+  // Contact on panel
+  layers.push(...buildContactLayers(cfg, panelX + panelW * 0.12, my + fs.name + fs.label + 20, Math.round(fs.contact * 1.5), "left", panelTextColor, 0.8, panelTextColor, 0.6, fs.contact, ff, W, H));
+  return layers;
+}
+
+/** Corporate Chevron â€” Inspired by Company Navy: Dark bg + chevron geometric overlay */
+function layoutCorporateChevron(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
   const mx = W * 0.1;
   const my = H * 0.15;
   const layers: LayerV2[] = [];
 
-  // Warm gradient wash
+  // Chevron decorative shapes (top-right corner)
   layers.push(rect({
-    name: "Warm Gradient",
-    x: 0, y: 0, w: W, h: H,
-    fill: lg(135, [cfg.primaryColor, 0, 0.02], [cfg.bgColor, 0.5, 0], [cfg.secondaryColor, 1, 0.015]),
-    tags: ["decorative", "background-gradient"],
+    name: "Chevron 1", x: W * 0.6, y: -H * 0.1, w: W * 0.35, h: W * 0.35,
+    fill: solidPaintHex(cfg.primaryColor, 0.08), tags: ["decorative", "accent"],
   }));
-
-  // Accent bar bottom-left
   layers.push(rect({
-    name: "Accent Bar",
-    x: mx, y: H - my, w: W * 0.15, h: 2.5,
-    fill: lg(0, [cfg.primaryColor, 0], [cfg.primaryColor, 0.6, 0.1]),
-    tags: ["decorative", "accent"],
+    name: "Chevron 2", x: W * 0.68, y: -H * 0.02, w: W * 0.28, h: W * 0.28,
+    fill: solidPaintHex(cfg.primaryColor, 0.06), tags: ["decorative", "accent"],
   }));
-
-  // Separator
-  layers.push(line({
-    name: "Separator", x: mx, y: H * 0.54, w: W * 0.85,
-    color: cfg.primaryColor, alpha: 0.15,
-  }));
-
-  // Logo (top-right)
-  const logoS = H * 0.18;
-  layers.push(buildLogoLayer(cfg, W - mx - logoS, my + fs.company + 8, logoS, logoS, cfg.primaryColor, ff));
-
-  // Name
-  layers.push(textLayer({
-    name: "Name", x: mx, y: my, w: W * 0.6, text: cfg.name || "Your Name",
-    fontSize: fs.name, ff, weight: 600, color: cfg.textColor, tags: ["name", "primary-text"],
-  }));
-
-  // Title
-  layers.push(textLayer({
-    name: "Title", x: mx, y: my + fs.name + 8, w: W * 0.6, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 400, color: cfg.textColor, alpha: 0.6, tags: ["title"],
-  }));
-
-  // Company (right-aligned)
-  layers.push(textLayer({
-    name: "Company", x: mx, y: my, w: W - 2 * mx, text: cfg.company || "Company",
-    fontSize: fs.company, ff, weight: 500, color: cfg.primaryColor, align: "right", tags: ["company"],
-  }));
-
-  // Contact
-  layers.push(...buildContactLayers(
-    cfg, mx, H * 0.62, Math.round(fs.contact * 1.5), "left",
-    cfg.textColor, 0.65, cfg.primaryColor, 0.5, fs.contact, ff, W, H
-  ));
-
-  // Tagline
-  if (cfg.tagline) {
-    layers.push(textLayer({
-      name: "Tagline", x: mx, y: H - my - 4, w: W - 2 * mx, text: cfg.tagline,
-      fontSize: fs.tagline, ff, weight: 300, color: cfg.textColor, alpha: 0.35, align: "right", tags: ["tagline"],
-    }));
-  }
-
-  return layers;
-}
-
-function layoutSwissGrid(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const mx = W * 0.08;
-  const layers: LayerV2[] = [];
-
-  // Red accent bar top
-  layers.push(rect({
-    name: "Top Accent Bar", x: 0, y: 0, w: W * 0.35, h: 5,
-    fill: solidPaintHex(cfg.primaryColor), tags: ["decorative", "accent"],
-  }));
-
-  // Grid line vertical
-  layers.push(line({
-    name: "Grid Line", x: W * 0.4, y: H * 0.1, w: 1.5,
-    color: cfg.primaryColor, alpha: 0.1, thickness: H * 0.8,
-  }));
-
-  // Name
-  layers.push(textLayer({
-    name: "Name", x: mx, y: H * 0.18, w: W * 0.3, text: cfg.name || "Your Name",
-    fontSize: fs.name, ff, weight: 800, color: cfg.textColor, tags: ["name", "primary-text"], uppercase: true,
-  }));
-
-  // Title
-  layers.push(textLayer({
-    name: "Title", x: mx, y: H * 0.18 + fs.name + 8, w: W * 0.3, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 400, color: cfg.primaryColor, tags: ["title"],
-  }));
-
-  // Logo
-  const logoS = H * 0.14;
-  layers.push(buildLogoLayer(cfg, W - mx - logoS, H * 0.08, logoS, logoS, cfg.primaryColor, ff));
-
-  // Company
-  layers.push(textLayer({
-    name: "Company", x: W * 0.42, y: H * 0.18, w: W * 0.5, text: cfg.company || "Company",
-    fontSize: fs.label, ff, weight: 600, color: cfg.textColor, alpha: 0.35, tags: ["company"], uppercase: true,
-  }));
-
-  // Contact (right side of grid)
-  layers.push(...buildContactLayers(
-    cfg, W * 0.42, H * 0.42, Math.round(fs.contact * 1.5), "left",
-    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W, H
-  ));
-
-  return layers;
-}
-
-function layoutMonoType(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const mx = W * 0.1;
-  const layers: LayerV2[] = [];
-
-  // Minimal underline
-  layers.push(line({
-    name: "Underline", x: mx, y: H * 0.52, w: W * 0.3,
-    color: cfg.primaryColor, alpha: 0.3,
-  }));
-
-  // Name
-  layers.push(textLayer({
-    name: "Name", x: mx, y: H * 0.28, w: W * 0.8, text: cfg.name || "Your Name",
-    fontSize: fs.nameXl, ff, weight: 200, color: cfg.textColor, tags: ["name", "primary-text"],
-    letterSpacing: 2,
-  }));
-
-  // Title
-  layers.push(textLayer({
-    name: "Title", x: mx, y: H * 0.28 + fs.nameXl + 4, w: W * 0.8, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 400, color: cfg.textColor, alpha: 0.5, tags: ["title"],
-    uppercase: true, letterSpacing: 3,
-  }));
-
-  // Contact
-  layers.push(...buildContactLayers(
-    cfg, mx, H * 0.62, Math.round(fs.contact * 1.45), "left",
-    cfg.textColor, 0.55, cfg.primaryColor, 0.3, fs.contact, ff, W, H
-  ));
-
-  // Logo (bottom-right)
-  const logoS = H * 0.14;
-  layers.push(buildLogoLayer(cfg, W - mx - logoS, H - mx - logoS, logoS, logoS, cfg.primaryColor, ff));
-
-  return layers;
-}
-
-function layoutNordicFrost(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const mx = W * 0.1;
-  const layers: LayerV2[] = [];
-
-  // Frost gradient
-  layers.push(rect({
-    name: "Frost Gradient", x: 0, y: 0, w: W, h: H,
-    fill: lg(180, [cfg.primaryColor, 0, 0.03], [cfg.bgColor, 1, 0]),
-    tags: ["decorative"],
-  }));
-
-  // Bottom accent
-  layers.push(rect({
-    name: "Bottom Accent", x: 0, y: H - 4, w: W, h: 4,
-    fill: lg(0, [cfg.primaryColor, 0], [cfg.secondaryColor, 1]),
-    tags: ["decorative", "accent"],
-  }));
-
-  // Name
-  layers.push(textLayer({
-    name: "Name", x: mx, y: H * 0.2, w: W * 0.7, text: cfg.name || "Your Name",
-    fontSize: fs.name, ff, weight: 500, color: cfg.textColor, tags: ["name", "primary-text"],
-  }));
-
-  // Title
-  layers.push(textLayer({
-    name: "Title", x: mx, y: H * 0.2 + fs.name + 8, w: W * 0.7, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 300, color: cfg.primaryColor, tags: ["title"], italic: true,
-  }));
-
-  // Logo
-  const logoS = H * 0.16;
-  layers.push(buildLogoLayer(cfg, W - mx - logoS, H * 0.15, logoS, logoS, cfg.primaryColor, ff));
-
-  // Separator
-  layers.push(line({
-    name: "Separator", x: mx, y: H * 0.52, w: W - 2 * mx,
-    color: cfg.primaryColor, alpha: 0.15,
-  }));
-
-  // Contact
-  layers.push(...buildContactLayers(
-    cfg, mx, H * 0.6, Math.round(fs.contact * 1.45), "left",
-    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W, H
-  ));
-
-  // Company (bottom-right)
-  layers.push(textLayer({
-    name: "Company", x: mx, y: H * 0.9, w: W - 2 * mx, text: cfg.company || "Company",
-    fontSize: fs.label, ff, weight: 500, color: cfg.textColor, alpha: 0.35, align: "right", tags: ["company"],
-  }));
-
-  return layers;
-}
-
-// --- Modern ---
-
-function layoutBoldSplit(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const splitX = W * 0.42;
-  const mx = splitX * 0.14;
-  const rx = splitX + (W - splitX) * 0.1;
-  const layers: LayerV2[] = [];
-  const contrastC = getContrastColor(cfg.primaryColor);
-
-  // Left panel gradient
-  layers.push(rect({
-    name: "Left Panel", x: 0, y: 0, w: splitX, h: H,
-    fill: lg(180, [cfg.primaryColor, 0], [cfg.secondaryColor, 0.7, 0.85], [cfg.primaryColor, 1, 0.7]),
-    tags: ["decorative", "panel"],
-  }));
-
-  // Decorative split lines
-  layers.push(rect({
-    name: "Split Line 1", x: splitX + 4, y: 0, w: 1.5, h: H,
-    fill: solidPaintHex(cfg.primaryColor, 0.1), tags: ["decorative"],
-  }));
-
-  // Accent circles
-  layers.push(ellipse({
-    name: "Accent Circle 1", cx: W * 0.92, cy: H * 0.08, rx: W * 0.06, ry: W * 0.06,
-    fill: solidPaintHex(cfg.primaryColor, 0.04), tags: ["decorative"],
-  }));
-  layers.push(ellipse({
-    name: "Accent Circle 2", cx: W * 0.95, cy: H * 0.92, rx: W * 0.04, ry: W * 0.04,
-    fill: solidPaintHex(cfg.secondaryColor, 0.03), tags: ["decorative"],
-  }));
-
-  // Logo (left panel)
-  const logoS = splitX * 0.22;
-  layers.push(buildLogoLayer(cfg, mx, H * 0.1, logoS, logoS, contrastC, ff));
-
-  // Name (left panel)
-  layers.push(textLayer({
-    name: "Name", x: mx, y: H * 0.48, w: splitX - 2 * mx, text: cfg.name || "Your Name",
-    fontSize: fs.name, ff, weight: 700, color: contrastC, tags: ["name", "primary-text"],
-  }));
-
-  // Title (left panel)
-  layers.push(textLayer({
-    name: "Title", x: mx, y: H * 0.48 + fs.title + 8, w: splitX - 2 * mx, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 400, color: contrastC, alpha: 0.7, tags: ["title"],
-  }));
-
-  // Company (left panel bottom)
-  layers.push(textLayer({
-    name: "Company", x: mx, y: H * 0.9, w: splitX - 2 * mx, text: cfg.company || "Company",
-    fontSize: fs.label, ff, weight: 600, color: contrastC, alpha: 0.4, tags: ["company"], uppercase: true,
-  }));
-
-  // "CONTACT" label
-  layers.push(textLayer({
-    name: "Contact Label", x: rx, y: H * 0.18, w: W - rx - mx, text: "CONTACT",
-    fontSize: fs.label, ff, weight: 600, color: cfg.textColor, alpha: 0.3,
-    tags: ["decorative", "label"], uppercase: true, letterSpacing: 3,
-  }));
-
-  // Divider
-  layers.push(line({
-    name: "Divider", x: rx, y: H * 0.23, w: W * 0.08,
-    color: cfg.primaryColor, alpha: 0.5,
-  }));
-
-  // Contact (right panel)
-  layers.push(...buildContactLayers(
-    cfg, rx, H * 0.35, Math.round(fs.contactLg * 1.6), "left",
-    cfg.textColor, 0.65, cfg.primaryColor, 0.45, fs.contactLg, ff, W, H
-  ));
-
-  // Tagline
-  if (cfg.tagline) {
-    layers.push(textLayer({
-      name: "Tagline", x: rx, y: H * 0.92, w: W - rx - mx, text: cfg.tagline,
-      fontSize: fs.tagline, ff, weight: 300, color: cfg.textColor, alpha: 0.25, tags: ["tagline"],
-    }));
-  }
-
-  return layers;
-}
-
-function layoutNeonEdge(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const mx = W * 0.09;
-  const layers: LayerV2[] = [];
-
-  // Neon border glow
-  layers.push(rect({
-    name: "Neon Border", x: 8, y: 8, w: W - 16, h: H - 16,
-    stroke: stroke(cfg.primaryColor, 2, 0.6), tags: ["decorative", "border"],
-  }));
-
-  // Name
-  layers.push(textLayer({
-    name: "Name", x: mx, y: H * 0.22, w: W * 0.6, text: cfg.name || "Your Name",
-    fontSize: fs.nameXl, ff, weight: 700, color: cfg.textColor, tags: ["name", "primary-text"],
-  }));
-
-  // Title
-  layers.push(textLayer({
-    name: "Title", x: mx, y: H * 0.22 + fs.nameXl + 4, w: W * 0.6, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 400, color: cfg.primaryColor, tags: ["title"],
-  }));
-
-  // Logo
-  const logoS = H * 0.16;
-  layers.push(buildLogoLayer(cfg, W - mx - logoS, H * 0.15, logoS, logoS, cfg.primaryColor, ff));
-
-  // Contact
-  layers.push(...buildContactLayers(
-    cfg, mx, H * 0.6, Math.round(fs.contact * 1.45), "left",
-    cfg.textColor, 0.6, cfg.primaryColor, 0.5, fs.contact, ff, W, H
-  ));
-
-  // Company (bottom-right)
-  layers.push(textLayer({
-    name: "Company", x: mx, y: H * 0.9, w: W - 2 * mx, text: cfg.company || "Company",
-    fontSize: fs.label, ff, weight: 600, color: cfg.primaryColor, alpha: 0.5, align: "right", tags: ["company"],
-  }));
-
-  return layers;
-}
-
-function layoutGeometricModern(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const mx = W * 0.09;
-  const layers: LayerV2[] = [];
-
-  // Large geometric circle
-  layers.push(ellipse({
-    name: "Geometric Circle", cx: W * 0.82, cy: H * 0.35, rx: W * 0.22, ry: W * 0.22,
-    fill: solidPaintHex(cfg.primaryColor, 0.08), tags: ["decorative"],
-  }));
-
-  // Small accent circle
-  layers.push(ellipse({
-    name: "Small Circle", cx: W * 0.12, cy: H * 0.85, rx: W * 0.06, ry: W * 0.06,
-    fill: solidPaintHex(cfg.secondaryColor, 0.06), tags: ["decorative"],
-  }));
-
-  // Name
-  layers.push(textLayer({
-    name: "Name", x: mx, y: H * 0.22, w: W * 0.55, text: cfg.name || "Your Name",
-    fontSize: fs.name, ff, weight: 700, color: cfg.textColor, tags: ["name", "primary-text"],
-  }));
-
-  // Title
-  layers.push(textLayer({
-    name: "Title", x: mx, y: H * 0.22 + fs.name + 6, w: W * 0.55, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 400, color: cfg.primaryColor, tags: ["title"],
-  }));
-
-  // Logo
-  const logoS = H * 0.15;
-  layers.push(buildLogoLayer(cfg, W - mx - logoS, mx, logoS, logoS, cfg.primaryColor, ff));
-
-  // Separator
-  layers.push(line({
-    name: "Separator", x: mx, y: H * 0.52, w: W * 0.4,
-    color: cfg.primaryColor, alpha: 0.2,
-  }));
-
-  // Contact
-  layers.push(...buildContactLayers(
-    cfg, mx, H * 0.6, Math.round(fs.contact * 1.45), "left",
-    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W, H
-  ));
-
-  // Company
-  layers.push(textLayer({
-    name: "Company", x: mx, y: H * 0.9, w: W - 2 * mx, text: cfg.company || "Company",
-    fontSize: fs.label, ff, weight: 600, color: cfg.textColor, alpha: 0.3, tags: ["company"], uppercase: true,
-  }));
-
-  return layers;
-}
-
-function layoutGradientWave(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const mx = W * 0.09;
-  const layers: LayerV2[] = [];
-
-  // Wave gradient
-  layers.push(rect({
-    name: "Wave Gradient", x: 0, y: H * 0.6, w: W, h: H * 0.4,
-    fill: lg(0, [cfg.primaryColor, 0, 0.15], [cfg.secondaryColor, 1, 0.08]),
-    tags: ["decorative"],
-  }));
-
-  // Name
-  layers.push(textLayer({
-    name: "Name", x: mx, y: H * 0.2, w: W * 0.6, text: cfg.name || "Your Name",
-    fontSize: fs.name, ff, weight: 700, color: cfg.textColor, tags: ["name", "primary-text"],
-  }));
-
-  // Title
-  layers.push(textLayer({
-    name: "Title", x: mx, y: H * 0.2 + fs.name + 6, w: W * 0.6, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 400, color: cfg.textColor, alpha: 0.7, tags: ["title"],
-  }));
-
-  // Logo
-  const logoS = H * 0.15;
-  layers.push(buildLogoLayer(cfg, W - mx - logoS, H * 0.12, logoS, logoS, cfg.primaryColor, ff));
-
-  // Separator
-  layers.push(line({
-    name: "Separator", x: mx, y: H * 0.52, w: W * 0.35,
-    color: cfg.primaryColor, alpha: 0.3,
-  }));
-
-  // Contact
-  layers.push(...buildContactLayers(
-    cfg, mx, H * 0.6, Math.round(fs.contact * 1.45), "left",
-    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W, H
-  ));
-
-  // Company
-  layers.push(textLayer({
-    name: "Company", x: mx, y: H * 0.9, w: W - 2 * mx, text: cfg.company || "Company",
-    fontSize: fs.label, ff, weight: 600, color: cfg.textColor, alpha: 0.3, tags: ["company"], uppercase: true,
-  }));
-
-  return layers;
-}
-
-// --- Classic ---
-
-function layoutCorporateStripe(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const mx = W * 0.06;
-  const layers: LayerV2[] = [];
-
-  // Vertical stripe
-  layers.push(rect({
-    name: "Stripe", x: 0, y: 0, w: 10, h: H,
-    fill: lg(90, [cfg.primaryColor, 0], [cfg.secondaryColor, 1]),
-    tags: ["decorative", "stripe"],
-  }));
-
-  // Stripe glow
-  layers.push(rect({
-    name: "Stripe Glow", x: 10, y: 0, w: 4, h: H,
-    fill: solidPaintHex(cfg.primaryColor, 0.06), tags: ["decorative"],
-  }));
-
-  // Logo
+  // Logo â€” centered
   const logoS = H * 0.2;
-  layers.push(buildLogoLayer(cfg, W - mx - logoS, H * 0.1, logoS, logoS, cfg.primaryColor, ff));
-
-  // Name
+  layers.push(buildLogoLayer(cfg, (W - logoS) / 2, my, logoS, logoS, cfg.primaryColor, ff));
+  // Company name + tagline centered below logo
   layers.push(textLayer({
-    name: "Name", x: mx, y: H * 0.3, w: W * 0.6, text: cfg.name || "Your Name",
-    fontSize: fs.name, ff, weight: 700, color: cfg.textColor, tags: ["name", "primary-text"],
+    name: "Company", x: 0, y: my + logoS + 10, w: W,
+    text: cfg.company || "Company", fontSize: fs.companyLg, ff, weight: 700,
+    color: cfg.textColor, align: "center", tags: ["company"], autoFit: true,
   }));
-
-  // Title
-  layers.push(textLayer({
-    name: "Title", x: mx, y: H * 0.3 + fs.title + 8, w: W * 0.6, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 400, color: cfg.primaryColor, tags: ["title"],
-  }));
-
-  // Company
-  layers.push(textLayer({
-    name: "Company", x: mx, y: H * 0.3 + fs.title + fs.company + 18, w: W * 0.6,
-    text: cfg.company || "Company",
-    fontSize: fs.company, ff, weight: 500, color: cfg.textColor, alpha: 0.4, tags: ["company"],
-  }));
-
-  // Divider
-  layers.push(line({
-    name: "Divider", x: mx, y: H * 0.58, w: W * 0.88,
-    color: cfg.primaryColor, alpha: 0.15,
-  }));
-
-  // Contact (horizontal layout — unique to this template)
-  layers.push(...buildContactLayers(
-    cfg, mx, H * 0.72, Math.round(fs.contact * 1.5), "left",
-    cfg.textColor, 0.55, cfg.primaryColor, 0.4, fs.contact, ff, W, H
-  ));
-
-  return layers;
-}
-
-function layoutDiplomat(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const layers: LayerV2[] = [];
-
-  // Top ornamental line
-  layers.push(line({
-    name: "Top Line", x: W * 0.2, y: H * 0.08, w: W * 0.6,
-    color: cfg.primaryColor, alpha: 0.3,
-  }));
-
-  // Logo (centered top)
-  const logoS = H * 0.16;
-  layers.push(buildLogoLayer(cfg, W / 2 - logoS / 2, H * 0.1, logoS, logoS, cfg.primaryColor, ff));
-
-  // Name (centered)
-  layers.push(textLayer({
-    name: "Name", x: 0, y: H * 0.38, w: W, text: cfg.name || "Your Name",
-    fontSize: fs.name, ff, weight: 500, color: cfg.textColor, align: "center", tags: ["name", "primary-text"],
-  }));
-
-  // Title (centered)
-  layers.push(textLayer({
-    name: "Title", x: 0, y: H * 0.38 + fs.name + 6, w: W, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 400, color: cfg.primaryColor, align: "center", tags: ["title"],
-  }));
-
-  // Divider
-  layers.push(line({
-    name: "Divider", x: W * 0.3, y: H * 0.56, w: W * 0.4,
-    color: cfg.primaryColor, alpha: 0.35,
-  }));
-
-  // Contact (centered)
-  layers.push(...buildContactLayers(
-    cfg, W / 2, H * 0.64, Math.round(fs.contact * 1.45), "center",
-    cfg.textColor, 0.55, cfg.primaryColor, 0.35, fs.contact, ff, W, H
-  ));
-
-  // Company (bottom center)
-  layers.push(textLayer({
-    name: "Company", x: 0, y: H * 0.92, w: W, text: cfg.company || "Company",
-    fontSize: fs.label, ff, weight: 600, color: cfg.primaryColor, alpha: 0.5, align: "center",
-    tags: ["company"], uppercase: true, letterSpacing: 3,
-  }));
-
-  return layers;
-}
-
-function layoutHeritageCrest(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const layers: LayerV2[] = [];
-
-  // Top gradient bar
-  layers.push(rect({
-    name: "Top Bar", x: 0, y: 0, w: W, h: 6,
-    fill: lg(0, [cfg.primaryColor, 0], [cfg.secondaryColor, 1]),
-    tags: ["decorative", "accent"],
-  }));
-
-  // Logo (centered)
-  const logoS = H * 0.18;
-  layers.push(buildLogoLayer(cfg, W / 2 - logoS / 2, H * 0.1, logoS, logoS, cfg.primaryColor, ff));
-
-  // Name (centered)
-  layers.push(textLayer({
-    name: "Name", x: 0, y: H * 0.4, w: W, text: cfg.name || "Your Name",
-    fontSize: fs.name, ff, weight: 600, color: cfg.textColor, align: "center",
-    tags: ["name", "primary-text"], uppercase: true, letterSpacing: 2,
-  }));
-
-  // Title
-  layers.push(textLayer({
-    name: "Title", x: 0, y: H * 0.4 + fs.name + 8, w: W, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 400, color: cfg.secondaryColor, align: "center", tags: ["title"],
-  }));
-
-  // Divider
-  layers.push(line({
-    name: "Divider", x: W * 0.25, y: H * 0.58, w: W * 0.5,
-    color: cfg.secondaryColor, alpha: 0.3,
-  }));
-
-  // Contact (centered)
-  layers.push(...buildContactLayers(
-    cfg, W / 2, H * 0.66, Math.round(fs.contact * 1.4), "center",
-    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W, H
-  ));
-
-  // Company
-  layers.push(textLayer({
-    name: "Company", x: 0, y: H * 0.92, w: W, text: cfg.company || "Company",
-    fontSize: fs.label, ff, weight: 600, color: cfg.secondaryColor, alpha: 0.5, align: "center",
-    tags: ["company"], uppercase: true, letterSpacing: 3,
-  }));
-
-  return layers;
-}
-
-function layoutEngraved(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const layers: LayerV2[] = [];
-
-  // Double border
-  layers.push(rect({
-    name: "Outer Border", x: 12, y: 12, w: W - 24, h: H - 24,
-    stroke: stroke(cfg.primaryColor, 1, 0.15), tags: ["decorative", "border"],
-  }));
-  layers.push(rect({
-    name: "Inner Border", x: 18, y: 18, w: W - 36, h: H - 36,
-    stroke: stroke(cfg.primaryColor, 0.5, 0.08), tags: ["decorative", "border"],
-  }));
-
-  // Name (centered)
-  layers.push(textLayer({
-    name: "Name", x: 0, y: H * 0.25, w: W, text: cfg.name || "Your Name",
-    fontSize: fs.name, ff, weight: 300, color: cfg.textColor, align: "center",
-    tags: ["name", "primary-text"], letterSpacing: 3,
-  }));
-
-  // Title
-  layers.push(textLayer({
-    name: "Title", x: 0, y: H * 0.25 + fs.name + 6, w: W, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 400, color: cfg.primaryColor, align: "center", tags: ["title"],
-  }));
-
-  // Engraved divider
-  layers.push(line({
-    name: "Divider", x: W * 0.2, y: H * 0.5, w: W * 0.6,
-    color: cfg.primaryColor, alpha: 0.2,
-  }));
-
-  // Logo
-  const logoS = H * 0.14;
-  layers.push(buildLogoLayer(cfg, W / 2 - logoS / 2, H * 0.52, logoS, logoS, cfg.primaryColor, ff));
-
-  // Contact (centered)
-  layers.push(...buildContactLayers(
-    cfg, W / 2, H * 0.72, Math.round(fs.contact * 1.4), "center",
-    cfg.textColor, 0.55, cfg.primaryColor, 0.35, fs.contact, ff, W, H
-  ));
-
-  // Company
-  layers.push(textLayer({
-    name: "Company", x: 0, y: H * 0.93, w: W, text: cfg.company || "Company",
-    fontSize: fs.label, ff, weight: 600, color: cfg.primaryColor, alpha: 0.4, align: "center",
-    tags: ["company"], uppercase: true, letterSpacing: 4,
-  }));
-
-  return layers;
-}
-
-// --- Creative ---
-
-function layoutDiagonalCut(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const mx = W * 0.08;
-  const layers: LayerV2[] = [];
-  const contrastC = getContrastColor(cfg.primaryColor);
-
-  // Diagonal block (polygon as path)
-  layers.push(createPathLayerV2({
-    name: "Diagonal Block",
-    x: 0, y: 0, width: W, height: H,
-    commands: [
-      { type: "M", x: W * 0.52, y: 0 },
-      { type: "L", x: W, y: 0 },
-      { type: "L", x: W, y: H },
-      { type: "L", x: W * 0.32, y: H },
-      { type: "Z" },
-    ],
-    fill: lg(135, [cfg.primaryColor, 0], [cfg.secondaryColor, 1]),
-    closed: true,
-    tags: ["decorative", "panel"],
-  }));
-
-  // Name (left side)
-  layers.push(textLayer({
-    name: "Name", x: mx, y: H * 0.32, w: W * 0.4, text: cfg.name || "Your Name",
-    fontSize: fs.name, ff, weight: 700, color: cfg.textColor, tags: ["name", "primary-text"],
-  }));
-
-  // Title
-  layers.push(textLayer({
-    name: "Title", x: mx, y: H * 0.32 + fs.title + 8, w: W * 0.4, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 400, color: cfg.textColor, alpha: 0.55, tags: ["title"],
-  }));
-
-  // Logo
-  const logoS = H * 0.16;
-  layers.push(buildLogoLayer(cfg, mx, H * 0.55, logoS, logoS, cfg.primaryColor, ff));
-
-  // Company (next to logo)
-  layers.push(textLayer({
-    name: "Company", x: mx + logoS + 10, y: H * 0.55 + logoS / 2 - fs.label / 2, w: W * 0.2,
-    text: cfg.company || "Company",
-    fontSize: fs.label, ff, weight: 600, color: cfg.textColor, alpha: 0.35, tags: ["company"],
-  }));
-
-  // Contact (right side on diagonal, right-aligned)
-  layers.push(...buildContactLayers(
-    cfg, W - mx, H * 0.3, Math.round(fs.contact * 1.5), "right",
-    contrastC, 0.85, contrastC, 0.5, fs.contact, ff, W, H
-  ));
-
-  return layers;
-}
-
-function layoutLayeredCard(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const mx = W * 0.09;
-  const layers: LayerV2[] = [];
-
-  // Bottom offset card layer
-  layers.push(rect({
-    name: "Background Layer", x: 12, y: 12, w: W - 12, h: H - 12,
-    fill: solidPaintHex(cfg.secondaryColor, 0.15),
-    radii: [8, 8, 8, 8], tags: ["decorative"],
-  }));
-
-  // Top gradient band
-  layers.push(rect({
-    name: "Top Band", x: 0, y: 0, w: W, h: H * 0.35,
-    fill: lg(0, [cfg.primaryColor, 0], [cfg.secondaryColor, 1]),
-    tags: ["decorative", "band"],
-  }));
-
-  // Logo
-  const logoS = H * 0.14;
-  layers.push(buildLogoLayer(cfg, W - mx - logoS, H * 0.1, logoS, logoS, getContrastColor(cfg.primaryColor), ff));
-
-  // Name (on band)
-  layers.push(textLayer({
-    name: "Name", x: mx, y: H * 0.12, w: W * 0.6, text: cfg.name || "Your Name",
-    fontSize: fs.name, ff, weight: 700, color: getContrastColor(cfg.primaryColor), tags: ["name", "primary-text"],
-  }));
-
-  // Title (on band)
-  layers.push(textLayer({
-    name: "Title", x: mx, y: H * 0.12 + fs.name + 4, w: W * 0.6, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 400, color: getContrastColor(cfg.primaryColor), alpha: 0.8, tags: ["title"],
-  }));
-
-  // Company
-  layers.push(textLayer({
-    name: "Company", x: mx, y: H * 0.42, w: W - 2 * mx, text: cfg.company || "Company",
-    fontSize: fs.label, ff, weight: 600, color: cfg.textColor, alpha: 0.35, tags: ["company"], uppercase: true,
-  }));
-
-  // Contact
-  layers.push(...buildContactLayers(
-    cfg, mx, H * 0.55, Math.round(fs.contact * 1.5), "left",
-    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W, H
-  ));
-
-  // Tagline
   if (cfg.tagline) {
     layers.push(textLayer({
-      name: "Tagline", x: mx, y: H * 0.92, w: W - 2 * mx, text: cfg.tagline,
-      fontSize: fs.tagline, ff, weight: 300, color: cfg.textColor, alpha: 0.3, tags: ["tagline"],
+      name: "Tagline", x: 0, y: my + logoS + 10 + fs.companyLg + 4, w: W,
+      text: cfg.tagline, fontSize: fs.tagline, ff, weight: 300,
+      color: cfg.textColor, alpha: 0.45, align: "center", tags: ["tagline"],
     }));
   }
-
+  // Website centered
+  if (cfg.website) {
+    layers.push(textLayer({
+      name: "website", x: 0, y: H - my, w: W,
+      text: cfg.website, fontSize: fs.label, ff, weight: 400,
+      color: cfg.primaryColor, align: "center", tags: ["contact-website", "contact-text"],
+    }));
+  }
   return layers;
 }
 
-function layoutPhotoOverlay(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const mx = W * 0.09;
+/** Zigzag Overlay â€” Inspired by Dwayne John: Dark bg + zigzag pattern + white content strip */
+function layoutZigzagOverlay(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.08;
   const layers: LayerV2[] = [];
+  const stripH = H * 0.38;
+  const stripY = H - stripH;
 
-  // Dark overlay gradient
-  layers.push(rect({
-    name: "Dark Overlay", x: 0, y: 0, w: W, h: H,
-    fill: lg(180, [cfg.primaryColor, 0, 0.4], [cfg.bgColor, 1, 0.8]),
-    tags: ["decorative"],
-  }));
-
-  // Name
+  // Logo â€” centered in dark area
+  const logoS = H * 0.2;
+  layers.push(buildLogoLayer(cfg, (W - logoS) / 2, H * 0.12, logoS, logoS, cfg.primaryColor, ff));
+  // Company below logo
   layers.push(textLayer({
-    name: "Name", x: mx, y: H * 0.25, w: W * 0.6, text: cfg.name || "Your Name",
-    fontSize: fs.nameXl, ff, weight: 800, color: cfg.textColor, tags: ["name", "primary-text"],
+    name: "Company", x: 0, y: H * 0.12 + logoS + 8, w: W,
+    text: cfg.company || "Company", fontSize: fs.label, ff, weight: 500,
+    color: cfg.textColor, alpha: 0.4, align: "center", tags: ["company"], uppercase: true, letterSpacing: 3,
   }));
-
+  // White strip at bottom
+  layers.push(rect({
+    name: "Content Strip", x: 0, y: stripY, w: W, h: stripH,
+    fill: solidPaintHex("#ffffff", 1), tags: ["decorative", "panel"],
+  }));
+  // Name on strip â€” dark text
+  layers.push(textLayer({
+    name: "Name", x: mx, y: stripY + stripH * 0.12, w: W * 0.5,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 700,
+    color: "#1a1a1a", tags: ["name", "primary-text"], autoFit: true,
+  }));
   // Title
   layers.push(textLayer({
-    name: "Title", x: mx, y: H * 0.25 + fs.nameXl + 4, w: W * 0.6, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 400, color: cfg.primaryColor, tags: ["title"],
+    name: "Title", x: mx, y: stripY + stripH * 0.12 + fs.name + 2, w: W * 0.4,
+    text: cfg.title || "Job Title", fontSize: fs.label, ff, weight: 400,
+    color: cfg.primaryColor, tags: ["title"], uppercase: true, letterSpacing: 1,
   }));
+  // Contact on right of strip (2-column)
+  layers.push(...buildContactLayers(cfg, W * 0.5, stripY + stripH * 0.15, Math.round(fs.contact * 1.45), "left", "#333333", 0.7, cfg.primaryColor, 0.6, fs.contact, ff, W, stripY + stripH));
+  return layers;
+}
 
-  // Logo
+/** Hex Split â€” Inspired by John Smith Blue: Two-tone split with hexagonal logo area + QR */
+function layoutHexSplit(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.08;
+  const my = H * 0.12;
+  const layers: LayerV2[] = [];
+
+  // Top accent wave/bar
+  layers.push(rect({
+    name: "Top Accent", x: 0, y: 0, w: W, h: H * 0.08,
+    fill: lg(90, [cfg.primaryColor, 0], [cfg.secondaryColor, 1]),
+    tags: ["decorative", "accent"],
+  }));
+  // QR area â€” top left
+  if (cfg.qrCodeUrl) {
+    layers.push(rect({
+      name: "QR Background", x: mx, y: H * 0.12, w: H * 0.22, h: H * 0.22,
+      fill: solidPaintHex(cfg.primaryColor, 0.06), tags: ["qr-code", "branding"],
+      radii: [4, 4, 4, 4],
+    }));
+  }
+  // Name â€” top right
+  layers.push(textLayer({
+    name: "Name", x: W * 0.4, y: my + 8, w: W * 0.55,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 600,
+    color: cfg.primaryColor, align: "right", tags: ["name", "primary-text"], autoFit: true,
+  }));
+  // Title
+  layers.push(textLayer({
+    name: "Title", x: W * 0.4, y: my + 8 + fs.name + 2, w: W * 0.55,
+    text: cfg.title || "Job Title", fontSize: fs.label, ff, weight: 400,
+    color: cfg.secondaryColor, align: "right", tags: ["title"],
+  }));
+  // Divider
+  layers.push(line({ name: "Divider", x: mx, y: H * 0.52, w: W - 2 * mx, color: cfg.primaryColor, alpha: 0.15 }));
+  // Contact â€” bottom left
+  layers.push(...buildContactLayers(cfg, mx, H * 0.58, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.6, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
+  // Logo + Company â€” bottom right
+  const logoS = H * 0.14;
+  layers.push(buildLogoLayer(cfg, W - mx - logoS, H - my - logoS, logoS, logoS, cfg.primaryColor, ff));
+  layers.push(textLayer({
+    name: "Company", x: W * 0.45, y: H - my - 4, w: W * 0.45,
+    text: cfg.company || "Company", fontSize: fs.label, ff, weight: 500,
+    color: cfg.textColor, alpha: 0.5, align: "right", tags: ["company"],
+  }));
+  return layers;
+}
+
+/** Dot Circle â€” Inspired by El Creatives: Dot grid + large dark circle accent */
+function layoutDotCircle(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.08;
+  const my = H * 0.15;
+  const layers: LayerV2[] = [];
+
+  // Large circle accent (bottom-right, partially off-card)
+  const circleR = H * 0.42;
+  layers.push(ellipse({
+    name: "Circle Accent", cx: W * 0.85, cy: H * 0.7, rx: circleR, ry: circleR,
+    fill: solidPaintHex(cfg.primaryColor, 0.9), tags: ["decorative", "accent"],
+  }));
+  // Name
+  layers.push(textLayer({
+    name: "Name", x: mx, y: my, w: W * 0.55,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 700,
+    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true,
+  }));
+  // Title
+  layers.push(textLayer({
+    name: "Title", x: mx, y: my + fs.name + 4, w: W * 0.5,
+    text: cfg.title || "Job Title", fontSize: fs.title, ff, weight: 400,
+    color: cfg.primaryColor, tags: ["title"],
+  }));
+  // Logo inside circle
+  const logoS = H * 0.18;
+  const panelText = getContrastColor(cfg.primaryColor);
+  layers.push(buildLogoLayer(cfg, W * 0.85 - logoS / 2, H * 0.55, logoS, logoS, panelText, ff));
+  // Company inside circle
+  layers.push(textLayer({
+    name: "Company", x: W * 0.65, y: H * 0.78, w: W * 0.3,
+    text: cfg.company || "Company", fontSize: fs.label, ff, weight: 500,
+    color: panelText, alpha: 0.8, align: "center", tags: ["company"], uppercase: true, letterSpacing: 2,
+  }));
+  // Contact â€” left side, below name
+  layers.push(...buildContactLayers(cfg, mx, my + fs.name + fs.title + 22, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.6, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
+  return layers;
+}
+
+/** Wave Gradient â€” Inspired by MTAC: Organic wave shape divider with gradient accent */
+function layoutWaveGradient(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.1;
+  const my = H * 0.15;
+  const layers: LayerV2[] = [];
+
+  // Bottom wave/gradient band
+  layers.push(rect({
+    name: "Gradient Band", x: 0, y: H * 0.6, w: W, h: H * 0.4,
+    fill: lg(135, [cfg.primaryColor, 0], [cfg.secondaryColor, 1]),
+    tags: ["decorative", "accent"],
+    radii: [W * 0.04, 0, 0, 0],
+  }));
+  // Logo â€” top left
   const logoS = H * 0.16;
-  layers.push(buildLogoLayer(cfg, W - mx - logoS, H * 0.2, logoS, logoS, cfg.primaryColor, ff));
-
-  // Separator
-  layers.push(line({
-    name: "Separator", x: mx, y: H * 0.55, w: W * 0.3,
-    color: cfg.primaryColor, alpha: 0.4,
+  layers.push(buildLogoLayer(cfg, mx, my, logoS, logoS, cfg.primaryColor, ff));
+  // Company next to logo
+  layers.push(textLayer({
+    name: "Company", x: mx + logoS + 10, y: my + 2, w: W * 0.4,
+    text: cfg.company || "Company", fontSize: fs.company, ff, weight: 700,
+    color: cfg.textColor, tags: ["company"], autoFit: true,
   }));
+  if (cfg.tagline) {
+    layers.push(textLayer({
+      name: "Tagline", x: mx + logoS + 10, y: my + fs.company + 4, w: W * 0.4,
+      text: cfg.tagline, fontSize: fs.tagline, ff, weight: 300,
+      color: cfg.textColor, alpha: 0.4, tags: ["tagline"],
+    }));
+  }
+  // Name â€” on gradient band
+  const bandText = getContrastColor(cfg.primaryColor);
+  layers.push(textLayer({
+    name: "Name", x: mx, y: H * 0.65, w: W * 0.6,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 600,
+    color: bandText, tags: ["name", "primary-text"], autoFit: true,
+  }));
+  // Title
+  layers.push(textLayer({
+    name: "Title", x: mx, y: H * 0.65 + fs.name + 2, w: W * 0.5,
+    text: cfg.title || "Job Title", fontSize: fs.label, ff, weight: 400,
+    color: bandText, alpha: 0.7, tags: ["title"],
+  }));
+  // Contact â€” right side on band
+  layers.push(...buildContactLayers(cfg, W * 0.55, H * 0.66, Math.round(fs.contact * 1.5), "left", bandText, 0.8, bandText, 0.6, fs.contact, ff, W, H));
+  return layers;
+}
 
-  // Contact
-  layers.push(...buildContactLayers(
-    cfg, mx, H * 0.63, Math.round(fs.contact * 1.5), "left",
-    cfg.textColor, 0.65, cfg.primaryColor, 0.45, fs.contact, ff, W, H
-  ));
+// ===================== CLASSIC / CORPORATE TEMPLATES =====================
 
+/** Circle Brand â€” Inspired by Close Financial: Clean white front + accent circle pattern */
+function layoutCircleBrand(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.08;
+  const my = H * 0.15;
+  const layers: LayerV2[] = [];
+
+  // Logo + Company top-left
+  const logoS = H * 0.18;
+  layers.push(buildLogoLayer(cfg, mx, my, logoS, logoS, cfg.primaryColor, ff));
+  layers.push(textLayer({
+    name: "Company", x: mx + logoS + 10, y: my + 4, w: W * 0.4,
+    text: cfg.company || "Company", fontSize: fs.companyLg, ff, weight: 700,
+    color: cfg.primaryColor, tags: ["company"], autoFit: true,
+  }));
+  if (cfg.tagline) {
+    layers.push(textLayer({
+      name: "Tagline", x: mx + logoS + 10, y: my + fs.companyLg + 8, w: W * 0.4,
+      text: cfg.tagline, fontSize: fs.tagline, ff, weight: 300,
+      color: cfg.textColor, alpha: 0.4, tags: ["tagline"],
+    }));
+  }
+  // Divider
+  layers.push(line({ name: "Divider", x: mx, y: H * 0.48, w: W - 2 * mx, color: cfg.primaryColor, alpha: 0.12 }));
+  // Name
+  layers.push(textLayer({
+    name: "Name", x: mx, y: H * 0.53, w: W * 0.5,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 600,
+    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true,
+  }));
+  // Title
+  layers.push(textLayer({
+    name: "Title", x: mx, y: H * 0.53 + fs.name + 2, w: W * 0.4,
+    text: cfg.title || "Job Title", fontSize: fs.title, ff, weight: 400,
+    color: cfg.primaryColor, tags: ["title"],
+  }));
+  // Contact â€” right side
+  layers.push(...buildContactLayers(cfg, W * 0.55, H * 0.55, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.6, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
+  return layers;
+}
+
+/** Full Color Back â€” Inspired by Gordon Law: White front + accents, full-color back */
+function layoutFullColorBack(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.08;
+  const my = H * 0.15;
+  const layers: LayerV2[] = [];
+
+  // Accent bar left
+  layers.push(rect({
+    name: "Side Accent", x: 0, y: 0, w: 5, h: H,
+    fill: solidPaintHex(cfg.primaryColor, 1), tags: ["decorative", "accent"],
+  }));
+  // Name â€” top left
+  layers.push(textLayer({
+    name: "Name", x: mx + 8, y: my, w: W * 0.55,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 600,
+    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true,
+  }));
+  // Title
+  layers.push(textLayer({
+    name: "Title", x: mx + 8, y: my + fs.name + 4, w: W * 0.5,
+    text: cfg.title || "Job Title", fontSize: fs.title, ff, weight: 400,
+    color: cfg.textColor, alpha: 0.55, tags: ["title"],
+  }));
   // Company
   layers.push(textLayer({
-    name: "Company", x: mx, y: H * 0.92, w: W - 2 * mx, text: cfg.company || "Company",
-    fontSize: fs.label, ff, weight: 600, color: cfg.textColor, alpha: 0.3, tags: ["company"], uppercase: true,
+    name: "Company", x: mx + 8, y: my + fs.name + fs.title + 12, w: W * 0.5,
+    text: cfg.company || "Company", fontSize: fs.company, ff, weight: 500,
+    color: cfg.textColor, alpha: 0.4, tags: ["company"],
   }));
-
+  // Contact â€” left, stacked
+  layers.push(...buildContactLayers(cfg, mx + 8, H * 0.56, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.6, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
+  // Logo â€” right
+  const logoS = H * 0.22;
+  layers.push(buildLogoLayer(cfg, W - mx - logoS, my, logoS, logoS, cfg.primaryColor, ff));
   return layers;
 }
 
-function layoutDotMatrix(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const mx = W * 0.09;
+/** Engineering Pro â€” Inspired by Holdfast Engineering: Professional with color accents + full back */
+function layoutEngineeringPro(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.08;
+  const my = H * 0.15;
   const layers: LayerV2[] = [];
 
-  // Large accent circle
-  layers.push(ellipse({
-    name: "Accent Circle", cx: W * 0.85, cy: H * 0.25, rx: W * 0.2, ry: W * 0.2,
-    fill: solidPaintHex(cfg.primaryColor, 0.06), tags: ["decorative"],
-  }));
-
-  // Name
+  // Logo + Company horizontal â€” top
+  const logoS = H * 0.16;
+  layers.push(buildLogoLayer(cfg, mx, my, logoS, logoS, cfg.primaryColor, ff));
   layers.push(textLayer({
-    name: "Name", x: mx, y: H * 0.2, w: W * 0.6, text: cfg.name || "Your Name",
-    fontSize: fs.name, ff, weight: 700, color: cfg.textColor, tags: ["name", "primary-text"],
+    name: "Company", x: mx + logoS + 8, y: my + 2, w: W * 0.5,
+    text: cfg.company || "Company", fontSize: fs.companyLg, ff, weight: 700,
+    color: cfg.primaryColor, tags: ["company"], autoFit: true,
   }));
-
+  // Separator
+  layers.push(line({ name: "Separator", x: mx, y: my + logoS + 14, w: W - 2 * mx, color: cfg.primaryColor, alpha: 0.15 }));
+  // Name â€” below sep
+  layers.push(textLayer({
+    name: "Name", x: mx, y: my + logoS + 22, w: W * 0.55,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 600,
+    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true,
+  }));
   // Title
   layers.push(textLayer({
-    name: "Title", x: mx, y: H * 0.2 + fs.name + 6, w: W * 0.6, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 400, color: cfg.primaryColor, tags: ["title"],
+    name: "Title", x: mx, y: my + logoS + 22 + fs.name + 2, w: W * 0.5,
+    text: cfg.title || "Job Title", fontSize: fs.label, ff, weight: 400,
+    color: cfg.primaryColor, tags: ["title"],
   }));
+  // Contact â€” 2-column style
+  const contactY = my + logoS + 22 + fs.name + fs.label + 14;
+  layers.push(...buildContactLayers(cfg, mx, contactY, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.55, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
+  return layers;
+}
 
+/** Clean Accent â€” Inspired by Real Estate Corp: White + accent color elements + line pattern */
+function layoutCleanAccent(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.08;
+  const my = H * 0.14;
+  const layers: LayerV2[] = [];
+
+  // Bottom accent bar with gradient
+  layers.push(rect({
+    name: "Bottom Bar", x: 0, y: H - H * 0.06, w: W, h: H * 0.06,
+    fill: lg(90, [cfg.primaryColor, 0], [cfg.secondaryColor, 1]),
+    tags: ["decorative", "accent"],
+  }));
+  // Logo â€” top left
+  const logoS = H * 0.18;
+  layers.push(buildLogoLayer(cfg, mx, my, logoS, logoS, cfg.primaryColor, ff));
+  // Name â€” right of logo
+  layers.push(textLayer({
+    name: "Name", x: mx + logoS + 14, y: my + 2, w: W * 0.45,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 600,
+    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true,
+  }));
+  // Title
+  layers.push(textLayer({
+    name: "Title", x: mx + logoS + 14, y: my + fs.name + 6, w: W * 0.4,
+    text: cfg.title || "Job Title", fontSize: fs.label, ff, weight: 400,
+    color: cfg.primaryColor, tags: ["title"],
+  }));
+  // Separator
+  layers.push(line({ name: "Sep", x: mx, y: H * 0.48, w: W - 2 * mx, color: cfg.textColor, alpha: 0.1 }));
+  // Contact â€” left
+  layers.push(...buildContactLayers(cfg, mx, H * 0.54, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.6, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
+  // Company â€” bottom right (above accent bar)
+  layers.push(textLayer({
+    name: "Company", x: mx, y: H - H * 0.06 - fs.label - 10, w: W - 2 * mx,
+    text: cfg.company || "Company", fontSize: fs.label, ff, weight: 500,
+    color: cfg.textColor, alpha: 0.35, align: "right", tags: ["company"], uppercase: true, letterSpacing: 2,
+  }));
+  return layers;
+}
+
+/** Nature Clean â€” Inspired by Bluebat: White front + QR accent, solid color back */
+function layoutNatureClean(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.08;
+  const my = H * 0.15;
+  const layers: LayerV2[] = [];
+
+  // Name band â€” primary colored bar behind name
+  const bandH = fs.name + 14;
+  layers.push(rect({
+    name: "Name Band", x: 0, y: H * 0.55, w: W * 0.52, h: bandH,
+    fill: solidPaintHex(cfg.primaryColor, 1), tags: ["decorative", "accent"],
+  }));
+  const bandText = getContrastColor(cfg.primaryColor);
+  // Name â€” on band
+  layers.push(textLayer({
+    name: "Name", x: mx, y: H * 0.55 + 6, w: W * 0.45,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 600,
+    color: bandText, tags: ["name", "primary-text"], autoFit: true,
+  }));
+  // Title below band
+  layers.push(textLayer({
+    name: "Title", x: mx, y: H * 0.55 + bandH + 6, w: W * 0.4,
+    text: cfg.title || "Job Title", fontSize: fs.label, ff, weight: 400,
+    color: cfg.primaryColor, tags: ["title"],
+  }));
+  // Contact â€” top right
+  layers.push(...buildContactLayers(cfg, W * 0.55, my, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.6, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
+  // Logo + Company â€” top right
+  const logoS = H * 0.18;
+  layers.push(buildLogoLayer(cfg, W - mx - logoS, H * 0.55 + 4, logoS, logoS, cfg.primaryColor, ff));
+  layers.push(textLayer({
+    name: "Company", x: W - mx - logoS - W * 0.2, y: H * 0.55 + logoS / 2 - fs.label / 2 + 4, w: W * 0.2,
+    text: cfg.company || "Company", fontSize: fs.company, ff, weight: 700,
+    color: cfg.primaryColor, align: "right", tags: ["company"], autoFit: true,
+  }));
+  return layers;
+}
+
+/** Diamond Brand â€” Inspired by Web Gurus: White front + diamond pattern accents */
+function layoutDiamondBrand(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.08;
+  const my = H * 0.15;
+  const layers: LayerV2[] = [];
+
+  // Logo left
+  const logoS = H * 0.22;
+  layers.push(buildLogoLayer(cfg, mx, my, logoS, logoS, cfg.primaryColor, ff));
+  // Company right of logo
+  layers.push(textLayer({
+    name: "Company", x: mx + logoS + 10, y: my + 4, w: W * 0.4,
+    text: cfg.company || "Company", fontSize: fs.companyLg, ff, weight: 700,
+    color: cfg.primaryColor, tags: ["company"], autoFit: true,
+  }));
+  // Name â€” middle
+  layers.push(textLayer({
+    name: "Name", x: mx, y: H * 0.45, w: W * 0.55,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 600,
+    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true,
+  }));
+  // Title
+  layers.push(textLayer({
+    name: "Title", x: mx, y: H * 0.45 + fs.name + 4, w: W * 0.5,
+    text: cfg.title || "Job Title", fontSize: fs.title, ff, weight: 400,
+    color: cfg.secondaryColor, tags: ["title"],
+  }));
+  // Contact â€” multi column
+  layers.push(...buildContactLayers(cfg, mx, H * 0.45 + fs.name + fs.title + 16, Math.round(fs.contact * 1.45), "left", cfg.textColor, 0.6, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
+  // Social media highlight
+  const socialY = H - my;
+  if (cfg.website) {
+    layers.push(textLayer({
+      name: "website", x: mx, y: socialY, w: W - 2 * mx,
+      text: cfg.website, fontSize: fs.label, ff, weight: 400,
+      color: cfg.secondaryColor, alpha: 0.7, tags: ["contact-website", "contact-text"],
+    }));
+  }
+  return layers;
+}
+
+// ===================== CREATIVE TEMPLATES =====================
+
+/** Flowing Lines â€” Inspired by Curve Studio: Concentric flowing line patterns on dark bg */
+function layoutFlowingLines(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.1;
+  const my = H * 0.15;
+  const layers: LayerV2[] = [];
+
+  // Decorative curve lines (simplified as concentric ellipses)
+  for (let i = 0; i < 5; i++) {
+    layers.push(ellipse({
+      name: `Curve ${i + 1}`, cx: W * 0.15, cy: H * 0.3, rx: W * (0.12 + i * 0.05), ry: H * (0.18 + i * 0.06),
+      fill: solidPaintHex(cfg.primaryColor, 0), tags: ["decorative", "accent"],
+      opacity: 0.15 - i * 0.02,
+    }));
+  }
+  // Company + Tagline â€” right side
+  layers.push(textLayer({
+    name: "Company", x: W * 0.48, y: my, w: W * 0.45,
+    text: cfg.company || "Company", fontSize: fs.companyLg, ff, weight: 700,
+    color: cfg.textColor, align: "right", tags: ["company"], autoFit: true,
+  }));
+  if (cfg.tagline) {
+    layers.push(textLayer({
+      name: "Tagline", x: W * 0.48, y: my + fs.companyLg + 4, w: W * 0.45,
+      text: cfg.tagline, fontSize: fs.tagline, ff, weight: 300,
+      color: cfg.textColor, alpha: 0.4, align: "right", tags: ["tagline"],
+    }));
+  }
+  if (cfg.website) {
+    layers.push(textLayer({
+      name: "website", x: W * 0.48, y: my + fs.companyLg + (cfg.tagline ? fs.tagline + 8 : 0) + 8, w: W * 0.45,
+      text: cfg.website, fontSize: fs.label, ff, weight: 400,
+      color: cfg.primaryColor, align: "right", tags: ["contact-website", "contact-text"],
+    }));
+  }
+  // Name â€” bottom left
+  layers.push(textLayer({
+    name: "Name", x: mx, y: H * 0.58, w: W * 0.55,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 700,
+    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true,
+  }));
+  // Title
+  layers.push(textLayer({
+    name: "Title", x: mx, y: H * 0.58 + fs.name + 4, w: W * 0.5,
+    text: cfg.title || "Job Title", fontSize: fs.title, ff, weight: 400,
+    color: cfg.primaryColor, tags: ["title"],
+  }));
+  // Contact
+  layers.push(...buildContactLayers(cfg, mx, H * 0.58 + fs.name + fs.title + 16, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.65, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
+  return layers;
+}
+
+/** Neon Watermark â€” Inspired by Global Insurance: Dark bg + large watermark logo */
+function layoutNeonWatermark(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.08;
+  const my = H * 0.15;
+  const layers: LayerV2[] = [];
+
+  // Large watermark circle
+  layers.push(ellipse({
+    name: "Watermark Circle", cx: W * 0.7, cy: H * 0.45, rx: H * 0.5, ry: H * 0.5,
+    fill: solidPaintHex(cfg.primaryColor, 0.06), tags: ["decorative", "monogram"],
+  }));
+  // Logo â€” top left
+  const logoS = H * 0.18;
+  layers.push(buildLogoLayer(cfg, mx, my, logoS, logoS, cfg.primaryColor, ff));
+  // Company next to logo
+  layers.push(textLayer({
+    name: "Company", x: mx + logoS + 10, y: my + 4, w: W * 0.4,
+    text: cfg.company || "Company", fontSize: fs.company, ff, weight: 700,
+    color: cfg.primaryColor, tags: ["company"], autoFit: true,
+  }));
+  // Name
+  layers.push(textLayer({
+    name: "Name", x: mx, y: H * 0.48, w: W * 0.55,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 600,
+    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true, italic: true,
+  }));
+  // Title
+  layers.push(textLayer({
+    name: "Title", x: mx, y: H * 0.48 + fs.name + 2, w: W * 0.5,
+    text: cfg.title || "Job Title", fontSize: fs.label, ff, weight: 400,
+    color: cfg.textColor, alpha: 0.5, tags: ["title"], uppercase: true, letterSpacing: 2,
+  }));
+  // Contact
+  layers.push(...buildContactLayers(cfg, mx, H * 0.48 + fs.name + fs.label + 14, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.65, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
+  return layers;
+}
+
+/** Blueprint Tech â€” Inspired by Ahmad Atef: Technical blueprint bg pattern + accent QR */
+function layoutBlueprintTech(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.08;
+  const my = H * 0.15;
+  const layers: LayerV2[] = [];
+
+  // Top bar with logo + company
+  layers.push(rect({
+    name: "Top Bar", x: 0, y: 0, w: W, h: H * 0.28,
+    fill: solidPaintHex(cfg.secondaryColor, 0.08), tags: ["decorative", "accent"],
+  }));
+  // Small accent square (QR bg)
+  layers.push(rect({
+    name: "QR Accent", x: W - mx - H * 0.2, y: my * 0.5, w: H * 0.2, h: H * 0.2,
+    fill: solidPaintHex(cfg.primaryColor, 1), tags: ["decorative", "accent"],
+    radii: [3, 3, 3, 3],
+  }));
+  // Company â€” top left
+  layers.push(textLayer({
+    name: "Company", x: mx, y: my * 0.6, w: W * 0.5,
+    text: cfg.company || "Company", fontSize: fs.label, ff, weight: 400,
+    color: cfg.textColor, alpha: 0.4, tags: ["company"], italic: true,
+  }));
+  // Name â€” below bar
+  layers.push(textLayer({
+    name: "Name", x: mx, y: H * 0.35, w: W * 0.55,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 700,
+    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true,
+  }));
+  // Title
+  layers.push(textLayer({
+    name: "Title", x: mx, y: H * 0.35 + fs.name + 2, w: W * 0.5,
+    text: cfg.title || "Job Title", fontSize: fs.label, ff, weight: 400,
+    color: cfg.textColor, alpha: 0.55, tags: ["title"],
+  }));
+  // Contact
+  layers.push(...buildContactLayers(cfg, mx, H * 0.35 + fs.name + fs.label + 14, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.6, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
   // Logo
   const logoS = H * 0.14;
-  layers.push(buildLogoLayer(cfg, W - mx - logoS, mx, logoS, logoS, cfg.primaryColor, ff));
-
-  // Separator
-  layers.push(line({
-    name: "Separator", x: mx, y: H * 0.5, w: W * 0.3,
-    color: cfg.secondaryColor, alpha: 0.3,
-  }));
-
-  // Contact
-  layers.push(...buildContactLayers(
-    cfg, mx, H * 0.58, Math.round(fs.contact * 1.45), "left",
-    cfg.textColor, 0.6, cfg.primaryColor, 0.4, fs.contact, ff, W, H
-  ));
-
-  // Company
-  layers.push(textLayer({
-    name: "Company", x: mx, y: H * 0.9, w: W - 2 * mx, text: cfg.company || "Company",
-    fontSize: fs.label, ff, weight: 600, color: cfg.textColor, alpha: 0.3, tags: ["company"], uppercase: true,
-  }));
-
+  layers.push(buildLogoLayer(cfg, mx, my * 0.5, logoS, logoS, cfg.primaryColor, ff));
   return layers;
 }
 
-// --- Luxury ---
-
-function layoutGoldFoil(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+/** Skyline Silhouette â€” Inspired by Real Estate: City skyline silhouette + clean layout */
+function layoutSkylineSilhouette(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.08;
+  const my = H * 0.14;
   const layers: LayerV2[] = [];
-  // Use config colors so AI color changes propagate to gold accents
-  const gold1 = cfg.primaryColor;
-  const gold2 = cfg.secondaryColor;
 
-  // Border
-  layers.push(rect({
-    name: "Gold Border", x: 16, y: 16, w: W - 32, h: H - 32,
-    stroke: stroke(gold1, 1.5), tags: ["decorative", "border", "accent"],
+  // Skyline silhouette bar (simplified as stepped rectangles at bottom)
+  const skyH = H * 0.25;
+  const skyY = H - skyH;
+  // Building shapes
+  layers.push(rect({ name: "Building 1", x: 0, y: skyY + skyH * 0.4, w: W * 0.08, h: skyH * 0.6, fill: solidPaintHex(cfg.primaryColor, 0.15), tags: ["decorative", "skyline"] }));
+  layers.push(rect({ name: "Building 2", x: W * 0.09, y: skyY + skyH * 0.2, w: W * 0.05, h: skyH * 0.8, fill: solidPaintHex(cfg.primaryColor, 0.12), tags: ["decorative", "skyline"] }));
+  layers.push(rect({ name: "Building 3", x: W * 0.15, y: skyY, w: W * 0.06, h: skyH, fill: solidPaintHex(cfg.primaryColor, 0.18), tags: ["decorative", "skyline"] }));
+  layers.push(rect({ name: "Building 4", x: W * 0.22, y: skyY + skyH * 0.3, w: W * 0.07, h: skyH * 0.7, fill: solidPaintHex(cfg.primaryColor, 0.13), tags: ["decorative", "skyline"] }));
+  layers.push(rect({ name: "Building 5", x: W * 0.30, y: skyY + skyH * 0.1, w: W * 0.04, h: skyH * 0.9, fill: solidPaintHex(cfg.primaryColor, 0.16), tags: ["decorative", "skyline"] }));
+  layers.push(rect({ name: "Building 6", x: W * 0.35, y: skyY + skyH * 0.35, w: W * 0.08, h: skyH * 0.65, fill: solidPaintHex(cfg.primaryColor, 0.11), tags: ["decorative", "skyline"] }));
+  layers.push(rect({ name: "Building 7", x: W * 0.44, y: skyY + skyH * 0.15, w: W * 0.05, h: skyH * 0.85, fill: solidPaintHex(cfg.primaryColor, 0.14), tags: ["decorative", "skyline"] }));
+  layers.push(rect({ name: "Building 8", x: W * 0.50, y: skyY + skyH * 0.45, w: W * 0.06, h: skyH * 0.55, fill: solidPaintHex(cfg.primaryColor, 0.10), tags: ["decorative", "skyline"] }));
+  layers.push(rect({ name: "Building 9", x: W * 0.57, y: skyY + skyH * 0.2, w: W * 0.07, h: skyH * 0.8, fill: solidPaintHex(cfg.primaryColor, 0.15), tags: ["decorative", "skyline"] }));
+  layers.push(rect({ name: "Building 10", x: W * 0.65, y: skyY + skyH * 0.05, w: W * 0.04, h: skyH * 0.95, fill: solidPaintHex(cfg.primaryColor, 0.17), tags: ["decorative", "skyline"] }));
+  layers.push(rect({ name: "Building 11", x: W * 0.70, y: skyY + skyH * 0.3, w: W * 0.06, h: skyH * 0.7, fill: solidPaintHex(cfg.primaryColor, 0.12), tags: ["decorative", "skyline"] }));
+  layers.push(rect({ name: "Building 12", x: W * 0.77, y: skyY + skyH * 0.15, w: W * 0.05, h: skyH * 0.85, fill: solidPaintHex(cfg.primaryColor, 0.14), tags: ["decorative", "skyline"] }));
+  layers.push(rect({ name: "Building 13", x: W * 0.83, y: skyY + skyH * 0.4, w: W * 0.08, h: skyH * 0.6, fill: solidPaintHex(cfg.primaryColor, 0.11), tags: ["decorative", "skyline"] }));
+  layers.push(rect({ name: "Building 14", x: W * 0.92, y: skyY + skyH * 0.25, w: W * 0.08, h: skyH * 0.75, fill: solidPaintHex(cfg.primaryColor, 0.13), tags: ["decorative", "skyline"] }));
+  // Logo + Company â€” top
+  const logoS = H * 0.18;
+  layers.push(buildLogoLayer(cfg, mx, my, logoS, logoS, cfg.primaryColor, ff));
+  layers.push(textLayer({
+    name: "Company", x: mx + logoS + 8, y: my + 2, w: W * 0.5,
+    text: cfg.company || "Company", fontSize: fs.companyLg, ff, weight: 700,
+    color: cfg.textColor, tags: ["company"], autoFit: true,
   }));
-
-  // Corner L-shapes (simplified as small rectangles)
-  const corners = [
-    { name: "Corner TL-H", x: 20, y: 20, w: 20, h: 1.5 },
-    { name: "Corner TL-V", x: 20, y: 20, w: 1.5, h: 20 },
-    { name: "Corner TR-H", x: W - 40, y: 20, w: 20, h: 1.5 },
-    { name: "Corner TR-V", x: W - 21.5, y: 20, w: 1.5, h: 20 },
-    { name: "Corner BL-H", x: 20, y: H - 21.5, w: 20, h: 1.5 },
-    { name: "Corner BL-V", x: 20, y: H - 40, w: 1.5, h: 20 },
-    { name: "Corner BR-H", x: W - 40, y: H - 21.5, w: 20, h: 1.5 },
-    { name: "Corner BR-V", x: W - 21.5, y: H - 40, w: 1.5, h: 20 },
-  ];
-  for (const c of corners) {
-    layers.push(rect({
-      name: c.name, x: c.x, y: c.y, w: c.w, h: c.h,
-      fill: solidPaintHex(gold2), tags: ["decorative", "corner", "accent"],
+  if (cfg.tagline) {
+    layers.push(textLayer({
+      name: "Tagline", x: mx + logoS + 8, y: my + fs.companyLg + 4, w: W * 0.5,
+      text: cfg.tagline, fontSize: fs.tagline, ff, weight: 300,
+      color: cfg.textColor, alpha: 0.4, tags: ["tagline"],
     }));
   }
-
-  // Logo (centered top)
-  const logoS = H * 0.18;
-  layers.push(buildLogoLayer(cfg, W / 2 - logoS / 2, H * 0.08, logoS, logoS, gold1, ff));
-
-  // Name (centered)
+  // Name + Contact â€” middle
   layers.push(textLayer({
-    name: "Name", x: 0, y: H * 0.42, w: W, text: cfg.name || "Your Name",
-    fontSize: fs.name, ff, weight: 600, color: cfg.textColor, align: "center",
-    tags: ["name", "primary-text"],
+    name: "Name", x: mx, y: H * 0.42, w: W * 0.5,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 600,
+    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true,
   }));
-
-  // Title
   layers.push(textLayer({
-    name: "Title", x: 0, y: H * 0.42 + fs.title + 8, w: W, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 400, color: gold1, align: "center", tags: ["title"],
+    name: "Title", x: mx, y: H * 0.42 + fs.name + 2, w: W * 0.4,
+    text: cfg.title || "Job Title", fontSize: fs.label, ff, weight: 400,
+    color: cfg.textColor, alpha: 0.5, tags: ["title"],
   }));
-
-  // Gold divider
-  layers.push(line({
-    name: "Gold Divider", x: W * 0.25, y: H * 0.56, w: W * 0.5,
-    color: gold1, alpha: 0.5,
-  }));
-
-  // Contact (centered)
-  layers.push(...buildContactLayers(
-    cfg, W / 2, H * 0.65, Math.round(fs.contact * 1.45), "center",
-    cfg.textColor, 0.55, gold1, 0.4, fs.contact, ff, W, H
-  ));
-
-  // Company (bottom center)
-  layers.push(textLayer({
-    name: "Company", x: 0, y: H * 0.93, w: W, text: cfg.company || "Company",
-    fontSize: fs.label, ff, weight: 600, color: gold1, alpha: 0.5, align: "center",
-    tags: ["company"], uppercase: true, letterSpacing: 3,
-  }));
-
+  layers.push(...buildContactLayers(cfg, W * 0.55, H * 0.42, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.6, cfg.primaryColor, 0.5, fs.contact, ff, W, skyY));
   return layers;
 }
 
-function layoutMarbleLuxe(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const mx = W * 0.1;
+/** World Map â€” Inspired by Jonathan Doe: World map watermark + boxed contact layout */
+function layoutWorldMap(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.08;
+  const my = H * 0.15;
   const layers: LayerV2[] = [];
 
-  // Subtle marble gradient
+  // Map watermark (large subtle rectangle)
   layers.push(rect({
-    name: "Marble Gradient", x: 0, y: 0, w: W, h: H,
-    fill: lg(135, [cfg.bgColor, 0], [cfg.secondaryColor, 0.5, 0.04], [cfg.bgColor, 1]),
-    tags: ["decorative"],
+    name: "Map Watermark", x: W * 0.3, y: H * 0.05, w: W * 0.65, h: H * 0.6,
+    fill: solidPaintHex(cfg.primaryColor, 0.04), tags: ["decorative", "monogram"],
+    radii: [4, 4, 4, 4],
   }));
-
-  // Top accent line
+  // Name â€” top left, bold
+  layers.push(textLayer({
+    name: "Name", x: mx, y: my, w: W * 0.6,
+    text: cfg.name || "Your Name", fontSize: fs.nameXl, ff, weight: 700,
+    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true, uppercase: true,
+  }));
+  // Title
+  layers.push(textLayer({
+    name: "Title", x: mx, y: my + fs.nameXl + 4, w: W * 0.5,
+    text: cfg.title || "Job Title", fontSize: fs.label, ff, weight: 400,
+    color: cfg.textColor, alpha: 0.5, tags: ["title"], uppercase: true, letterSpacing: 2,
+  }));
+  // Boxed contact section at bottom
   layers.push(rect({
-    name: "Top Accent", x: mx, y: H * 0.08, w: W * 0.15, h: 2,
+    name: "Contact Box", x: mx, y: H * 0.55, w: W - 2 * mx, h: H * 0.35,
+    fill: solidPaintHex(cfg.primaryColor, 0.04), tags: ["decorative"],
+    radii: [3, 3, 3, 3],
+  }));
+  layers.push(...buildContactLayers(cfg, mx + 12, H * 0.59, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.7, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
+  // Company â€” bottom right
+  layers.push(textLayer({
+    name: "Company", x: mx, y: H - my + 4, w: W - 2 * mx,
+    text: cfg.company || "Company", fontSize: fs.label, ff, weight: 500,
+    color: cfg.textColor, alpha: 0.3, align: "right", tags: ["company"], uppercase: true, letterSpacing: 3,
+  }));
+  // Logo
+  const logoS = H * 0.14;
+  layers.push(buildLogoLayer(cfg, W - mx - logoS, my, logoS, logoS, cfg.primaryColor, ff));
+  return layers;
+}
+
+/** Diagonal Gold â€” Inspired by Yes Assistant: Teal bg + diagonal gold accent bar */
+function layoutDiagonalGold(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.08;
+  const my = H * 0.15;
+  const layers: LayerV2[] = [];
+
+  // Diagonal gold stripe
+  layers.push(rect({
+    name: "Diagonal Stripe", x: W * 0.25, y: H * 0.35, w: W * 0.55, h: H * 0.08,
+    fill: lg(15, [cfg.secondaryColor, 0], [cfg.primaryColor, 1]),
+    tags: ["decorative", "accent"],
+  }));
+  // Logo â€” top left
+  const logoS = H * 0.18;
+  layers.push(buildLogoLayer(cfg, mx, my, logoS, logoS, cfg.primaryColor, ff));
+  // Company top right
+  layers.push(textLayer({
+    name: "Company", x: W * 0.35, y: my, w: W * 0.55,
+    text: cfg.company || "Company", fontSize: fs.label, ff, weight: 500,
+    color: cfg.textColor, alpha: 0.5, align: "right", tags: ["company"], uppercase: true, letterSpacing: 2,
+  }));
+  if (cfg.website) {
+    layers.push(textLayer({
+      name: "website", x: W * 0.35, y: my + fs.label + 4, w: W * 0.55,
+      text: cfg.website, fontSize: fs.label, ff, weight: 400,
+      color: cfg.primaryColor, alpha: 0.6, align: "right", tags: ["contact-website", "contact-text"],
+    }));
+  }
+  // Name â€” below stripe
+  layers.push(textLayer({
+    name: "Name", x: mx, y: H * 0.52, w: W * 0.6,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 700,
+    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true,
+  }));
+  // Title
+  layers.push(textLayer({
+    name: "Title", x: mx, y: H * 0.52 + fs.name + 2, w: W * 0.5,
+    text: cfg.title || "Job Title", fontSize: fs.title, ff, weight: 400,
+    color: cfg.primaryColor, tags: ["title"],
+  }));
+  // Contact
+  layers.push(...buildContactLayers(cfg, mx, H * 0.52 + fs.name + fs.title + 14, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.7, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
+  return layers;
+}
+
+// ===================== LUXURY TEMPLATES =====================
+
+/** Luxury Divider â€” Inspired by Charles Jones: Dark teal + gold accents + vertical dividers */
+function layoutLuxuryDivider(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.08;
+  const my = H * 0.12;
+  const layers: LayerV2[] = [];
+
+  // Vertical gold dividers
+  layers.push(rect({ name: "V-Divider 1", x: W * 0.5, y: my, w: 1.5, h: H - 2 * my, fill: solidPaintHex(cfg.primaryColor, 0.3), tags: ["decorative", "divider"] }));
+  layers.push(rect({ name: "V-Divider 2", x: W * 0.75, y: my, w: 1.5, h: H - 2 * my, fill: solidPaintHex(cfg.primaryColor, 0.15), tags: ["decorative", "divider"] }));
+  // Logo â€” top right
+  const logoS = H * 0.2;
+  layers.push(buildLogoLayer(cfg, W - mx - logoS, my, logoS, logoS, cfg.primaryColor, ff));
+  // Company vertical text area (right of second divider)
+  layers.push(textLayer({
+    name: "Company", x: W * 0.76, y: my + logoS + 14, w: W * 0.16,
+    text: cfg.company || "Company", fontSize: fs.label, ff, weight: 500,
+    color: cfg.textColor, alpha: 0.5, tags: ["company"], uppercase: true, letterSpacing: 3,
+  }));
+  // Name â€” left side, large
+  layers.push(textLayer({
+    name: "Name", x: mx, y: H * 0.4, w: W * 0.42,
+    text: cfg.name || "Your Name", fontSize: fs.nameXl, ff, weight: 700,
+    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true,
+  }));
+  // Title â€” in primary/gold color
+  layers.push(textLayer({
+    name: "Title", x: mx, y: H * 0.4 + fs.nameXl + 4, w: W * 0.4,
+    text: cfg.title || "Job Title", fontSize: fs.label, ff, weight: 400,
+    color: cfg.primaryColor, tags: ["title"], uppercase: true, letterSpacing: 2,
+  }));
+  // Contact â€” between dividers
+  layers.push(...buildContactLayers(cfg, W * 0.52, H * 0.42, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.65, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
+  return layers;
+}
+
+/** Social Band â€” Inspired by Visionary Vogue: Dark bg + cream social media band */
+function layoutSocialBand(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.1;
+  const my = H * 0.15;
+  const layers: LayerV2[] = [];
+  const bandH = H * 0.2;
+  const bandY = H - bandH;
+
+  // Bottom band (lighter color)
+  layers.push(rect({
+    name: "Social Band", x: 0, y: bandY, w: W, h: bandH,
+    fill: solidPaintHex(cfg.secondaryColor, 0.5), tags: ["decorative", "accent", "panel"],
+  }));
+  // Company â€” centered top
+  layers.push(textLayer({
+    name: "Company", x: 0, y: my, w: W,
+    text: cfg.company || "Company", fontSize: fs.companyLg, ff, weight: 400,
+    color: cfg.textColor, align: "center", tags: ["company"], uppercase: true, letterSpacing: 5,
+  }));
+  // Title centered
+  layers.push(textLayer({
+    name: "Title", x: 0, y: my + fs.companyLg + 6, w: W,
+    text: cfg.title || "Title", fontSize: fs.label, ff, weight: 400,
+    color: cfg.textColor, alpha: 0.5, align: "center", tags: ["title"], uppercase: true, letterSpacing: 3,
+  }));
+  // Divider
+  layers.push(line({ name: "Divider", x: W * 0.35, y: my + fs.companyLg + fs.label + 18, w: W * 0.3, color: cfg.primaryColor, alpha: 0.3 }));
+  // Name â€” centered middle
+  layers.push(textLayer({
+    name: "Name", x: 0, y: H * 0.48, w: W,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 600,
+    color: cfg.textColor, align: "center", tags: ["name", "primary-text"], autoFit: true,
+  }));
+  // Social / Contact on band
+  const bandTextColor = getContrastColor(cfg.secondaryColor);
+  layers.push(...buildContactLayers(cfg, W / 2, bandY + bandH * 0.2, Math.round(fs.contact * 1.4), "center", bandTextColor, 0.7, bandTextColor, 0.5, fs.contact, ff, W, H));
+  // Logo
+  const logoS = H * 0.12;
+  layers.push(buildLogoLayer(cfg, (W - logoS) / 2, H * 0.48 + fs.name + 10, logoS, logoS, cfg.primaryColor, ff));
+  return layers;
+}
+
+/** Organic Pattern â€” Inspired by Company Logo Green: Topographic/organic pattern bg */
+function layoutOrganicPattern(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.1;
+  const my = H * 0.15;
+  const layers: LayerV2[] = [];
+
+  // Subtle topographic lines (simplified as concentric rounded rects)
+  for (let i = 0; i < 6; i++) {
+    layers.push(rect({
+      name: `Topo Line ${i + 1}`,
+      x: W * (0.02 + i * 0.06), y: H * (0.05 + i * 0.04),
+      w: W * (0.96 - i * 0.12), h: H * (0.9 - i * 0.08),
+      fill: solidPaintHex(cfg.primaryColor, 0),
+      stroke: stroke(cfg.primaryColor, 0.8, 0.06 + i * 0.01),
+      tags: ["decorative", "pattern"],
+      radii: [20 + i * 8, 20 + i * 8, 20 + i * 8, 20 + i * 8],
+    }));
+  }
+  // Left panel for contact/name
+  layers.push(rect({
+    name: "Content Panel", x: 0, y: 0, w: W * 0.42, h: H,
+    fill: solidPaintHex(cfg.bgColor, 0.85), tags: ["decorative", "panel"],
+  }));
+  // Name on panel
+  layers.push(textLayer({
+    name: "Name", x: mx, y: my, w: W * 0.32,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 700,
+    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true,
+  }));
+  // Title
+  layers.push(textLayer({
+    name: "Title", x: mx, y: my + fs.name + 4, w: W * 0.3,
+    text: cfg.title || "Job Title", fontSize: fs.label, ff, weight: 400,
+    color: cfg.textColor, alpha: 0.5, tags: ["title"],
+  }));
+  // Contact
+  layers.push(...buildContactLayers(cfg, mx, my + fs.name + fs.label + 20, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.65, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
+  // Logo â€” right side
+  const logoS = H * 0.2;
+  layers.push(buildLogoLayer(cfg, W * 0.6, (H - logoS) / 2, logoS, logoS, cfg.primaryColor, ff));
+  // Company
+  layers.push(textLayer({
+    name: "Company", x: W * 0.5, y: H - my, w: W * 0.42,
+    text: cfg.company || "Company", fontSize: fs.label, ff, weight: 500,
+    color: cfg.textColor, alpha: 0.6, align: "right", tags: ["company"], uppercase: true, letterSpacing: 2,
+  }));
+  return layers;
+}
+
+/** Celtic Stripe â€” Inspired by Celtic Pattern: Ornamental pattern stripe on one side */
+function layoutCelticStripe(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.1;
+  const my = H * 0.15;
+  const layers: LayerV2[] = [];
+  const stripeW = W * 0.06;
+
+  // Left ornamental stripe
+  layers.push(rect({
+    name: "Ornament Stripe", x: mx * 0.5, y: my * 0.5, w: stripeW, h: H - my,
+    fill: lg(0, [cfg.primaryColor, 0], [cfg.secondaryColor, 0.5], [cfg.primaryColor, 1]),
+    tags: ["decorative", "accent", "border"],
+  }));
+  // Stripe inner pattern (dots)
+  for (let i = 0; i < 8; i++) {
+    layers.push(ellipse({
+      name: `Stripe Dot ${i + 1}`, cx: mx * 0.5 + stripeW / 2, cy: my + i * ((H - 2 * my) / 8),
+      rx: stripeW * 0.2, ry: stripeW * 0.2,
+      fill: solidPaintHex(cfg.bgColor, 0.3), tags: ["decorative"],
+    }));
+  }
+  // Name â€” right of stripe
+  const contentX = mx * 0.5 + stripeW + mx;
+  layers.push(textLayer({
+    name: "Name", x: contentX, y: my, w: W - contentX - mx,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 600,
+    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true, uppercase: true, letterSpacing: 2,
+  }));
+  // Divider
+  layers.push(line({ name: "Divider", x: contentX, y: my + fs.name + 10, w: W * 0.3, color: cfg.primaryColor, alpha: 0.25, thickness: 1 }));
+  // Contact
+  layers.push(...buildContactLayers(cfg, contentX, my + fs.name + 20, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.6, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
+  // Company â€” bottom right
+  layers.push(textLayer({
+    name: "Company", x: contentX, y: H - my, w: W - contentX - mx,
+    text: cfg.company || "Company", fontSize: fs.label, ff, weight: 500,
+    color: cfg.textColor, alpha: 0.4, align: "right", tags: ["company"], uppercase: true, letterSpacing: 3,
+  }));
+  return layers;
+}
+
+/** Premium Crest â€” Inspired by Company Green Dark: Dark front + triangle accent area */
+function layoutPremiumCrest(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.1;
+  const my = H * 0.15;
+  const layers: LayerV2[] = [];
+
+  // Right accent bar
+  layers.push(rect({
+    name: "Right Accent", x: W - mx * 0.6, y: H * 0.2, w: 3, h: H * 0.6,
     fill: solidPaintHex(cfg.primaryColor, 0.5), tags: ["decorative", "accent"],
   }));
-
-  // Name
+  // Logo â€” centered top
+  const logoS = H * 0.22;
+  layers.push(buildLogoLayer(cfg, (W - logoS) / 2, my * 0.8, logoS, logoS, cfg.primaryColor, ff));
+  // Company â€” centered below logo
   layers.push(textLayer({
-    name: "Name", x: mx, y: H * 0.2, w: W * 0.7, text: cfg.name || "Your Name",
-    fontSize: fs.name, ff, weight: 400, color: cfg.textColor, tags: ["name", "primary-text"],
-    letterSpacing: 1,
+    name: "Company", x: 0, y: my * 0.8 + logoS + 8, w: W,
+    text: cfg.company || "Company", fontSize: fs.companyLg, ff, weight: 700,
+    color: cfg.textColor, align: "center", tags: ["company"], autoFit: true,
   }));
-
+  if (cfg.tagline) {
+    layers.push(textLayer({
+      name: "Tagline", x: 0, y: my * 0.8 + logoS + 8 + fs.companyLg + 4, w: W,
+      text: cfg.tagline, fontSize: fs.tagline, ff, weight: 300,
+      color: cfg.textColor, alpha: 0.4, align: "center", tags: ["tagline"],
+    }));
+  }
+  // Divider
+  layers.push(line({ name: "Divider", x: W * 0.3, y: H * 0.58, w: W * 0.4, color: cfg.primaryColor, alpha: 0.25 }));
+  // Name â€” centered
+  layers.push(textLayer({
+    name: "Name", x: 0, y: H * 0.62, w: W,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 600,
+    color: cfg.textColor, align: "center", tags: ["name", "primary-text"], autoFit: true,
+  }));
   // Title
   layers.push(textLayer({
-    name: "Title", x: mx, y: H * 0.2 + fs.name + 6, w: W * 0.7, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 300, color: cfg.secondaryColor, tags: ["title"], italic: true,
+    name: "Title", x: 0, y: H * 0.62 + fs.name + 4, w: W,
+    text: cfg.title || "Job Title", fontSize: fs.label, ff, weight: 400,
+    color: cfg.primaryColor, align: "center", tags: ["title"], uppercase: true, letterSpacing: 2,
   }));
-
-  // Logo
-  const logoS = H * 0.16;
-  layers.push(buildLogoLayer(cfg, W - mx - logoS, H * 0.15, logoS, logoS, cfg.primaryColor, ff));
-
-  // Separator
-  layers.push(line({
-    name: "Separator", x: mx, y: H * 0.5, w: W * 0.8,
-    color: cfg.secondaryColor, alpha: 0.15,
-  }));
-
-  // Contact
-  layers.push(...buildContactLayers(
-    cfg, mx, H * 0.58, Math.round(fs.contact * 1.45), "left",
-    cfg.textColor, 0.55, cfg.primaryColor, 0.3, fs.contact, ff, W, H
-  ));
-
-  // Company
-  layers.push(textLayer({
-    name: "Company", x: mx, y: H * 0.92, w: W - 2 * mx, text: cfg.company || "Company",
-    fontSize: fs.label, ff, weight: 500, color: cfg.secondaryColor, alpha: 0.4, align: "right",
-    tags: ["company"], uppercase: true,
-  }));
-
+  // Contact â€” centered
+  layers.push(...buildContactLayers(cfg, W / 2, H * 0.62 + fs.name + fs.label + 16, Math.round(fs.contact * 1.4), "center", cfg.textColor, 0.6, cfg.primaryColor, 0.45, fs.contact, ff, W, H));
   return layers;
 }
 
-function layoutVelvetNoir(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const mx = W * 0.1;
+/** Gold Construct â€” Inspired by News Business: Teal/gold, vertical text, construction/premium feel */
+function layoutGoldConstruct(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
+  const mx = W * 0.08;
+  const my = H * 0.12;
   const layers: LayerV2[] = [];
 
-  // Subtle dark gradient
+  // Top gold accent bar
   layers.push(rect({
-    name: "Dark Gradient", x: 0, y: 0, w: W, h: H,
-    fill: lg(135, [cfg.primaryColor, 0, 0.08], [cfg.bgColor, 1, 0]),
-    tags: ["decorative"],
+    name: "Gold Top Bar", x: mx, y: my * 0.5, w: W - 2 * mx, h: 3,
+    fill: solidPaintHex(cfg.primaryColor, 0.6), tags: ["decorative", "accent", "border"],
   }));
-
-  // Side accent bar
+  // Bottom gold accent bar
   layers.push(rect({
-    name: "Side Bar", x: W - 6, y: H * 0.2, w: 6, h: H * 0.6,
-    fill: lg(90, [cfg.primaryColor, 0], [cfg.secondaryColor, 1]),
-    tags: ["decorative", "accent"],
+    name: "Gold Bottom Bar", x: mx, y: H - my * 0.5 - 3, w: W - 2 * mx, h: 3,
+    fill: solidPaintHex(cfg.primaryColor, 0.6), tags: ["decorative", "accent", "border"],
   }));
-
-  // Name
-  layers.push(textLayer({
-    name: "Name", x: mx, y: H * 0.22, w: W * 0.7, text: cfg.name || "Your Name",
-    fontSize: fs.name, ff, weight: 400, color: cfg.textColor, tags: ["name", "primary-text"],
-    letterSpacing: 2,
-  }));
-
-  // Title
-  layers.push(textLayer({
-    name: "Title", x: mx, y: H * 0.22 + fs.name + 6, w: W * 0.7, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 300, color: cfg.primaryColor, tags: ["title"], italic: true,
-  }));
-
-  // Logo
-  const logoS = H * 0.14;
-  layers.push(buildLogoLayer(cfg, mx, H * 0.5, logoS, logoS, cfg.primaryColor, ff));
-
-  // Company (next to logo)
-  layers.push(textLayer({
-    name: "Company", x: mx + logoS + 10, y: H * 0.5 + logoS / 2 - fs.label / 2, w: W * 0.3,
-    text: cfg.company || "Company",
-    fontSize: fs.label, ff, weight: 600, color: cfg.textColor, alpha: 0.3, tags: ["company"], uppercase: true,
-  }));
-
-  // Separator
-  layers.push(line({
-    name: "Separator", x: mx, y: H * 0.7, w: W * 0.5,
-    color: cfg.primaryColor, alpha: 0.15,
-  }));
-
-  // Contact
-  layers.push(...buildContactLayers(
-    cfg, mx, H * 0.76, Math.round(fs.contact * 1.4), "left",
-    cfg.textColor, 0.5, cfg.primaryColor, 0.35, fs.contact, ff, W, H
-  ));
-
-  return layers;
-}
-
-function layoutArtDeco(W: number, H: number, cfg: CardConfig, fs: FontSizes, ff: string): LayerV2[] {
-  const layers: LayerV2[] = [];
-  const gold = cfg.primaryColor;
-
-  // Art deco border
+  // Left thin gold divider
   layers.push(rect({
-    name: "Deco Border", x: 14, y: 14, w: W - 28, h: H - 28,
-    stroke: stroke(gold, 2, 0.4), tags: ["decorative", "border"],
+    name: "V-Divider", x: W * 0.35, y: my, w: 1.5, h: H - 2 * my,
+    fill: solidPaintHex(cfg.primaryColor, 0.3), tags: ["decorative", "divider"],
   }));
-
-  // Inner deco border
-  layers.push(rect({
-    name: "Inner Border", x: 22, y: 22, w: W - 44, h: H - 44,
-    stroke: stroke(gold, 0.5, 0.2), tags: ["decorative", "border"],
-  }));
-
-  // Fan/sunrise shape (path)
-  layers.push(createPathLayerV2({
-    name: "Deco Fan",
-    x: 0, y: 0, width: W, height: H * 0.1,
-    commands: [
-      { type: "M", x: W * 0.35, y: 0 },
-      { type: "L", x: W * 0.5, y: H * 0.08 },
-      { type: "L", x: W * 0.65, y: 0 },
-      { type: "Z" },
-    ],
-    fill: solidPaintHex(gold, 0.06),
-    closed: true,
-    tags: ["decorative"],
-  }));
-
-  // Logo (centered top)
-  const logoS = H * 0.16;
-  layers.push(buildLogoLayer(cfg, W / 2 - logoS / 2, H * 0.1, logoS, logoS, gold, ff));
-
-  // Name (centered)
+  // Logo â€” top right
+  const logoS = H * 0.2;
+  layers.push(buildLogoLayer(cfg, W - mx - logoS, my, logoS, logoS, cfg.primaryColor, ff));
+  // Company next to logo
   layers.push(textLayer({
-    name: "Name", x: 0, y: H * 0.38, w: W, text: cfg.name || "Your Name",
-    fontSize: fs.name, ff, weight: 500, color: cfg.textColor, align: "center",
-    tags: ["name", "primary-text"], letterSpacing: 3,
+    name: "Company", x: W * 0.37, y: my + 4, w: W * 0.35,
+    text: cfg.company || "Company", fontSize: fs.company, ff, weight: 700,
+    color: cfg.textColor, tags: ["company"], autoFit: true,
   }));
-
-  // Title
+  // Name â€” left of divider, bold
   layers.push(textLayer({
-    name: "Title", x: 0, y: H * 0.38 + fs.name + 6, w: W, text: cfg.title || "Job Title",
-    fontSize: fs.title, ff, weight: 400, color: gold, align: "center", tags: ["title"],
+    name: "Name", x: mx, y: H * 0.42, w: W * 0.25,
+    text: cfg.name || "Your Name", fontSize: fs.name, ff, weight: 700,
+    color: cfg.textColor, tags: ["name", "primary-text"], autoFit: true,
   }));
-
-  // Deco divider
-  layers.push(line({
-    name: "Deco Divider", x: W * 0.2, y: H * 0.55, w: W * 0.6,
-    color: gold, alpha: 0.35,
-  }));
-
-  // Contact (centered)
-  layers.push(...buildContactLayers(
-    cfg, W / 2, H * 0.63, Math.round(fs.contact * 1.4), "center",
-    cfg.textColor, 0.55, gold, 0.35, fs.contact, ff, W, H
-  ));
-
-  // Company (bottom center)
+  // Title â€” in gold
   layers.push(textLayer({
-    name: "Company", x: 0, y: H * 0.92, w: W, text: cfg.company || "Company",
-    fontSize: fs.label, ff, weight: 600, color: gold, alpha: 0.5, align: "center",
-    tags: ["company"], uppercase: true, letterSpacing: 4,
+    name: "Title", x: mx, y: H * 0.42 + fs.name + 4, w: W * 0.25,
+    text: cfg.title || "Job Title", fontSize: fs.label, ff, weight: 400,
+    color: cfg.primaryColor, tags: ["title"], uppercase: true, letterSpacing: 1,
   }));
-
+  // Contact â€” right of divider
+  layers.push(...buildContactLayers(cfg, W * 0.37, H * 0.45, Math.round(fs.contact * 1.5), "left", cfg.textColor, 0.65, cfg.primaryColor, 0.5, fs.contact, ff, W, H));
   return layers;
 }
 
 // --- Template dispatcher ---
 
 const LAYOUT_MAP: Record<string, LayoutFn> = {
-  "executive-clean":  layoutExecutiveClean,
-  "swiss-grid":       layoutSwissGrid,
-  "mono-type":        layoutMonoType,
-  "nordic-frost":     layoutNordicFrost,
-  "bold-split":       layoutBoldSplit,
-  "neon-edge":        layoutNeonEdge,
-  "geometric-modern": layoutGeometricModern,
-  "gradient-wave":    layoutGradientWave,
-  "corporate-stripe": layoutCorporateStripe,
-  "diplomat":         layoutDiplomat,
-  "heritage-crest":   layoutHeritageCrest,
-  "engraved":         layoutEngraved,
-  "diagonal-cut":     layoutDiagonalCut,
-  "layered-card":     layoutLayeredCard,
-  "photo-overlay":    layoutPhotoOverlay,
-  "dot-matrix":       layoutDotMatrix,
-  "gold-foil":        layoutGoldFoil,
-  "marble-luxe":      layoutMarbleLuxe,
-  "velvet-noir":      layoutVelvetNoir,
-  "art-deco":         layoutArtDeco,
+  // Minimal
+  "ultra-minimal":      layoutUltraMinimal,
+  "monogram-luxe":      layoutMonogramLuxe,
+  "geometric-mark":     layoutGeometricMark,
+  "frame-minimal":      layoutFrameMinimal,
+  "split-vertical":     layoutSplitVertical,
+  "diagonal-mono":      layoutDiagonalMono,
+  // Modern
+  "cyan-tech":          layoutCyanTech,
+  "corporate-chevron":  layoutCorporateChevron,
+  "zigzag-overlay":     layoutZigzagOverlay,
+  "hex-split":          layoutHexSplit,
+  "dot-circle":         layoutDotCircle,
+  "wave-gradient":      layoutWaveGradient,
+  // Classic / Corporate
+  "circle-brand":       layoutCircleBrand,
+  "full-color-back":    layoutFullColorBack,
+  "engineering-pro":    layoutEngineeringPro,
+  "clean-accent":       layoutCleanAccent,
+  "nature-clean":       layoutNatureClean,
+  "diamond-brand":      layoutDiamondBrand,
+  // Creative
+  "flowing-lines":      layoutFlowingLines,
+  "neon-watermark":     layoutNeonWatermark,
+  "blueprint-tech":     layoutBlueprintTech,
+  "skyline-silhouette": layoutSkylineSilhouette,
+  "world-map":          layoutWorldMap,
+  "diagonal-gold":      layoutDiagonalGold,
+  // Luxury
+  "luxury-divider":     layoutLuxuryDivider,
+  "social-band":        layoutSocialBand,
+  "organic-pattern":    layoutOrganicPattern,
+  "celtic-stripe":      layoutCelticStripe,
+  "premium-crest":      layoutPremiumCrest,
+  "gold-construct":     layoutGoldConstruct,
 };
 
 // =============================================================================
@@ -1897,7 +3067,7 @@ const BACK_LAYOUT_MAP: Record<string, LayoutFn> = {
 };
 
 // =============================================================================
-// 9.  Main Conversion: CardConfig → DesignDocumentV2
+// 9.  Main Conversion: CardConfig â†’ DesignDocumentV2
 // =============================================================================
 
 export function cardConfigToDocument(
@@ -1922,7 +3092,7 @@ export function cardConfigToDocument(
   // Create document with root frame
   let doc = createDocumentV2({
     toolId: "business-card",
-    name: `Business Card — ${cfg.name || "Untitled"}`,
+    name: `Business Card â€” ${cfg.name || "Untitled"}`,
     width: W,
     height: H,
     backgroundColor: hexToRGBA(cfg.bgColor),
@@ -1952,11 +3122,30 @@ export function cardConfigToDocument(
   let templateLayers: LayerV2[];
 
   if (isFront) {
-    const layoutFn = LAYOUT_MAP[cfg.template] || LAYOUT_MAP["executive-clean"];
+    const layoutFn = LAYOUT_MAP[cfg.template] || LAYOUT_MAP["ultra-minimal"];
     templateLayers = layoutFn(W, H, cfg, fs, ff);
   } else {
-    const backFn = BACK_LAYOUT_MAP[cfg.backStyle] || BACK_LAYOUT_MAP["logo-center"];
-    templateLayers = backFn(W, H, cfg, fs, ff);
+    // Check for template-specific back layout first (pixel-perfect versions)
+    const templateBackFn = getBackLayout(cfg.template);
+    const theme = TEMPLATE_FIXED_THEMES[cfg.template];
+    if (templateBackFn && theme) {
+      const contacts = extractContacts(cfg);
+      templateLayers = templateBackFn(W, H, {
+        name: cfg.name,
+        company: cfg.company,
+        title: cfg.title,
+        tagline: cfg.tagline,
+        contacts,
+        logoUrl: cfg.logoUrl || undefined,
+        fontFamily: ff,
+        showContactIcons: cfg.showContactIcons,
+        qrCodeUrl: cfg.qrCodeUrl || undefined,
+      }, theme);
+    } else {
+      // Fall back to generic back layout
+      const backFn = BACK_LAYOUT_MAP[cfg.backStyle] || BACK_LAYOUT_MAP["logo-center"];
+      templateLayers = backFn(W, H, cfg, fs, ff);
+    }
   }
 
   // Build pattern overlay
@@ -2034,7 +3223,7 @@ export function cardConfigToDocument(
     }
   }
 
-  // ── Post-process: Auto-fit name & company text layers ──────────────────
+  // â”€â”€ Post-process: Auto-fit name & company text layers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Prevents long names from overflowing the card edge.
   {
     const allLayers = Object.values(doc.layersById);
@@ -2083,7 +3272,7 @@ export function syncTextToDocument(
   let updated = doc;
   const layers = Object.values(updated.layersById);
 
-  // Text content mapping: tag → config field
+  // Text content mapping: tag â†’ config field
   const textMap: Record<string, string> = {
     "name": cfg.name || "Your Name",
     "title": cfg.title || "Job Title",
@@ -2145,11 +3334,11 @@ export function syncColorsToDocument(
   for (const layer of layers) {
     if (options?.skipLayerIds?.has(layer.id)) continue;
 
-    // ── Text layers: sync fill color based on semantic tags ──
+    // â”€â”€ Text layers: sync fill color based on semantic tags â”€â”€
     if (layer.type === "text") {
       const tl = layer as TextLayerV2;
 
-      // Name / primary-text → textColor
+      // Name / primary-text â†’ textColor
       if (tl.tags.includes("name") || tl.tags.includes("primary-text")) {
         const shouldUpdate = !prevTextRGBA || _textLayerColorMatches(tl, prevTextRGBA);
         if (shouldUpdate) {
@@ -2159,7 +3348,7 @@ export function syncColorsToDocument(
         }
       }
 
-      // Title → primaryColor (many templates use primaryColor for titles)
+      // Title â†’ primaryColor (many templates use primaryColor for titles)
       if (tl.tags.includes("title")) {
         const shouldUpdate = !prevPrimaryRGBA || _textLayerColorMatches(tl, prevPrimaryRGBA);
         if (shouldUpdate) {
@@ -2169,10 +3358,10 @@ export function syncColorsToDocument(
         }
       }
 
-      // Company → textColor (with lower alpha, preserve existing alpha)
+      // Company â†’ textColor (with lower alpha, preserve existing alpha)
       if (tl.tags.includes("company")) {
         const shouldUpdate = !prevTextRGBA || _textLayerColorMatches(tl, prevTextRGBA);
-        // Also check primaryColor — some templates use primaryColor for company text
+        // Also check primaryColor â€” some templates use primaryColor for company text
         const shouldUpdateP = !shouldUpdate && (!prevPrimaryRGBA || _textLayerColorMatches(tl, prevPrimaryRGBA));
         if (shouldUpdate) {
           updated = updateLayer(updated, layer.id, {
@@ -2185,7 +3374,7 @@ export function syncColorsToDocument(
         }
       }
 
-      // Contact text → textColor
+      // Contact text â†’ textColor
       if (tl.tags.includes("contact-text")) {
         const shouldUpdate = !prevTextRGBA || _textLayerColorMatches(tl, prevTextRGBA);
         if (shouldUpdate) {
@@ -2195,7 +3384,7 @@ export function syncColorsToDocument(
         }
       }
 
-      // Tagline → textColor
+      // Tagline â†’ textColor
       if (tl.tags.includes("tagline")) {
         const shouldUpdate = !prevTextRGBA || _textLayerColorMatches(tl, prevTextRGBA);
         if (shouldUpdate) {
@@ -2206,7 +3395,7 @@ export function syncColorsToDocument(
       }
     }
 
-    // ── Icon layers: contact-icon → primaryColor ──
+    // â”€â”€ Icon layers: contact-icon â†’ primaryColor â”€â”€
     if (layer.type === "icon" && layer.tags.includes("contact-icon")) {
       const shouldUpdate = !prevPrimaryRGBA || _rgbaApprox((layer as import("./schema").IconLayerV2).color, prevPrimaryRGBA);
       if (shouldUpdate) {
@@ -2216,7 +3405,7 @@ export function syncColorsToDocument(
       }
     }
 
-    // ── Shape layers: accent → primaryColor ──
+    // â”€â”€ Shape layers: accent â†’ primaryColor â”€â”€
     if (layer.tags.includes("accent") && layer.type === "shape") {
       const firstFill = (layer as ShapeLayerV2).fills?.[0];
       const shouldUpdate = !prevPrimaryRGBA || (firstFill?.kind === "solid" && _rgbaApprox(firstFill.color, prevPrimaryRGBA));
@@ -2227,7 +3416,7 @@ export function syncColorsToDocument(
       }
     }
 
-    // ── Shape layers: corner decoratives → secondaryColor ──
+    // â”€â”€ Shape layers: corner decoratives â†’ secondaryColor â”€â”€
     if (layer.tags.includes("corner") && layer.type === "shape") {
       const firstFill = (layer as ShapeLayerV2).fills?.[0];
       const shouldUpdate = !prevSecondaryRGBA || (firstFill?.kind === "solid" && _rgbaApprox(firstFill.color, prevSecondaryRGBA));
@@ -2238,7 +3427,7 @@ export function syncColorsToDocument(
       }
     }
 
-    // ── Shape layers: border strokes → primaryColor ──
+    // â”€â”€ Shape layers: border strokes â†’ primaryColor â”€â”€
     if (layer.tags.includes("border") && layer.type === "shape") {
       const sl = layer as ShapeLayerV2;
       if (sl.strokes.length > 0) {
@@ -2253,7 +3442,7 @@ export function syncColorsToDocument(
       }
     }
 
-    // ── QR code layer: darken on light backgrounds, lighten on dark backgrounds ──
+    // â”€â”€ QR code layer: darken on light backgrounds, lighten on dark backgrounds â”€â”€
     if (layer.tags.includes("qr-code") && layer.type === "shape") {
       const bgLum = (() => { const c = hexToRGBA(cfg.bgColor); return (0.299 * c.r + 0.587 * c.g + 0.114 * c.b) / 255; })();
       const qrColor = bgLum > 0.5 ? "#1a1a1a" : "#e0e0e0";
@@ -2262,7 +3451,7 @@ export function syncColorsToDocument(
       } as Partial<LayerV2>);
     }
 
-    // ── Abstract asset layers: color-primary → primaryColor, color-secondary → secondaryColor ──
+    // â”€â”€ Abstract asset layers: color-primary â†’ primaryColor, color-secondary â†’ secondaryColor â”€â”€
     if (layer.tags.includes("abstract-asset")) {
       if (layer.tags.includes("color-primary") && (layer.type === "shape" || layer.type === "path")) {
         const sl = layer as ShapeLayerV2;

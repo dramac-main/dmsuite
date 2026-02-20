@@ -673,36 +673,36 @@ export interface TemplateColorTheme {
 export const TEMPLATE_FIXED_THEMES: Record<string, TemplateColorTheme> = {
   // ── Minimal ──
   "ultra-minimal": {
-    frontBg: "#FFFFFF", frontText: "#1A1A1A", frontTextAlt: "#666666",
-    accent: "#1A1A1A", backBg: "#1A1A1A", backText: "#FFFFFF",
-    divider: "#C8C8C8", contactText: "#555555", contactIcon: "#888888",
+    frontBg: "#f8f9fa", frontText: "#4a4a4a", frontTextAlt: "#4a4a4a",
+    accent: "#4a4a4a", backBg: "#ffffff", backText: "#2c2c2c",
+    divider: "#e0e0e0", contactText: "#8a8a8a", contactIcon: "#b0b0b0",
   },
   "monogram-luxe": {
-    frontBg: "#F5F5F0", frontText: "#1A1A1A", frontTextAlt: "#8A8A8A",
-    accent: "#1A1A1A", backBg: "#1A1A1A", backText: "#F5F5F0",
-    divider: "#D4D0C8", contactText: "#666666", contactIcon: "#999999",
+    frontBg: "#eae8eb", frontText: "#2c2c2c", frontTextAlt: "#6a6a6a",
+    accent: "#2c2c2c", backBg: "#2c2c2c", backText: "#d8d6d9",
+    divider: "#d0d0d0", contactText: "#8a8a8a", contactIcon: "#999999",
   },
   "geometric-mark": {
-    frontBg: "#FFFFFF", frontText: "#1F2937", frontTextAlt: "#6B7280",
-    accent: "#E74C3C", backBg: "#1F2937", backText: "#FFFFFF",
-    divider: "#E5E7EB", contactText: "#4B5563", contactIcon: "#6B7280",
+    frontBg: "#252628", frontText: "#ffffff", frontTextAlt: "#b8b8ba",
+    accent: "#ffffff", backBg: "#f8f9fb", backText: "#1c1d1e",
+    divider: "#e0e0e0", contactText: "#939495", contactIcon: "#838587",
   },
   "frame-minimal": {
-    frontBg: "#FFFFFF", frontText: "#1F1F1F", frontTextAlt: "#717171",
-    accent: "#E65100", accentAlt: "#FF8A50", backBg: "#1F1F1F", backText: "#FFFFFF",
-    backAccent: "#E65100", divider: "#E0E0E0", contactText: "#555555",
+    frontBg: "#FFFFFF", frontText: "#2D2D2D", frontTextAlt: "#888888",
+    accent: "#2D2D2D", accentAlt: "#FF6B35", backBg: "#1A1A1A", backText: "#FFFFFF",
+    backAccent: "#AAAAAA", divider: "#CCCCCC", contactText: "#999999",
   },
   "split-vertical": {
-    frontBg: "#FFFFFF", frontBgAlt: "#1A1A2E", frontText: "#1A1A2E",
-    frontTextAlt: "#FFFFFF", accent: "#C5A55A",
-    backBg: "#1A1A2E", backText: "#FFFFFF", backAccent: "#C5A55A",
-    divider: "#C5A55A", contactText: "#333333",
+    frontBg: "#F5F5F0", frontBgAlt: "#2C2C2C", frontText: "#2C2C2C",
+    frontTextAlt: "#FFFFFF", accent: "#FFFFFF",
+    backBg: "#F5F5F0", backText: "#2C2C2C", backAccent: "#888888",
+    divider: "#CCCCCC", contactText: "#444444",
   },
   "diagonal-mono": {
-    frontBg: "#FFFFFF", frontBgAlt: "#1A1A1A", frontText: "#1A1A1A",
-    frontTextAlt: "#FFFFFF", accent: "#C5A55A",
-    backBg: "#1A1A1A", backText: "#FFFFFF",
-    divider: "#333333", contactText: "#555555",
+    frontBg: "#E2E2E2", frontBgAlt: "#232323", frontText: "#232323",
+    frontTextAlt: "#FFFFFF", accent: "#FFFFFF",
+    backBg: "#E2E2E2", backText: "#FFFFFF",
+    divider: "#232323", contactText: "#232323",
   },
 
   // ── Modern ──
@@ -1262,6 +1262,7 @@ export type TemplateBackLayoutFn = (
   cfg: {
     name: string;
     company: string;
+    title: string;
     tagline: string;
     contacts: ContactInfo;
     logoUrl?: string;
