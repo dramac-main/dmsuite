@@ -188,12 +188,12 @@ export default function ToolWorkspacePage() {
           Upload your assets, configure settings, and let AI do the heavy lifting.
         </p>
         <div className="flex items-center gap-3">
-          <button className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl
-            bg-primary-500 text-gray-950 text-sm font-semibold
-            hover:bg-primary-400 transition-colors shadow-lg shadow-primary-500/20">
+          <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl
+            bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm font-semibold
+            cursor-not-allowed">
             <IconZap className="size-4" />
-            Start Creating
-          </button>
+            Coming Soon
+          </span>
           <Link
             href="/dashboard"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl

@@ -109,7 +109,7 @@ export default function LayerPropertiesPanel() {
   return (
     <div className="flex flex-col text-sm overflow-y-auto max-h-full">
       {/* ---- Layer Identity ---- */}
-      <PanelSection title={`${layerType} Layer`}>
+      <PanelSection title={`${layerType.charAt(0).toUpperCase() + layerType.slice(1)} Layer`}>
         <div className="space-y-1.5">
           <div>
             <label className="text-[10px] text-gray-500 block mb-0.5">Name</label>

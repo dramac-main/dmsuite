@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
@@ -104,7 +104,7 @@ interface ContactEntry {
   title: string;
   email: string;
   phone: string;
-  /* ── Extended batch fields ─────────────────────── */
+  /* â”€â”€ Extended batch fields â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   website?: string;
   address?: string;
   linkedin?: string;
@@ -113,7 +113,7 @@ interface ContactEntry {
   department?: string;
   /** Per-person QR code URL (overrides the card-level qrCodeUrl) */
   qrUrl?: string;
-  /** Per-person logo override (data-url or URL) — e.g. branch logos */
+  /** Per-person logo override (data-url or URL) â€” e.g. branch logos */
   logoOverride?: string;
 }
 
@@ -177,31 +177,41 @@ interface RevisionEntry {
 /* -- Template Data --------------------------------------------------- */
 
 const TEMPLATES = [
-  /* Minimal & Clean */
-  { id: "executive-clean",      label: "Executive Clean",     category: "minimal",    desc: "Ultra-clean with generous whitespace" },
-  { id: "swiss-grid",           label: "Swiss Grid",          category: "minimal",    desc: "Grid-based Swiss design" },
-  { id: "mono-type",            label: "Mono Type",           category: "minimal",    desc: "Typography-focused, no decoration" },
-  { id: "nordic-frost",         label: "Nordic Frost",        category: "minimal",    desc: "Clean Scandinavian style" },
-  /* Modern & Bold */
-  { id: "bold-split",           label: "Bold Split",          category: "modern",     desc: "Color-blocked split panel" },
-  { id: "neon-edge",            label: "Neon Edge",           category: "modern",     desc: "Glowing accent edge" },
-  { id: "geometric-modern",     label: "Geometric",           category: "modern",     desc: "Bold geometric shapes" },
-  { id: "gradient-wave",        label: "Gradient Wave",       category: "modern",     desc: "Flowing gradient accent" },
-  /* Classic & Professional */
-  { id: "corporate-stripe",     label: "Corporate Stripe",    category: "classic",    desc: "Professional side stripe" },
-  { id: "diplomat",             label: "Diplomat",            category: "classic",    desc: "Distinguished double border" },
-  { id: "heritage-crest",       label: "Heritage Crest",      category: "classic",    desc: "Traditional centered layout" },
-  { id: "engraved",             label: "Engraved",            category: "classic",    desc: "Subtle engraved style" },
-  /* Creative & Trendy */
-  { id: "diagonal-cut",         label: "Diagonal Cut",        category: "creative",   desc: "Angular diagonal division" },
-  { id: "layered-card",         label: "Layered Card",        category: "creative",   desc: "Floating panel effect" },
-  { id: "photo-overlay",        label: "Photo Overlay",       category: "creative",   desc: "Image-based with overlay" },
-  { id: "dot-matrix",           label: "Dot Matrix",          category: "creative",   desc: "Halftone pattern accent" },
-  /* Luxury & Premium */
-  { id: "gold-foil",            label: "Gold Foil",           category: "luxury",     desc: "Metallic gold accents" },
-  { id: "marble-luxe",          label: "Marble Luxe",         category: "luxury",     desc: "Marble texture effect" },
-  { id: "velvet-noir",          label: "Velvet Noir",         category: "luxury",     desc: "Deep dark luxury" },
-  { id: "art-deco",             label: "Art Deco",            category: "luxury",     desc: "1920s geometric luxury" },
+  /* Minimal (6) */
+  { id: "ultra-minimal",        label: "Ultra Minimal",       category: "minimal",    desc: "Pure whitespace, thin divider, zero noise" },
+  { id: "monogram-luxe",        label: "Monogram Luxe",       category: "minimal",    desc: "Large initials watermark, clean right side" },
+  { id: "geometric-mark",       label: "Geometric Mark",      category: "minimal",    desc: "Centered geometric logo, balanced layout" },
+  { id: "frame-minimal",        label: "Frame Minimal",       category: "minimal",    desc: "Elegant open-corner frame accent" },
+  { id: "split-vertical",       label: "Split Vertical",      category: "minimal",    desc: "50/50 vertical color split" },
+  { id: "diagonal-mono",        label: "Diagonal Mono",       category: "minimal",    desc: "Diagonal B&W split, bold contrast" },
+  /* Modern (6) */
+  { id: "cyan-tech",            label: "Cyan Tech",           category: "modern",     desc: "Dark bg + colored accent panel" },
+  { id: "corporate-chevron",    label: "Corporate Chevron",   category: "modern",     desc: "Chevron geometric overlay" },
+  { id: "zigzag-overlay",       label: "Zigzag Overlay",      category: "modern",     desc: "Dark bg + white content strip" },
+  { id: "hex-split",            label: "Hex Split",           category: "modern",     desc: "Two-tone split with accent bar" },
+  { id: "dot-circle",           label: "Dot Circle",          category: "modern",     desc: "Large circle accent, dot grid" },
+  { id: "wave-gradient",        label: "Wave Gradient",       category: "modern",     desc: "Organic wave gradient divider" },
+  /* Classic (6) */
+  { id: "circle-brand",         label: "Circle Brand",        category: "classic",    desc: "Logo + company header, clean sections" },
+  { id: "full-color-back",      label: "Full Color Back",     category: "classic",    desc: "White front + side accent" },
+  { id: "engineering-pro",      label: "Engineering Pro",      category: "classic",    desc: "Professional header + contact grid" },
+  { id: "clean-accent",         label: "Clean Accent",        category: "classic",    desc: "White + gradient bottom bar" },
+  { id: "nature-clean",         label: "Nature Clean",        category: "classic",    desc: "Name band accent, organic feel" },
+  { id: "diamond-brand",        label: "Diamond Brand",       category: "classic",    desc: "Logo-forward, diamond pattern" },
+  /* Creative (6) */
+  { id: "flowing-lines",        label: "Flowing Lines",       category: "creative",   desc: "Concentric flowing curves" },
+  { id: "neon-watermark",       label: "Neon Watermark",      category: "creative",   desc: "Large watermark circle accent" },
+  { id: "blueprint-tech",       label: "Blueprint Tech",      category: "creative",   desc: "Technical blueprint pattern" },
+  { id: "skyline-silhouette",   label: "Skyline Silhouette",  category: "creative",   desc: "City skyline at bottom" },
+  { id: "world-map",            label: "World Map",           category: "creative",   desc: "Map watermark + boxed contacts" },
+  { id: "diagonal-gold",        label: "Diagonal Gold",       category: "creative",   desc: "Diagonal gold accent stripe" },
+  /* Luxury (6) */
+  { id: "luxury-divider",       label: "Luxury Divider",      category: "luxury",     desc: "Vertical gold dividers, dark teal" },
+  { id: "social-band",          label: "Social Band",         category: "luxury",     desc: "Dark bg + cream social band" },
+  { id: "organic-pattern",      label: "Organic Pattern",     category: "luxury",     desc: "Topographic pattern overlay" },
+  { id: "celtic-stripe",        label: "Celtic Stripe",       category: "luxury",     desc: "Ornamental pattern side stripe" },
+  { id: "premium-crest",        label: "Premium Crest",       category: "luxury",     desc: "Centered crest, dark elegance" },
+  { id: "gold-construct",       label: "Gold Construct",      category: "luxury",     desc: "Gold borders, vertical text" },
 ] as const;
 
 const TEMPLATE_CATEGORIES = [
@@ -213,7 +223,7 @@ const TEMPLATE_CATEGORIES = [
 ];
 
 const COLOR_PRESETS = [
-  /* ── Original 12 ─────────────────────────────────────────────── */
+  /* â”€â”€ Original 12 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   { name: "Lime Pro",    primary: "#8ae600", secondary: "#06b6d4", text: "#ffffff", bg: "#0a0a0a" },
   { name: "Navy",        primary: "#1e3a5f", secondary: "#4a90d9", text: "#ffffff", bg: "#0c1929" },
   { name: "Charcoal",    primary: "#2d2d2d", secondary: "#6b6b6b", text: "#333333", bg: "#ffffff" },
@@ -226,7 +236,7 @@ const COLOR_PRESETS = [
   { name: "Slate",       primary: "#475569", secondary: "#94a3b8", text: "#f1f5f9", bg: "#0f172a" },
   { name: "Coral",       primary: "#ff6b6b", secondary: "#ffd93d", text: "#ffffff", bg: "#1a1a2e" },
   { name: "Sage",        primary: "#6b8f71", secondary: "#aab89e", text: "#ffffff", bg: "#1c2a1e" },
-  /* ── Extended 20+ Industry-Inspired Presets ──────────────────── */
+  /* â”€â”€ Extended 20+ Industry-Inspired Presets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   { name: "Rose Gold",   primary: "#b76e79", secondary: "#f0d5d8", text: "#ffffff", bg: "#1a1218" },
   { name: "Copper",      primary: "#b87333", secondary: "#daa06d", text: "#faf0e6", bg: "#1c1410" },
   { name: "Platinum",    primary: "#e5e4e2", secondary: "#bfc0c0", text: "#1a1a1a", bg: "#2d2d2d" },
@@ -264,31 +274,41 @@ const PATTERN_OPTIONS = [
 /* -- Template Default Themes (Applied on template selection) ---------- */
 
 const TEMPLATE_DEFAULT_THEMES: Record<string, { primary: string; secondary: string; text: string; bg: string; pattern: string; font: CardConfig["fontStyle"] }> = {
-  /* Minimal & Clean — light, airy, whitespace-forward */
-  "executive-clean":    { primary: "#2c3e50", secondary: "#7f8c8d", text: "#2c3e50", bg: "#faf8f5",  pattern: "none",           font: "modern"  },
-  "swiss-grid":         { primary: "#e63946", secondary: "#457b9d", text: "#1d3557", bg: "#f1faee",  pattern: "none",           font: "bold"    },
-  "mono-type":          { primary: "#111111", secondary: "#555555", text: "#111111", bg: "#ffffff",  pattern: "none",           font: "minimal" },
-  "nordic-frost":       { primary: "#5e81ac", secondary: "#88c0d0", text: "#2e3440", bg: "#eceff4",  pattern: "none",           font: "elegant" },
-  /* Modern & Bold — dark canvases, vibrant accents */
-  "bold-split":         { primary: "#ff6347", secondary: "#ffa07a", text: "#ffffff", bg: "#1a2332",  pattern: "dots",           font: "bold"    },
-  "neon-edge":          { primary: "#00ff87", secondary: "#60efff", text: "#e8e8e8", bg: "#0a0a0a",  pattern: "none",           font: "modern"  },
-  "geometric-modern":   { primary: "#6c5ce7", secondary: "#a29bfe", text: "#ffffff", bg: "#2d3436",  pattern: "none",           font: "bold"    },
-  "gradient-wave":      { primary: "#ff6b6b", secondary: "#feca57", text: "#ffffff", bg: "#1a1a2e",  pattern: "waves",          font: "modern"  },
-  /* Classic & Professional — rich, distinguished palettes */
-  "corporate-stripe":   { primary: "#1e3a5f", secondary: "#4a90d9", text: "#ffffff", bg: "#0f1c2e",  pattern: "lines",          font: "classic" },
-  "diplomat":           { primary: "#c9a227", secondary: "#e8d48b", text: "#1a1a1a", bg: "#f5f0e1",  pattern: "none",           font: "elegant" },
-  "heritage-crest":     { primary: "#8b1a2b", secondary: "#c4a882", text: "#f5f0e1", bg: "#1e0f14",  pattern: "none",           font: "classic" },
-  "engraved":           { primary: "#64748b", secondary: "#94a3b8", text: "#e2e8f0", bg: "#1e293b",  pattern: "lines",          font: "elegant" },
-  /* Creative & Trendy — vivid, expressive, playful */
-  "diagonal-cut":       { primary: "#ff006e", secondary: "#8338ec", text: "#ffffff", bg: "#14213d",  pattern: "diagonal-lines", font: "bold"    },
-  "layered-card":       { primary: "#06d6a0", secondary: "#118ab2", text: "#ffffff", bg: "#073b4c",  pattern: "none",           font: "modern"  },
-  "photo-overlay":      { primary: "#f77f00", secondary: "#fcbf49", text: "#ffffff", bg: "#003049",  pattern: "none",           font: "bold"    },
-  "dot-matrix":         { primary: "#ef476f", secondary: "#ffd166", text: "#ffffff", bg: "#073b4c",  pattern: "dots",           font: "modern"  },
-  /* Luxury & Premium — opulent darks, metallic tones */
-  "gold-foil":          { primary: "#d4af37", secondary: "#f4e5b2", text: "#f5f0e1", bg: "#1a1410",  pattern: "none",           font: "elegant" },
-  "marble-luxe":        { primary: "#2d2d2d", secondary: "#9e9e9e", text: "#2d2d2d", bg: "#f5f0eb",  pattern: "none",           font: "elegant" },
-  "velvet-noir":        { primary: "#9b1b30", secondary: "#c41e3a", text: "#e8d5b7", bg: "#0a0a0a",  pattern: "none",           font: "elegant" },
-  "art-deco":           { primary: "#d4af37", secondary: "#b8860b", text: "#f5f0e1", bg: "#1a1a2e",  pattern: "diamond",        font: "elegant" },
+  /* Minimal (6) â€” light, airy, whitespace-forward */
+  "ultra-minimal":      { primary: "#2c3e50", secondary: "#7f8c8d", text: "#2c3e50", bg: "#faf8f5",  pattern: "none",           font: "modern"  },
+  "monogram-luxe":      { primary: "#1a1a1a", secondary: "#8b7355", text: "#1a1a1a", bg: "#f5f0e8",  pattern: "none",           font: "elegant" },
+  "geometric-mark":     { primary: "#2d4a3e", secondary: "#5d8a6e", text: "#1e3329", bg: "#f0f4f1",  pattern: "none",           font: "modern"  },
+  "frame-minimal":      { primary: "#34495e", secondary: "#95a5a6", text: "#2c3e50", bg: "#ffffff",  pattern: "none",           font: "minimal" },
+  "split-vertical":     { primary: "#1a2332", secondary: "#3d5a80", text: "#2c3e50", bg: "#f8f9fa",  pattern: "none",           font: "bold"    },
+  "diagonal-mono":      { primary: "#111111", secondary: "#333333", text: "#111111", bg: "#ffffff",  pattern: "none",           font: "bold"    },
+  /* Modern (6) â€” dark canvases, vibrant accents */
+  "cyan-tech":          { primary: "#00bcd4", secondary: "#0097a7", text: "#e0e0e0", bg: "#0d1117",  pattern: "none",           font: "modern"  },
+  "corporate-chevron":  { primary: "#1e3a5f", secondary: "#2980b9", text: "#ffffff", bg: "#0f1c2e",  pattern: "none",           font: "bold"    },
+  "zigzag-overlay":     { primary: "#e74c3c", secondary: "#c0392b", text: "#e8e8e8", bg: "#1a1a2e",  pattern: "none",           font: "modern"  },
+  "hex-split":          { primary: "#2196f3", secondary: "#1976d2", text: "#333333", bg: "#ffffff",  pattern: "none",           font: "modern"  },
+  "dot-circle":         { primary: "#6c5ce7", secondary: "#a29bfe", text: "#ffffff", bg: "#2d3436",  pattern: "dots",           font: "bold"    },
+  "wave-gradient":      { primary: "#ff6b6b", secondary: "#feca57", text: "#ffffff", bg: "#1a1a2e",  pattern: "waves",          font: "modern"  },
+  /* Classic (6) â€” clean, professional, corporate */
+  "circle-brand":       { primary: "#1565c0", secondary: "#1976d2", text: "#333333", bg: "#ffffff",  pattern: "none",           font: "classic" },
+  "full-color-back":    { primary: "#2e7d32", secondary: "#43a047", text: "#333333", bg: "#ffffff",  pattern: "none",           font: "modern"  },
+  "engineering-pro":    { primary: "#f57c00", secondary: "#ff9800", text: "#333333", bg: "#ffffff",  pattern: "none",           font: "bold"    },
+  "clean-accent":       { primary: "#00897b", secondary: "#26a69a", text: "#333333", bg: "#ffffff",  pattern: "none",           font: "classic" },
+  "nature-clean":       { primary: "#388e3c", secondary: "#66bb6a", text: "#333333", bg: "#f5f5f5",  pattern: "none",           font: "modern"  },
+  "diamond-brand":      { primary: "#5c6bc0", secondary: "#7986cb", text: "#333333", bg: "#ffffff",  pattern: "none",           font: "elegant" },
+  /* Creative (6) â€” vivid, expressive */
+  "flowing-lines":      { primary: "#ff006e", secondary: "#8338ec", text: "#ffffff", bg: "#14213d",  pattern: "none",           font: "modern"  },
+  "neon-watermark":     { primary: "#00ff87", secondary: "#60efff", text: "#e8e8e8", bg: "#0a0a0a",  pattern: "none",           font: "modern"  },
+  "blueprint-tech":     { primary: "#1e88e5", secondary: "#42a5f5", text: "#333333", bg: "#f5f5f5",  pattern: "lines",          font: "modern"  },
+  "skyline-silhouette": { primary: "#37474f", secondary: "#607d8b", text: "#333333", bg: "#ffffff",  pattern: "none",           font: "classic" },
+  "world-map":          { primary: "#ef6c00", secondary: "#f57c00", text: "#ffffff", bg: "#1a2332",  pattern: "none",           font: "bold"    },
+  "diagonal-gold":      { primary: "#d4af37", secondary: "#c9a227", text: "#e8e8e8", bg: "#1a3a3a",  pattern: "none",           font: "elegant" },
+  /* Luxury (6) â€” opulent darks, metallic tones */
+  "luxury-divider":     { primary: "#d4af37", secondary: "#c9a227", text: "#f5f0e1", bg: "#0d1b1e",  pattern: "none",           font: "elegant" },
+  "social-band":        { primary: "#c9a227", secondary: "#e8d48b", text: "#f5f0e1", bg: "#1a1a1a",  pattern: "none",           font: "elegant" },
+  "organic-pattern":    { primary: "#2e7d32", secondary: "#43a047", text: "#f5f5f5", bg: "#1a2e1a",  pattern: "none",           font: "modern"  },
+  "celtic-stripe":      { primary: "#8b1a2b", secondary: "#c4a882", text: "#f5f0e1", bg: "#1e0f14",  pattern: "none",           font: "classic" },
+  "premium-crest":      { primary: "#4caf50", secondary: "#66bb6a", text: "#e0e0e0", bg: "#1a2e1a",  pattern: "none",           font: "elegant" },
+  "gold-construct":     { primary: "#d4af37", secondary: "#f4e5b2", text: "#f5f0e1", bg: "#0d2b2b",  pattern: "none",           font: "elegant" },
 };
 
 /* -- Card Sizes (International Standards) ----------------------------- */
@@ -336,7 +356,7 @@ let _renderCfg: CardConfig | null = null;
 /** Professional font sizes (calculated for 1050px wide canvas = 300DPI) */
 function getFontSizes(W: number, _H: number) {
   const s = fontScale(W);
-  // Advanced-settings scale factors — read from global Zustand store
+  // Advanced-settings scale factors â€” read from global Zustand store
   const adv = getAdvancedSettings();
   return {
     name:        scaledFontSize(Math.round(36 * s), "heading", adv),  // ~12pt base
@@ -387,6 +407,18 @@ function getContactEntries(c: CardConfig): Array<{ type: "email" | "phone" | "we
   if (c.instagram) entries.push({ type: "instagram", value: c.instagram });
   if (c.address)   entries.push({ type: "address",   value: c.address });
   return entries;
+}
+
+/* ====================================================================
+   LOGO SHAPE HELPER — maps fontStyle to a clip shape for logos
+   ==================================================================== */
+
+function logoShapeFor(fs: CardConfig["fontStyle"]): "circle" | "square" | "none" {
+  switch (fs) {
+    case "classic": case "elegant": return "circle";
+    case "modern": case "bold": return "square";
+    default: return "none";
+  }
 }
 
 /* ====================================================================
@@ -443,7 +475,7 @@ function drawContactBlock(
   textColor: string, iconColor: string, fontSize: number
 ) {
   const entries = getContactEntries(c);
-  // Advanced-settings multipliers — read from global store
+  // Advanced-settings multipliers â€” read from global store
   const adv = getAdvancedSettings();
   const lineGap = scaledElementGap(gap, adv);
 
@@ -455,8 +487,8 @@ function drawContactBlock(
     const textW = ctx.measureText(entry.value).width;
 
     if (c.showContactIcons) {
-      // Icon slightly smaller than full font size (0.85×) for optical balance;
-      // gap between icon-right-edge and text-left is ~0.35× fontSize
+      // Icon slightly smaller than full font size (0.85Ã—) for optical balance;
+      // gap between icon-right-edge and text-left is ~0.35Ã— fontSize
       const icoSize = scaledIconSize(Math.round(fontSize * 0.85), adv);
       const icoGap  = scaledIconGap(Math.round(fontSize * 0.35), adv);
 
@@ -489,12 +521,12 @@ function drawContactBlock(
 }
 
 /* ====================================================================
-   vNEXT RENDERER BRIDGE — Uses DesignDocumentV2 + layer-based rendering
+   vNEXT RENDERER BRIDGE â€” Uses DesignDocumentV2 + layer-based rendering
    ==================================================================== */
 
 /**
  * Renders a business card using the vNext layer-based engine.
- * Converts CardConfig → DesignDocumentV2 → Canvas render.
+ * Converts CardConfig â†’ DesignDocumentV2 â†’ Canvas render.
  * This is the M2 migration path; keeps identical visual output
  * while enabling AI to target individual layers.
  */
@@ -531,7 +563,7 @@ function renderCardV2(
 }
 
 /* ====================================================================
-   20 PROFESSIONAL TEMPLATE RENDERERS (Legacy — kept for reference)
+   20 PROFESSIONAL TEMPLATE RENDERERS (Legacy â€” kept for reference)
    ==================================================================== */
 
 function renderCard(canvas: HTMLCanvasElement, config: CardConfig, logoImg?: HTMLImageElement | null, scale: number = 1) {
@@ -564,7 +596,7 @@ function renderCard(canvas: HTMLCanvasElement, config: CardConfig, logoImg?: HTM
   ctx.fillStyle = config.bgColor;
   ctx.fillRect(0, 0, W, H);
 
-  // Optional pattern overlay — opacity driven by global advanced settings
+  // Optional pattern overlay â€” opacity driven by global advanced settings
   if (config.patternType && config.patternType !== "none") {
     drawPattern(ctx, 0, 0, W, H, config.patternType as Parameters<typeof drawPattern>[5], config.primaryColor, getPatternOpacity(0.06), 28);
   }
@@ -579,7 +611,7 @@ function renderCard(canvas: HTMLCanvasElement, config: CardConfig, logoImg?: HTM
   if (renderer) {
     renderer(ctx, W, H, config, logoImg);
   } else {
-    TEMPLATE_RENDERERS["executive-clean"](ctx, W, H, config, logoImg);
+    TEMPLATE_RENDERERS["ultra-minimal"](ctx, W, H, config, logoImg);
   }
 }
 
@@ -587,1145 +619,925 @@ function renderCard(canvas: HTMLCanvasElement, config: CardConfig, logoImg?: HTM
 
 const TEMPLATE_RENDERERS: Record<string, (ctx: CanvasRenderingContext2D, W: number, H: number, c: CardConfig, logo?: HTMLImageElement | null) => void> = {
 
-  /* ==== 1. EXECUTIVE CLEAN - Ultra-minimal, generous whitespace ==== */
-  "executive-clean": (ctx, W, H, c, logo) => {
+  // ===================== MINIMAL =====================
+
+  "ultra-minimal": (ctx, W, H, c, logo) => {
     const f = getFontSizes(W, H);
-    const mx = W * 0.1;
-    const my = H * 0.15;
-
-    // Subtle warm gradient wash across card
-    const warmGrad = ctx.createLinearGradient(0, 0, W, H);
-    warmGrad.addColorStop(0, hexToRgba(c.primaryColor, 0.02));
-    warmGrad.addColorStop(0.5, "transparent");
-    warmGrad.addColorStop(1, hexToRgba(c.secondaryColor, 0.015));
-    ctx.fillStyle = warmGrad;
-    ctx.fillRect(0, 0, W, H);
-
-    // Elegant corner accent (top-right)
-    ctx.strokeStyle = hexToRgba(c.primaryColor, 0.1);
-    ctx.lineWidth = 0.75;
-    ctx.beginPath();
-    ctx.moveTo(W - mx, my * 0.5);
-    ctx.lineTo(W - mx, my * 0.5);
-    ctx.lineTo(W - mx + 1, my * 0.5);
-    ctx.stroke();
-
-    // Refined accent bar at bottom
-    const barGrad = ctx.createLinearGradient(mx, 0, mx + W * 0.15, 0);
-    barGrad.addColorStop(0, c.primaryColor);
-    barGrad.addColorStop(1, hexToRgba(c.primaryColor, 0.1));
-    ctx.fillStyle = barGrad;
-    ctx.fillRect(mx, H - my, W * 0.15, 2.5);
-
-    // Secondary accent dot
-    ctx.fillStyle = hexToRgba(c.secondaryColor, 0.3);
-    ctx.beginPath();
-    ctx.arc(mx + W * 0.17, H - my + 1.25, 2, 0, Math.PI * 2);
-    ctx.fill();
-
+    const mx = W * 0.12;
+    const cy = H * 0.32;
     // Name
     ctx.font = getFont(600, f.name, c.fontStyle);
     ctx.fillStyle = c.textColor;
     ctx.textAlign = "left";
-    ctx.fillText(c.name || "Your Name", mx, my + f.name);
-
+    ctx.textBaseline = "top";
+    ctx.fillText(c.name || "Your Name", mx, cy);
     // Title
-    ctx.font = getFont(400, f.title, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.textColor, 0.6);
-    ctx.fillText(c.title || "Job Title", mx, my + f.name + f.title + 8);
-
-    // Company (right-aligned top)
-    if (c.company) {
-      ctx.font = getFont(500, f.company, c.fontStyle);
-      ctx.fillStyle = c.primaryColor;
-      ctx.textAlign = "right";
-      ctx.fillText(c.company, W - mx, my + f.company);
-    }
-
-    // Logo (right top)
-    const logoS = H * 0.18;
-    drawLogo(ctx, logo, W - mx - logoS, my + f.company + 8, logoS, logoS, c.company || "", c.primaryColor);
-
-    // Elegant gradient separator
-    const sepGrad = ctx.createLinearGradient(mx, 0, W - mx, 0);
-    sepGrad.addColorStop(0, hexToRgba(c.primaryColor, 0.25));
-    sepGrad.addColorStop(0.3, hexToRgba(c.primaryColor, 0.08));
-    sepGrad.addColorStop(1, "transparent");
-    ctx.fillStyle = sepGrad;
-    ctx.fillRect(mx, H * 0.54, W - mx * 2, 1);
-
-    // Contact block
-    drawContactBlock(ctx, c, mx, H * 0.62, Math.round(f.contact * 1.5), "left",
-      hexToRgba(c.textColor, 0.65), hexToRgba(c.primaryColor, 0.5), f.contact);
-
-    // Tagline
-    if (c.tagline) {
-      ctx.font = getFont(300, f.tagline, c.fontStyle);
-      ctx.fillStyle = hexToRgba(c.textColor, 0.35);
-      ctx.textAlign = "right";
-      ctx.fillText(c.tagline, W - mx, H - my - 4);
-    }
+    ctx.font = getFont(300, f.title, c.fontStyle);
+    ctx.fillStyle = hexToRgba(c.textColor, 0.5);
+    ctx.fillText(c.title || "Job Title", mx, cy + f.name + 4);
+    // Divider
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.4);
+    ctx.fillRect(mx, cy + f.name + f.title + 18, W * 0.2, 1);
+    // Contact
+    drawContactBlock(ctx, c, mx, cy + f.name + f.title + 30, Math.round(f.contact * 1.6), "left",
+      hexToRgba(c.textColor, 0.55), hexToRgba(c.primaryColor, 0.45), f.contact);
+    // Logo
+    const ls = H * 0.16;
+    drawLogo(ctx, logo, W - mx - ls, H * 0.42, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+    // Company
+    ctx.font = getFont(400, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(c.textColor, 0.4);
+    ctx.textAlign = "right";
+    ctx.fillText((c.company || "Company").toUpperCase(), W - mx, H * 0.12);
   },
 
-  /* ==== 2. SWISS GRID - Strict grid-based Swiss design ==== */
-  "swiss-grid": (ctx, W, H, c, logo) => {
+  "monogram-luxe": (ctx, W, H, c, logo) => {
     const f = getFontSizes(W, H);
-    const mx = W * 0.08;
-
-    // Grid lines (very subtle)
-    ctx.strokeStyle = hexToRgba(c.primaryColor, 0.06);
-    ctx.lineWidth = 0.5;
-    for (let i = 1; i < 6; i++) {
-      const x = mx + (W - mx * 2) * (i / 6);
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-    }
-    for (let i = 1; i < 4; i++) {
-      const y = H * (i / 4);
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-    }
-
-    // Primary accent rectangle
-    ctx.fillStyle = c.primaryColor;
-    ctx.fillRect(0, 0, W * 0.04, H);
-
-    // Name - bold, uppercase
-    ctx.font = getFont(800, f.nameXl, c.fontStyle);
+    const mx = W * 0.1;
+    const initials = (c.name || "DM").split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
+    // Large watermark monogram
+    const ms = H * 0.7;
+    ctx.font = getFont(700, Math.round(ms * 0.55), c.fontStyle);
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.08);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(initials, mx + ms * 0.3, H / 2);
+    // Name
+    const nx = W * 0.45;
+    ctx.font = getFont(600, f.name, c.fontStyle);
     ctx.fillStyle = c.textColor;
     ctx.textAlign = "left";
-    const nameText = (c.name || "YOUR NAME").toUpperCase();
-    ctx.fillText(nameText, mx + W * 0.04, H * 0.35);
-
-    // Title - light weight
-    ctx.font = getFont(300, f.titleLg, c.fontStyle);
+    ctx.textBaseline = "top";
+    ctx.fillText(c.name || "Your Name", nx, H * 0.25);
+    // Title
+    ctx.font = getFont(300, f.title, c.fontStyle);
     ctx.fillStyle = hexToRgba(c.textColor, 0.55);
-    ctx.fillText(c.title || "Job Title", mx + W * 0.04, H * 0.35 + f.titleLg + 10);
+    ctx.fillText(c.title || "Job Title", nx, H * 0.25 + f.name + 4);
+    // Divider
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.3);
+    ctx.fillRect(nx, H * 0.25 + f.name + f.title + 16, W * 0.12, 1);
+    // Contact
+    drawContactBlock(ctx, c, nx, H * 0.25 + f.name + f.title + 28, Math.round(f.contact * 1.55), "left",
+      hexToRgba(c.textColor, 0.6), hexToRgba(c.primaryColor, 0.5), f.contact);
+  },
 
-    // Company at bottom-left
-    ctx.font = getFont(600, f.company, c.fontStyle);
-    ctx.fillStyle = c.primaryColor;
-    ctx.fillText((c.company || "").toUpperCase(), mx + W * 0.04, H * 0.88);
-
-    // Logo (bottom right)
-    const logoS = H * 0.16;
-    drawLogo(ctx, logo, W - mx - logoS, H - H * 0.12 - logoS, logoS, logoS, c.company || "", c.primaryColor);
-
-    // Contact - right column
-    const contactX = W * 0.58;
-    drawContactBlock(ctx, c, contactX, H * 0.55, Math.round(f.contact * 1.55), "left",
+  "geometric-mark": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const my = H * 0.15;
+    // Logo centered
+    const ls = H * 0.25;
+    drawLogo(ctx, logo, (W - ls) / 2, my, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+    // Name
+    ctx.font = getFont(500, f.name, c.fontStyle);
+    ctx.fillStyle = c.textColor;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(c.name || "Your Name", W / 2, my + ls + 14);
+    // Title
+    ctx.font = getFont(300, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(c.textColor, 0.5);
+    ctx.fillText((c.title || "Job Title").toUpperCase(), W / 2, my + ls + 14 + f.name + 4);
+    // Divider
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.25);
+    ctx.fillRect(W * 0.35, my + ls + 14 + f.name + f.label + 18, W * 0.3, 1);
+    // Contact
+    drawContactBlock(ctx, c, W / 2, my + ls + 14 + f.name + f.label + 30, Math.round(f.contact * 1.5), "center",
       hexToRgba(c.textColor, 0.6), hexToRgba(c.primaryColor, 0.45), f.contact);
   },
 
-  /* ==== 3. MONO TYPE - Pure typography, zero decoration ==== */
-  "mono-type": (ctx, W, H, c, logo) => {
+  "frame-minimal": (ctx, W, H, c, logo) => {
     const f = getFontSizes(W, H);
-    const mx = W * 0.1;
-
-    // Name - very large, light weight
-    ctx.font = getFont(200, Math.round(f.nameXl * 1.1), c.fontStyle);
-    ctx.fillStyle = c.textColor;
-    ctx.textAlign = "left";
-    ctx.fillText(c.name || "Your Name", mx, H * 0.38);
-
-    // Title
-    ctx.font = getFont(400, f.title, c.fontStyle);
-    ctx.fillStyle = c.primaryColor;
-    ctx.fillText(c.title || "Job Title", mx, H * 0.38 + f.title + 12);
-
-    // Small separator dot
-    ctx.fillStyle = c.primaryColor;
+    const mx = W * 0.1, my = H * 0.12;
+    // Frame
+    ctx.strokeStyle = hexToRgba(c.secondaryColor, 0.25);
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(mx + 4, H * 0.56, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Contact - compact
-    const entries = getContactEntries(c);
-    ctx.font = getFont(400, f.contact, c.fontStyle);
-    ctx.textAlign = "left";
-    entries.forEach((entry, i) => {
-      const y = H * 0.64 + i * Math.round(f.contact * 1.5);
-      ctx.fillStyle = hexToRgba(c.textColor, 0.5);
-      ctx.fillText(entry.value, mx, y);
-    });
-
-    // Company - bottom right
-    ctx.font = getFont(600, f.company, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.textColor, 0.3);
-    ctx.textAlign = "right";
-    ctx.fillText((c.company || "").toUpperCase(), W - mx, H * 0.9);
-
-    // Logo
-    const logoS = H * 0.14;
-    drawLogo(ctx, logo, W - mx - logoS, H * 0.12, logoS, logoS, c.company || "", c.primaryColor);
-  },
-
-  /* ==== 4. NORDIC FROST - Clean Scandinavian ==== */
-  "nordic-frost": (ctx, W, H, c, logo) => {
-    const f = getFontSizes(W, H);
-    const mx = W * 0.1;
-
-    // Subtle frost gradient top
-    const frostGrad = ctx.createLinearGradient(0, 0, 0, H * 0.3);
-    frostGrad.addColorStop(0, hexToRgba(c.primaryColor, 0.04));
-    frostGrad.addColorStop(1, "transparent");
-    ctx.fillStyle = frostGrad;
-    ctx.fillRect(0, 0, W, H * 0.3);
-
-    // Logo top-left
-    const logoS = H * 0.18;
-    drawLogo(ctx, logo, mx, H * 0.12, logoS, logoS, c.company || "", c.primaryColor, "circle");
-
-    // Company next to logo
-    ctx.font = getFont(500, f.company, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.textColor, 0.4);
-    ctx.textAlign = "left";
-    ctx.fillText((c.company || "").toUpperCase(), mx + logoS + 12, H * 0.12 + logoS / 2 + f.company * 0.3);
-
+    ctx.moveTo(mx, my); ctx.lineTo(W - mx, my); ctx.lineTo(W - mx, H - my);
+    ctx.moveTo(mx + W * 0.35, H - my); ctx.lineTo(W - mx, H - my);
+    ctx.stroke();
     // Name
     ctx.font = getFont(600, f.name, c.fontStyle);
     ctx.fillStyle = c.textColor;
-    ctx.fillText(c.name || "Your Name", mx, H * 0.52);
-
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(c.name || "Your Name", mx + 18, my + 18);
     // Title
-    ctx.font = getFont(300, f.title, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.textColor, 0.5);
-    ctx.fillText(c.title || "Job Title", mx, H * 0.52 + f.title + 8);
-
-    // Accent line
+    ctx.font = getFont(400, f.label, c.fontStyle);
     ctx.fillStyle = c.primaryColor;
-    ctx.fillRect(mx, H * 0.68, W * 0.06, 2);
-
+    ctx.fillText(c.title || "Job Title", mx + 18, my + 18 + f.name + 2);
+    // Accent line
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.5);
+    ctx.fillRect(mx + 18, my + 18 + f.name + f.label + 12, W * 0.18, 2);
     // Contact
-    drawContactBlock(ctx, c, mx, H * 0.76, Math.round(f.contact * 1.45), "left",
-      hexToRgba(c.textColor, 0.55), hexToRgba(c.primaryColor, 0.4), f.contact);
+    drawContactBlock(ctx, c, mx + 18, my + 18 + f.name + f.label + 26, Math.round(f.contact * 1.5), "left",
+      hexToRgba(c.textColor, 0.55), hexToRgba(c.primaryColor, 0.5), f.contact);
+    // Logo
+    const ls = H * 0.15;
+    drawLogo(ctx, logo, W - mx - ls - 18, H - my - ls - 18, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+    // Company
+    ctx.font = getFont(500, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(c.textColor, 0.4);
+    ctx.textAlign = "left";
+    ctx.fillText((c.company || "Company").toUpperCase(), mx + 18, H - my - 28);
   },
 
-  /* ==== 5. BOLD SPLIT - Color-blocked split panel ==== */
-  "bold-split": (ctx, W, H, c, logo) => {
+  "split-vertical": (ctx, W, H, c, logo) => {
     const f = getFontSizes(W, H);
     const splitX = W * 0.42;
-
-    // Left gradient panel with rich depth
-    const panelGrad = ctx.createLinearGradient(0, 0, splitX, H);
-    panelGrad.addColorStop(0, c.primaryColor);
-    panelGrad.addColorStop(0.6, hexToRgba(c.secondaryColor, 0.85));
-    panelGrad.addColorStop(1, hexToRgba(c.primaryColor, 0.7));
-    ctx.fillStyle = panelGrad;
+    const my = H * 0.18;
+    // Left panel
+    ctx.fillStyle = c.primaryColor;
     ctx.fillRect(0, 0, splitX, H);
-
-    // Subtle pattern on left panel
-    drawPattern(ctx, 0, 0, splitX, H, "dots", getContrastColor(c.primaryColor), 0.04, 24);
-
-    // Decorative diagonal line on split boundary
-    ctx.save();
-    ctx.strokeStyle = hexToRgba(c.primaryColor, 0.1);
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(splitX + 4, 0);
-    ctx.lineTo(splitX + 4, H);
-    ctx.stroke();
-    ctx.strokeStyle = hexToRgba(c.primaryColor, 0.05);
-    ctx.beginPath();
-    ctx.moveTo(splitX + 10, 0);
-    ctx.lineTo(splitX + 10, H);
-    ctx.stroke();
-    ctx.restore();
-
-    // Subtle accent circles on right side
-    drawAccentCircle(ctx, W * 0.92, H * 0.08, W * 0.06, c.primaryColor, 0.04);
-    drawAccentCircle(ctx, W * 0.95, H * 0.92, W * 0.04, c.secondaryColor, 0.03);
-
-    const contrastC = getContrastColor(c.primaryColor);
-    const mx = splitX * 0.14;
-
-    // Logo on left panel
-    const logoS = splitX * 0.22;
-    drawLogo(ctx, logo, mx, H * 0.1, logoS, logoS, c.company || "", contrastC, "circle");
-
-    // Name on left panel
-    ctx.font = getFont(700, f.name, c.fontStyle);
-    ctx.fillStyle = contrastC;
+    const pt = getContrastColor(c.primaryColor);
+    // Logo
+    const ls = Math.min(splitX * 0.35, H * 0.2);
+    drawLogo(ctx, logo, (splitX - ls) / 2, H * 0.3, ls, ls, c.company || "DM", pt, logoShapeFor(c.fontStyle));
+    // Company on panel
+    ctx.font = getFont(500, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(pt, 0.7);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText((c.company || "Company").toUpperCase(), splitX / 2, H * 0.3 + ls + 10);
+    // Name right
+    const rx = splitX + W * 0.06;
+    ctx.font = getFont(600, f.name, c.fontStyle);
+    ctx.fillStyle = c.textColor;
     ctx.textAlign = "left";
-    drawTextWithShadow(ctx, c.name || "Your Name", mx, H * 0.48, { shadowBlur: 4, shadowColor: "rgba(0,0,0,0.2)" });
-
+    ctx.fillText(c.name || "Your Name", rx, my);
     // Title
     ctx.font = getFont(400, f.title, c.fontStyle);
-    ctx.fillStyle = hexToRgba(contrastC, 0.7);
-    ctx.fillText(c.title || "Job Title", mx, H * 0.48 + f.title + 8);
+    ctx.fillStyle = hexToRgba(c.textColor, 0.5);
+    ctx.fillText(c.title || "Job Title", rx, my + f.name + 4);
+    // Contact
+    drawContactBlock(ctx, c, rx, my + f.name + f.title + 22, Math.round(f.contact * 1.5), "left",
+      hexToRgba(c.textColor, 0.6), hexToRgba(c.primaryColor, 0.5), f.contact);
+  },
 
-    // Company
-    ctx.font = getFont(600, f.label, c.fontStyle);
-    ctx.fillStyle = hexToRgba(contrastC, 0.4);
-    ctx.fillText((c.company || "").toUpperCase(), mx, H * 0.9);
-
-    // Right panel - contact details
-    const rx = splitX + (W - splitX) * 0.1;
-    ctx.font = getFont(600, f.label, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.textColor, 0.3);
+  "diagonal-mono": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const mx = W * 0.1, my = H * 0.15;
+    // Dark panel
+    ctx.fillStyle = c.primaryColor;
+    ctx.fillRect(0, 0, W * 0.55, H);
+    const dt = getContrastColor(c.primaryColor);
+    // Name on dark
+    ctx.font = getFont(700, f.name, c.fontStyle);
+    ctx.fillStyle = dt;
     ctx.textAlign = "left";
-    ctx.fillText("CONTACT", rx, H * 0.18);
+    ctx.textBaseline = "top";
+    ctx.fillText(c.name || "Your Name", mx, my);
+    // Title
+    ctx.font = getFont(300, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(dt, 0.6);
+    ctx.fillText(c.title || "Title", mx, my + f.name + 2);
+    // Line
+    ctx.fillStyle = hexToRgba(dt, 0.3);
+    ctx.fillRect(mx, my + f.name + f.label + 10, W * 0.22, 1);
+    // Contact right side
+    drawContactBlock(ctx, c, W * 0.58, my, Math.round(f.contact * 1.6), "left",
+      hexToRgba(c.textColor, 0.6), hexToRgba(c.primaryColor, 0.5), f.contact);
+    // Company
+    ctx.font = getFont(400, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(c.textColor, 0.5);
+    ctx.textAlign = "right";
+    ctx.fillText(c.company || "Company", W - mx, H - my);
+    // Logo
+    const ls = H * 0.14;
+    drawLogo(ctx, logo, mx, H - my - ls, ls, ls, c.company || "DM", dt, logoShapeFor(c.fontStyle));
+  },
 
-    drawDivider(ctx, rx, H * 0.23, W * 0.08, "gradient", c.primaryColor, 0.5);
+  // ===================== MODERN =====================
 
-    drawContactBlock(ctx, c, rx, H * 0.35, Math.round(f.contactLg * 1.6), "left",
-      hexToRgba(c.textColor, 0.65), hexToRgba(c.primaryColor, 0.45), f.contactLg);
+  "cyan-tech": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const mx = W * 0.08, my = H * 0.14;
+    const pw = W * 0.38, px = W - pw;
+    // Accent panel
+    const grad = ctx.createLinearGradient(px, 0, W, H);
+    grad.addColorStop(0, c.primaryColor);
+    grad.addColorStop(1, c.secondaryColor);
+    ctx.fillStyle = grad;
+    ctx.fillRect(px, 0, pw, H);
+    // Logo
+    const ls = H * 0.18;
+    drawLogo(ctx, logo, mx, my, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+    // Company
+    ctx.font = getFont(700, f.company, c.fontStyle);
+    ctx.fillStyle = c.textColor;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(c.company || "Company", mx + ls + 10, my);
+    // Panel content
+    const pt = getContrastColor(c.primaryColor);
+    ctx.font = getFont(700, f.name, c.fontStyle);
+    ctx.fillStyle = pt;
+    ctx.fillText(c.name || "Your Name", px + pw * 0.12, my);
+    ctx.font = getFont(400, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(pt, 0.7);
+    ctx.fillText(c.title || "Job Title", px + pw * 0.12, my + f.name + 4);
+    // Contact on panel
+    drawContactBlock(ctx, c, px + pw * 0.12, my + f.name + f.label + 20, Math.round(f.contact * 1.5), "left",
+      hexToRgba(pt, 0.8), hexToRgba(pt, 0.6), f.contact);
+  },
 
-    // Subtle tagline on right bottom
+  "corporate-chevron": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const my = H * 0.15;
+    // Chevron shapes
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.08);
+    ctx.fillRect(W * 0.6, -H * 0.1, W * 0.35, W * 0.35);
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.06);
+    ctx.fillRect(W * 0.68, -H * 0.02, W * 0.28, W * 0.28);
+    // Logo centered
+    const ls = H * 0.2;
+    drawLogo(ctx, logo, (W - ls) / 2, my, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+    // Company + Tagline
+    ctx.font = getFont(700, f.companyLg, c.fontStyle);
+    ctx.fillStyle = c.textColor;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(c.company || "Company", W / 2, my + ls + 10);
     if (c.tagline) {
       ctx.font = getFont(300, f.tagline, c.fontStyle);
-      ctx.fillStyle = hexToRgba(c.textColor, 0.25);
-      ctx.textAlign = "left";
-      ctx.fillText(c.tagline, rx, H * 0.92);
+      ctx.fillStyle = hexToRgba(c.textColor, 0.45);
+      ctx.fillText(c.tagline, W / 2, my + ls + 10 + f.companyLg + 4);
     }
-  },
-
-  /* ==== 6. NEON EDGE - Glowing accent edge ==== */
-  "neon-edge": (ctx, W, H, c, logo) => {
-    const f = getFontSizes(W, H);
-    const mx = W * 0.09;
-
-    // Neon left edge with multi-layered glow
-    const neonW = 6;
-    ctx.fillStyle = c.primaryColor;
-    ctx.fillRect(0, 0, neonW, H);
-
-    // Triple glow layers
-    for (let i = 0; i < 3; i++) {
-      const glowW = 15 + i * 25;
-      const glowGrad = ctx.createLinearGradient(neonW, 0, neonW + glowW, 0);
-      glowGrad.addColorStop(0, hexToRgba(c.primaryColor, 0.12 - i * 0.035));
-      glowGrad.addColorStop(1, "transparent");
-      ctx.fillStyle = glowGrad;
-      ctx.fillRect(neonW, 0, glowW, H);
-    }
-
-    // Neon bottom accent with glow
-    ctx.fillStyle = c.secondaryColor;
-    ctx.fillRect(W * 0.6, H - 3, W * 0.4, 3);
-    const glowBottom = ctx.createLinearGradient(0, H - 40, 0, H - 3);
-    glowBottom.addColorStop(0, "transparent");
-    glowBottom.addColorStop(1, hexToRgba(c.secondaryColor, 0.1));
-    ctx.fillStyle = glowBottom;
-    ctx.fillRect(W * 0.55, H - 40, W * 0.45, 37);
-
-    // Subtle corner glow (top-right)
-    const cornerGlow = ctx.createRadialGradient(W, 0, 0, W, 0, W * 0.25);
-    cornerGlow.addColorStop(0, hexToRgba(c.secondaryColor, 0.04));
-    cornerGlow.addColorStop(1, "transparent");
-    ctx.fillStyle = cornerGlow;
-    ctx.fillRect(W * 0.7, 0, W * 0.3, H * 0.35);
-
-    // Decorative scan lines
-    ctx.save();
-    ctx.globalAlpha = 0.015;
-    for (let y = 0; y < H; y += 4) {
-      ctx.fillStyle = c.textColor;
-      ctx.fillRect(0, y, W, 1);
-    }
-    ctx.restore();
-
-    // Name with neon glow
-    ctx.font = getFont(700, f.name, c.fontStyle);
-    ctx.fillStyle = c.textColor;
-    ctx.textAlign = "left";
-    drawTextWithShadow(ctx, c.name || "Your Name", mx, H * 0.28, { shadowBlur: 8, shadowColor: hexToRgba(c.primaryColor, 0.35) });
-
-    // Title + Company inline
-    ctx.font = getFont(400, f.title, c.fontStyle);
-    ctx.fillStyle = c.primaryColor;
-    ctx.fillText(c.title || "Job Title", mx, H * 0.28 + f.title + 8);
-
-    ctx.font = getFont(500, f.company, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.textColor, 0.4);
-    ctx.fillText(c.company || "", mx, H * 0.28 + f.title + f.company + 18);
-
-    // Contact
-    drawContactBlock(ctx, c, mx, H * 0.62, Math.round(f.contact * 1.5), "left",
-      hexToRgba(c.textColor, 0.6), hexToRgba(c.primaryColor, 0.5), f.contact);
-
-    // Logo right with glow
-    const logoS = H * 0.2;
-    drawLogo(ctx, logo, W - mx - logoS, H * 0.12, logoS, logoS, c.company || "", c.primaryColor, "square");
-
-    // Logo glow effect
-    const logoGlow = ctx.createRadialGradient(W - mx - logoS / 2, H * 0.12 + logoS / 2, logoS * 0.3, W - mx - logoS / 2, H * 0.12 + logoS / 2, logoS);
-    logoGlow.addColorStop(0, hexToRgba(c.primaryColor, 0.06));
-    logoGlow.addColorStop(1, "transparent");
-    ctx.fillStyle = logoGlow;
-    ctx.fillRect(W - mx - logoS * 1.5, H * 0.12 - logoS * 0.3, logoS * 2, logoS * 1.6);
-  },
-
-  /* ==== 7. GEOMETRIC MODERN - Bold geometric shapes ==== */
-  "geometric-modern": (ctx, W, H, c, logo) => {
-    const f = getFontSizes(W, H);
-
-    // Large geometric circle (top-right bleed)
-    drawAccentCircle(ctx, W * 0.88, H * -0.15, W * 0.28, c.primaryColor, 0.08);
-    drawAccentCircle(ctx, W * 0.94, H * 0.12, W * 0.14, c.secondaryColor, 0.06);
-
-    // Bottom-left small circle
-    drawAccentCircle(ctx, W * -0.04, H * 1.08, W * 0.16, c.primaryColor, 0.05);
-
-    // Corner frame accent
-    ctx.strokeStyle = hexToRgba(c.primaryColor, 0.12);
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(W * 0.06, H * 0.22);
-    ctx.lineTo(W * 0.06, H * 0.06);
-    ctx.lineTo(W * 0.22, H * 0.06);
-    ctx.stroke();
-
-    const mx = W * 0.09;
-
-    // Logo
-    const logoS = H * 0.18;
-    drawLogo(ctx, logo, mx, H * 0.1, logoS, logoS, c.company || "", c.primaryColor);
-
-    // Name - large bold
-    ctx.font = getFont(800, f.nameXl, c.fontStyle);
-    ctx.fillStyle = c.textColor;
-    ctx.textAlign = "left";
-    drawTextWithShadow(ctx, c.name || "Your Name", mx, H * 0.48);
-
-    // Title badge
-    ctx.font = getFont(500, f.title, c.fontStyle);
-    const titleText = c.title || "Job Title";
-    const tw = ctx.measureText(titleText).width + 18;
-    ctx.fillStyle = hexToRgba(c.primaryColor, 0.1);
-    roundRect(ctx, mx, H * 0.54, tw, Math.round(f.title * 1.6), Math.round(f.title * 0.8));
-    ctx.fill();
-    ctx.fillStyle = c.primaryColor;
-    ctx.textAlign = "left";
-    ctx.fillText(titleText, mx + 9, H * 0.54 + f.title + 2);
-
-    // Company
-    ctx.font = getFont(600, f.label, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.textColor, 0.35);
-    ctx.fillText((c.company || "").toUpperCase(), mx, H * 0.75);
-
-    // Contact (right column)
-    drawContactBlock(ctx, c, W * 0.56, H * 0.35, Math.round(f.contact * 1.5), "left",
-      hexToRgba(c.textColor, 0.55), hexToRgba(c.primaryColor, 0.4), f.contact);
-
-    // Bottom-right corner frame
-    ctx.strokeStyle = hexToRgba(c.primaryColor, 0.12);
-    ctx.beginPath();
-    ctx.moveTo(W * 0.78, H * 0.94);
-    ctx.lineTo(W * 0.94, H * 0.94);
-    ctx.lineTo(W * 0.94, H * 0.78);
-    ctx.stroke();
-  },
-
-  /* ==== 8. GRADIENT WAVE - Flowing gradient accent ==== */
-  "gradient-wave": (ctx, W, H, c, logo) => {
-    const f = getFontSizes(W, H);
-    const mx = W * 0.09;
-
-    // Gradient wave at bottom
-    ctx.save();
-    const waveGrad = ctx.createLinearGradient(0, H * 0.7, W, H);
-    waveGrad.addColorStop(0, c.primaryColor);
-    waveGrad.addColorStop(1, c.secondaryColor);
-    ctx.fillStyle = waveGrad;
-    ctx.beginPath();
-    ctx.moveTo(0, H);
-    ctx.lineTo(W, H);
-    ctx.lineTo(W, H * 0.78);
-    ctx.quadraticCurveTo(W * 0.75, H * 0.7, W * 0.5, H * 0.8);
-    ctx.quadraticCurveTo(W * 0.25, H * 0.9, 0, H * 0.75);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-
-    // Logo
-    const logoS = H * 0.18;
-    drawLogo(ctx, logo, mx, H * 0.1, logoS, logoS, c.company || "", c.primaryColor, "circle");
-
-    // Company next to logo
-    ctx.font = getFont(500, f.company, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.textColor, 0.4);
-    ctx.textAlign = "left";
-    ctx.fillText(c.company || "Company", mx + logoS + 10, H * 0.1 + logoS / 2 + 4);
-
-    // Name
-    ctx.font = getFont(700, f.name, c.fontStyle);
-    ctx.fillStyle = c.textColor;
-    ctx.fillText(c.name || "Your Name", mx, H * 0.44);
-
-    // Title
-    ctx.font = getFont(400, f.title, c.fontStyle);
-    ctx.fillStyle = c.primaryColor;
-    ctx.fillText(c.title || "Job Title", mx, H * 0.44 + f.title + 8);
-
-    // Contact
-    drawContactBlock(ctx, c, mx, H * 0.58, Math.round(f.contact * 1.4), "left",
-      hexToRgba(c.textColor, 0.55), hexToRgba(c.primaryColor, 0.4), f.contact);
-
-    // Company on wave (contrast text)
-    const waveContrast = getContrastColor(c.primaryColor);
-    ctx.font = getFont(700, f.company, c.fontStyle);
-    ctx.fillStyle = hexToRgba(waveContrast, 0.6);
-    ctx.textAlign = "right";
-    ctx.fillText((c.company || "").toUpperCase(), W - mx, H * 0.92);
-  },
-
-  /* ==== 9. CORPORATE STRIPE - Professional side stripe ==== */
-  "corporate-stripe": (ctx, W, H, c, logo) => {
-    const f = getFontSizes(W, H);
-
-    // Left accent stripe with gradient
-    const stripeW = 10;
-    const stripeGrad = ctx.createLinearGradient(0, 0, 0, H);
-    stripeGrad.addColorStop(0, c.primaryColor);
-    stripeGrad.addColorStop(1, c.secondaryColor);
-    ctx.fillStyle = stripeGrad;
-    ctx.fillRect(0, 0, stripeW, H);
-
-    // Glow
-    ctx.fillStyle = hexToRgba(c.primaryColor, 0.06);
-    ctx.fillRect(stripeW, 0, 4, H);
-
-    const mx = W * 0.06;
-
-    // Logo top-right
-    const logoS = H * 0.2;
-    drawLogo(ctx, logo, W - mx - logoS, H * 0.1, logoS, logoS, c.company || "", c.primaryColor);
-
-    // Name
-    ctx.font = getFont(700, f.name, c.fontStyle);
-    ctx.fillStyle = c.textColor;
-    ctx.textAlign = "left";
-    drawTextWithShadow(ctx, c.name || "Your Name", mx, H * 0.3);
-
-    // Title + Company
-    ctx.font = getFont(400, f.title, c.fontStyle);
-    ctx.fillStyle = c.primaryColor;
-    ctx.fillText(c.title || "Job Title", mx, H * 0.3 + f.title + 8);
-
-    ctx.font = getFont(500, f.company, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.textColor, 0.4);
-    ctx.fillText(c.company || "Company", mx, H * 0.3 + f.title + f.company + 18);
-
-    // Divider
-    drawDivider(ctx, mx, H * 0.58, W * 0.88, "gradient", c.primaryColor, 0.15);
-
-    // Contact - horizontal layout
-    const entries = getContactEntries(c);
-    ctx.font = getFont(400, f.contact, c.fontStyle);
-    ctx.textBaseline = "middle"; // keep icon center and text center on the same y
-    let detailX = mx;
-    entries.forEach((entry, idx) => {
-      const contactY = H * 0.72;
-      if (c.showContactIcons) {
-        const iconSz = scaledIconSize(Math.round(f.contact + 2));
-        drawContactIcon(ctx, entry.type, detailX + iconSz / 2, contactY, iconSz, hexToRgba(c.primaryColor, 0.4));
-        detailX += iconSz + Math.round(f.contact * 0.3);
-      }
-      ctx.fillStyle = hexToRgba(c.textColor, 0.55);
-      ctx.textAlign = "left";
-      const textW = ctx.measureText(entry.value).width;
-      ctx.fillText(entry.value, detailX, contactY);
-      detailX += textW + 16;
-      // Separator dot — vertically centred with text
-      if (idx < entries.length - 1 && detailX < W * 0.9) {
-        ctx.fillStyle = hexToRgba(c.primaryColor, 0.25);
-        ctx.beginPath();
-        ctx.arc(detailX - 7, contactY, 2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    });
-  },
-
-  /* ==== 10. DIPLOMAT - Distinguished double border ==== */
-  "diplomat": (ctx, W, H, c, logo) => {
-    const f = getFontSizes(W, H);
-
-    // Outer border
-    ctx.strokeStyle = hexToRgba(c.primaryColor, 0.4);
-    ctx.lineWidth = 2;
-    roundRect(ctx, 14, 14, W - 28, H - 28, 3);
-    ctx.stroke();
-
-    // Inner border
-    ctx.strokeStyle = hexToRgba(c.primaryColor, 0.15);
-    ctx.lineWidth = 0.5;
-    roundRect(ctx, 20, 20, W - 40, H - 40, 2);
-    ctx.stroke();
-
-    // Corner ornaments
-    const corners: number[][] = [[24, 24], [W - 24, 24], [24, H - 24], [W - 24, H - 24]];
-    corners.forEach(([cx, cy]) => {
+    // Website
+    if (c.website) {
+      ctx.font = getFont(400, f.label, c.fontStyle);
       ctx.fillStyle = c.primaryColor;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-    });
+      ctx.fillText(c.website, W / 2, H - my);
+    }
+  },
 
-    // Centered logo
-    const logoS = H * 0.17;
-    drawLogo(ctx, logo, W / 2 - logoS / 2, H * 0.08, logoS, logoS, c.company || "", c.primaryColor, "circle");
+  "zigzag-overlay": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const mx = W * 0.08;
+    const sH = H * 0.38, sY = H - sH;
+    // Logo centered in dark area
+    const ls = H * 0.2;
+    drawLogo(ctx, logo, (W - ls) / 2, H * 0.12, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+    // Company
+    ctx.font = getFont(500, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(c.textColor, 0.4);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText((c.company || "Company").toUpperCase(), W / 2, H * 0.12 + ls + 8);
+    // White strip
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, sY, W, sH);
+    // Name on strip
+    ctx.font = getFont(700, f.name, c.fontStyle);
+    ctx.fillStyle = "#1a1a1a";
+    ctx.textAlign = "left";
+    ctx.fillText(c.name || "Your Name", mx, sY + sH * 0.12);
+    // Title
+    ctx.font = getFont(400, f.label, c.fontStyle);
+    ctx.fillStyle = c.primaryColor;
+    ctx.fillText((c.title || "Job Title").toUpperCase(), mx, sY + sH * 0.12 + f.name + 2);
+    // Contact
+    drawContactBlock(ctx, c, W * 0.5, sY + sH * 0.15, Math.round(f.contact * 1.45), "left",
+      "rgba(51,51,51,0.7)", hexToRgba(c.primaryColor, 0.6), f.contact);
+  },
 
-    // Name - centered
+  "hex-split": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const mx = W * 0.08, my = H * 0.12;
+    // Top accent bar
+    const grad = ctx.createLinearGradient(0, 0, W, 0);
+    grad.addColorStop(0, c.primaryColor);
+    grad.addColorStop(1, c.secondaryColor);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H * 0.08);
+    // Name
+    ctx.font = getFont(600, f.name, c.fontStyle);
+    ctx.fillStyle = c.primaryColor;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "top";
+    ctx.fillText(c.name || "Your Name", W - mx, my + 8);
+    // Title
+    ctx.font = getFont(400, f.label, c.fontStyle);
+    ctx.fillStyle = c.secondaryColor;
+    ctx.fillText(c.title || "Job Title", W - mx, my + 8 + f.name + 2);
+    // Divider
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.15);
+    ctx.fillRect(mx, H * 0.52, W - 2 * mx, 1);
+    // Contact
+    drawContactBlock(ctx, c, mx, H * 0.58, Math.round(f.contact * 1.5), "left",
+      hexToRgba(c.textColor, 0.6), hexToRgba(c.primaryColor, 0.5), f.contact);
+    // Logo + Company
+    const ls = H * 0.14;
+    drawLogo(ctx, logo, W - mx - ls, H - my - ls, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+  },
+
+  "dot-circle": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const mx = W * 0.08, my = H * 0.15;
+    // Circle accent
+    ctx.beginPath();
+    ctx.arc(W * 0.85, H * 0.7, H * 0.42, 0, Math.PI * 2);
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.9);
+    ctx.fill();
+    // Name
+    ctx.font = getFont(700, f.name, c.fontStyle);
+    ctx.fillStyle = c.textColor;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(c.name || "Your Name", mx, my);
+    // Title
+    ctx.font = getFont(400, f.title, c.fontStyle);
+    ctx.fillStyle = c.primaryColor;
+    ctx.fillText(c.title || "Job Title", mx, my + f.name + 4);
+    // Logo inside circle
+    const ls = H * 0.18;
+    const pt = getContrastColor(c.primaryColor);
+    drawLogo(ctx, logo, W * 0.85 - ls / 2, H * 0.55, ls, ls, c.company || "DM", pt, logoShapeFor(c.fontStyle));
+    // Company in circle
+    ctx.font = getFont(500, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(pt, 0.8);
+    ctx.textAlign = "center";
+    ctx.fillText((c.company || "Company").toUpperCase(), W * 0.85, H * 0.82);
+    // Contact
+    drawContactBlock(ctx, c, mx, my + f.name + f.title + 22, Math.round(f.contact * 1.5), "left",
+      hexToRgba(c.textColor, 0.6), hexToRgba(c.primaryColor, 0.5), f.contact);
+  },
+
+  "wave-gradient": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const mx = W * 0.1, my = H * 0.15;
+    // Bottom gradient band
+    const grad = ctx.createLinearGradient(0, H * 0.6, W, H);
+    grad.addColorStop(0, c.primaryColor);
+    grad.addColorStop(1, c.secondaryColor);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, H * 0.6, W, H * 0.4);
+    // Logo + Company
+    const ls = H * 0.16;
+    drawLogo(ctx, logo, mx, my, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+    ctx.font = getFont(700, f.company, c.fontStyle);
+    ctx.fillStyle = c.textColor;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(c.company || "Company", mx + ls + 10, my + 2);
+    // Name on band
+    const bt = getContrastColor(c.primaryColor);
+    ctx.font = getFont(600, f.name, c.fontStyle);
+    ctx.fillStyle = bt;
+    ctx.fillText(c.name || "Your Name", mx, H * 0.65);
+    // Title
+    ctx.font = getFont(400, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(bt, 0.7);
+    ctx.fillText(c.title || "Job Title", mx, H * 0.65 + f.name + 2);
+    // Contact
+    drawContactBlock(ctx, c, W * 0.55, H * 0.66, Math.round(f.contact * 1.5), "left",
+      hexToRgba(bt, 0.8), hexToRgba(bt, 0.6), f.contact);
+  },
+
+  // ===================== CLASSIC / CORPORATE =====================
+
+  "circle-brand": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const mx = W * 0.08, my = H * 0.15;
+    // Logo + Company
+    const ls = H * 0.18;
+    drawLogo(ctx, logo, mx, my, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+    ctx.font = getFont(700, f.companyLg, c.fontStyle);
+    ctx.fillStyle = c.primaryColor;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(c.company || "Company", mx + ls + 10, my + 4);
+    // Divider
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.12);
+    ctx.fillRect(mx, H * 0.48, W - 2 * mx, 1);
+    // Name
     ctx.font = getFont(600, f.name, c.fontStyle);
     ctx.fillStyle = c.textColor;
-    ctx.textAlign = "center";
-    drawTextWithShadow(ctx, c.name || "Your Name", W / 2, H * 0.42);
-
-    // Title
-    ctx.font = getFont(400, f.title, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.textColor, 0.55);
-    ctx.fillText(c.title || "Job Title", W / 2, H * 0.42 + f.title + 8);
-
-    // Ornate divider
-    drawDivider(ctx, W * 0.3, H * 0.56, W * 0.4, "ornate", c.primaryColor, 0.35);
-
-    // Contact - centered
-    drawContactBlock(ctx, c, W / 2, H * 0.66, Math.round(f.contact * 1.45), "center",
-      hexToRgba(c.textColor, 0.55), hexToRgba(c.primaryColor, 0.35), f.contact);
-
-    // Company
-    ctx.font = getFont(600, f.label, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.primaryColor, 0.45);
-    ctx.textAlign = "center";
-    ctx.fillText((c.company || "").toUpperCase(), W / 2, H * 0.92);
-  },
-
-  /* ==== 11. HERITAGE CREST - Traditional centered ==== */
-  "heritage-crest": (ctx, W, H, c, logo) => {
-    const f = getFontSizes(W, H);
-
-    // Top gradient line
-    const topGrad = ctx.createLinearGradient(W * 0.2, 0, W * 0.8, 0);
-    topGrad.addColorStop(0, "transparent");
-    topGrad.addColorStop(0.3, c.primaryColor);
-    topGrad.addColorStop(0.7, c.primaryColor);
-    topGrad.addColorStop(1, "transparent");
-    ctx.fillStyle = topGrad;
-    ctx.fillRect(W * 0.2, H * 0.06, W * 0.6, 2.5);
-
-    // Logo - centered, larger
-    const logoS = H * 0.2;
-    drawLogo(ctx, logo, W / 2 - logoS / 2, H * 0.1, logoS, logoS, c.company || "", c.primaryColor, "circle");
-
-    // Name
-    ctx.font = getFont(700, f.name, c.fontStyle);
-    ctx.fillStyle = c.textColor;
-    ctx.textAlign = "center";
-    drawTextWithShadow(ctx, c.name || "Your Name", W / 2, H * 0.44);
-
+    ctx.fillText(c.name || "Your Name", mx, H * 0.53);
     // Title
     ctx.font = getFont(400, f.title, c.fontStyle);
     ctx.fillStyle = c.primaryColor;
-    ctx.fillText(c.title || "Job Title", W / 2, H * 0.44 + f.title + 8);
-
-    // Company
-    ctx.font = getFont(600, f.label, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.textColor, 0.35);
-    ctx.fillText((c.company || "").toUpperCase(), W / 2, H * 0.44 + f.title + f.label + 22);
-
-    // Ornate divider
-    drawDivider(ctx, W * 0.28, H * 0.62, W * 0.44, "ornate", c.primaryColor, 0.3);
-
-    // Contact - centered
-    drawContactBlock(ctx, c, W / 2, H * 0.72, Math.round(f.contact * 1.45), "center",
-      hexToRgba(c.textColor, 0.55), hexToRgba(c.primaryColor, 0.35), f.contact);
-
-    // Bottom gradient line
-    ctx.fillStyle = topGrad;
-    ctx.fillRect(W * 0.2, H * 0.94, W * 0.6, 2.5);
-  },
-
-  /* ==== 12. ENGRAVED - Subtle engraved style ==== */
-  "engraved": (ctx, W, H, c, logo) => {
-    const f = getFontSizes(W, H);
-
-    // Subtle emboss background
-    const embossGrad = ctx.createLinearGradient(0, 0, W, H);
-    embossGrad.addColorStop(0, hexToRgba(c.primaryColor, 0.02));
-    embossGrad.addColorStop(0.5, "transparent");
-    embossGrad.addColorStop(1, hexToRgba(c.primaryColor, 0.02));
-    ctx.fillStyle = embossGrad;
-    ctx.fillRect(0, 0, W, H);
-
-    // Fine horizontal lines as texture
-    ctx.strokeStyle = hexToRgba(c.primaryColor, 0.03);
-    ctx.lineWidth = 0.5;
-    for (let y = 0; y < H; y += 8) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-    }
-
-    // Logo - top center
-    const logoS = H * 0.16;
-    drawLogo(ctx, logo, W / 2 - logoS / 2, H * 0.08, logoS, logoS, c.company || "", c.primaryColor);
-
-    // Company below logo
-    ctx.font = getFont(600, f.label, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.primaryColor, 0.45);
-    ctx.textAlign = "center";
-    ctx.fillText((c.company || "").toUpperCase(), W / 2, H * 0.08 + logoS + f.label + 4);
-
-    // Thin line
-    ctx.fillStyle = hexToRgba(c.primaryColor, 0.12);
-    ctx.fillRect(W * 0.35, H * 0.38, W * 0.3, 1);
-
-    // Name
-    ctx.font = getFont(500, f.name, c.fontStyle);
-    ctx.fillStyle = c.textColor;
-    ctx.textAlign = "center";
-    ctx.fillText(c.name || "Your Name", W / 2, H * 0.52);
-
-    // Title
-    ctx.font = getFont(300, f.title, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.textColor, 0.5);
-    ctx.fillText(c.title || "Job Title", W / 2, H * 0.52 + f.title + 8);
-
-    // Contact at bottom
-    drawContactBlock(ctx, c, W / 2, H * 0.72, Math.round(f.contact * 1.4), "center",
-      hexToRgba(c.textColor, 0.5), hexToRgba(c.primaryColor, 0.3), f.contact);
-  },
-
-  /* ==== 13. DIAGONAL CUT - Angular diagonal division ==== */
-  "diagonal-cut": (ctx, W, H, c, logo) => {
-    const f = getFontSizes(W, H);
-
-    // Diagonal gradient block (right portion)
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(W * 0.52, 0);
-    ctx.lineTo(W, 0);
-    ctx.lineTo(W, H);
-    ctx.lineTo(W * 0.32, H);
-    ctx.closePath();
-    const diagGrad = ctx.createLinearGradient(W * 0.4, 0, W, H);
-    diagGrad.addColorStop(0, c.primaryColor);
-    diagGrad.addColorStop(1, c.secondaryColor);
-    ctx.fillStyle = diagGrad;
-    ctx.fill();
-    ctx.clip();
-    drawPattern(ctx, 0, 0, W, H, "diagonal-lines", getContrastColor(c.primaryColor), 0.04, 20);
-    ctx.restore();
-
-    const mx = W * 0.08;
-    const contrastC = getContrastColor(c.primaryColor);
-
-    // Name (left side)
-    ctx.font = getFont(700, f.name, c.fontStyle);
-    ctx.fillStyle = c.textColor;
-    ctx.textAlign = "left";
-    drawTextWithShadow(ctx, c.name || "Your Name", mx, H * 0.32);
-
-    // Title
-    ctx.font = getFont(400, f.title, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.textColor, 0.55);
-    ctx.fillText(c.title || "Job Title", mx, H * 0.32 + f.title + 8);
-
-    // Logo
-    const logoS = H * 0.16;
-    drawLogo(ctx, logo, mx, H * 0.55, logoS, logoS, c.company || "", c.primaryColor, "circle");
-
-    // Company
-    ctx.font = getFont(600, f.label, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.textColor, 0.35);
-    ctx.fillText((c.company || "").toUpperCase(), mx + logoS + 10, H * 0.55 + logoS / 2 + 4);
-
-    // Contact on diagonal (right side)
-    drawContactBlock(ctx, c, W - mx, H * 0.3, Math.round(f.contact * 1.5), "right",
-      hexToRgba(contrastC, 0.85), hexToRgba(contrastC, 0.5), f.contact);
-  },
-
-  /* ==== 14. LAYERED CARD - Floating panel effect ==== */
-  "layered-card": (ctx, W, H, c, logo) => {
-    const f = getFontSizes(W, H);
-
-    // Background gradient
-    drawGradient(ctx, 0, 0, W, H, 135, [
-      { offset: 0, color: c.bgColor },
-      { offset: 1, color: hexToRgba(c.primaryColor, 0.05) },
-    ]);
-
-    // Floating card panel with shadow
-    ctx.save();
-    ctx.shadowColor = hexToRgba(c.primaryColor, 0.12);
-    ctx.shadowBlur = 24;
-    ctx.shadowOffsetY = 6;
-    ctx.fillStyle = hexToRgba(c.bgColor, 0.96);
-    roundRect(ctx, W * 0.06, H * 0.1, W * 0.88, H * 0.8, 14);
-    ctx.fill();
-    ctx.restore();
-
-    // Border
-    ctx.strokeStyle = hexToRgba(c.primaryColor, 0.1);
-    ctx.lineWidth = 1;
-    roundRect(ctx, W * 0.06, H * 0.1, W * 0.88, H * 0.8, 14);
-    ctx.stroke();
-
-    // Top accent bar
-    ctx.fillStyle = c.primaryColor;
-    ctx.save();
-    ctx.beginPath();
-    ctx.roundRect(W * 0.06, H * 0.1, W * 0.88, 4, [14, 14, 0, 0]);
-    ctx.fill();
-    ctx.restore();
-
-    const mx = W * 0.12;
-
-    // Logo
-    const logoS = H * 0.16;
-    drawLogo(ctx, logo, mx, H * 0.19, logoS, logoS, c.company || "", c.primaryColor, "square");
-
-    // Name
-    ctx.font = getFont(700, f.name, c.fontStyle);
-    ctx.fillStyle = c.textColor;
-    ctx.textAlign = "left";
-    drawTextWithShadow(ctx, c.name || "Your Name", mx + logoS + 14, H * 0.28);
-
-    // Title
-    ctx.font = getFont(400, f.title, c.fontStyle);
-    ctx.fillStyle = c.primaryColor;
-    ctx.fillText(c.title || "Job Title", mx + logoS + 14, H * 0.28 + f.title + 6);
-
-    // Company
-    ctx.font = getFont(500, f.label, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.textColor, 0.35);
-    ctx.fillText((c.company || "").toUpperCase(), mx + logoS + 14, H * 0.28 + f.title + f.label + 16);
-
-    // Divider
-    drawDivider(ctx, mx, H * 0.54, W * 0.76, "gradient", c.primaryColor, 0.15);
-
+    ctx.fillText(c.title || "Job Title", mx, H * 0.53 + f.name + 2);
     // Contact
-    drawContactBlock(ctx, c, mx, H * 0.63, Math.round(f.contact * 1.45), "left",
-      hexToRgba(c.textColor, 0.55), hexToRgba(c.primaryColor, 0.35), f.contact);
+    drawContactBlock(ctx, c, W * 0.55, H * 0.55, Math.round(f.contact * 1.5), "left",
+      hexToRgba(c.textColor, 0.6), hexToRgba(c.primaryColor, 0.5), f.contact);
   },
 
-  /* ==== 15. PHOTO OVERLAY - Image-based with overlay ==== */
-  "photo-overlay": (ctx, W, H, c, logo) => {
+  "full-color-back": (ctx, W, H, c, logo) => {
     const f = getFontSizes(W, H);
-
-    // Right 40% photo/brand area
-    const photoX = W * 0.6;
-    if (logo && logo.complete && logo.naturalWidth > 0) {
-      drawImageCover(ctx, logo, photoX, 0, W - photoX, H);
-      ctx.fillStyle = hexToRgba("#000000", 0.25);
-      ctx.fillRect(photoX, 0, W - photoX, H);
-    } else {
-      const phGrad = ctx.createLinearGradient(photoX, 0, W, H);
-      phGrad.addColorStop(0, c.primaryColor);
-      phGrad.addColorStop(1, c.secondaryColor);
-      ctx.fillStyle = phGrad;
-      ctx.fillRect(photoX, 0, W - photoX, H);
-      drawPattern(ctx, photoX, 0, W - photoX, H, "hexagons", getContrastColor(c.primaryColor), 0.05, 30);
-      drawImagePlaceholder(ctx, photoX + 24, H * 0.25, W - photoX - 48, H * 0.5, getContrastColor(c.primaryColor), "Add Logo / Photo", 0);
-    }
-
-    // Left content
-    const mx = W * 0.07;
-
-    ctx.font = getFont(700, f.name, c.fontStyle);
-    ctx.fillStyle = c.textColor;
-    ctx.textAlign = "left";
-    drawTextWithShadow(ctx, c.name || "Your Name", mx, H * 0.28);
-
-    ctx.font = getFont(400, f.title, c.fontStyle);
+    const mx = W * 0.08, my = H * 0.15;
+    // Accent bar left
     ctx.fillStyle = c.primaryColor;
-    ctx.fillText(c.title || "Job Title", mx, H * 0.28 + f.title + 8);
-
-    ctx.font = getFont(500, f.label, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.textColor, 0.35);
-    ctx.fillText((c.company || "").toUpperCase(), mx, H * 0.28 + f.title + f.label + 20);
-
-    drawDivider(ctx, mx, H * 0.52, W * 0.38, "gradient", c.primaryColor, 0.2);
-
-    drawContactBlock(ctx, c, mx, H * 0.6, Math.round(f.contact * 1.45), "left",
-      hexToRgba(c.textColor, 0.6), hexToRgba(c.primaryColor, 0.4), f.contact);
-  },
-
-  /* ==== 16. DOT MATRIX - Halftone pattern accent ==== */
-  "dot-matrix": (ctx, W, H, c, logo) => {
-    const f = getFontSizes(W, H);
-    const mx = W * 0.09;
-
-    // Halftone dot field (top right corner)
-    ctx.save();
-    const dotField = W * 0.35;
-    for (let dx = 0; dx < dotField; dx += 12) {
-      for (let dy = 0; dy < H * 0.4; dy += 12) {
-        const distX = dx / dotField;
-        const distY = dy / (H * 0.4);
-        const opacity = Math.max(0, 0.15 - (distX + distY) * 0.08);
-        const radius = Math.max(0.5, 3 - (distX + distY) * 2);
-        ctx.fillStyle = hexToRgba(c.primaryColor, opacity);
-        ctx.beginPath();
-        ctx.arc(W - dotField + dx, dy, radius, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-    ctx.restore();
-
-    // Logo
-    const logoS = H * 0.18;
-    drawLogo(ctx, logo, mx, H * 0.1, logoS, logoS, c.company || "", c.primaryColor, "square");
-
+    ctx.fillRect(0, 0, 5, H);
     // Name
-    ctx.font = getFont(700, f.name, c.fontStyle);
+    ctx.font = getFont(600, f.name, c.fontStyle);
     ctx.fillStyle = c.textColor;
     ctx.textAlign = "left";
-    drawTextWithShadow(ctx, c.name || "Your Name", mx, H * 0.45);
-
+    ctx.textBaseline = "top";
+    ctx.fillText(c.name || "Your Name", mx + 8, my);
     // Title
     ctx.font = getFont(400, f.title, c.fontStyle);
-    ctx.fillStyle = c.primaryColor;
-    ctx.fillText(c.title || "Job Title", mx, H * 0.45 + f.title + 8);
-
+    ctx.fillStyle = hexToRgba(c.textColor, 0.55);
+    ctx.fillText(c.title || "Job Title", mx + 8, my + f.name + 4);
     // Company
     ctx.font = getFont(500, f.company, c.fontStyle);
     ctx.fillStyle = hexToRgba(c.textColor, 0.4);
-    ctx.fillText(c.company || "Company", mx, H * 0.45 + f.title + f.company + 18);
-
-    // Accent line
-    ctx.fillStyle = c.primaryColor;
-    ctx.fillRect(mx, H * 0.68, W * 0.08, 2);
-
+    ctx.fillText(c.company || "Company", mx + 8, my + f.name + f.title + 12);
     // Contact
-    drawContactBlock(ctx, c, mx, H * 0.76, Math.round(f.contact * 1.4), "left",
-      hexToRgba(c.textColor, 0.55), hexToRgba(c.primaryColor, 0.4), f.contact);
+    drawContactBlock(ctx, c, mx + 8, H * 0.56, Math.round(f.contact * 1.5), "left",
+      hexToRgba(c.textColor, 0.6), hexToRgba(c.primaryColor, 0.5), f.contact);
+    // Logo right
+    const ls = H * 0.22;
+    drawLogo(ctx, logo, W - mx - ls, my, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
   },
 
-  /* ==== 17. GOLD FOIL - Metallic gold accents ==== */
-  "gold-foil": (ctx, W, H, c, logo) => {
+  "engineering-pro": (ctx, W, H, c, logo) => {
     const f = getFontSizes(W, H);
-
-    // Gold accent colors
-    const gold1 = "#c9a227";
-    const gold2 = "#e8d48b";
-    const goldDark = "#8a6d1b";
-
-    // Fine gold border
-    ctx.strokeStyle = gold1;
-    ctx.lineWidth = 1.5;
-    roundRect(ctx, 16, 16, W - 32, H - 32, 2);
-    ctx.stroke();
-
-    // Gold corner elements
-    const cLen = 20;
-    ([[20, 20, 1, 1], [W - 20, 20, -1, 1], [20, H - 20, 1, -1], [W - 20, H - 20, -1, -1]] as const).forEach(([cx, cy, dx, dy]) => {
-      ctx.strokeStyle = gold2;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(cx, cy + dy * cLen);
-      ctx.lineTo(cx, cy);
-      ctx.lineTo(cx + dx * cLen, cy);
-      ctx.stroke();
-    });
-
-    // Logo centered
-    const logoS = H * 0.18;
-    drawLogo(ctx, logo, W / 2 - logoS / 2, H * 0.08, logoS, logoS, c.company || "", gold1, "circle");
-
-    // Name with gold shadow
+    const mx = W * 0.08, my = H * 0.15;
+    // Logo + Company
+    const ls = H * 0.16;
+    drawLogo(ctx, logo, mx, my, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+    ctx.font = getFont(700, f.companyLg, c.fontStyle);
+    ctx.fillStyle = c.primaryColor;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(c.company || "Company", mx + ls + 8, my + 2);
+    // Separator
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.15);
+    ctx.fillRect(mx, my + ls + 14, W - 2 * mx, 1);
+    // Name + Title
     ctx.font = getFont(600, f.name, c.fontStyle);
     ctx.fillStyle = c.textColor;
-    ctx.textAlign = "center";
-    drawTextWithShadow(ctx, c.name || "Your Name", W / 2, H * 0.42, { shadowBlur: 4, shadowColor: hexToRgba(gold1, 0.2) });
-
-    // Title
-    ctx.font = getFont(400, f.title, c.fontStyle);
-    ctx.fillStyle = gold1;
-    ctx.fillText(c.title || "Job Title", W / 2, H * 0.42 + f.title + 8);
-
-    // Gold divider
-    const divGrad = ctx.createLinearGradient(W * 0.25, 0, W * 0.75, 0);
-    divGrad.addColorStop(0, "transparent");
-    divGrad.addColorStop(0.2, goldDark);
-    divGrad.addColorStop(0.5, gold2);
-    divGrad.addColorStop(0.8, goldDark);
-    divGrad.addColorStop(1, "transparent");
-    ctx.fillStyle = divGrad;
-    ctx.fillRect(W * 0.25, H * 0.56, W * 0.5, 1.5);
-
+    ctx.fillText(c.name || "Your Name", mx, my + ls + 22);
+    ctx.font = getFont(400, f.label, c.fontStyle);
+    ctx.fillStyle = c.primaryColor;
+    ctx.fillText(c.title || "Job Title", mx, my + ls + 22 + f.name + 2);
     // Contact
-    drawContactBlock(ctx, c, W / 2, H * 0.65, Math.round(f.contact * 1.45), "center",
-      hexToRgba(c.textColor, 0.55), hexToRgba(gold1, 0.4), f.contact);
-
-    // Company
-    ctx.font = getFont(600, f.label, c.fontStyle);
-    ctx.fillStyle = hexToRgba(gold1, 0.5);
-    ctx.fillText((c.company || "").toUpperCase(), W / 2, H * 0.93);
+    drawContactBlock(ctx, c, mx, my + ls + 22 + f.name + f.label + 14, Math.round(f.contact * 1.5), "left",
+      hexToRgba(c.textColor, 0.55), hexToRgba(c.primaryColor, 0.5), f.contact);
   },
 
-  /* ==== 18. MARBLE LUXE - Marble texture effect ==== */
-  "marble-luxe": (ctx, W, H, c, logo) => {
+  "clean-accent": (ctx, W, H, c, logo) => {
     const f = getFontSizes(W, H);
-
-    // Simulate marble veins with subtle lines
-    ctx.save();
-    ctx.globalAlpha = 0.03;
-    for (let i = 0; i < 30; i++) {
-      const y = (H * i / 30) + Math.sin(i * 0.5) * 20;
-      ctx.strokeStyle = hexToRgba(c.primaryColor, 0.5);
-      ctx.lineWidth = 0.5 + Math.random() * 1.5;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      for (let x = 0; x < W; x += 20) {
-        ctx.lineTo(x, y + Math.sin(x * 0.01 + i) * 8);
-      }
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    const mx = W * 0.1;
-
-    // Logo with subtle shadow
-    const logoS = H * 0.18;
-    drawLogo(ctx, logo, mx, H * 0.1, logoS, logoS, c.company || "", c.primaryColor);
-
-    // Company
-    ctx.font = getFont(600, f.company, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.textColor, 0.4);
-    ctx.textAlign = "left";
-    ctx.fillText((c.company || "").toUpperCase(), mx + logoS + 12, H * 0.1 + logoS / 2 + 4);
-
-    // Thin gold line
-    ctx.fillStyle = hexToRgba(c.primaryColor, 0.3);
-    ctx.fillRect(mx, H * 0.38, W - mx * 2, 1);
-
-    // Name
-    ctx.font = getFont(500, f.name, c.fontStyle);
+    const mx = W * 0.08, my = H * 0.14;
+    // Bottom accent gradient bar
+    const grad = ctx.createLinearGradient(0, H - H * 0.06, W, H);
+    grad.addColorStop(0, c.primaryColor);
+    grad.addColorStop(1, c.secondaryColor);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, H - H * 0.06, W, H * 0.06);
+    // Logo + Name + Title
+    const ls = H * 0.18;
+    drawLogo(ctx, logo, mx, my, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+    ctx.font = getFont(600, f.name, c.fontStyle);
     ctx.fillStyle = c.textColor;
     ctx.textAlign = "left";
-    ctx.fillText(c.name || "Your Name", mx, H * 0.52);
-
-    // Title
-    ctx.font = getFont(300, f.title, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.textColor, 0.5);
-    ctx.fillText(c.title || "Job Title", mx, H * 0.52 + f.title + 8);
-
+    ctx.textBaseline = "top";
+    ctx.fillText(c.name || "Your Name", mx + ls + 14, my + 2);
+    ctx.font = getFont(400, f.label, c.fontStyle);
+    ctx.fillStyle = c.primaryColor;
+    ctx.fillText(c.title || "Job Title", mx + ls + 14, my + f.name + 6);
+    // Sep
+    ctx.fillStyle = hexToRgba(c.textColor, 0.1);
+    ctx.fillRect(mx, H * 0.48, W - 2 * mx, 1);
     // Contact
-    drawContactBlock(ctx, c, mx, H * 0.7, Math.round(f.contact * 1.4), "left",
-      hexToRgba(c.textColor, 0.5), hexToRgba(c.primaryColor, 0.3), f.contact);
+    drawContactBlock(ctx, c, mx, H * 0.54, Math.round(f.contact * 1.5), "left",
+      hexToRgba(c.textColor, 0.6), hexToRgba(c.primaryColor, 0.5), f.contact);
   },
 
-  /* ==== 19. VELVET NOIR - Deep dark luxury ==== */
-  "velvet-noir": (ctx, W, H, c, logo) => {
+  "nature-clean": (ctx, W, H, c, logo) => {
     const f = getFontSizes(W, H);
+    const mx = W * 0.08, my = H * 0.15;
+    // Name band
+    const bH = f.name + 14;
+    ctx.fillStyle = c.primaryColor;
+    ctx.fillRect(0, H * 0.55, W * 0.52, bH);
+    // Name on band
+    const bt = getContrastColor(c.primaryColor);
+    ctx.font = getFont(600, f.name, c.fontStyle);
+    ctx.fillStyle = bt;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(c.name || "Your Name", mx, H * 0.55 + 6);
+    // Title
+    ctx.font = getFont(400, f.label, c.fontStyle);
+    ctx.fillStyle = c.primaryColor;
+    ctx.fillText(c.title || "Job Title", mx, H * 0.55 + bH + 6);
+    // Contact
+    drawContactBlock(ctx, c, W * 0.55, my, Math.round(f.contact * 1.5), "left",
+      hexToRgba(c.textColor, 0.6), hexToRgba(c.primaryColor, 0.5), f.contact);
+    // Logo
+    const ls = H * 0.18;
+    drawLogo(ctx, logo, W - mx - ls, H * 0.55 + 4, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+  },
 
-    // Deep gradient overlay
-    const deepGrad = ctx.createLinearGradient(0, 0, W, H);
-    deepGrad.addColorStop(0, hexToRgba(c.primaryColor, 0.04));
-    deepGrad.addColorStop(0.5, "transparent");
-    deepGrad.addColorStop(1, hexToRgba(c.secondaryColor, 0.03));
-    ctx.fillStyle = deepGrad;
-    ctx.fillRect(0, 0, W, H);
+  "diamond-brand": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const mx = W * 0.08, my = H * 0.15;
+    // Logo + Company
+    const ls = H * 0.22;
+    drawLogo(ctx, logo, mx, my, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+    ctx.font = getFont(700, f.companyLg, c.fontStyle);
+    ctx.fillStyle = c.primaryColor;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(c.company || "Company", mx + ls + 10, my + 4);
+    // Name
+    ctx.font = getFont(600, f.name, c.fontStyle);
+    ctx.fillStyle = c.textColor;
+    ctx.fillText(c.name || "Your Name", mx, H * 0.45);
+    // Title
+    ctx.font = getFont(400, f.title, c.fontStyle);
+    ctx.fillStyle = c.secondaryColor;
+    ctx.fillText(c.title || "Job Title", mx, H * 0.45 + f.name + 4);
+    // Contact
+    drawContactBlock(ctx, c, mx, H * 0.45 + f.name + f.title + 16, Math.round(f.contact * 1.45), "left",
+      hexToRgba(c.textColor, 0.6), hexToRgba(c.primaryColor, 0.5), f.contact);
+  },
 
-    // Subtle radial glow behind name
-    const glowGrad = ctx.createRadialGradient(W * 0.3, H * 0.4, 0, W * 0.3, H * 0.4, W * 0.4);
-    glowGrad.addColorStop(0, hexToRgba(c.primaryColor, 0.04));
-    glowGrad.addColorStop(1, "transparent");
-    ctx.fillStyle = glowGrad;
-    ctx.fillRect(0, 0, W, H);
+  // ===================== CREATIVE =====================
 
-    const mx = W * 0.1;
+  "flowing-lines": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const mx = W * 0.1, my = H * 0.15;
+    // Decorative curves
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.ellipse(W * 0.15, H * 0.3, W * (0.12 + i * 0.05), H * (0.18 + i * 0.06), 0, 0, Math.PI * 2);
+      ctx.strokeStyle = hexToRgba(c.primaryColor, 0.12 - i * 0.02);
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    // Company
+    ctx.font = getFont(700, f.companyLg, c.fontStyle);
+    ctx.fillStyle = c.textColor;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "top";
+    ctx.fillText(c.company || "Company", W - mx, my);
+    // Name
+    ctx.font = getFont(700, f.name, c.fontStyle);
+    ctx.textAlign = "left";
+    ctx.fillText(c.name || "Your Name", mx, H * 0.58);
+    // Title
+    ctx.font = getFont(400, f.title, c.fontStyle);
+    ctx.fillStyle = c.primaryColor;
+    ctx.fillText(c.title || "Job Title", mx, H * 0.58 + f.name + 4);
+    // Contact
+    drawContactBlock(ctx, c, mx, H * 0.58 + f.name + f.title + 16, Math.round(f.contact * 1.5), "left",
+      hexToRgba(c.textColor, 0.65), hexToRgba(c.primaryColor, 0.5), f.contact);
+  },
 
-    // Name - large, bold
+  "neon-watermark": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const mx = W * 0.08, my = H * 0.15;
+    // Watermark circle
+    ctx.beginPath();
+    ctx.arc(W * 0.7, H * 0.45, H * 0.5, 0, Math.PI * 2);
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.06);
+    ctx.fill();
+    // Logo + Company
+    const ls = H * 0.18;
+    drawLogo(ctx, logo, mx, my, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+    ctx.font = getFont(700, f.company, c.fontStyle);
+    ctx.fillStyle = c.primaryColor;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(c.company || "Company", mx + ls + 10, my + 4);
+    // Name
+    ctx.font = getFont(600, f.name, c.fontStyle);
+    ctx.fillStyle = c.textColor;
+    ctx.fillText(c.name || "Your Name", mx, H * 0.48);
+    // Title
+    ctx.font = getFont(400, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(c.textColor, 0.5);
+    ctx.fillText((c.title || "Job Title").toUpperCase(), mx, H * 0.48 + f.name + 2);
+    // Contact
+    drawContactBlock(ctx, c, mx, H * 0.48 + f.name + f.label + 14, Math.round(f.contact * 1.5), "left",
+      hexToRgba(c.textColor, 0.65), hexToRgba(c.primaryColor, 0.5), f.contact);
+  },
+
+  "blueprint-tech": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const mx = W * 0.08, my = H * 0.15;
+    // Top bar
+    ctx.fillStyle = hexToRgba(c.secondaryColor, 0.08);
+    ctx.fillRect(0, 0, W, H * 0.28);
+    // QR accent square
+    ctx.fillStyle = c.primaryColor;
+    ctx.fillRect(W - mx - H * 0.2, my * 0.5, H * 0.2, H * 0.2);
+    // Company
+    ctx.font = getFont(400, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(c.textColor, 0.4);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(c.company || "Company", mx, my * 0.6);
+    // Logo
+    const ls = H * 0.14;
+    drawLogo(ctx, logo, mx, my * 0.5, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+    // Name
+    ctx.font = getFont(700, f.name, c.fontStyle);
+    ctx.fillStyle = c.textColor;
+    ctx.fillText(c.name || "Your Name", mx, H * 0.35);
+    ctx.font = getFont(400, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(c.textColor, 0.55);
+    ctx.fillText(c.title || "Job Title", mx, H * 0.35 + f.name + 2);
+    // Contact
+    drawContactBlock(ctx, c, mx, H * 0.35 + f.name + f.label + 14, Math.round(f.contact * 1.5), "left",
+      hexToRgba(c.textColor, 0.6), hexToRgba(c.primaryColor, 0.5), f.contact);
+  },
+
+  "skyline-silhouette": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const mx = W * 0.08, my = H * 0.14;
+    const skyH = H * 0.25, skyY = H - skyH;
+    // Building silhouettes
+    const buildings = [
+      [0, 0.4, 0.08], [0.09, 0.2, 0.05], [0.15, 0, 0.06], [0.22, 0.3, 0.07],
+      [0.30, 0.1, 0.04], [0.35, 0.35, 0.08], [0.44, 0.15, 0.05], [0.50, 0.45, 0.06],
+      [0.57, 0.2, 0.07], [0.65, 0.05, 0.04], [0.70, 0.3, 0.06], [0.77, 0.15, 0.05],
+      [0.83, 0.4, 0.08], [0.92, 0.25, 0.08],
+    ];
+    buildings.forEach(([bx, by, bw]) => {
+      ctx.fillStyle = hexToRgba(c.primaryColor, 0.1 + Math.random() * 0.08);
+      ctx.fillRect(W * bx, skyY + skyH * by, W * bw, skyH * (1 - by));
+    });
+    // Logo + Company
+    const ls = H * 0.18;
+    drawLogo(ctx, logo, mx, my, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+    ctx.font = getFont(700, f.companyLg, c.fontStyle);
+    ctx.fillStyle = c.textColor;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(c.company || "Company", mx + ls + 8, my + 2);
+    // Name + Title
+    ctx.font = getFont(600, f.name, c.fontStyle);
+    ctx.fillText(c.name || "Your Name", mx, H * 0.42);
+    ctx.font = getFont(400, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(c.textColor, 0.5);
+    ctx.fillText(c.title || "Job Title", mx, H * 0.42 + f.name + 2);
+    // Contact
+    drawContactBlock(ctx, c, W * 0.55, H * 0.42, Math.round(f.contact * 1.5), "left",
+      hexToRgba(c.textColor, 0.6), hexToRgba(c.primaryColor, 0.5), f.contact);
+  },
+
+  "world-map": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const mx = W * 0.08, my = H * 0.15;
+    // Map watermark
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.04);
+    ctx.fillRect(W * 0.3, H * 0.05, W * 0.65, H * 0.6);
+    // Name
     ctx.font = getFont(700, f.nameXl, c.fontStyle);
     ctx.fillStyle = c.textColor;
     ctx.textAlign = "left";
-    drawTextWithShadow(ctx, c.name || "Your Name", mx, H * 0.36, { shadowBlur: 10, shadowColor: hexToRgba(c.primaryColor, 0.15) });
-
-    // Title with accent
-    ctx.font = getFont(400, f.titleLg, c.fontStyle);
-    ctx.fillStyle = c.primaryColor;
-    ctx.fillText(c.title || "Job Title", mx, H * 0.36 + f.titleLg + 10);
-
-    // Company
-    ctx.font = getFont(500, f.company, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.textColor, 0.3);
-    ctx.fillText(c.company || "Company", mx, H * 0.36 + f.titleLg + f.company + 22);
-
-    // Fine accent line
-    ctx.fillStyle = c.primaryColor;
-    ctx.fillRect(mx, H * 0.66, W * 0.04, 2);
-
-    // Contact
-    drawContactBlock(ctx, c, mx, H * 0.74, Math.round(f.contact * 1.45), "left",
-      hexToRgba(c.textColor, 0.45), hexToRgba(c.primaryColor, 0.3), f.contact);
-
-    // Logo - right side
-    const logoS = H * 0.2;
-    drawLogo(ctx, logo, W - mx - logoS, H * 0.12, logoS, logoS, c.company || "", c.primaryColor, "circle");
+    ctx.textBaseline = "top";
+    ctx.fillText((c.name || "Your Name").toUpperCase(), mx, my);
+    // Title
+    ctx.font = getFont(400, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(c.textColor, 0.5);
+    ctx.fillText((c.title || "Job Title").toUpperCase(), mx, my + f.nameXl + 4);
+    // Contact box
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.04);
+    ctx.fillRect(mx, H * 0.55, W - 2 * mx, H * 0.35);
+    drawContactBlock(ctx, c, mx + 12, H * 0.59, Math.round(f.contact * 1.5), "left",
+      hexToRgba(c.textColor, 0.7), hexToRgba(c.primaryColor, 0.5), f.contact);
+    // Logo
+    const ls = H * 0.14;
+    drawLogo(ctx, logo, W - mx - ls, my, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
   },
 
-  /* ==== 20. ART DECO - 1920s geometric luxury ==== */
-  "art-deco": (ctx, W, H, c, logo) => {
+  "diagonal-gold": (ctx, W, H, c, logo) => {
     const f = getFontSizes(W, H);
+    const mx = W * 0.08, my = H * 0.15;
+    // Diagonal stripe
+    const grad = ctx.createLinearGradient(W * 0.25, H * 0.35, W * 0.8, H * 0.43);
+    grad.addColorStop(0, c.secondaryColor);
+    grad.addColorStop(1, c.primaryColor);
+    ctx.fillStyle = grad;
+    ctx.fillRect(W * 0.25, H * 0.35, W * 0.55, H * 0.08);
+    // Logo
+    const ls = H * 0.18;
+    drawLogo(ctx, logo, mx, my, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+    // Company top right
+    ctx.font = getFont(500, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(c.textColor, 0.5);
+    ctx.textAlign = "right";
+    ctx.textBaseline = "top";
+    ctx.fillText((c.company || "Company").toUpperCase(), W - mx, my);
+    // Name below stripe
+    ctx.font = getFont(700, f.name, c.fontStyle);
+    ctx.fillStyle = c.textColor;
+    ctx.textAlign = "left";
+    ctx.fillText(c.name || "Your Name", mx, H * 0.52);
+    ctx.font = getFont(400, f.title, c.fontStyle);
+    ctx.fillStyle = c.primaryColor;
+    ctx.fillText(c.title || "Job Title", mx, H * 0.52 + f.name + 2);
+    // Contact
+    drawContactBlock(ctx, c, mx, H * 0.52 + f.name + f.title + 14, Math.round(f.contact * 1.5), "left",
+      hexToRgba(c.textColor, 0.7), hexToRgba(c.primaryColor, 0.5), f.contact);
+  },
 
-    // Art deco frame
-    ctx.strokeStyle = hexToRgba(c.primaryColor, 0.4);
-    ctx.lineWidth = 2;
-    ctx.strokeRect(16, 16, W - 32, H - 32);
+  // ===================== LUXURY =====================
 
-    // Inner frame with stepped corners
-    ctx.strokeStyle = hexToRgba(c.primaryColor, 0.2);
-    ctx.lineWidth = 1;
-    ctx.strokeRect(24, 24, W - 48, H - 48);
-
-    // Deco fan patterns in corners
-    const fanR = 30;
-    ([[28, 28], [W - 28, 28], [28, H - 28], [W - 28, H - 28]] as const).forEach(([cx, cy], idx) => {
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate((idx * Math.PI) / 2);
-      for (let i = 0; i < 5; i++) {
-        ctx.strokeStyle = hexToRgba(c.primaryColor, 0.15 - i * 0.025);
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.arc(0, 0, fanR - i * 5, 0, Math.PI / 2);
-        ctx.stroke();
-      }
-      ctx.restore();
-    });
-
-    // Deco line elements (vertical lines at center top)
+  "luxury-divider": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const mx = W * 0.08, my = H * 0.12;
+    // Vertical gold dividers
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.3);
+    ctx.fillRect(W * 0.5, my, 1.5, H - 2 * my);
     ctx.fillStyle = hexToRgba(c.primaryColor, 0.15);
-    ctx.fillRect(W / 2 - 1, 16, 2, 20);
-    ctx.fillRect(W / 2 - 8, 16, 2, 14);
-    ctx.fillRect(W / 2 + 6, 16, 2, 14);
+    ctx.fillRect(W * 0.75, my, 1.5, H - 2 * my);
+    // Logo top right
+    const ls = H * 0.2;
+    drawLogo(ctx, logo, W - mx - ls, my, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+    // Name left
+    ctx.font = getFont(700, f.nameXl, c.fontStyle);
+    ctx.fillStyle = c.textColor;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(c.name || "Your Name", mx, H * 0.4);
+    // Title in gold
+    ctx.font = getFont(400, f.label, c.fontStyle);
+    ctx.fillStyle = c.primaryColor;
+    ctx.fillText((c.title || "Job Title").toUpperCase(), mx, H * 0.4 + f.nameXl + 4);
+    // Contact between dividers
+    drawContactBlock(ctx, c, W * 0.52, H * 0.42, Math.round(f.contact * 1.5), "left",
+      hexToRgba(c.textColor, 0.65), hexToRgba(c.primaryColor, 0.5), f.contact);
+  },
 
+  "social-band": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const mx = W * 0.1, my = H * 0.15;
+    const bH = H * 0.2, bY = H - bH;
+    // Bottom band
+    ctx.fillStyle = hexToRgba(c.secondaryColor, 0.5);
+    ctx.fillRect(0, bY, W, bH);
+    // Company centered top
+    ctx.font = getFont(400, f.companyLg, c.fontStyle);
+    ctx.fillStyle = c.textColor;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText((c.company || "Company").toUpperCase(), W / 2, my);
+    // Title
+    ctx.font = getFont(400, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(c.textColor, 0.5);
+    ctx.fillText((c.title || "Title").toUpperCase(), W / 2, my + f.companyLg + 6);
+    // Divider
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.3);
+    ctx.fillRect(W * 0.35, my + f.companyLg + f.label + 18, W * 0.3, 1);
+    // Name centered
+    ctx.font = getFont(600, f.name, c.fontStyle);
+    ctx.fillStyle = c.textColor;
+    ctx.fillText(c.name || "Your Name", W / 2, H * 0.48);
+    // Contact on band
+    const bt = getContrastColor(c.secondaryColor);
+    drawContactBlock(ctx, c, W / 2, bY + bH * 0.2, Math.round(f.contact * 1.4), "center",
+      hexToRgba(bt, 0.7), hexToRgba(bt, 0.5), f.contact);
+    // Logo
+    const ls = H * 0.12;
+    drawLogo(ctx, logo, (W - ls) / 2, H * 0.48 + f.name + 10, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+  },
+
+  "organic-pattern": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const mx = W * 0.1, my = H * 0.15;
+    // Topographic lines
+    for (let i = 0; i < 6; i++) {
+      ctx.beginPath();
+      const rx = W * (0.48 - i * 0.06), ry = H * (0.45 - i * 0.04);
+      ctx.ellipse(W * 0.5, H * 0.5, rx, ry, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = hexToRgba(c.primaryColor, 0.06 + i * 0.01);
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    }
+    // Left content panel
+    ctx.fillStyle = hexToRgba(c.bgColor, 0.85);
+    ctx.fillRect(0, 0, W * 0.42, H);
+    // Name
+    ctx.font = getFont(700, f.name, c.fontStyle);
+    ctx.fillStyle = c.textColor;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(c.name || "Your Name", mx, my);
+    // Title
+    ctx.font = getFont(400, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(c.textColor, 0.5);
+    ctx.fillText(c.title || "Job Title", mx, my + f.name + 4);
+    // Contact
+    drawContactBlock(ctx, c, mx, my + f.name + f.label + 20, Math.round(f.contact * 1.5), "left",
+      hexToRgba(c.textColor, 0.65), hexToRgba(c.primaryColor, 0.5), f.contact);
+    // Logo right
+    const ls = H * 0.2;
+    drawLogo(ctx, logo, W * 0.6, (H - ls) / 2, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+    // Company
+    ctx.font = getFont(500, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(c.textColor, 0.6);
+    ctx.textAlign = "right";
+    ctx.fillText((c.company || "Company").toUpperCase(), W - mx, H - my);
+  },
+
+  "celtic-stripe": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const mx = W * 0.1, my = H * 0.15;
+    const sw = W * 0.06;
+    // Ornamental stripe
+    const grad = ctx.createLinearGradient(mx * 0.5, 0, mx * 0.5, H);
+    grad.addColorStop(0, c.primaryColor);
+    grad.addColorStop(0.5, c.secondaryColor);
+    grad.addColorStop(1, c.primaryColor);
+    ctx.fillStyle = grad;
+    ctx.fillRect(mx * 0.5, my * 0.5, sw, H - my);
+    // Stripe dots
+    for (let i = 0; i < 8; i++) {
+      ctx.beginPath();
+      ctx.arc(mx * 0.5 + sw / 2, my + i * ((H - 2 * my) / 8), sw * 0.2, 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba(c.bgColor, 0.3);
+      ctx.fill();
+    }
+    // Name
+    const cx = mx * 0.5 + sw + mx;
+    ctx.font = getFont(600, f.name, c.fontStyle);
+    ctx.fillStyle = c.textColor;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText((c.name || "Your Name").toUpperCase(), cx, my);
+    // Divider
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.25);
+    ctx.fillRect(cx, my + f.name + 10, W * 0.3, 1);
+    // Contact
+    drawContactBlock(ctx, c, cx, my + f.name + 20, Math.round(f.contact * 1.5), "left",
+      hexToRgba(c.textColor, 0.6), hexToRgba(c.primaryColor, 0.5), f.contact);
+    // Company
+    ctx.font = getFont(500, f.label, c.fontStyle);
+    ctx.fillStyle = hexToRgba(c.textColor, 0.4);
+    ctx.textAlign = "right";
+    ctx.fillText((c.company || "Company").toUpperCase(), W - mx, H - my);
+  },
+
+  "premium-crest": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const my = H * 0.15;
+    // Right accent bar
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.5);
+    ctx.fillRect(W - W * 0.03, H * 0.2, 3, H * 0.6);
     // Logo centered
-    const logoS = H * 0.16;
-    drawLogo(ctx, logo, W / 2 - logoS / 2, H * 0.1, logoS, logoS, c.company || "", c.primaryColor);
-
+    const ls = H * 0.22;
+    drawLogo(ctx, logo, (W - ls) / 2, my * 0.8, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
+    // Company
+    ctx.font = getFont(700, f.companyLg, c.fontStyle);
+    ctx.fillStyle = c.textColor;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(c.company || "Company", W / 2, my * 0.8 + ls + 8);
+    if (c.tagline) {
+      ctx.font = getFont(300, f.tagline, c.fontStyle);
+      ctx.fillStyle = hexToRgba(c.textColor, 0.4);
+      ctx.fillText(c.tagline, W / 2, my * 0.8 + ls + 8 + f.companyLg + 4);
+    }
+    // Divider
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.25);
+    ctx.fillRect(W * 0.3, H * 0.58, W * 0.4, 1);
     // Name
     ctx.font = getFont(600, f.name, c.fontStyle);
     ctx.fillStyle = c.textColor;
-    ctx.textAlign = "center";
-    drawTextWithShadow(ctx, c.name || "Your Name", W / 2, H * 0.42);
-
+    ctx.fillText(c.name || "Your Name", W / 2, H * 0.62);
     // Title
-    ctx.font = getFont(400, f.title, c.fontStyle);
+    ctx.font = getFont(400, f.label, c.fontStyle);
     ctx.fillStyle = c.primaryColor;
-    ctx.fillText(c.title || "Job Title", W / 2, H * 0.42 + f.title + 8);
-
-    // Deco divider (stepped)
-    const divY = H * 0.57;
-    ctx.fillStyle = hexToRgba(c.primaryColor, 0.3);
-    ctx.fillRect(W * 0.25, divY, W * 0.5, 1);
-    ctx.fillRect(W * 0.35, divY - 3, W * 0.3, 1);
-    ctx.fillRect(W * 0.45, divY + 3, W * 0.1, 1);
-    // Center diamond
-    ctx.save();
-    ctx.translate(W / 2, divY);
-    ctx.rotate(Math.PI / 4);
-    ctx.fillStyle = c.primaryColor;
-    ctx.fillRect(-3, -3, 6, 6);
-    ctx.restore();
-
+    ctx.fillText((c.title || "Job Title").toUpperCase(), W / 2, H * 0.62 + f.name + 4);
     // Contact
-    drawContactBlock(ctx, c, W / 2, H * 0.67, Math.round(f.contact * 1.4), "center",
-      hexToRgba(c.textColor, 0.5), hexToRgba(c.primaryColor, 0.35), f.contact);
+    drawContactBlock(ctx, c, W / 2, H * 0.62 + f.name + f.label + 16, Math.round(f.contact * 1.4), "center",
+      hexToRgba(c.textColor, 0.6), hexToRgba(c.primaryColor, 0.45), f.contact);
+  },
 
+  "gold-construct": (ctx, W, H, c, logo) => {
+    const f = getFontSizes(W, H);
+    const mx = W * 0.08, my = H * 0.12;
+    // Gold bars top & bottom
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.6);
+    ctx.fillRect(mx, my * 0.5, W - 2 * mx, 3);
+    ctx.fillRect(mx, H - my * 0.5 - 3, W - 2 * mx, 3);
+    // Vertical divider
+    ctx.fillStyle = hexToRgba(c.primaryColor, 0.3);
+    ctx.fillRect(W * 0.35, my, 1.5, H - 2 * my);
+    // Logo top right
+    const ls = H * 0.2;
+    drawLogo(ctx, logo, W - mx - ls, my, ls, ls, c.company || "DM", c.primaryColor, logoShapeFor(c.fontStyle));
     // Company
-    ctx.font = getFont(600, f.label, c.fontStyle);
-    ctx.fillStyle = hexToRgba(c.primaryColor, 0.4);
-    ctx.fillText((c.company || "").toUpperCase(), W / 2, H * 0.93);
+    ctx.font = getFont(700, f.company, c.fontStyle);
+    ctx.fillStyle = c.textColor;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(c.company || "Company", W * 0.37, my + 4);
+    // Name left of divider
+    ctx.font = getFont(700, f.name, c.fontStyle);
+    ctx.fillText(c.name || "Your Name", mx, H * 0.42);
+    // Title
+    ctx.font = getFont(400, f.label, c.fontStyle);
+    ctx.fillStyle = c.primaryColor;
+    ctx.fillText((c.title || "Job Title").toUpperCase(), mx, H * 0.42 + f.name + 4);
+    // Contact right of divider
+    drawContactBlock(ctx, c, W * 0.37, H * 0.45, Math.round(f.contact * 1.5), "left",
+      hexToRgba(c.textColor, 0.65), hexToRgba(c.primaryColor, 0.5), f.contact);
   },
 };
 
@@ -1885,7 +1697,7 @@ function renderBatchCard(
     title: entry.title,
     email: entry.email,
     phone: entry.phone,
-    // Extended batch fields — override only if the person has them
+    // Extended batch fields â€” override only if the person has them
     ...(entry.website  ? { website: entry.website }   : {}),
     ...(entry.address  ? { address: entry.address }   : {}),
     ...(entry.linkedin ? { linkedin: entry.linkedin } : {}),
@@ -1932,7 +1744,7 @@ export default function BusinessCardWorkspace() {
     name: "", title: "", company: "", tagline: "",
     email: "", phone: "", website: "", address: "",
     linkedin: "", twitter: "", instagram: "",
-    template: "executive-clean",
+    template: "ultra-minimal",
     primaryColor: "#2c3e50", secondaryColor: "#7f8c8d",
     textColor: "#2c3e50", bgColor: "#faf8f5",
     fontStyle: "modern", cardStyle: "standard",
@@ -1952,12 +1764,12 @@ export default function BusinessCardWorkspace() {
   const [sideBySide, setSideBySide] = useState(false);
   const [templateFilter, setTemplateFilter] = useState<string>("all");
 
-  // ── Parametric Generator State ──
+  // â”€â”€ Parametric Generator State â”€â”€
   const [genRecipeId,    setGenRecipeId]    = useState<string>(LAYOUT_RECIPES[0].id);
   const [genThemeId,     setGenThemeId]     = useState<string>(CARD_THEMES[0].id);
   const [genAccentKitId, setGenAccentKitId] = useState<string>(ACCENT_KITS[0].id);
 
-  // ── Front-only mode (no back card needed) ──
+  // â”€â”€ Front-only mode (no back card needed) â”€â”€
   const [frontOnly, setFrontOnly] = useState(false);
 
   // Revision State
@@ -1973,7 +1785,10 @@ export default function BusinessCardWorkspace() {
   const [batchExporting, setBatchExporting] = useState(false);
   const [batchProgress, setBatchProgress] = useState(0);
 
-  // ── vNext Editor Mode ──
+  // â”€â”€ AI Error Feedback â”€â”€
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  // â”€â”€ vNext Editor Mode â”€â”€
   const [editorMode, setEditorMode] = useState(false);
   const editorStore = useEditorStore();
 
@@ -2114,13 +1929,21 @@ export default function BusinessCardWorkspace() {
         label: t.label,
         render: (ctx: CanvasRenderingContext2D, w: number, h: number) => {
           const styleMap: Record<string, "left" | "centered" | "split" | "diagonal" | "gradient" | "minimal"> = {
-            "executive-clean": "left", "swiss-grid": "left", "mono-type": "minimal",
-            "nordic-frost": "left", "bold-split": "split", "neon-edge": "left",
-            "geometric-modern": "minimal", "gradient-wave": "gradient",
-            "corporate-stripe": "left", "diplomat": "centered", "heritage-crest": "centered",
-            "engraved": "centered", "diagonal-cut": "diagonal", "layered-card": "centered",
-            "photo-overlay": "split", "dot-matrix": "left", "gold-foil": "centered",
-            "marble-luxe": "left", "velvet-noir": "left", "art-deco": "centered",
+            // Minimal
+            "ultra-minimal": "left", "monogram-luxe": "left", "geometric-mark": "centered",
+            "frame-minimal": "left", "split-vertical": "split", "diagonal-mono": "diagonal",
+            // Modern
+            "cyan-tech": "split", "corporate-chevron": "centered", "zigzag-overlay": "left",
+            "hex-split": "left", "dot-circle": "left", "wave-gradient": "gradient",
+            // Classic
+            "circle-brand": "left", "full-color-back": "left", "engineering-pro": "left",
+            "clean-accent": "left", "nature-clean": "left", "diamond-brand": "left",
+            // Creative
+            "flowing-lines": "left", "neon-watermark": "left", "blueprint-tech": "left",
+            "skyline-silhouette": "left", "world-map": "left", "diagonal-gold": "left",
+            // Luxury
+            "luxury-divider": "left", "social-band": "centered", "organic-pattern": "left",
+            "celtic-stripe": "left", "premium-crest": "centered", "gold-construct": "left",
           };
           const theme = TEMPLATE_DEFAULT_THEMES[t.id];
           drawCardThumbnail(ctx, w, h, {
@@ -2139,9 +1962,9 @@ export default function BusinessCardWorkspace() {
   // Subscribe to global advanced settings to trigger canvas re-render
   const advancedSettings = useAdvancedSettingsStore((s) => s.settings);
 
-  // ── vNext Editor: Smart sync — tracks what changed to decide full rebuild vs. incremental ──
-  // Structural fields (template, fontStyle, cardStyle, side, logo) → full rebuild.
-  // Text/color-only changes → incremental sync that PRESERVES per-layer color overrides.
+  // â”€â”€ vNext Editor: Smart sync â€” tracks what changed to decide full rebuild vs. incremental â”€â”€
+  // Structural fields (template, fontStyle, cardStyle, side, logo) â†’ full rebuild.
+  // Text/color-only changes â†’ incremental sync that PRESERVES per-layer color overrides.
   const _prevSyncRef = useRef<{
     templateKey: string;
     textColor: string;
@@ -2149,7 +1972,7 @@ export default function BusinessCardWorkspace() {
     secondaryColor: string;
     logoUrl: string;
   } | null>(null);
-  // ── vNext Editor: sync effect ──────────────────────────────────────────────
+  // â”€â”€ vNext Editor: sync effect â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Runs whenever editorMode, config, or logoImg changes.
   //
   // IMPORTANT: We no longer force a full rebuild just because the user toggled
@@ -2157,10 +1980,10 @@ export default function BusinessCardWorkspace() {
   // moment the user clicked "Edit Layers" a second time.
   //
   // Rules:
-  //   • Template / fontStyle / cardStyle / side / logo changed → full rebuild
-  //     (structure of the card has changed — safe to lose per-layer tweaks)
-  //   • Text or color only changed → incremental sync (preserves layer overrides)
-  //   • editorMode = false AND doc exists → still sync so re-entering editor mode
+  //   â€¢ Template / fontStyle / cardStyle / side / logo changed â†’ full rebuild
+  //     (structure of the card has changed â€” safe to lose per-layer tweaks)
+  //   â€¢ Text or color only changed â†’ incremental sync (preserves layer overrides)
+  //   â€¢ editorMode = false AND doc exists â†’ still sync so re-entering editor mode
   //     sees the latest config without needing a destructive rebuild
   useEffect(() => {
     const templateKey = `${config.template}|${config.fontStyle}|${config.cardStyle}|${config.side}`;
@@ -2172,7 +1995,7 @@ export default function BusinessCardWorkspace() {
       // entry into editor mode can do an incremental sync rather than a full rebuild
       // (which would destroy any manual layer edits from the previous session).
       const hasDoc = Object.keys(editorStore.doc?.layersById ?? {}).length > 1;
-      if (!hasDoc) return; // no doc yet — nothing to preserve
+      if (!hasDoc) return; // no doc yet â€” nothing to preserve
 
       if (!prev || prev.templateKey !== templateKey || prev.logoUrl !== logoUrl) {
         const doc = cardConfigToDocument(config as unknown as CardConfigV2, { logoImg: logoImg ?? undefined });
@@ -2190,7 +2013,7 @@ export default function BusinessCardWorkspace() {
       return;
     }
 
-    // ── Editor mode ──────────────────────────────────────────────────────────
+    // â”€â”€ Editor mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Only rebuild when something structural actually changed.
     const needsFullRebuild =
       !prev ||
@@ -2204,7 +2027,7 @@ export default function BusinessCardWorkspace() {
       );
       editorStore.setDoc(doc);
     } else {
-      // Incremental sync — preserves any per-layer color/position overrides the
+      // Incremental sync â€” preserves any per-layer color/position overrides the
       // user set manually; only updates layers tagged with global semantic tags.
       let updatedDoc = syncTextToDocument(editorStore.doc, config as unknown as CardConfigV2);
       updatedDoc = syncColorsToDocument(updatedDoc, config as unknown as CardConfigV2, {
@@ -2226,12 +2049,12 @@ export default function BusinessCardWorkspace() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editorMode, config, logoImg]);
 
-  // ── Normal-mode canvas render ───────────────────────────────────────────────
-  // CanvasEditor runs its own RAF loop in editor mode — this effect only fires
+  // â”€â”€ Normal-mode canvas render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // CanvasEditor runs its own RAF loop in editor mode â€” this effect only fires
   // when editorMode is false.
   //
   // KEY FIX: When a doc exists (the user has used Edit Layers at least once),
-  // render from the doc — NOT from config — so that any layer-level edits remain
+  // render from the doc â€” NOT from config â€” so that any layer-level edits remain
   // visible after clicking "Exit Editor".  Fall back to config-based rendering
   // only when there is no doc yet (first load before entering editor mode).
   useEffect(() => {
@@ -2243,14 +2066,14 @@ export default function BusinessCardWorkspace() {
     const hasDoc = Object.keys(editorStore.doc?.layersById ?? {}).length > 1;
 
     if (hasDoc) {
-      // Doc exists → render from layer document so editor-mode changes stay visible
+      // Doc exists â†’ render from layer document so editor-mode changes stay visible
       const offscreen = renderToCanvas(editorStore.doc, 1);
       canvas.width  = offscreen.width;
       canvas.height = offscreen.height;
       const ctx = canvas.getContext("2d");
       if (ctx) ctx.drawImage(offscreen, 0, 0);
     } else {
-      // No doc yet (user has never entered editor mode) → config-based render
+      // No doc yet (user has never entered editor mode) â†’ config-based render
       renderCardV2(canvas, config, logoImg, 1, { showBleedSafe: showBleed || showSafeZone });
     }
 
@@ -2274,7 +2097,7 @@ export default function BusinessCardWorkspace() {
       const templateList = TEMPLATES.map(t => `${t.id}: ${t.desc}`).join("\n");
       const templateIds = TEMPLATES.map(t => t.id).join(" | ");
       const patternIds = PATTERN_OPTIONS.map(p => p.id).join(" | ");
-      const recipeIds = LAYOUT_RECIPES.map(r => `${r.id}: ${r.label} — ${r.description}`).join("\n");
+      const recipeIds = LAYOUT_RECIPES.map(r => `${r.id}: ${r.label} â€” ${r.description}`).join("\n");
       const themeIds = CARD_THEMES.map(t => `${t.id}: ${t.label} (${t.mood})`).join("\n");
       const accentKitIds = ACCENT_KITS.map(k => `${k.id}: ${k.label}`).join("\n");
 
@@ -2329,8 +2152,8 @@ THEME: Pick the best theme ID from the list above
 ACCENT_KIT: Pick the best accent kit ID from the list above
 CARD_FORMAT: standard | eu | jp | square | rounded (best format for this industry/brand)
 SHOW_ICONS: yes | no (should contact lines have leading icons?)
-QR_CODE: (optional — a relevant URL to embed as QR code, or "none")
-ABSTRACT: (optional — pick ONE abstract asset ID below that fits this brand's personality, or "none")
+QR_CODE: (optional â€” a relevant URL to embed as QR code, or "none")
+ABSTRACT: (optional â€” pick ONE abstract asset ID below that fits this brand's personality, or "none")
 
 ABSTRACT ASSET OPTIONS (pick 1 that fits the brand aesthetic):
 ${ABSTRACT_ASSETS.slice(0, 18).map(a => `  ${a.id}: [${a.category}] ${a.label}`).join("\n")}`;
@@ -2410,7 +2233,7 @@ ${ABSTRACT_ASSETS.slice(0, 18).map(a => `  ${a.id}: [${a.category}] ${a.label}`)
       }
       updateConfig(updates);
 
-      // ── Generate a full parametric design using the AI's style choice ──────
+      // â”€â”€ Generate a full parametric design using the AI's style choice â”€â”€â”€â”€â”€â”€
       const aiStyle = styleMatch?.[1]?.toLowerCase() as Parameters<typeof suggestCombination>[0] | undefined;
       const validStyles = ["minimal", "modern", "classic", "creative", "luxury"] as const;
       const resolvedStyle: typeof validStyles[number] =
@@ -2454,6 +2277,8 @@ ${ABSTRACT_ASSETS.slice(0, 18).map(a => `  ${a.id}: [${a.category}] ${a.label}`)
 
     } catch (err) {
       console.error("AI generation error:", err);
+      setAiError("Design generation failed â€” please check your API key and try again.");
+      setTimeout(() => setAiError(null), 6000);
     } finally {
       setIsGenerating(false);
     }
@@ -2464,7 +2289,7 @@ ${ABSTRACT_ASSETS.slice(0, 18).map(a => `  ${a.id}: [${a.category}] ${a.label}`)
      ================================================================== */
   /**
    * Returns true when the prompt names a specific card element by name.
-   * These requests can only be fulfilled at the layer level — not via global CardConfig fields.
+   * These requests can only be fulfilled at the layer level â€” not via global CardConfig fields.
    */
   const isElementSpecificRequest = useCallback((prompt: string): boolean => {
     const lower = prompt.toLowerCase();
@@ -2516,7 +2341,7 @@ ${ABSTRACT_ASSETS.slice(0, 18).map(a => `  ${a.id}: [${a.category}] ${a.label}`)
         qrCodeUrl: config.qrCodeUrl,
       };
 
-      // ── HARD SCOPE ENFORCEMENT: define exactly which fields each scope may touch ──
+      // â”€â”€ HARD SCOPE ENFORCEMENT: define exactly which fields each scope may touch â”€â”€
       const SCOPE_ALLOWED_FIELDS: Record<RevisionScope, string[]> = {
         "text-only":        ["name", "title", "company", "tagline", "email", "phone", "website", "address", "linkedin", "twitter", "instagram", "fontStyle", "showContactIcons"],
         "colors-only":      ["primaryColor", "secondaryColor", "textColor", "bgColor"],
@@ -2531,12 +2356,12 @@ ${ABSTRACT_ASSETS.slice(0, 18).map(a => `  ${a.id}: [${a.category}] ${a.label}`)
 
       const prompt = `You are a PRECISION design revision AI. Your ONLY job is to make the SMALLEST, most SURGICAL change that satisfies the user's request. You are NOT redesigning the card.
 
-## ABSOLUTE RULES — VIOLATION MEANS FAILURE
+## ABSOLUTE RULES â€” VIOLATION MEANS FAILURE
 1. You MUST ONLY change what the user SPECIFICALLY asks for
 2. You MUST NOT redesign or reimagine the card
 3. You MUST NOT change properties the user did not mention
-4. If the user says "align icons" → that is showContactIcons or layout, NOT colors or fonts
-5. If the user says "warmer colors" → that is colors ONLY, NOT template or fonts
+4. If the user says "align icons" â†’ that is showContactIcons or layout, NOT colors or fonts
+5. If the user says "warmer colors" â†’ that is colors ONLY, NOT template or fonts
 6. ONLY return properties whose values are DIFFERENT from the current values
 7. If ZERO properties need changing, return an empty object {}
 
@@ -2596,7 +2421,7 @@ JSON:`;
       if (jsonMatch) {
         const rawChanges = JSON.parse(jsonMatch[0]) as Partial<CardConfig>;
 
-        // ── Step 1: Validate each field's value format ──
+        // â”€â”€ Step 1: Validate each field's value format â”€â”€
         const validatedChanges: Partial<CardConfig> = {};
         if (rawChanges.template && TEMPLATES.some(t => t.id === rawChanges.template)) validatedChanges.template = rawChanges.template;
         if (rawChanges.primaryColor?.match(/^#[0-9a-fA-F]{6}$/)) validatedChanges.primaryColor = rawChanges.primaryColor;
@@ -2624,7 +2449,7 @@ JSON:`;
         if (rawChanges.side && ["front", "back"].includes(rawChanges.side)) validatedChanges.side = rawChanges.side;
         if (typeof rawChanges.qrCodeUrl === "string") validatedChanges.qrCodeUrl = rawChanges.qrCodeUrl;
 
-        // ── Step 2: HARD SCOPE ENFORCEMENT — strip any field not in allowedFields ──
+        // â”€â”€ Step 2: HARD SCOPE ENFORCEMENT â€” strip any field not in allowedFields â”€â”€
         const scopedChanges: Partial<CardConfig> = {};
         for (const [key, value] of Object.entries(validatedChanges)) {
           if (allowedFields.includes(key)) {
@@ -2632,7 +2457,7 @@ JSON:`;
           }
         }
 
-        // ── Step 3: DIFF CHECK — only keep values that actually differ from current ──
+        // â”€â”€ Step 3: DIFF CHECK â€” only keep values that actually differ from current â”€â”€
         const finalChanges: Partial<CardConfig> = {};
         for (const [key, value] of Object.entries(scopedChanges)) {
           const currentVal = currentDesign[key as keyof typeof currentDesign];
@@ -2657,6 +2482,8 @@ JSON:`;
       }
     } catch (err) {
       console.error("AI revision error:", err);
+      setAiError("Revision failed â€” please check your API key and try again.");
+      setTimeout(() => setAiError(null), 6000);
     } finally {
       setIsRevising(false);
     }
@@ -2664,7 +2491,7 @@ JSON:`;
 
   /* ==================================================================
      AI REVISION ENGINE (vNext) - Layer-level targeting via ai-patch.ts
-     Used when editor mode is active — targets individual layers
+     Used when editor mode is active â€” targets individual layers
      ================================================================== */
   const handleEditorRevision = useCallback(async (scopeOverride?: EditorRevisionScope) => {
     if (!revisionPrompt.trim()) return;
@@ -2672,7 +2499,7 @@ JSON:`;
     editorStore.setAIProcessing(true);
 
     try {
-      // Map workspace revision scope → editor scope (scopeOverride takes priority)
+      // Map workspace revision scope â†’ editor scope (scopeOverride takes priority)
       const scopeMap: Record<RevisionScope, EditorRevisionScope> = {
         "text-only": "text-only",
         "colors-only": "colors-only",
@@ -2737,6 +2564,8 @@ JSON:`;
       setRevisionPrompt("");
     } catch (err) {
       console.error("AI editor revision error:", err);
+      setAiError("Layer revision failed â€” please check your API key and try again.");
+      setTimeout(() => setAiError(null), 6000);
     } finally {
       setIsRevising(false);
       editorStore.setAIProcessing(false);
@@ -2753,7 +2582,7 @@ JSON:`;
     const needsLayerLevel = isElementSpecificRequest(revisionPrompt);
     if (needsLayerLevel) {
       // Ensure the editor document is populated before running the AI revision.
-      // If editor mode wasn't active the doc may be empty — build it now.
+      // If editor mode wasn't active the doc may be empty â€” build it now.
       const hasDoc = Object.keys(editorStore.doc?.layersById ?? {}).length > 1;
       if (!hasDoc) {
         const freshDoc = cardConfigToDocument(config, { logoImg: logoImg ?? undefined });
@@ -2878,7 +2707,7 @@ JSON:`;
     }
   }, [batchEntries, config, bleedInExport, getCardSize, logoImg]);
 
-  // ── Batch ZIP Export ──
+  // â”€â”€ Batch ZIP Export â”€â”€
   const exportBatchZip = useCallback(async () => {
     const validEntries = batchEntries.filter(e => e.name.trim());
     if (validEntries.length === 0) return;
@@ -2895,7 +2724,7 @@ JSON:`;
 
         const safeName = entry.name.trim().replace(/[^a-zA-Z0-9_\-\s]/g, "").replace(/\s+/g, "-") || `person-${i + 1}`;
 
-        // Front PNG (300 DPI quality — scale 4)
+        // Front PNG (300 DPI quality â€” scale 4)
         const frontCanvas = renderBatchCard(config, entry, logoImg, "front", 4);
         const frontBlob = await new Promise<Blob>((resolve) =>
           frontCanvas.toBlob(b => resolve(b!), "image/png")
@@ -2946,8 +2775,9 @@ JSON:`;
     if (config.qrCodeUrl) {
       const ctx2 = offscreen.getContext("2d");
       if (ctx2) {
-        const logW = offscreen.width / 2;
-        const logH = offscreen.height / 2;
+        const scale = getExportScale();
+        const logW = offscreen.width / scale;
+        const logH = offscreen.height / scale;
         const qrSize = Math.min(logW, logH) * 0.14;
         if (config.side === "front") {
           drawQRPlaceholder(ctx2, logW - qrSize - logW * 0.06, logH - qrSize - logH * 0.1, qrSize, "#000000");
@@ -2979,8 +2809,9 @@ JSON:`;
     if (config.qrCodeUrl) {
       const ctx2 = offscreen.getContext("2d");
       if (ctx2) {
-        const logW = offscreen.width / 2;
-        const logH = offscreen.height / 2;
+        const scale = getExportScale();
+        const logW = offscreen.width / scale;
+        const logH = offscreen.height / scale;
         const qrSize = Math.min(logW, logH) * 0.14;
         if (config.side === "front") {
           drawQRPlaceholder(ctx2, logW - qrSize - logW * 0.06, logH - qrSize - logH * 0.1, qrSize, "#000000");
@@ -3026,8 +2857,9 @@ JSON:`;
       if (config.qrCodeUrl) {
         const ctx2 = offscreen.getContext("2d");
         if (ctx2) {
-          const logW = offscreen.width / 2;
-          const logH = offscreen.height / 2;
+          const s = getExportScale();
+          const logW = offscreen.width / s;
+          const logH = offscreen.height / s;
           const qrSize = Math.min(logW, logH) * 0.14;
           if (side === "front") {
             drawQRPlaceholder(ctx2, logW - qrSize - logW * 0.06, logH - qrSize - logH * 0.1, qrSize, "#000000");
@@ -3069,7 +2901,7 @@ JSON:`;
     <div className="space-y-3">
       <Accordion defaultOpen="details">
 
-        {/* ── Parametric Generator — Infinite Designs ─────────────────── */}
+        {/* â”€â”€ Parametric Generator â€” Infinite Designs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <AccordionSection
           icon={<IconSparkles className="size-3.5" />}
           label="Infinite Designs"
@@ -3080,9 +2912,9 @@ JSON:`;
             {/* Combo count pill */}
             <p className="text-[0.5625rem] text-gray-400 leading-relaxed">
               Mix <span className="text-primary-400 font-semibold">{LAYOUT_RECIPES.length} layouts</span>
-              {" × "}
+              {" Ã— "}
               <span className="text-secondary-400 font-semibold">{CARD_THEMES.length} themes</span>
-              {" × "}
+              {" Ã— "}
               <span className="text-primary-300 font-semibold">{ACCENT_KITS.length} accent kits</span>
               {" = "}
               <span className="text-white font-bold">{getCombinationCount().toLocaleString()}</span> base designs.
@@ -3114,7 +2946,7 @@ JSON:`;
                 className="w-full h-9 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 text-gray-900 dark:text-white text-xs focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
               >
                 {CARD_THEMES.map(t => (
-                  <option key={t.id} value={t.id}>{t.label} — {t.mood}</option>
+                  <option key={t.id} value={t.id}>{t.label} â€” {t.mood}</option>
                 ))}
               </select>
             </div>
@@ -3413,7 +3245,7 @@ JSON:`;
                     <div key={`${ac.assetId}-${idx}`} className="flex items-center gap-2 p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
                       <div className="flex-1 min-w-0">
                         <p className="text-[0.65rem] font-semibold text-gray-700 dark:text-gray-200 truncate">{asset.label}</p>
-                        <p className="text-[0.55rem] text-gray-500 dark:text-gray-400 truncate">{asset.category} · {ac.zPosition === "above-content" ? "Above" : "Behind"}</p>
+                        <p className="text-[0.55rem] text-gray-500 dark:text-gray-400 truncate">{asset.category} Â· {ac.zPosition === "above-content" ? "Above" : "Behind"}</p>
                       </div>
                       <select
                         value={ac.assetId}
@@ -3437,7 +3269,7 @@ JSON:`;
                         className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-[0.55rem] text-gray-500 dark:text-gray-400"
                         title="Toggle layer position"
                       >
-                        {ac.zPosition === "above-content" ? "↑" : "↓"}
+                        {ac.zPosition === "above-content" ? "â†‘" : "â†“"}
                       </button>
                       <button
                         onClick={() => {
@@ -3545,9 +3377,9 @@ JSON:`;
                 }}
                 className="size-3.5 rounded border-gray-300 dark:border-gray-600 text-primary-500 focus:ring-primary-500/30"
               />
-              <span className="text-xs text-gray-600 dark:text-gray-300">Front card only — no back needed</span>
+              <span className="text-xs text-gray-600 dark:text-gray-300">Front card only â€” no back needed</span>
             </label>
-            {/* Back Style — hidden in front-only mode */}
+            {/* Back Style â€” hidden in front-only mode */}
             {!frontOnly && (
             <div>
               <p className="text-[0.625rem] font-semibold uppercase tracking-wider text-gray-400 mb-1">Back Design</p>
@@ -3584,7 +3416,7 @@ JSON:`;
 
       </Accordion>
 
-      {/* Advanced Settings — Global (shared across all document/print tools) */}
+      {/* Advanced Settings â€” Global (shared across all document/print tools) */}
       <AdvancedSettingsPanel />
 
       {/* AI Design Director */}
@@ -3654,6 +3486,15 @@ JSON:`;
           )}
         </div>
       </div>
+
+      {/* AI Error Banner */}
+      {aiError && (
+        <div className="rounded-xl border border-error-500/30 bg-error-500/10 p-3 flex items-start gap-2">
+          <span className="text-error-500 text-xs shrink-0 mt-0.5">âš </span>
+          <p className="text-xs text-error-400 flex-1">{aiError}</p>
+          <button onClick={() => setAiError(null)} className="text-error-500 hover:text-error-300 text-xs shrink-0">âœ•</button>
+        </div>
+      )}
     </div>
   );
 
@@ -3707,7 +3548,7 @@ JSON:`;
               {batchEntries.map((entry, idx) => (
                 <div key={entry.id} className="rounded-lg border border-gray-700/50 bg-gray-800/30 p-2 space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-[0.5625rem] font-bold text-primary-500">Person {idx + 1}{entry.department ? ` · ${entry.department}` : ""}</span>
+                    <span className="text-[0.5625rem] font-bold text-primary-500">Person {idx + 1}{entry.department ? ` Â· ${entry.department}` : ""}</span>
                     {batchEntries.length > 1 && (
                       <button onClick={() => removeBatchEntry(entry.id)} className="p-0.5 text-gray-500 hover:text-error-500 transition-colors">
                         <IconTrash className="size-3" />
@@ -3732,10 +3573,10 @@ JSON:`;
                       className="h-7 px-2 rounded-lg border border-gray-700 bg-gray-800/50 text-white text-[0.625rem] placeholder:text-gray-500 focus:outline-none focus:border-primary-500 transition-all"
                     />
                   </div>
-                  {/* Extended fields — collapsed by default */}
+                  {/* Extended fields â€” collapsed by default */}
                   <details className="group">
                     <summary className="text-[0.5rem] text-gray-500 cursor-pointer hover:text-gray-300 transition-colors select-none">
-                      More fields (website, social, dept, QR) ▸
+                      More fields (website, social, dept, QR) â–¸
                     </summary>
                     <div className="mt-1.5 space-y-1">
                       <input type="text" placeholder="Website" value={entry.website ?? ""}
@@ -3779,7 +3620,7 @@ JSON:`;
               className="w-full flex items-center justify-center gap-1.5 h-8 rounded-lg border border-dashed border-gray-600 text-gray-400 text-xs hover:border-primary-500 hover:text-primary-500 transition-colors">
               <IconPlus className="size-3" /> Add Person
             </button>
-            {/* CSV / Excel import — auto-populates all entries from a spreadsheet */}
+            {/* CSV / Excel import â€” auto-populates all entries from a spreadsheet */}
             <div className="flex items-center gap-1.5">
               <label className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-lg border border-dashed border-secondary-500/40 text-secondary-500 text-xs hover:bg-secondary-500/5 cursor-pointer transition-colors">
                 <IconDownload className="size-3 rotate-180" />
@@ -3792,7 +3633,7 @@ JSON:`;
                 className="px-2.5 py-1.5 rounded-lg border border-gray-700 text-gray-400 text-[0.5625rem] hover:text-gray-200 hover:border-gray-500 transition-colors whitespace-nowrap"
                 title="Download a CSV template you can fill in and re-import"
               >
-                Template ↓
+                Template â†“
               </a>
             </div>
             <button onClick={exportBatchPdf}
@@ -3880,10 +3721,10 @@ JSON:`;
     </div>
   );
 
-  // Right panel — add layers + properties panels when in editor mode
+  // Right panel â€” add layers + properties panels when in editor mode
   const editorRightPanel = editorMode ? (
     <div className="space-y-3">
-      {/* Element Colors — quick per-element color overrides */}
+      {/* Element Colors â€” quick per-element color overrides */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-3">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
           Element Colors

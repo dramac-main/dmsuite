@@ -1,16 +1,56 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Session 41 — Pixel-Perfect Template Infrastructure
+**Phase:** Session 42+ — Template Rebuild Quality Fixes — SYSTEMIC + 5 MAJOR templates + post-layout collision check COMPLETE ✅
 
-### Actual State (Session 41 Updated)
+### Actual State (Post-Template-Rebuild-Quality-Pass)
 - **194 total tools** defined in tools.ts
 - **96 tools** have dedicated workspace routes in page.tsx → status: "ready"  
 - **~90 tools** have NO workspace → status: "coming-soon"
 - **8 tools** have NO workspace → status: "beta"
 - **93 workspace component files** exist in `src/components/workspaces/`
 - Build passes with zero TypeScript errors
-- All workspaces now use global Accordion component (no more local Section+Set<string>)
+- **ALL 30 business card templates** have pixel-perfect front + back layouts
+- **business-card-adapter.ts** — ~6637 lines with 30 front layouts + 30 back layouts + post-layout collision check
+- **card-template-helpers.ts** — ~1600 lines with contactWithIcons overflow prevention (maxY parameter)
+- **TEMPLATE_FIXED_THEMES** — all 30 entries match reference specifications
+
+## Recent Changes (Session 42 — Template Rebuild Quality Fixes)
+
+### Systemic Fixes Applied to ALL 30 Templates
+1. **Font parameter fix**: `_fs`/`_ff` → `fs`/`ff` in 12 function signatures
+2. **FONT_STACKS.geometric hardcodes**: Replaced 14 occurrences with `ff` (front) / `cfg.fontFamily` (back)
+3. **FONT_STACKS import removed**: No longer used anywhere
+4. **Logo/company duplication fix**: Added 20 `if (!cfg.logoUrl)` conditionals to prevent showing logo + company text together
+5. **Contact overflow prevention**: Added `maxY?: number` parameter to contactWithIcons with auto-compression logic; applied `maxY: H * 0.95` to all 14 calls
+6. **showContactIcons gate removal**: Removed `if (cfg.showContactIcons)` from 4 front layouts (flowing-lines, blueprint-tech, skyline-silhouette, premium-crest) — contacts now always show; showContactIcons only controls icon rendering
+7. **Front contact tags fixed**: Changed `tags: ["back"]` → `tags: ["front"]` on 4 front layout contactWithIcons calls
+
+### MAJOR ISSUE Template Rewrites (5 templates)
+1. **Template 7 (cyan-tech)** — Front + back completely rewritten: organic S-curve wave, gear cog with teeth, company 5.5%H, email on wave, mirrored back
+2. **Template 8 (corporate-chevron)** — Front rewritten: company reduced 11%→5.5%H, contactWithIcons replacing inline circles
+3. **Template 9 (zigzag-overlay)** — Front rewritten: name 2.5%→6.5%H, added title, larger gradient bar, contactWithIcons
+4. **Template 12 (wave-gradient)** — Front rewritten: buildWatermarkLogo, name 6%H, contactWithIcons, proper visual flow
+5. **Template 16 (clean-accent)** — Front rewritten: name 2.8%→5.5%H, contact 1.8%→2.5%H, contactWithIcons right-aligned, proper building skyline, QR conditional
+
+### Template 29 (premium-crest) Front Fix
+- Added buildWatermarkLogo, title, and company elements that were missing
+- Repositioned name from 58% to 68% Y to fit below logo
+- Contacts always visible (showContactIcons guard removed)
+
+### Post-Layout Text Collision Check
+- Added collision detection in `cardConfigToDocument()` after template layers generation
+- Sorts text layers by Y position, checks for vertical overlap
+- If collision detected: pushes lower element down by overlap + 8px gap
+- Safety net — good layouts avoid collisions but this catches edge cases
+
+### Luxury Templates 25-30 Audit — ALL VERIFIED ✅
+- luxury-divider: No vertical dividers (correct), QR upper-right, teal back
+- social-band: 70/30 split exact, Light 300 weight, script watermark 30% opacity on back
+- organic-pattern: 60/40 split exact, gold icon strip at divider, bezier contour back
+- celtic-stripe: 25% strip width (correct), oval-diamond pattern, mirrored right on back
+- premium-crest: Skyline front, key-skyline composite on back (key shaft, head, building cutouts, keyhole)
+- gold-construct: 60/40 split, 3-column contact with dividers, world map dots + corner triangles on back
 - AI Design Engine v2.0 — massively upgraded with 13 sections, 60+ exports
 - **vNext Editor Infrastructure** — 14+ files, 6,207+ lines (Session 28)
 - **M2 BusinessCard Adapter** — layer-based rendering via DesignDocumentV2 (Session 29)

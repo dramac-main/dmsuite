@@ -673,8 +673,8 @@ export interface TemplateColorTheme {
 export const TEMPLATE_FIXED_THEMES: Record<string, TemplateColorTheme> = {
   // ── Minimal ──
   "ultra-minimal": {
-    frontBg: "#f8f9fa", frontText: "#4a4a4a", frontTextAlt: "#4a4a4a",
-    accent: "#4a4a4a", backBg: "#ffffff", backText: "#2c2c2c",
+    frontBg: "#ffffff", frontText: "#2c2c2c", frontTextAlt: "#4a4a4a",
+    accent: "#4a4a4a", backBg: "#f8f9fa", backText: "#4a4a4a",
     divider: "#e0e0e0", contactText: "#8a8a8a", contactIcon: "#b0b0b0",
   },
   "monogram-luxe": {
@@ -683,8 +683,8 @@ export const TEMPLATE_FIXED_THEMES: Record<string, TemplateColorTheme> = {
     divider: "#d0d0d0", contactText: "#8a8a8a", contactIcon: "#999999",
   },
   "geometric-mark": {
-    frontBg: "#252628", frontText: "#ffffff", frontTextAlt: "#b8b8ba",
-    accent: "#ffffff", backBg: "#f8f9fb", backText: "#1c1d1e",
+    frontBg: "#f8f9fb", frontText: "#1c1d1e", frontTextAlt: "#b8b8ba",
+    accent: "#ffffff", backBg: "#252628", backText: "#ffffff",
     divider: "#e0e0e0", contactText: "#939495", contactIcon: "#838587",
   },
   "frame-minimal": {
@@ -707,15 +707,15 @@ export const TEMPLATE_FIXED_THEMES: Record<string, TemplateColorTheme> = {
 
   // ── Modern ──
   "cyan-tech": {
-    frontBg: "#1E1E1E", frontText: "#D6D6D6", frontTextAlt: "#D6D6D6",
+    frontBg: "#1E1E1E", frontText: "#FFFFFF", frontTextAlt: "#D6D6D6",
     accent: "#2DB5E5",
-    backBg: "#1E1E1E", backText: "#FFFFFF", backAccent: "#2DB5E5",
+    backBg: "#1E1E1E", backText: "#D6D6D6", backAccent: "#2DB5E5",
     contactText: "#FFFFFF", contactIcon: "#FFFFFF",
   },
   "corporate-chevron": {
-    frontBg: "#1E2633", frontBgAlt: "#1A202A", frontText: "#C8CBD0",
+    frontBg: "#EFEFEF", frontBgAlt: "#1A202A", frontText: "#444648",
     frontTextAlt: "#8090A0", accent: "#324154",
-    backBg: "#EFEFEF", backText: "#444648", backAccent: "#1C1C1E",
+    backBg: "#1E2633", backText: "#C8CBD0", backAccent: "#1C1C1E",
     contactText: "#727780", contactIcon: "#4D5562",
     divider: "#DDDDDD",
   },
@@ -726,9 +726,9 @@ export const TEMPLATE_FIXED_THEMES: Record<string, TemplateColorTheme> = {
     contactText: "#E0E0E0",
   },
   "hex-split": {
-    frontBg: "#2C4F6B", frontBgAlt: "#1E3A4F", frontText: "#FFFFFF",
+    frontBg: "#F8F9FA", frontBgAlt: "#1E3A4F", frontText: "#2C4F6B",
     frontTextAlt: "#8BB4D1", accent: "#2C4F6B",
-    backBg: "#F8F9FA", backText: "#2C4F6B", backAccent: "#2C4F6B",
+    backBg: "#2C4F6B", backText: "#FFFFFF", backAccent: "#2C4F6B",
     contactText: "#FFFFFF", contactIcon: "#FFFFFF",
     divider: "#FFFFFF",
   },
@@ -786,9 +786,9 @@ export const TEMPLATE_FIXED_THEMES: Record<string, TemplateColorTheme> = {
 
   // ── Creative ──
   "flowing-lines": {
-    frontBg: "#1B4D3E", frontText: "#FFFFFF",
+    frontBg: "#F8F8F8", frontText: "#1B4D3E",
     accent: "#00B050",
-    backBg: "#F8F8F8", backText: "#1B4D3E", backAccent: "#00B050",
+    backBg: "#1B4D3E", backText: "#FFFFFF", backAccent: "#00B050",
     contactText: "#333333", contactIcon: "#00B050",
   },
   "neon-watermark": {
@@ -798,14 +798,14 @@ export const TEMPLATE_FIXED_THEMES: Record<string, TemplateColorTheme> = {
     contactText: "#2B5F7F", contactIcon: "#2B5F7F",
   },
   "blueprint-tech": {
-    frontBg: "#6B6B6B", frontText: "#FFFFFF", frontTextAlt: "#BDC3C7",
-    accent: "#E74C3C", backBg: "#FFFFFF", backText: "#2C3E50",
+    frontBg: "#FFFFFF", frontText: "#2C3E50", frontTextAlt: "#BDC3C7",
+    accent: "#E74C3C", backBg: "#6B6B6B", backText: "#FFFFFF",
     backAccent: "#BDC3C7", contactText: "#2C3E50", contactIcon: "#2C3E50",
   },
   "skyline-silhouette": {
-    frontBg: "#F5F5F5", frontBgAlt: "#1A1A1A", frontText: "#2C2C2C",
+    frontBg: "#2C2C2C", frontBgAlt: "#1A1A1A", frontText: "#FFFFFF",
     frontTextAlt: "#666666", accent: "#2C2C2C",
-    backBg: "#2C2C2C", backText: "#FFFFFF",
+    backBg: "#F5F5F5", backText: "#2C2C2C",
     divider: "#2C2C2C", contactText: "#FFFFFF", contactIcon: "#FFFFFF",
   },
   "world-map": {
@@ -847,9 +847,9 @@ export const TEMPLATE_FIXED_THEMES: Record<string, TemplateColorTheme> = {
     divider: "#2C2C2C", contactText: "#666666", contactIcon: "#666666",
   },
   "premium-crest": {
-    frontBg: "#1A1A1A", frontText: "#2A2A2A", frontTextAlt: "#F5F1E8",
+    frontBg: "#F5F1E8", frontText: "#2A2A2A", frontTextAlt: "#F5F1E8",
     accent: "#F5F1E8", accentAlt: "#1A1A1A",
-    backBg: "#F5F1E8", backText: "#2A2A2A",
+    backBg: "#1A1A1A", backText: "#2A2A2A",
     backAccent: "#1A1A1A", contactText: "#4A4A4A", contactIcon: "#4A4A4A",
   },
   "gold-construct": {
@@ -1183,6 +1183,7 @@ export function contactWithIcons(opts: {
   fontFamily: string;
   align?: "left" | "right";
   maxWidth?: number;
+  maxY?: number;
   tags?: string[];
 }): LayerV2[] {
   const layers: LayerV2[] = [];
@@ -1196,14 +1197,42 @@ export function contactWithIcons(opts: {
   if (opts.contacts.twitter) entries.push({ type: "twitter", value: opts.contacts.twitter, iconId: "twitter-x" });
   if (opts.contacts.instagram) entries.push({ type: "instagram", value: opts.contacts.instagram, iconId: "instagram" });
 
+  // --- Overflow prevention ---
+  // If maxY is specified, ensure the contact block fits within bounds.
+  // Strategy: compress lineGap first, then drop optional entries (social media).
+  let effectiveLineGap = opts.lineGap;
+  let visibleEntries = entries;
+
+  if (opts.maxY && entries.length > 0) {
+    const available = opts.maxY - opts.startY;
+    const minLineGap = opts.fontSize * 1.2;
+    let requiredHeight = (entries.length - 1) * effectiveLineGap + opts.fontSize;
+
+    if (requiredHeight > available) {
+      // First: compress lineGap
+      effectiveLineGap = Math.max(minLineGap, (available - opts.fontSize) / Math.max(entries.length - 1, 1));
+      requiredHeight = (entries.length - 1) * effectiveLineGap + opts.fontSize;
+
+      // Second: if still overflows, drop optional entries from end (social first)
+      if (requiredHeight > available) {
+        visibleEntries = [...entries];
+        while (visibleEntries.length > 2 && (visibleEntries.length - 1) * effectiveLineGap + opts.fontSize > available) {
+          visibleEntries.pop(); // drop instagram, then twitter, then linkedin, etc.
+        }
+        // Recalculate gap with fewer entries
+        effectiveLineGap = Math.max(minLineGap, (available - opts.fontSize) / Math.max(visibleEntries.length - 1, 1));
+      }
+    }
+  }
+
   const iconSize = Math.round(opts.fontSize * 0.9);
   const iconGap = Math.round(opts.fontSize * 0.5);
   const isRight = opts.align === "right";
   const maxW = opts.maxWidth ?? 400;
 
-  for (let i = 0; i < entries.length; i++) {
-    const entry = entries[i];
-    const lineY = opts.startY + i * opts.lineGap;
+  for (let i = 0; i < visibleEntries.length; i++) {
+    const entry = visibleEntries[i];
+    const lineY = opts.startY + i * effectiveLineGap;
 
     if (isRight) {
       // Icon on right of text
