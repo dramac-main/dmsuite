@@ -726,8 +726,9 @@ export function ChikoAssistant() {
           for (let i = 1; i < parts.length; i++) {
             const newlineIdx = parts[i].indexOf("\n");
             if (newlineIdx === -1) {
-              // Incomplete action event — keep in buffer for next chunk
-              textBuffer = "__CHIKO_ACTION__:" + parts[i];
+              // Incomplete action event — reconstruct remaining buffer including any subsequent parts
+              const remaining = parts.slice(i).join("__CHIKO_ACTION__:");
+              textBuffer = "__CHIKO_ACTION__:" + remaining;
               break;
             }
             const jsonStr = parts[i].slice(0, newlineIdx);
@@ -769,9 +770,11 @@ export function ChikoAssistant() {
                     appendToLastAssistantMessage(`\n❌ ${result.message}`);
                   }
                 }
+              } else {
+                console.warn("[Chiko] Invalid action format (missing __):", actionEvent.action);
               }
-            } catch {
-              // Invalid JSON — skip
+            } catch (parseErr) {
+              console.warn("[Chiko] Failed to parse action JSON:", jsonStr, parseErr);
             }
 
             // Append any trailing text after the action event
