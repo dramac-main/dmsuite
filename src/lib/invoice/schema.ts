@@ -6,6 +6,7 @@
 // =============================================================================
 
 import { z } from "zod";
+import type { CustomBlock } from "@/lib/sales-book/custom-blocks";
 
 // ---------------------------------------------------------------------------
 // Sales Document Types
@@ -382,6 +383,7 @@ export const invoiceDataSchema = z.object({
   notes:          z.string().default(""),
   terms:          z.string().default(""),
   metadata:       invoiceMetadataSchema,
+  customBlocks:   z.array(z.any()).default([]) as unknown as z.ZodType<CustomBlock[]>,
 });
 
 // ---------------------------------------------------------------------------
@@ -602,6 +604,7 @@ export function createDefaultInvoiceData(docType: SalesDocumentType = "invoice")
       footerText: "",
       watermark: "",
     },
+    customBlocks: [],
   };
 }
 
@@ -707,6 +710,7 @@ export function createSampleInvoiceData(
       watermark: "",
       ...overrides,
     },
+    customBlocks: [],
   };
 }
 

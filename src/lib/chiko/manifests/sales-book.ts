@@ -5,6 +5,7 @@
 
 import type { ChikoActionManifest, ChikoActionResult } from "@/stores/chiko-actions";
 import { useSalesBookEditor } from "@/stores/sales-book-editor";
+import type { CustomBlockType, BlockPosition } from "@/lib/sales-book/custom-blocks";
 
 /** Build the sales book action manifest. Call from the workspace component. */
 export function createSalesBookManifest(): ChikoActionManifest {
@@ -182,6 +183,63 @@ export function createSalesBookManifest(): ChikoActionManifest {
         parameters: { type: "object", properties: {} },
         category: "Read",
       },
+      {
+        name: "addCustomBlock",
+        description: "Add a custom block to the form. Types: qr-code (QR code for URLs/payment links), text (custom text/tagline), divider (horizontal line), spacer (empty space), image (custom image), signature-box (additional signature line)",
+        parameters: {
+          type: "object",
+          properties: {
+            type: { type: "string", enum: ["qr-code", "text", "divider", "spacer", "image", "signature-box"], description: "Block type" },
+            position: { type: "string", enum: ["after-header", "after-items", "before-signature", "after-footer"], description: "Where to place the block" },
+            data: { type: "object", description: "Type-specific configuration (e.g. url, size, caption for QR code; content, fontSize for text; style, thickness for divider)" },
+          },
+          required: ["type"],
+        },
+        category: "Customization",
+      },
+      {
+        name: "updateCustomBlock",
+        description: "Modify an existing custom block's settings",
+        parameters: {
+          type: "object",
+          properties: {
+            blockId: { type: "string", description: "Block ID to update" },
+            data: { type: "object", description: "Partial update of block-specific data" },
+            position: { type: "string", enum: ["after-header", "after-items", "before-signature", "after-footer"] },
+            alignment: { type: "string", enum: ["left", "center", "right"] },
+            enabled: { type: "boolean" },
+            label: { type: "string" },
+          },
+          required: ["blockId"],
+        },
+        category: "Customization",
+      },
+      {
+        name: "removeCustomBlock",
+        description: "Remove a custom block from the form",
+        parameters: {
+          type: "object",
+          properties: {
+            blockId: { type: "string", description: "Block ID to remove" },
+          },
+          required: ["blockId"],
+        },
+        category: "Customization",
+        destructive: true,
+      },
+      {
+        name: "reorderCustomBlocks",
+        description: "Reorder custom blocks by changing a block's position in the list",
+        parameters: {
+          type: "object",
+          properties: {
+            fromIndex: { type: "number", description: "Current index of the block" },
+            toIndex: { type: "number", description: "New index for the block" },
+          },
+          required: ["fromIndex", "toIndex"],
+        },
+        category: "Customization",
+      },
     ],
 
     getState: () => {
@@ -198,6 +256,7 @@ export function createSalesBookManifest(): ChikoActionManifest {
           position: form.brandLogos.position,
           logoCount: form.brandLogos.logos.length,
         },
+        customBlocks: form.customBlocks.map(b => ({ id: b.id, type: b.type, position: b.position, enabled: b.enabled })),
       };
     },
 
@@ -243,6 +302,32 @@ export function createSalesBookManifest(): ChikoActionManifest {
               message: "Current state read",
               newState: readSalesBookState(),
             };
+
+          case "addCustomBlock": {
+            const blockId = store.addCustomBlock(
+              params.type as CustomBlockType,
+              {
+                ...(params.position ? { position: params.position as BlockPosition } : {}),
+                ...(params.data ? { data: params.data as Record<string, unknown> } : {}),
+              } as Partial<import("@/lib/sales-book/custom-blocks").CustomBlock>,
+            );
+            return { success: true, message: `Added ${params.type} block (${blockId})` };
+          }
+
+          case "updateCustomBlock":
+            store.updateCustomBlock(
+              params.blockId as string,
+              params as Partial<import("@/lib/sales-book/custom-blocks").CustomBlock>,
+            );
+            return { success: true, message: `Updated block ${params.blockId}` };
+
+          case "removeCustomBlock":
+            store.removeCustomBlock(params.blockId as string);
+            return { success: true, message: `Removed block ${params.blockId}` };
+
+          case "reorderCustomBlocks":
+            store.reorderCustomBlocks(params.fromIndex as number, params.toIndex as number);
+            return { success: true, message: "Blocks reordered" };
 
           default:
             return { success: false, message: `Unknown action: ${actionName}` };

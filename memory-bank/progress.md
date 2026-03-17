@@ -4,9 +4,31 @@
 
 ---
 
-## Current Work: Chiko Layer 2 File Processing Pipeline — BUILD COMPLETE ✅
+## Current Work: Chiko Layer 3 Custom Blocks System — BUILT ✅ — Zero TSC Errors
 
-### Session 86 — Chiko Layer 2 Build (Complete)
+### Session 88 — Chiko Layer 3 Custom Blocks Build (Complete)
+- [x] Installed `qrcode` + `@types/qrcode` dependency
+- [x] Created `src/lib/sales-book/custom-blocks.ts` — types, constants, factory for 6 block types
+- [x] Modified `src/lib/sales-book/schema.ts` — customBlocks field, re-exports
+- [x] Modified `src/stores/sales-book-editor.ts` — 4 CRUD actions (add/update/remove/reorder)
+- [x] Created `src/lib/sales-book/CustomBlockRenderer.tsx` — 6 renderers + CustomBlocksRegion
+- [x] Modified `src/lib/sales-book/BlankFormRenderer.tsx` — 8 insertion points (4 per slip type)
+- [x] Created `src/components/workspaces/sales-book-designer/SBSectionCustomBlocks.tsx` — sidebar panel with DnD
+- [x] Modified `SalesBookDesignerWorkspace.tsx` — Custom Blocks accordion section
+- [x] Modified `src/lib/chiko/manifests/sales-book.ts` — 4 new actions + getState update
+- [x] Modified invoice system (schema + store + manifest) — 4 CRUD actions + getState
+- [x] Fixed 24 tsc errors (Zod v4 compat, field name mismatches, type casts)
+- [x] Zero TypeScript errors — clean build confirmed (tsc --noEmit)
+- [x] Memory bank updated
+- [ ] **NEXT:** Layer 4 (Business Memory) spec
+
+### Session 87 — Chiko Layer 3 Spec (Complete)
+- [x] Created `PHASES/CHIKO-LAYER-3-SPEC.md` — comprehensive build spec (~650 lines)
+- [x] Covers: 6 block types (QR, text, divider, spacer, image, signature-box), schema extension, store CRUD, renderer integration, sidebar UI with dnd-kit, Chiko manifest actions
+- [x] Confirmed Layer 2 reality note already in architecture doc
+- [x] Memory bank updated
+
+### Session 86 — Chiko Layer 2 File Processing Build (Complete)
 - [x] Installed `xlsx` (SheetJS) — only new npm dependency
 - [x] Created `src/lib/chiko/extractors/field-detector.ts` — Regex business field detection
 - [x] Created `src/lib/chiko/extractors/pdf-extractor.ts` — PDF extraction via pdf-parse

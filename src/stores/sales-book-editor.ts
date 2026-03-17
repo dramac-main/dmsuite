@@ -22,6 +22,8 @@ import {
   createDefaultSalesBookForm,
   convertSalesBookType,
 } from "@/lib/sales-book/schema";
+import type { CustomBlock, CustomBlockType } from "@/lib/sales-book/custom-blocks";
+import { createDefaultBlock } from "@/lib/sales-book/custom-blocks";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -58,6 +60,12 @@ export interface SalesBookEditorState {
   updateBrandLogos: (patch: Partial<BrandLogosConfig>) => void;
   addBrandLogo: (logo: BrandLogo) => void;
   removeBrandLogo: (index: number) => void;
+
+  // ── Custom Blocks ──
+  addCustomBlock: (type: CustomBlockType, overrides?: Partial<CustomBlock>) => string;
+  updateCustomBlock: (blockId: string, patch: Partial<CustomBlock>) => void;
+  removeCustomBlock: (blockId: string) => void;
+  reorderCustomBlocks: (fromIndex: number, toIndex: number) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -146,6 +154,53 @@ export const useSalesBookEditor = create<SalesBookEditorState>()(
       removeBrandLogo: (index) =>
         set((s) => {
           s.form.brandLogos.logos.splice(index, 1);
+        }),
+
+      // ── Custom Blocks ──
+      addCustomBlock: (type, overrides) => {
+        const block = createDefaultBlock(type);
+        if (overrides) {
+          Object.assign(block, overrides);
+          if (overrides.data) {
+            Object.assign(block.data, overrides.data);
+          }
+        }
+        set((s) => {
+          s.form.customBlocks.push(block as CustomBlock);
+        });
+        return block.id;
+      },
+
+      updateCustomBlock: (blockId, patch) =>
+        set((s) => {
+          const block = s.form.customBlocks.find((b) => b.id === blockId);
+          if (!block) return;
+          // Apply top-level fields
+          if (patch.position !== undefined) block.position = patch.position;
+          if (patch.alignment !== undefined) block.alignment = patch.alignment;
+          if (patch.enabled !== undefined) block.enabled = patch.enabled;
+          if (patch.label !== undefined) block.label = patch.label;
+          if (patch.marginTop !== undefined) block.marginTop = patch.marginTop;
+          if (patch.marginBottom !== undefined) block.marginBottom = patch.marginBottom;
+          // Merge data
+          if ((patch as { data?: Record<string, unknown> }).data) {
+            Object.assign(block.data, (patch as { data: Record<string, unknown> }).data);
+          }
+        }),
+
+      removeCustomBlock: (blockId) =>
+        set((s) => {
+          const idx = s.form.customBlocks.findIndex((b) => b.id === blockId);
+          if (idx !== -1) s.form.customBlocks.splice(idx, 1);
+        }),
+
+      reorderCustomBlocks: (fromIndex, toIndex) =>
+        set((s) => {
+          const blocks = s.form.customBlocks;
+          if (fromIndex < 0 || fromIndex >= blocks.length) return;
+          if (toIndex < 0 || toIndex >= blocks.length) return;
+          const [item] = blocks.splice(fromIndex, 1);
+          blocks.splice(toIndex, 0, item);
         }),
     })),
     {

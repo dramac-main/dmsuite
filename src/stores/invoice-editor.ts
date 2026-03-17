@@ -28,6 +28,8 @@ import {
   convertDocumentType,
   DOCUMENT_TYPE_CONFIGS,
 } from "@/lib/invoice/schema";
+import type { CustomBlock, CustomBlockType } from "@/lib/sales-book/custom-blocks";
+import { createDefaultBlock } from "@/lib/sales-book/custom-blocks";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -91,6 +93,12 @@ export interface InvoiceEditorState {
   setFontPairing: (fp: string) => void;
   setPageFormat: (pf: InvoiceMetadata["pageFormat"]) => void;
   updateMetadata: (patch: Partial<InvoiceMetadata>) => void;
+
+  // ── Custom Blocks ──
+  addCustomBlock: (type: CustomBlockType, overrides?: Partial<CustomBlock>) => string;
+  updateCustomBlock: (blockId: string, patch: Partial<CustomBlock>) => void;
+  removeCustomBlock: (blockId: string) => void;
+  reorderCustomBlocks: (fromIndex: number, toIndex: number) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -305,6 +313,55 @@ export const useInvoiceEditor = create<InvoiceEditorState>()(
       updateMetadata: (patch) =>
         set((s) => {
           Object.assign(s.invoice.metadata, patch);
+        }),
+
+      // ── Custom Blocks ──
+      addCustomBlock: (type, overrides) => {
+        const block = createDefaultBlock(type);
+        if (overrides) {
+          if (overrides.position) block.position = overrides.position;
+          if (overrides.alignment) block.alignment = overrides.alignment;
+          if (overrides.enabled !== undefined) block.enabled = overrides.enabled;
+          if (overrides.label !== undefined) block.label = overrides.label;
+          if ((overrides as { data?: Record<string, unknown> }).data) {
+            Object.assign(block.data, (overrides as { data?: Record<string, unknown> }).data);
+          }
+        }
+        set((s) => {
+          const blocks = s.invoice.customBlocks as CustomBlock[];
+          blocks.push(block as CustomBlock);
+        });
+        return block.id;
+      },
+
+      updateCustomBlock: (blockId, patch) =>
+        set((s) => {
+          const blocks = s.invoice.customBlocks as CustomBlock[];
+          const block = blocks.find((b) => b.id === blockId);
+          if (!block) return;
+          if (patch.position) block.position = patch.position;
+          if (patch.alignment) block.alignment = patch.alignment;
+          if (patch.enabled !== undefined) block.enabled = patch.enabled;
+          if (patch.label !== undefined) block.label = patch.label;
+          if (patch.marginTop !== undefined) block.marginTop = patch.marginTop;
+          if (patch.marginBottom !== undefined) block.marginBottom = patch.marginBottom;
+          if ((patch as { data?: Record<string, unknown> }).data) {
+            Object.assign(block.data, (patch as { data?: Record<string, unknown> }).data);
+          }
+        }),
+
+      removeCustomBlock: (blockId) =>
+        set((s) => {
+          const blocks = s.invoice.customBlocks as CustomBlock[];
+          const idx = blocks.findIndex((b) => b.id === blockId);
+          if (idx !== -1) blocks.splice(idx, 1);
+        }),
+
+      reorderCustomBlocks: (fromIndex, toIndex) =>
+        set((s) => {
+          const blocks = s.invoice.customBlocks as CustomBlock[];
+          const [item] = blocks.splice(fromIndex, 1);
+          blocks.splice(toIndex, 0, item);
         }),
     })),
     {

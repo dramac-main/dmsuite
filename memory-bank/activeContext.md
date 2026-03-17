@@ -1,45 +1,80 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Session 86 — Chiko Layer 2 File Processing Pipeline BUILD ✅ COMPLETE
+**Phase:** Session 88 — Chiko Layer 3 Custom Blocks System Built ✅ — Zero TSC Errors
 
-### Session 86: Chiko Layer 2 Build (Complete)
+### Session 88: Chiko Layer 3 Custom Blocks System Implementation
 
-**Context:** Layer 2 spec (`PHASES/CHIKO-LAYER-2-SPEC.md`) was written in Session 85. This session implemented the full file processing pipeline.
+**Context:** Layer 3 spec (`CHIKO-LAYER-3-SPEC.md`) was written in Session 87. This session implemented the full specification.
 
 **Completed Work:**
 
-1. **Installed `xlsx` (SheetJS)** — Only new dependency needed
+1. **Installed `qrcode` + `@types/qrcode`** — Single new dependency for QR code generation
 
-2. **Created 7 new files:**
-   - `src/lib/chiko/extractors/field-detector.ts` — Regex-based business field detection (company, phone, email, address, website, taxId, banking)
-   - `src/lib/chiko/extractors/pdf-extractor.ts` — PDF text/metadata extraction via pdf-parse
-   - `src/lib/chiko/extractors/docx-extractor.ts` — DOCX extraction via mammoth (text, tables, embedded images)
-   - `src/lib/chiko/extractors/xlsx-extractor.ts` — XLSX extraction via SheetJS (sheets, headers, rows)
-   - `src/lib/chiko/extractors/image-extractor.ts` — Image processing via sharp (resize, thumbnail, SVG sanitization)
-   - `src/lib/chiko/extractors/index.ts` — Barrel export + MIME-type router + all TypeScript contracts
-   - `src/app/api/chiko/upload/route.ts` — POST endpoint for multipart file uploads (10MB limit, memory-only)
+2. **Created `src/lib/sales-book/custom-blocks.ts`** — Pure types + constants + factory:
+   - 6 block types: QR code, text, divider, spacer, image, signature box
+   - 4 block positions: after-header, after-items, before-signature, after-footer
+   - `CustomBlockBase` interface + 6 type-specific interfaces + `CustomBlock` union
+   - `BLOCK_TYPES` and `BLOCK_POSITIONS` constant arrays
+   - `createDefaultBlock(type)` factory with uuid and sensible defaults
+   - `getBlockSummary(block)` helper for Chiko state summaries
 
-3. **Modified 4 existing files:**
-   - `src/stores/chiko.ts` — Added `ChikoFileAttachment` interface, `attachments` state, CRUD actions
-   - `src/lib/chiko/manifests/sales-book.ts` — Added `logoUrl` parameter to `updateBranding` action
-   - `src/app/api/chiko/route.ts` — Added `fileContext` field parsing, file-aware system prompt injection, image placeholder instructions
-   - `src/components/Chiko/ChikoAssistant.tsx` — Full file upload UI: attachment button (paperclip), drag-and-drop with overlay, file chips with progress, `fileContext` in API requests, `__ATTACHED_IMAGE_N__` placeholder interception in action execution, auto-send on upload via useEffect
+3. **Modified `src/lib/sales-book/schema.ts`**:
+   - Added `customBlocks` field to `salesBookFormSchema` using `z.array(z.any()).default([])` with cast
+   - Re-exported all custom block types from `custom-blocks.ts`
+   - Updated `createDefaultSalesBookForm()` with `customBlocks: []`
+   - Updated `convertSalesBookType()` to preserve `customBlocks`
 
-**Key Implementation Details:**
-- Files NEVER written to disk — all in-memory Buffer processing
-- SVG sanitization: strips scripts, event handlers, external refs
-- Image resize: max 2000px / 2MB cap, generates 200px thumbnail
-- Token efficiency: only summary/metadata/detected fields sent to AI (not raw text or base64)
-- `__ATTACHED_IMAGE_0__` placeholder: AI outputs placeholder → client replaces with actual base64 data URI before action execution
-- Auto-send: useEffect monitors attachment status, sends prompt when file becomes ready with no user text
-- Attachments excluded from localStorage persistence (not in `partialize`)
+4. **Modified `src/stores/sales-book-editor.ts`**:
+   - Added 4 CRUD actions: `addCustomBlock`, `updateCustomBlock`, `removeCustomBlock`, `reorderCustomBlocks`
+   - All use Immer draft mutations with proper type handling
+
+5. **Created `src/lib/sales-book/CustomBlockRenderer.tsx`**:
+   - `CustomBlocksRegion` component: filters blocks by position, renders in array order
+   - 6 individual block renderers with density scaling and accent color resolution
+   - QR code uses wrapper component with `useState`/`useEffect` for async `toDataURL()`
+   - All dimensions scale by `density` parameter for multi-form layouts
+
+6. **Modified `src/lib/sales-book/BlankFormRenderer.tsx`**:
+   - Added `<CustomBlocksRegion>` at 4 positions in `BlankFormSlip` (table-based forms)
+   - Added `<CustomBlocksRegion>` at 4 positions in `BlankReceiptSlip` (receipt cards)
+   - Passes `blocks`, `position`, `accentColor`, `density` to each region
+
+7. **Created `src/components/workspaces/sales-book-designer/SBSectionCustomBlocks.tsx`**:
+   - Full sidebar panel with Add Block type selector grid (6 types)
+   - Sortable block list using `@dnd-kit/sortable` for drag-and-drop reordering
+   - Collapsible block cards with type icon, summary, enable/disable toggle, delete button
+   - Type-specific config panels for all 6 block types (sliders, inputs, color pickers, file upload)
+   - Position and alignment selectors, margin controls
+
+8. **Modified `SalesBookDesignerWorkspace.tsx`**:
+   - Added "Custom Blocks" accordion section between "Brand & Supplier Logos" and "Start Over"
+   - Badge shows block count when blocks exist
+
+9. **Modified `src/lib/chiko/manifests/sales-book.ts`**:
+   - Added 4 new actions: addCustomBlock, updateCustomBlock, removeCustomBlock, reorderCustomBlocks
+   - Updated `getState()` to include customBlocks metadata summary
+   - Import of CustomBlockType, BlockPosition types
+
+10. **Modified Invoice System** (manifests + store + schema):
+    - Added `customBlocks` field to `invoiceDataSchema` and both default/sample data functions
+    - Added 4 CRUD actions to `invoice-editor.ts` store
+    - Added 4 actions to `invoice.ts` manifest with executeAction cases
+    - Updated `getState()` to include customBlocks summary
+    - Invoice renderer integration deferred per spec (only manifest + store ready)
 
 **Build Status: ✅ Zero TypeScript errors (tsc --noEmit passes clean)**
 
+**Key Technical Decisions:**
+- Zod v4 compatibility: Used `z.array(z.any()).default([]) as unknown as z.ZodType<CustomBlock[]>` double cast
+- Invoice store: Cast `s.invoice.customBlocks as CustomBlock[]` since Zod infers `unknown` from `z.any()`
+- QR code: Wrapper component approach (not store pre-generation) — cleanest for async rendering
+- Block field names: `BLOCK_TYPES` uses `.type` not `.id`, `BLOCK_POSITIONS` uses `.value` not `.id`
+
 **Next Steps:**
-- Layer 3 (Custom Blocks System) spec is next
-- Tool workspace registrations for invoice manifest (useChikoActions hook)
+- Layer 4 (Business Memory) spec is next
+- Invoice renderer custom blocks integration (deferred from Layer 3)
+- Remaining business tools: Cover Letter Writer, Proposal & Pitch Deck, Certificate Designer, Contract Creator
    - BlankFormRenderer header band: "Tax ID:" → "TPIN:"
    - BlankFormRenderer non-band header: "Tax ID:" → "TPIN:"
 

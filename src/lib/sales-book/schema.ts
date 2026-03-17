@@ -7,6 +7,22 @@
 
 import { z } from "zod";
 
+// Re-export custom block types for consumers
+export type {
+  CustomBlock,
+  CustomBlockType,
+  BlockPosition,
+  QRCodeBlock,
+  TextBlock,
+  DividerBlock,
+  SpacerBlock,
+  ImageBlock,
+  SignatureBoxBlock,
+} from "./custom-blocks";
+export { createDefaultBlock, BLOCK_TYPES, BLOCK_POSITIONS, getBlockSummary } from "./custom-blocks";
+
+import type { CustomBlock } from "./custom-blocks";
+
 // Re-export document types from invoice schema (shared across systems)
 export {
   SALES_DOCUMENT_TYPES,
@@ -225,6 +241,7 @@ export const salesBookFormSchema = z.object({
   printConfig:     printConfigSchema,
   style:           formStyleSchema,
   brandLogos:      brandLogosConfigSchema,
+  customBlocks:    z.array(z.any()).default([]) as unknown as z.ZodType<CustomBlock[]>,
 });
 
 // ---------------------------------------------------------------------------
@@ -336,6 +353,7 @@ export function createDefaultSalesBookForm(
       position: "bottom",
       logos: [],
     },
+    customBlocks: [],
   };
 }
 
@@ -349,6 +367,7 @@ export function convertSalesBookType(
 
   return {
     ...form,
+    customBlocks: form.customBlocks,
     documentType: targetType,
     serialConfig: {
       ...form.serialConfig,

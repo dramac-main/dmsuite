@@ -26,6 +26,7 @@ import SBSectionFormLayout from "./SBSectionFormLayout";
 import SBSectionPrintConfig from "./SBSectionPrintConfig";
 import SBSectionStyle from "./SBSectionStyle";
 import SBSectionBrandLogos from "./SBSectionBrandLogos";
+import SBSectionCustomBlocks from "./SBSectionCustomBlocks";
 
 // ── Accordion Section Wrapper ──
 
@@ -282,6 +283,16 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
           badge={form.brandLogos.enabled ? `${form.brandLogos.logos.length} logos` : undefined}
         >
           <SBSectionBrandLogos />
+        </AccordionSection>
+
+        <AccordionSection
+          title="Custom Blocks"
+          icon={<SIcon d="M10 2h4v4h-4z" extra={<><rect x="2" y="10" width="4" height="4" /><rect x="18" y="10" width="4" height="4" /><rect x="10" y="18" width="4" height="4" /><line x1="12" y1="6" x2="12" y2="10" /><line x1="6" y1="12" x2="10" y2="12" /><line x1="14" y1="12" x2="18" y2="12" /><line x1="12" y1="14" x2="12" y2="18" /></>} />}
+          isOpen={openSection === "blocks"}
+          onToggle={() => toggleSection("blocks")}
+          badge={form.customBlocks?.length > 0 ? `${form.customBlocks.length} blocks` : undefined}
+        >
+          <SBSectionCustomBlocks />
         </AccordionSection>
 
         {/* Start Over */}

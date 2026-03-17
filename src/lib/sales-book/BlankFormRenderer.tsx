@@ -31,6 +31,7 @@ import {
 } from "@/lib/sales-book/schema";
 import type { SalesDocumentType, PageFormat } from "@/lib/invoice/schema";
 import type { SalesBookTemplate } from "@/lib/sales-book/schema";
+import { CustomBlocksRegion } from "@/lib/sales-book/CustomBlockRenderer";
 
 // ---------------------------------------------------------------------------
 // Pixel dimensions at 96 CSS PPI for each page format
@@ -589,6 +590,13 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
           </div>
         )}
 
+        {/* Custom blocks — after-header */}
+        {form.customBlocks && form.customBlocks.length > 0 && (
+          <div style={{ padding: `0 ${pad}px` }}>
+            <CustomBlocksRegion blocks={form.customBlocks} position="after-header" accentColor={accent} density={1} />
+          </div>
+        )}
+
         {/* BODY — two-column: fields left, amount right */}
         <div style={{ flex: 1, display: "flex", gap: "18px", padding: tpl.headerBand ? `12px ${pad}px 0` : `8px ${pad}px 0`, minHeight: 0 }}>
           {/* Left column: form fields */}
@@ -635,6 +643,20 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
           </div>
         </div>
 
+        {/* Custom blocks — after-items */}
+        {form.customBlocks && form.customBlocks.length > 0 && (
+          <div style={{ padding: `0 ${pad}px` }}>
+            <CustomBlocksRegion blocks={form.customBlocks} position="after-items" accentColor={accent} density={1} />
+          </div>
+        )}
+
+        {/* Custom blocks — before-signature */}
+        {form.customBlocks && form.customBlocks.length > 0 && (
+          <div style={{ padding: `0 ${pad}px` }}>
+            <CustomBlocksRegion blocks={form.customBlocks} position="before-signature" accentColor={accent} density={1} />
+          </div>
+        )}
+
         {/* SIGNATURES */}
         {layout.showSignature && (
           <div style={{ display: "flex", justifyContent: "space-between", padding: `0 ${pad}px`, paddingTop: "10px", marginTop: "auto" }}>
@@ -668,6 +690,13 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
               // eslint-disable-next-line @next/next/no-img-element
               <img key={i} src={logo.url} alt={logo.name} style={{ height: "18px", objectFit: "contain", opacity: 0.7 }} />
             ))}
+          </div>
+        )}
+
+        {/* Custom blocks — after-footer */}
+        {form.customBlocks && form.customBlocks.length > 0 && (
+          <div style={{ padding: `0 ${pad}px` }}>
+            <CustomBlocksRegion blocks={form.customBlocks} position="after-footer" accentColor={accent} density={1} />
           </div>
         )}
 
@@ -1038,6 +1067,11 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
         </div>
       )}
 
+      {/* Custom blocks — after-header */}
+      {form.customBlocks && form.customBlocks.length > 0 && (
+        <CustomBlocksRegion blocks={form.customBlocks} position="after-header" accentColor={accent} density={density} />
+      )}
+
       {/* ITEM TABLE */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", marginBottom: `${Math.round(10 * density)}px`, minHeight: 0 }}>
         {/* Table header */}
@@ -1165,6 +1199,11 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
         </div>
       </div>
 
+      {/* Custom blocks — after-items */}
+      {form.customBlocks && form.customBlocks.length > 0 && (
+        <CustomBlocksRegion blocks={form.customBlocks} position="after-items" accentColor={accent} density={density} />
+      )}
+
       {/* AMOUNT IN WORDS */}
       {layout.showAmountInWords && docType !== "delivery-note" && (
         <div style={{ marginBottom: `${Math.round(10 * density)}px` }}>
@@ -1233,6 +1272,11 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
         <div style={{ fontSize: `${clampFont(Math.round(9 * density))}px`, color: "#6b7280", marginBottom: `${Math.round(6 * density)}px`, lineHeight: 1.4 }}>{layout.customFooterText}</div>
       )}
 
+      {/* Custom blocks — before-signature */}
+      {form.customBlocks && form.customBlocks.length > 0 && (
+        <CustomBlocksRegion blocks={form.customBlocks} position="before-signature" accentColor={accent} density={density} />
+      )}
+
       {/* SIGNATURE */}
       {layout.showSignature && (
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: "auto", paddingTop: `${Math.round(14 * density)}px` }}>
@@ -1280,6 +1324,11 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
             <img key={i} src={logo.url} alt={logo.name} style={{ height: `${Math.round(20 * density)}px`, objectFit: "contain", opacity: 0.7 }} />
           ))}
         </div>
+      )}
+
+      {/* Custom blocks — after-footer */}
+      {form.customBlocks && form.customBlocks.length > 0 && (
+        <CustomBlocksRegion blocks={form.customBlocks} position="after-footer" accentColor={accent} density={density} />
       )}
 
       {/* CUT LINE */}
