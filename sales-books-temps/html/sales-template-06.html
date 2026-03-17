@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Money Cash Receipt</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; background: #e8edf2; color: #333; }
+  .page { width: 700px; min-height: 300px; margin: 40px auto; background: #fff; border-radius: 4px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); position: relative; }
+
+  /* Decorative Corners */
+  .page::before { content: ''; position: absolute; bottom: 0; right: 0; width: 180px; height: 100px; background: linear-gradient(135deg, transparent 40%, #2196F3 40%, #2196F3 45%, transparent 45%, transparent 50%, #4CAF50 50%, #4CAF50 55%, transparent 55%); opacity: 0.6; }
+  .page::after { content: ''; position: absolute; top: 0; left: 0; width: 120px; height: 70px; background: linear-gradient(-45deg, transparent 40%, #2196F3 40%, #2196F3 45%, transparent 45%, transparent 50%, #4CAF50 50%, #4CAF50 55%, transparent 55%); opacity: 0.4; }
+
+  .content { padding: 30px 35px; position: relative; z-index: 1; }
+
+  /* Header */
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+  .header-left { display: flex; align-items: center; gap: 20px; }
+  .receipt-label { font-size: 12px; color: #555; font-weight: 700; letter-spacing: 1px; }
+  .receipt-title { font-size: 28px; font-weight: 900; color: #333; letter-spacing: 3px; }
+
+  .receipt-meta { text-align: right; }
+  .meta-row { display: flex; align-items: center; gap: 8px; justify-content: flex-end; margin-bottom: 5px; font-size: 11px; }
+  .meta-label { font-weight: 700; color: #333; }
+  .meta-value { background: #c8e6c9; padding: 3px 12px; font-weight: 700; min-width: 120px; text-align: center; }
+  .checkbox-row2 { font-size: 10px; color: #555; line-height: 1.8; }
+  .checkbox-row2 .cb { width: 10px; height: 10px; border: 1.5px solid #555; display: inline-block; margin-right: 3px; vertical-align: middle; }
+
+  /* Form Fields */
+  .form-grid { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 8px 12px; align-items: center; font-size: 11px; margin-top: 15px; }
+  .form-grid .label { font-weight: 600; }
+  .form-grid .field { border-bottom: 1px solid #aaa; min-height: 22px; }
+  .form-grid .amount-field { background: #c8e6c9; min-height: 22px; padding: 2px 8px; }
+
+  /* Footer */
+  .footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 25px; }
+  .company-footer { display: flex; align-items: center; gap: 10px; }
+  .company-name { font-size: 14px; font-weight: 900; }
+  .company-name span { color: #2196F3; }
+  .company-web { font-size: 8px; color: #888; }
+  .sig-label { font-size: 10px; color: #555; text-align: right; font-style: italic; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="content">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-left">
+        <div>
+          <div class="receipt-label">CASH</div>
+          <div class="receipt-title">RECEIPT</div>
+        </div>
+      </div>
+      <div class="receipt-meta">
+        <div class="meta-row"><span class="meta-label">Receipt No #</span></div>
+        <div class="meta-row"><span class="meta-value" style="font-size:18px; font-weight:900;">B269 872 459</span></div>
+        <div class="meta-row"><span class="meta-value" style="font-size:9px;">Date : October, 25, 2017</span></div>
+        <div class="checkbox-row2">
+          <div>Payment Method :</div>
+          <div><span class="cb"></span> Cash / Check / Money Order</div>
+          <div><span class="cb"></span> Online Payment / PayPal / Payoneer</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Fields -->
+    <div class="form-grid">
+      <span class="label">From :</span>
+      <span class="field"></span>
+      <span class="label">Amount (USD) :</span>
+      <span class="amount-field"></span>
+
+      <span class="label">Amount in word :</span>
+      <span class="field" style="grid-column: 2 / -1;"></span>
+
+      <span class="label">Purpose :</span>
+      <span class="field" style="grid-column: 2 / -1;"></span>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="company-footer">
+        <div>
+          <div class="company-name">Creative <span>PAINTING</span></div>
+          <div class="company-web">BRANDING</div>
+        </div>
+        <div style="font-size: 8px; color: #888;">&#169; www.businessgrow.com</div>
+      </div>
+      <div class="sig-label">Money Receiver Sign</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

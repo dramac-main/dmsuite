@@ -233,8 +233,8 @@ function renderFrame(ctx: CanvasRenderingContext2D, frame: FrameLayerV2, doc: De
     ctx.clip();
   }
 
-  // Render children (back-to-front: last child in array renders first, then earlier ones on top)
-  for (let i = frame.children.length - 1; i >= 0; i--) {
+  // Render children in array order: first child = behind (drawn first), last child = on top (drawn last)
+  for (let i = 0; i < frame.children.length; i++) {
     const child = doc.layersById[frame.children[i]];
     if (child) renderLayerV2(ctx, child, doc, opts);
   }
@@ -245,30 +245,35 @@ function renderFrame(ctx: CanvasRenderingContext2D, frame: FrameLayerV2, doc: De
 }
 
 function renderText(ctx: CanvasRenderingContext2D, layer: TextLayerV2): void {
+  if (!layer.text) return;
   const { x, y } = layer.transform.position;
   const { x: w } = layer.transform.size;
   const s = layer.defaultStyle;
+  if (!s) return;
 
   const displayText = s.uppercase ? layer.text.toUpperCase() : layer.text;
   const italic = s.italic ? "italic " : "";
-  ctx.font = `${italic}${s.fontWeight} ${s.fontSize}px ${s.fontFamily}`;
+  const fontSize = s.fontSize || 16;
+  const fontWeight = s.fontWeight || 400;
+  const fontFamily = s.fontFamily || "Inter, sans-serif";
+  ctx.font = `${italic}${fontWeight} ${fontSize}px ${fontFamily}`;
   ctx.textBaseline = "top";
 
-  const lines = wrapCanvasText(ctx, displayText, w);
-  const leading = s.lineHeight * s.fontSize;
+  const lines = wrapCanvasText(ctx, displayText, w > 0 ? w : 500);
+  const leading = (s.lineHeight || 1.3) * fontSize;
 
   let textX = x;
-  const align = layer.paragraphs[0]?.align ?? "left";
+  const align = layer.paragraphs?.[0]?.align ?? "left";
   if (align === "center") textX = x + w / 2;
   else if (align === "right") textX = x + w;
 
-  // Apply fill
-  const fillColor = paintToCSS(s.fill);
+  // Apply fill — default to white if paint is missing/invalid
+  const fillColor = s.fill ? paintToCSS(s.fill) : "#ffffff";
   ctx.fillStyle = fillColor;
 
   for (let i = 0; i < lines.length; i++) {
     const ly = y + i * leading;
-    drawTrackedText(ctx, lines[i], textX, ly, s.letterSpacing, align as CanvasTextAlign);
+    drawTrackedText(ctx, lines[i], textX, ly, s.letterSpacing ?? 0, align as CanvasTextAlign);
   }
 }
 
@@ -432,30 +437,34 @@ function renderIcon(ctx: CanvasRenderingContext2D, layer: IconLayerV2): void {
 
 function renderPath(ctx: CanvasRenderingContext2D, layer: PathLayerV2): void {
   const { x, y } = layer.transform.position;
+  if (!layer.geometry?.commands) return;
   const path2d = geometryToPath2D(layer.geometry.commands, x, y);
 
-  for (const fill of layer.fills) {
+  for (const fill of (layer.fills || [])) {
+    if (!fill) continue;
     ctx.save();
     applyPaintDirect(ctx, fill);
-    ctx.fill(path2d, layer.geometry.fillRule);
+    ctx.fill(path2d, layer.geometry.fillRule || "nonzero");
     ctx.restore();
   }
 
-  for (const stroke of layer.strokes) {
+  for (const stroke of (layer.strokes || [])) {
+    if (!stroke?.paint) continue;
     ctx.save();
     applyPaintDirect(ctx, stroke.paint);
-    ctx.lineWidth = stroke.width;
-    ctx.lineCap = stroke.cap;
-    ctx.lineJoin = stroke.join;
-    ctx.miterLimit = stroke.miterLimit;
-    if (stroke.dash.length > 0) ctx.setLineDash(stroke.dash);
+    ctx.lineWidth = stroke.width ?? 1;
+    ctx.lineCap = stroke.cap ?? "butt";
+    ctx.lineJoin = stroke.join ?? "miter";
+    ctx.miterLimit = stroke.miterLimit ?? 10;
+    if (Array.isArray(stroke.dash) && stroke.dash.length > 0) ctx.setLineDash(stroke.dash);
     ctx.stroke(path2d);
     ctx.restore();
   }
 }
 
 function renderGroup(ctx: CanvasRenderingContext2D, group: GroupLayerV2 | BooleanGroupLayerV2, doc: DesignDocumentV2, opts: RenderOptions): void {
-  for (let i = group.children.length - 1; i >= 0; i--) {
+  // Render children in array order: first child = behind (drawn first), last child = on top (drawn last)
+  for (let i = 0; i < group.children.length; i++) {
     const child = doc.layersById[group.children[i]];
     if (child) renderLayerV2(ctx, child, doc, opts);
   }
@@ -489,24 +498,26 @@ function applyPaint(ctx: CanvasRenderingContext2D, paint: Paint, x: number, y: n
 }
 
 function applyPaintDirect(ctx: CanvasRenderingContext2D, paint: Paint): void {
-  if (paint.kind === "solid") {
+  if (!paint) return;
+  if (paint.kind === "solid" && paint.color) {
     ctx.fillStyle = rgbaToCSS(paint.color);
     ctx.strokeStyle = rgbaToCSS(paint.color);
   }
 }
 
 function applyStroke(ctx: CanvasRenderingContext2D, stroke: StrokeSpec, x: number, y: number, w: number, h: number): void {
+  if (!stroke || !stroke.paint) return;
   if (stroke.paint.kind === "solid") {
     ctx.strokeStyle = rgbaToCSS(stroke.paint.color);
   } else if (stroke.paint.kind === "gradient") {
     const grad = createCanvasGradient(ctx, stroke.paint, x, y, w, h);
     if (grad) ctx.strokeStyle = grad;
   }
-  ctx.lineWidth = stroke.width;
-  ctx.lineCap = stroke.cap;
-  ctx.lineJoin = stroke.join;
-  ctx.miterLimit = stroke.miterLimit;
-  if (stroke.dash.length > 0) ctx.setLineDash(stroke.dash);
+  ctx.lineWidth = stroke.width ?? 1;
+  ctx.lineCap = stroke.cap ?? "butt";
+  ctx.lineJoin = stroke.join ?? "miter";
+  ctx.miterLimit = stroke.miterLimit ?? 10;
+  if (Array.isArray(stroke.dash) && stroke.dash.length > 0) ctx.setLineDash(stroke.dash);
 }
 
 function createCanvasGradient(
@@ -703,12 +714,14 @@ function geometryToPath2D(commands: PathLayerV2["geometry"]["commands"], offsetX
 
 /** Convert RGBA to CSS string */
 function rgbaToCSS(c: RGBA): string {
-  return `rgba(${c.r}, ${c.g}, ${c.b}, ${c.a})`;
+  if (!c) return "#ffffff";
+  return `rgba(${c.r ?? 0}, ${c.g ?? 0}, ${c.b ?? 0}, ${c.a ?? 1})`;
 }
 
 /** Convert a Paint to a single CSS color string (for simple cases) */
 function paintToCSS(paint: Paint): string {
-  if (paint.kind === "solid") return rgbaToCSS(paint.color);
+  if (!paint) return "#ffffff";
+  if (paint.kind === "solid" && paint.color) return rgbaToCSS(paint.color);
   return "#000000";
 }
 

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asomani Adom Enterprise - Receipt</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #333; }
+  .page { width: 650px; min-height: 350px; margin: 40px auto; position: relative; overflow: hidden; }
+
+  /* Top Blue Bar */
+  .top-bar { background: #003087; padding: 10px 20px; display: flex; align-items: center; gap: 12px; }
+  .logo-box { background: #fff; border-radius: 4px; padding: 5px 8px; display: flex; align-items: center; gap: 5px; }
+  .logo-icon { font-size: 20px; color: #003087; }
+  .logo-letters { font-size: 14px; font-weight: 900; color: #003087; }
+  .logo-sub { font-size: 6px; color: #c0392b; font-weight: 700; letter-spacing: 1px; }
+  .company-name-bar { color: #fff; font-size: 18px; font-weight: 900; letter-spacing: 2px; flex: 1; }
+  .company-desc { color: #fff; font-size: 7px; font-weight: 400; opacity: 0.9; }
+
+  /* Contact Bar */
+  .contact-bar { background: #003087; border-top: 2px solid #c0392b; padding: 5px 20px; display: flex; gap: 15px; font-size: 8px; color: #fff; }
+
+  /* Content */
+  .content { padding: 20px 25px; background: #fff; }
+
+  /* Receipt Title */
+  .receipt-title { font-size: 32px; font-weight: 900; color: #003087; margin-bottom: 8px; }
+  .date-field { font-size: 10px; color: #555; text-align: right; margin-top: -25px; }
+  .date-line { border-bottom: 1px solid #999; display: inline-block; width: 100px; }
+
+  /* Form Fields */
+  .form-fields { font-size: 11px; line-height: 3; }
+  .field-row { display: flex; align-items: center; gap: 8px; }
+  .field-label { font-weight: 600; white-space: nowrap; }
+  .field-line { flex: 1; border-bottom: 1px solid #999; }
+
+  /* Amount Box */
+  .amount-row { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
+  .cash-cheque { font-size: 10px; }
+  .cash-cheque .line { border-bottom: 1px solid #999; display: inline-block; width: 120px; }
+  .balance-area { font-size: 10px; }
+  .balance-area .line { border-bottom: 1px solid #999; display: inline-block; width: 120px; }
+
+  /* GH Amount Box */
+  .gh-box { display: flex; align-items: center; gap: 5px; margin-top: 15px; }
+  .gh-label { background: #003087; color: #fff; font-size: 12px; font-weight: 900; padding: 5px 10px; border: 2px solid #003087; }
+  .gh-value { width: 80px; height: 30px; border: 2px solid #003087; }
+
+  /* Manager Sign */
+  .manager-sign { text-align: right; font-size: 10px; font-weight: 700; font-style: italic; color: #003087; margin-top: 15px; }
+  .sign-line { border-bottom: 1px solid #003087; display: inline-block; width: 150px; margin-bottom: 3px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="logo-box">
+      <div>
+        <div class="logo-letters">AD</div>
+        <div class="logo-sub">ADOM<br>ENTERPRISE</div>
+      </div>
+    </div>
+    <div>
+      <div class="company-name-bar">ASOMANI ADOM ENTERPRISE</div>
+      <div class="company-desc">DEALERS IN ALL KINDS OF ELECTRICALS AND PLUMBING MATERIALS</div>
+    </div>
+  </div>
+
+  <!-- Contact Bar -->
+  <div class="contact-bar">
+    <span>Phone: +233 (O) 242327486 / +233 (O) 594644210</span>
+    <span>|</span>
+    <span>Location: Mpraeso-Kwahu (Roundabout)</span>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <div class="receipt-title">RECEIPT</div>
+      <div class="date-field">Date: <span class="date-line"></span>/<span class="date-line" style="width:30px;"></span>/<span class="date-line" style="width:30px;"></span></div>
+    </div>
+
+    <div class="form-fields">
+      <div class="field-row"><span class="field-label">Received from</span><span class="field-line"></span></div>
+      <div class="field-row"><span class="field-label">Sum of</span><span class="field-line"></span></div>
+      <div class="field-row"><span class="field-label">Being</span><span class="field-line"></span></div>
+    </div>
+
+    <div class="amount-row">
+      <div class="cash-cheque">Cash/Cheque <span class="line"></span></div>
+      <div class="balance-area">Balance <span class="line"></span></div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items: flex-end;">
+      <div class="gh-box">
+        <div class="gh-label">GH&#162;</div>
+        <div class="gh-value"></div>
+      </div>
+      <div class="manager-sign">
+        <div class="sign-line"></div><br>
+        Manager's Sign
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Purchase Order - Blue Layouts</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #333; }
+  .page { width: 595px; min-height: 842px; margin: 0 auto; padding: 20px 25px; }
+
+  /* Header */
+  .header { text-align: center; margin-bottom: 10px; }
+  .brand { font-size: 20px; font-weight: 700; color: #2980b9; font-style: italic; }
+  .brand-sub { font-size: 8px; color: #888; margin-bottom: 5px; }
+  .po-title { font-size: 22px; font-weight: 900; color: #222; letter-spacing: 2px; margin-top: 5px; }
+
+  /* Section Boxes */
+  .section-header { background: #2980b9; color: #fff; font-size: 10px; font-weight: 700; padding: 5px 10px; letter-spacing: 1px; margin-top: 12px; }
+  .section-header.dark { background: #1a5276; }
+
+  .field-table { width: 100%; border-collapse: collapse; }
+  .field-table td { border: 1px solid #ddd; padding: 5px 8px; font-size: 10px; }
+  .field-table .label { font-weight: 700; background: #f0f0f0; width: 130px; text-transform: uppercase; font-size: 9px; }
+
+  /* Date & PO Number */
+  .top-fields { margin-bottom: 8px; }
+  .top-fields .field-row { display: flex; align-items: center; font-size: 10px; margin-bottom: 4px; }
+  .top-fields .field-label { font-weight: 700; text-transform: uppercase; width: 140px; font-size: 9px; }
+  .top-fields .field-value { border-bottom: 1px solid #ccc; flex: 1; min-height: 16px; }
+
+  /* Items Table */
+  .items-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  .items-table thead th { background: #2980b9; color: #fff; font-size: 9px; font-weight: 700; padding: 7px 5px; text-align: center; }
+  .items-table thead th:nth-child(1) { width: 8%; }
+  .items-table thead th:nth-child(2) { width: 37%; text-align: left; }
+  .items-table thead th:nth-child(3) { width: 12%; }
+  .items-table thead th:nth-child(4) { width: 12%; }
+  .items-table thead th:nth-child(5) { width: 15%; }
+  .items-table thead th:nth-child(6) { width: 16%; }
+  .items-table tbody td { padding: 5px; border: 1px solid #ddd; font-size: 9px; text-align: center; }
+  .items-table tbody td:nth-child(2) { text-align: left; }
+  .items-table tbody tr:nth-child(even) { background: #f8f9fa; }
+
+  /* Sample Data */
+  .sample { color: #333; }
+
+  /* Totals Section */
+  .bottom-section { display: flex; justify-content: space-between; margin-top: 10px; gap: 15px; }
+  .notes-area { flex: 1; }
+  .notes-label { font-size: 9px; font-weight: 700; color: #2980b9; margin-bottom: 3px; }
+  .notes-text { font-size: 9px; color: #555; line-height: 1.6; }
+  .totals-area { width: 220px; }
+  .total-row { display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; padding: 4px 0; font-size: 9px; }
+  .total-row .label { font-weight: 600; }
+  .total-row .value { text-align: right; min-width: 60px; }
+  .total-row.highlight { background: #2980b9; color: #fff; padding: 5px 8px; margin: 0 -8px; font-weight: 700; }
+  .total-row.highlight .label,
+  .total-row.highlight .value { color: #fff; }
+
+  /* Authorized */
+  .auth-section { margin-top: 15px; display: flex; justify-content: flex-end; }
+  .auth-box { background: #c0392b; color: #fff; font-size: 9px; font-weight: 700; padding: 6px 20px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="page">
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">Blue Layouts</div>
+    <div class="brand-sub">Your Business Name here - Write Location Here - Contact No - 111-222-3333 - www.yourwebsite.com</div>
+    <div class="po-title">PURCHASE ORDER</div>
+  </div>
+
+  <!-- Date / PO Number -->
+  <div class="top-fields">
+    <div class="field-row"><span class="field-label">DATE:</span><span class="field-value"></span></div>
+    <div class="field-row"><span class="field-label">PURCHASE ORDER NO.:</span><span class="field-value"></span></div>
+  </div>
+
+  <!-- Vendor Information -->
+  <div class="section-header">VENDOR INFORMATION</div>
+  <table class="field-table">
+    <tr><td class="label">VENDOR NAME</td><td colspan="3"></td></tr>
+    <tr><td class="label">ADDRESS</td><td colspan="3"></td></tr>
+    <tr><td class="label">CONTACT NO.</td><td></td><td class="label">EMAIL ADDRESS</td><td></td></tr>
+  </table>
+
+  <!-- Customer Information -->
+  <div class="section-header" style="margin-top:10px;">CUSTOMER INFORMATION</div>
+  <table class="field-table">
+    <tr><td class="label">CUSTOMER NAME</td><td colspan="3"></td></tr>
+    <tr><td class="label">ADDRESS</td><td colspan="3"></td></tr>
+    <tr><td class="label">CONTACT NO.</td><td></td><td class="label">EMAIL ADDRESS</td><td></td></tr>
+  </table>
+
+  <!-- Items Table -->
+  <table class="items-table">
+    <thead>
+      <tr>
+        <th>Item No.</th>
+        <th>Details</th>
+        <th>Unit</th>
+        <th>Quantity</th>
+        <th>Unit Price</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>1.</td><td>Pencils HB</td><td>Dozen</td><td>5</td><td>10.00</td><td>10.00</td></tr>
+      <tr><td>2.</td><td>Pencils 2B</td><td>Dozen</td><td>4</td><td>10.00</td><td>10.00</td></tr>
+      <tr><td>3.</td><td>Paper - A4, Photo copier, 70 grams</td><td>Ream</td><td>10</td><td>10.00</td><td>10.00</td></tr>
+      <tr><td>4.</td><td>Paper - A4, Photo copier, 80 grams</td><td>Ream</td><td>15</td><td>10.00</td><td>10.00</td></tr>
+      <tr><td>5.</td><td>Pen - Ball Point, Blue</td><td>Boxes</td><td>10</td><td>10.00</td><td>10.00</td></tr>
+      <tr><td>6.</td><td>Highlighter - 3 color</td><td>Sets</td><td>8</td><td>10.00</td><td>10.00</td></tr>
+      <tr><td>7.</td><td>Pencils HB</td><td>Dozen</td><td>5</td><td>10.00</td><td>10.00</td></tr>
+      <tr><td>8.</td><td>Pencils 2B</td><td>Dozen</td><td>4</td><td>10.00</td><td>10.00</td></tr>
+      <tr><td>9.</td><td>Paper - A4, Photo copier, 70 grams</td><td>Ream</td><td>10</td><td>10.00</td><td>10.00</td></tr>
+      <tr><td>10.</td><td>Paper - A4, Photo copier, 80 grams</td><td>Ream</td><td>15</td><td>10.00</td><td>10.00</td></tr>
+      <tr><td>11.</td><td>Pen - Ball Point, Blue</td><td>Boxes</td><td>10</td><td>10.00</td><td>10.00</td></tr>
+      <tr><td>12.</td><td>Highlighter - 3 color</td><td>Sets</td><td>8</td><td>10.00</td><td>10.00</td></tr>
+      <tr><td>13.</td><td>Pencils HB</td><td>Dozen</td><td>5</td><td>10.00</td><td>10.00</td></tr>
+      <tr><td>14.</td><td>Pencils 2B</td><td>Dozen</td><td>4</td><td>10.00</td><td>10.00</td></tr>
+    </tbody>
+  </table>
+
+  <!-- Bottom Section -->
+  <div class="bottom-section">
+    <div class="notes-area">
+      <div class="notes-label">Additional Notes:</div>
+      <div class="notes-text">Payment shall be 30 days upon delivery of the above items.</div>
+    </div>
+    <div class="totals-area">
+      <div class="total-row highlight"><span class="label">Subtotal</span><span class="value">10.00</span></div>
+      <div class="total-row"><span class="label">Taxes (%)</span><span class="value">10.00</span></div>
+      <div class="total-row"><span class="label">Discount (%)</span><span class="value">10.00</span></div>
+      <div class="total-row"><span class="label" style="font-weight:900;">Total</span><span class="value" style="font-weight:900;">10.00</span></div>
+    </div>
+  </div>
+
+  <!-- Authorized -->
+  <div class="auth-section">
+    <div class="auth-box">Authorized By</div>
+  </div>
+</div>
+</body>
+</html>

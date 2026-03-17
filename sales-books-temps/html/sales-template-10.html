@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pawlow Electronics - Cash Sales Invoice</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #333; }
+  .page { width: 595px; min-height: 842px; margin: 0 auto; padding: 15px 20px; position: relative; overflow: hidden; }
+
+  /* Watermark Background */
+  .watermark { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; opacity: 0.04; font-size: 11px; font-weight: 900; color: #c0392b; line-height: 1.8; word-spacing: 5px; overflow: hidden; padding: 10px; }
+
+  .content { position: relative; z-index: 1; }
+
+  /* Header */
+  .header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+  .logo-box { width: 60px; height: 50px; display: flex; align-items: center; justify-content: center; }
+  .logo-box .pe { font-size: 32px; font-weight: 900; color: #c0392b; }
+  .company-title { font-size: 38px; font-weight: 900; color: #c0392b; letter-spacing: 3px; line-height: 1; }
+  .company-sub { font-size: 16px; font-weight: 700; color: #1a237e; letter-spacing: 4px; }
+
+  /* Description */
+  .description { font-size: 9px; font-weight: 700; color: #333; text-align: center; margin: 5px 0; letter-spacing: 0.5px; }
+  .products-list { font-size: 9px; font-weight: 700; color: #333; text-align: center; margin-bottom: 5px; }
+
+  /* Contact & Address */
+  .contact-row { display: flex; justify-content: space-between; font-size: 9px; color: #c0392b; font-weight: 700; margin-bottom: 8px; }
+
+  /* Invoice Title & Date */
+  .invoice-row { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; }
+  .invoice-badge { border: 2px solid #c0392b; color: #c0392b; font-size: 12px; font-weight: 900; padding: 4px 15px; letter-spacing: 2px; }
+  .date-grid { display: grid; grid-template-columns: repeat(3, 1fr); border: 2px solid #1a237e; }
+  .date-grid .cell { padding: 3px 10px; text-align: center; font-size: 8px; font-weight: 700; color: #1a237e; border-right: 1px solid #1a237e; }
+  .date-grid .cell:last-child { border-right: none; }
+  .date-grid .cell.header { background: #1a237e; color: #fff; }
+
+  /* LPC NO */
+  .lpc { font-size: 11px; font-weight: 900; color: #c0392b; margin: 5px 0; }
+
+  /* Items Table */
+  .items-table { width: 100%; border-collapse: collapse; border: 2px solid #1a237e; margin-top: 5px; }
+  .items-table thead th { background: transparent; color: #1a237e; font-size: 9px; font-weight: 900; padding: 6px 4px; text-align: center; border: 2px solid #1a237e; }
+  .items-table thead th:nth-child(1) { width: 10%; }
+  .items-table thead th:nth-child(2) { width: 40%; }
+  .items-table thead th:nth-child(3) { width: 15%; }
+  .items-table thead th:nth-child(4) { width: 17%; }
+  .items-table thead th:nth-child(5) { width: 18%; }
+  .items-table tbody td { padding: 5px 4px; border: 1px solid #1a237e; font-size: 9px; text-align: center; min-height: 22px; }
+  .items-table tbody td:nth-child(2) { text-align: left; }
+  .items-table tbody tr { height: 26px; }
+  .items-table .amount-header { font-size: 8px; }
+  .items-table .amount-sub { display: flex; justify-content: space-around; }
+
+  /* Footer */
+  .footer-notes { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 9px; }
+  .disclaimer { color: #c0392b; font-weight: 700; font-size: 8px; line-height: 1.4; max-width: 280px; }
+  .total-box { display: flex; align-items: center; gap: 5px; }
+  .total-label { font-weight: 900; font-size: 14px; color: #1a237e; }
+  .total-naira { font-size: 14px; font-weight: 900; color: #c0392b; }
+  .total-value-box { width: 100px; height: 28px; border: 2px solid #1a237e; }
+
+  /* Amount in Words & Signatures */
+  .amount-words { font-size: 10px; color: #c0392b; font-weight: 700; font-style: italic; margin-top: 8px; }
+  .amount-line { border-bottom: 1px solid #999; display: inline-block; width: 300px; min-height: 14px; margin-left: 5px; }
+  .naira-text { font-weight: 900; font-style: italic; color: #c0392b; text-align: center; margin-top: 3px; }
+
+  .sig-section { display: flex; justify-content: space-between; margin-top: 15px; font-size: 9px; }
+  .sig-line { width: 150px; border-bottom: 1px solid #999; text-align: center; padding-top: 20px; }
+  .sig-label { color: #c0392b; font-weight: 700; font-style: italic; }
+</style>
+</head>
+<body>
+<div class="page">
+  <!-- Watermark -->
+  <div class="watermark">
+    PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS VENTURES PAWLOW ELECTRONICS PAWLOW ELECTRONICS VENTURES
+  </div>
+
+  <div class="content">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo-box"><span class="pe" style="color:#c0392b; font-size:28px;">P<span style="font-size:20px;">E</span></span></div>
+      <div>
+        <div class="company-title">PAWLOW</div>
+        <div class="company-sub">ELECTRONICS VENTURES</div>
+      </div>
+    </div>
+
+    <div class="description">(DISTRIBUTOR OF HEIR THERMOCOOL &amp; L.G. PRODUCTS)</div>
+    <div class="products-list">-REFRIGERATOR -FREEZER -SPLIT AC -WASHING MACHINE -TELEVISION<br>-GENERATOR -GAS COOKER -STABILIZER -GIFT ITEMS -FURNITURE ETC.</div>
+
+    <div class="contact-row">
+      <div><strong>ADDRESS:</strong><br>MOLONY STREET,<br>OFF EXPRESS,<br>ILARO, OGUN STATE</div>
+      <div style="text-align:right;"><strong>TEL:</strong><br>07069201623<br>08102620654</div>
+    </div>
+
+    <!-- Invoice Header -->
+    <div class="invoice-row">
+      <div class="invoice-badge">CASH SALES INVOICE</div>
+      <div class="date-grid">
+        <div class="cell header">DAY</div>
+        <div class="cell header">MONTH</div>
+        <div class="cell header">YEAR</div>
+        <div class="cell">&nbsp;</div>
+        <div class="cell">&nbsp;</div>
+        <div class="cell">&nbsp;</div>
+      </div>
+    </div>
+
+    <div class="lpc">LPC NO:</div>
+
+    <!-- Items Table -->
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th>QTY</th>
+          <th>DESCRIPTION OF GOODS</th>
+          <th>RATE</th>
+          <th colspan="2">Amount<br><span class="amount-sub"><span>N</span><span>K</span></span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+      </tbody>
+    </table>
+
+    <!-- Footer -->
+    <div class="footer-notes">
+      <div class="disclaimer">Good received in good condition are not returnable<br>No refund of money after payment, Thanks Call Again</div>
+      <div class="total-box">
+        <span class="total-label">TOTAL</span>
+        <span class="total-naira">&#8358;</span>
+        <div class="total-value-box"></div>
+      </div>
+    </div>
+
+    <div class="amount-words">Amount in words:<span class="amount-line"></span></div>
+    <div class="naira-text">Naira</div>
+
+    <div class="sig-section">
+      <div class="sig-line"><span class="sig-label">Customer's Sign</span></div>
+      <div class="sig-line"><span class="sig-label">For. Powlow Elect. Ventures</span></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

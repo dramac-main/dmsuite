@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DNG Suppliers - Invoice</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #222; }
+  .page { width: 595px; min-height: 842px; margin: 0 auto; padding: 20px 25px; position: relative; }
+
+  /* Header */
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
+  .header-left { display: flex; align-items: flex-start; gap: 10px; }
+  .logo-block { display: flex; flex-direction: column; align-items: center; }
+  .logo-icon { width: 60px; height: 60px; background: #004a80; border-radius: 4px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; }
+  .logo-icon svg { width: 50px; height: 45px; fill: #fff; }
+  .company-name { font-size: 13px; font-weight: 900; color: #004a80; letter-spacing: 1px; margin-top: 4px; }
+  .contact-info { margin-top: 6px; font-size: 10px; color: #004a80; line-height: 1.6; }
+  .contact-info span { display: flex; align-items: center; gap: 5px; }
+  .contact-icon { width: 14px; height: 14px; background: #004a80; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 8px; flex-shrink: 0; }
+  .contact-icon.green { background: #2e8b57; }
+
+  .header-right { text-align: right; font-size: 10px; color: #333; line-height: 1.6; }
+  .header-right .pin-icon { color: #004a80; }
+  .address-line { display: flex; align-items: flex-start; gap: 4px; justify-content: flex-end; }
+  .address-line .dot { width: 8px; height: 8px; background: #004a80; border-radius: 50%; margin-top: 3px; flex-shrink: 0; }
+
+  /* Invoice Badge */
+  .invoice-badge { background: #004a80; color: #fff; font-size: 22px; font-weight: 900; padding: 6px 18px; display: inline-block; margin-top: 10px; letter-spacing: 2px; }
+
+  /* Client Section */
+  .client-section { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 18px; margin-bottom: 15px; }
+  .client-label { background: #004a80; color: #fff; font-size: 11px; font-weight: 700; padding: 6px 15px; display: inline-block; letter-spacing: 1px; }
+  .client-fields { text-align: right; font-size: 11px; color: #333; line-height: 2.2; }
+  .client-fields .field-line { display: flex; align-items: center; gap: 5px; justify-content: flex-end; }
+  .client-fields .field-label { font-weight: 600; }
+  .client-fields .field-underline { width: 160px; border-bottom: 1px solid #999; display: inline-block; }
+
+  /* Watermark */
+  .watermark-area { position: relative; }
+  .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.06; pointer-events: none; }
+  .watermark svg { width: 250px; height: 220px; fill: #004a80; }
+
+  /* Table */
+  .items-table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+  .items-table thead th { background: #004a80; color: #fff; font-size: 10px; font-weight: 700; padding: 8px 6px; text-align: left; letter-spacing: 0.5px; }
+  .items-table thead th:nth-child(1) { width: 8%; }
+  .items-table thead th:nth-child(2) { width: 47%; }
+  .items-table thead th:nth-child(3) { width: 15%; text-align: center; }
+  .items-table thead th:nth-child(4) { width: 15%; text-align: center; }
+  .items-table thead th:nth-child(5) { width: 15%; text-align: center; }
+  .items-table tbody td { padding: 10px 6px; border-bottom: 1px solid #ddd; font-size: 10px; color: #333; }
+  .items-table tbody td:nth-child(3),
+  .items-table tbody td:nth-child(4),
+  .items-table tbody td:nth-child(5) { text-align: center; }
+  .items-table tbody tr { height: 28px; }
+
+  /* Totals */
+  .totals-section { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 10px; }
+  .comments-section { font-size: 10px; }
+  .comments-label { font-weight: 700; text-decoration: underline; margin-bottom: 5px; font-size: 10px; }
+  .totals-table { width: 220px; }
+  .totals-table .total-row { display: flex; justify-content: space-between; border: 1px solid #004a80; margin-bottom: -1px; }
+  .totals-table .total-label { background: #004a80; color: #fff; font-size: 10px; font-weight: 700; padding: 8px 12px; width: 110px; text-align: center; letter-spacing: 1px; }
+  .totals-table .total-value { padding: 8px 12px; font-size: 10px; width: 110px; text-align: right; }
+
+  /* Payment Section */
+  .payment-section { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 15px; padding-top: 10px; }
+  .payment-box { background: #f0f0f0; border: 1px solid #ccc; padding: 8px 12px; font-size: 9px; line-height: 1.8; }
+  .payment-title { background: #004a80; color: #fff; font-size: 9px; font-weight: 700; padding: 4px 10px; letter-spacing: 3px; margin-bottom: 5px; display: inline-block; }
+  .payment-box .detail { color: #333; }
+  .payment-box .detail strong { color: #000; }
+  .thank-you { font-style: italic; color: #004a80; font-weight: 700; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-block">
+        <div class="logo-icon">
+          <svg viewBox="0 0 50 45"><rect x="5" y="15" width="6" height="30" fill="#fff"/><rect x="14" y="8" width="6" height="37" fill="#fff"/><rect x="23" y="2" width="6" height="43" fill="#fff"/><rect x="32" y="8" width="6" height="37" fill="#fff"/><rect x="41" y="15" width="6" height="30" fill="#fff"/></svg>
+        </div>
+        <div class="company-name">DNG SUPPLIERS</div>
+        <div class="contact-info">
+          <span><span class="contact-icon green">&#9742;</span> +1-4879-899-898</span>
+          <span><span class="contact-icon" style="background:#c00;">&#9993;</span> info@dngs.co.us</span>
+          <span><span class="contact-icon">&#9673;</span> www.dngs.co.us</span>
+        </div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="address-line">
+        <span class="dot"></span>
+        <span>Dominion Towers<br>House No.548N<br>E Buckeye Road<br>Phoenix, Arizona</span>
+      </div>
+      <div class="invoice-badge">INVOICE</div>
+    </div>
+  </div>
+
+  <!-- Client Details & Date -->
+  <div class="client-section">
+    <div class="client-label">Client Details</div>
+    <div class="client-fields">
+      <div class="field-line"><span class="field-label">Date:</span> <span class="field-underline"></span></div>
+      <div class="field-line"><span class="field-label">Invoice No:</span> <span class="field-underline"></span></div>
+    </div>
+  </div>
+
+  <!-- Items Table with watermark -->
+  <div class="watermark-area">
+    <div class="watermark">
+      <svg viewBox="0 0 50 45"><rect x="3" y="15" width="6" height="30"/><rect x="12" y="8" width="6" height="37"/><rect x="21" y="2" width="6" height="43"/><rect x="30" y="8" width="6" height="37"/><rect x="39" y="15" width="6" height="30"/></svg>
+    </div>
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Item(s) Description</th>
+          <th>Units</th>
+          <th>Price</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td></td><td></td><td></td><td></td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Totals -->
+  <div class="totals-section">
+    <div class="comments-section">
+      <div class="comments-label">OTHER COMMENTS:</div>
+    </div>
+    <div class="totals-table">
+      <div class="total-row"><div class="total-label">SUB TOTAL</div><div class="total-value"></div></div>
+      <div class="total-row"><div class="total-label">TAXES</div><div class="total-value"></div></div>
+      <div class="total-row"><div class="total-label">TOTAL</div><div class="total-value"></div></div>
+    </div>
+  </div>
+
+  <!-- Payment Details -->
+  <div class="payment-section">
+    <div>
+      <div class="payment-title">P A Y M E N T&nbsp;&nbsp;D E T A I L S</div>
+      <div class="payment-box">
+        <div class="detail"><strong>Bank Name:</strong> Phoenix Commercial Bank</div>
+        <div class="detail"><strong>Acc No:</strong> 59899898989898</div>
+        <div class="detail"><strong>Branch:</strong> E Buckeye Branch</div>
+      </div>
+    </div>
+    <div class="thank-you">Thank you for the business.</div>
+  </div>
+</div>
+</body>
+</html>

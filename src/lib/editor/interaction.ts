@@ -9,7 +9,9 @@ import type {
 } from "./schema";
 import { getLayerOrder } from "./schema";
 import type { Command } from "./commands";
-import { createMoveCommand, createResizeCommand, createUpdateCommand } from "./commands";
+import { createMoveCommand, createResizeCommand, createUpdateCommand, createAddLayerCommand } from "./commands";
+import { defaultTransform, solidPaint } from "./schema";
+import type { ShapeLayerV2, TextLayerV2, LayerTypeV2 } from "./schema";
 import { hitTestDocument, hitTestHandles } from "./hit-test";
 import type { HandleDirection } from "./hit-test";
 import { snapToGrid } from "./design-rules";
@@ -27,7 +29,7 @@ export interface InteractionState {
     | { type: "move"; layerIds: LayerId[]; origins: Record<string, Vec2>; startWorld: Vec2 }
     | { type: "resize"; layerId: LayerId; handle: HandleDirection; startWorld: Vec2; origPos: Vec2; origSize: Vec2 }
     | { type: "rotate"; layerId: LayerId; startAngle: number; origRotation: number }
-    | { type: "draw-shape"; shapeType: string; startWorld: Vec2 }
+    | { type: "draw-shape"; shapeType: string; startWorld: Vec2; currentWorld: Vec2 }
     | { type: "marquee"; startWorld: Vec2; currentWorld: Vec2 }
     | { type: "pan"; startScreen: Vec2; origOffset: Vec2 };
   /** Distance moved so far — used to distinguish click from drag */
@@ -85,6 +87,8 @@ export interface InteractionResult {
   needsRepaint: boolean;
   /** Cursor to show */
   cursor: string;
+  /** If true, commands should be committed to the undo stack (not just preview) */
+  commitToUndoStack?: boolean;
 }
 
 const DRAG_THRESHOLD = 3; // pixels before a press becomes a drag
@@ -126,8 +130,49 @@ export function handlePointerDown(
       type: "draw-shape",
       shapeType,
       startWorld: worldPoint,
+      currentWorld: worldPoint,
     };
     result.cursor = "crosshair";
+    return result;
+  }
+
+  // Text mode: create a text layer at click location
+  if (mode === "text") {
+    const layerId = `text-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` as LayerId;
+    const textLayer: TextLayerV2 = {
+      id: layerId,
+      type: "text",
+      name: "New Text",
+      tags: [],
+      parentId: doc.rootFrameId,
+      transform: defaultTransform(worldPoint.x, worldPoint.y, 200, 40),
+      opacity: 1,
+      blendMode: "normal",
+      visible: true,
+      locked: false,
+      effects: [],
+      constraints: { horizontal: "left", vertical: "top" },
+      text: "Type here",
+      defaultStyle: {
+        fontFamily: "Inter",
+        fontWeight: 400,
+        fontSize: 16,
+        lineHeight: 1.4,
+        letterSpacing: 0,
+        fill: solidPaint({ r: 255, g: 255, b: 255, a: 1 }),
+        italic: false,
+        underline: false,
+        strikethrough: false,
+        uppercase: false,
+      },
+      runs: [],
+      paragraphs: [{ align: "left", indent: 0, spaceBefore: 0, spaceAfter: 0 }],
+      overflow: "expand",
+      verticalAlign: "top",
+    };
+    result.commands = [createAddLayerCommand(textLayer, doc.rootFrameId, "Add text")];
+    result.selection = { ids: [layerId] };
+    result.needsRepaint = true;
     return result;
   }
 
@@ -330,6 +375,13 @@ export function handlePointerMove(
       break;
     }
 
+    case "draw-shape": {
+      result.state.action = { ...action, currentWorld: worldPoint };
+      result.cursor = "crosshair";
+      result.needsRepaint = true;
+      break;
+    }
+
     case "marquee": {
       result.state.action = { ...action, currentWorld: worldPoint };
       result.cursor = "crosshair";
@@ -369,6 +421,93 @@ export function handlePointerUp(
     needsRepaint: true,
     cursor: "default",
   };
+
+  // Emit final move command for undo stack
+  if (istate.action.type === "move" && istate.phase === "dragging") {
+    const act = istate.action as { type: "move"; layerIds: LayerId[]; origins: Record<string, Vec2>; startWorld: Vec2 };
+    // Compute final delta from origins to current positions in doc
+    const firstId = act.layerIds[0];
+    const currentLayer = doc.layersById[firstId];
+    const origPos = act.origins[firstId];
+    if (currentLayer && origPos) {
+      const dx = currentLayer.transform.position.x - origPos.x;
+      const dy = currentLayer.transform.position.y - origPos.y;
+      if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
+        result.commands = [createMoveCommand(act.layerIds, dx, dy)];
+        result.commitToUndoStack = true;
+      }
+    }
+  }
+
+  // Emit final resize command for undo stack
+  if (istate.action.type === "resize" && istate.phase === "dragging") {
+    const act = istate.action as { type: "resize"; layerId: LayerId; handle: HandleDirection; startWorld: Vec2; origPos: Vec2; origSize: Vec2 };
+    const layer = doc.layersById[act.layerId];
+    if (layer) {
+      const newPos = layer.transform.position;
+      const newSize = layer.transform.size;
+      if (
+        Math.abs(newPos.x - act.origPos.x) > 0.1 ||
+        Math.abs(newPos.y - act.origPos.y) > 0.1 ||
+        Math.abs(newSize.x - act.origSize.x) > 0.1 ||
+        Math.abs(newSize.y - act.origSize.y) > 0.1
+      ) {
+        result.commands = [createResizeCommand(
+          act.layerId,
+          newPos.x, newPos.y, newSize.x, newSize.y,
+          act.origPos.x, act.origPos.y, act.origSize.x, act.origSize.y
+        )];
+        result.commitToUndoStack = true;
+      }
+    }
+  }
+
+  // Emit final rotate command for undo stack
+  if (istate.action.type === "rotate" && istate.phase === "dragging") {
+    const act = istate.action as { type: "rotate"; layerId: LayerId; startAngle: number; origRotation: number };
+    const layer = doc.layersById[act.layerId];
+    if (layer && Math.abs(layer.transform.rotation - act.origRotation) > 0.1) {
+      result.commands = [createUpdateCommand(
+        act.layerId,
+        { transform: { ...layer.transform } } as Partial<typeof layer>,
+        "Rotate"
+      )];
+      result.commitToUndoStack = true;
+    }
+  }
+
+  if (istate.action.type === "draw-shape" && istate.phase === "dragging") {
+    const act = istate.action as { type: "draw-shape"; shapeType: string; startWorld: Vec2; currentWorld: Vec2 };
+    const x = Math.min(act.startWorld.x, act.currentWorld.x);
+    const y = Math.min(act.startWorld.y, act.currentWorld.y);
+    const w = Math.max(10, Math.abs(act.currentWorld.x - act.startWorld.x));
+    const h = Math.max(10, Math.abs(act.currentWorld.y - act.startWorld.y));
+
+    const shapeType = (act.shapeType || "rectangle") as ShapeLayerV2["shapeType"];
+    const layerId = `shape-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` as LayerId;
+    const shapeLayer: ShapeLayerV2 = {
+      id: layerId,
+      type: "shape",
+      name: `New ${shapeType.charAt(0).toUpperCase() + shapeType.slice(1)}`,
+      tags: [],
+      parentId: doc.rootFrameId,
+      transform: defaultTransform(x, y, w, h),
+      opacity: 1,
+      blendMode: "normal",
+      visible: true,
+      locked: false,
+      effects: [],
+      constraints: { horizontal: "left", vertical: "top" },
+      shapeType,
+      fills: [solidPaint({ r: 100, g: 100, b: 100, a: 0.5 })],
+      strokes: [{ paint: solidPaint({ r: 180, g: 180, b: 180, a: 1 }), width: 1, align: "center", dash: [], cap: "butt", join: "miter", miterLimit: 10 }],
+      cornerRadii: [0, 0, 0, 0],
+      sides: shapeType === "polygon" ? 6 : shapeType === "star" ? 5 : 4,
+      innerRadiusRatio: shapeType === "star" ? 0.4 : 1,
+    };
+    result.commands = [createAddLayerCommand(shapeLayer, doc.rootFrameId, `Draw ${shapeType}`)];
+    result.selection = { ids: [layerId] };
+  }
 
   if (istate.action.type === "marquee" && istate.phase === "dragging") {
     const { startWorld, currentWorld } = istate.action as { type: "marquee"; startWorld: Vec2; currentWorld: Vec2 };

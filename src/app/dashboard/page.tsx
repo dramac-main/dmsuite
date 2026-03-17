@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { Suspense } from "react";
 import { toolCategories } from "@/data/tools";
 import Sidebar from "@/components/dashboard/Sidebar";
 import TopBar from "@/components/dashboard/TopBar";
@@ -9,6 +9,9 @@ import StatsBar from "@/components/dashboard/StatsBar";
 import QuickAccess from "@/components/dashboard/QuickAccess";
 import CategorySection from "@/components/dashboard/CategorySection";
 import { Skeleton } from "@/components/ui";
+import { useSidebarStore } from "@/stores/sidebar";
+import { sidebar as sidebarConfig, surfaces, layout } from "@/lib/design-system";
+import { cn } from "@/lib/utils";
 
 function SectionSkeleton() {
   return (
@@ -24,18 +27,26 @@ function SectionSkeleton() {
 }
 
 export default function DashboardPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const pinned = useSidebarStore((s) => s.pinned);
+  const openMobile = useSidebarStore((s) => s.openMobile);
 
   return (
-    <div className="min-h-dvh bg-gray-50 dark:bg-gray-950 transition-colors">
+    <div className={cn("min-h-dvh", surfaces.page, "transition-colors")}>
       {/* Sidebar */}
-      <Sidebar mobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
+      <Sidebar />
 
       {/* Main content */}
-      <main id="main-content" className="lg:ml-60 min-h-dvh">
-        <div className="px-4 py-4 sm:px-6 sm:py-6 max-w-screen-2xl mx-auto">
+      <main
+        id="main-content"
+        className={cn(
+          "min-h-dvh",
+          sidebarConfig.transition,
+          pinned ? sidebarConfig.mainMarginExpanded : sidebarConfig.mainMarginCollapsed
+        )}
+      >
+        <div className={layout.container}>
           {/* Top Bar */}
-          <TopBar onMenuClick={() => setSidebarOpen(true)} title="AI Suite" />
+          <TopBar onMenuClick={openMobile} title="AI Suite" />
 
           {/* Hero Banner with Search */}
           <HeroBanner />

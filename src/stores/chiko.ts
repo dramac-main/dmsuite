@@ -1,10 +1,33 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { ExtractedFileData } from "@/lib/chiko/extractors";
 
 /* ── Chiko — DMSuite's AI Personal Assistant Store ───────────
    Manages Chiko's state, conversation history, context awareness,
    and user preferences. Persisted in localStorage.
    ──────────────────────────────────────────────────────────── */
+
+/** Attached file state in the Chiko store */
+export interface ChikoFileAttachment {
+  /** Unique ID for this attachment */
+  id: string;
+  /** Original filename */
+  fileName: string;
+  /** File size in bytes */
+  fileSize: number;
+  /** MIME type */
+  mimeType: string;
+  /** Upload status */
+  status: "pending" | "uploading" | "processing" | "ready" | "error";
+  /** Upload progress (0-100) */
+  progress: number;
+  /** Extracted data (populated when status is "ready") */
+  extractedData?: ExtractedFileData;
+  /** Error message (populated when status is "error") */
+  error?: string;
+  /** Thumbnail preview for images (small base64 data URI) */
+  thumbnail?: string;
+}
 
 export interface ChikoMessage {
   id: string;
@@ -52,6 +75,8 @@ interface ChikoState {
   hasNotification: boolean;
   /** Minimize vs full close (minimized = FAB stays animated) */
   isMinimized: boolean;
+  /** Currently attached files (pending upload or ready) */
+  attachments: ChikoFileAttachment[];
 
   /* ── Actions ──────────────────────────────────────────── */
   open: () => void;
@@ -68,6 +93,14 @@ interface ChikoState {
   setHasNotification: (v: boolean) => void;
   clearMessages: () => void;
   clearAll: () => void;
+  /** Add a pending attachment and return its ID */
+  addAttachment: (file: { fileName: string; fileSize: number; mimeType: string }) => string;
+  /** Update an attachment's status, progress, extracted data, etc. */
+  updateAttachment: (id: string, patch: Partial<ChikoFileAttachment>) => void;
+  /** Remove a single attachment by ID */
+  removeAttachment: (id: string) => void;
+  /** Remove all attachments */
+  clearAttachments: () => void;
 }
 
 function generateId(): string {
@@ -85,6 +118,7 @@ export const useChikoStore = create<ChikoState>()(
       hasGreeted: false,
       hasNotification: false,
       isMinimized: false,
+      attachments: [],
 
       open: () => set({ isOpen: true, isMinimized: false, hasNotification: false }),
       close: () => set({ isOpen: false, isMinimized: false }),
@@ -144,7 +178,40 @@ export const useChikoStore = create<ChikoState>()(
           hasGreeted: false,
           hasNotification: false,
           isMinimized: false,
+          attachments: [],
         }),
+
+      addAttachment: (file) => {
+        const id = generateId();
+        set((s) => ({
+          attachments: [
+            ...s.attachments,
+            {
+              id,
+              fileName: file.fileName,
+              fileSize: file.fileSize,
+              mimeType: file.mimeType,
+              status: "pending",
+              progress: 0,
+            },
+          ],
+        }));
+        return id;
+      },
+
+      updateAttachment: (id, patch) =>
+        set((s) => ({
+          attachments: s.attachments.map((a) =>
+            a.id === id ? { ...a, ...patch } : a
+          ),
+        })),
+
+      removeAttachment: (id) =>
+        set((s) => ({
+          attachments: s.attachments.filter((a) => a.id !== id),
+        })),
+
+      clearAttachments: () => set({ attachments: [] }),
     }),
     {
       name: "dmsuite-chiko",

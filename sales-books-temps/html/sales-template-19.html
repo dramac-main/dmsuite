@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Creative IT Institute - Money Receipt</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; background: #9e9e9e; color: #333; }
+  .page { width: 700px; min-height: 320px; margin: 40px auto; background: #fff; box-shadow: 0 6px 25px rgba(0,0,0,0.2); position: relative; overflow: hidden; }
+
+  /* Background Watermark */
+  .watermark { position: absolute; top: 50%; right: 10%; transform: translateY(-50%); width: 250px; height: 250px; border-radius: 50%; border: 30px solid rgba(200,0,0,0.06); z-index: 0; }
+  .watermark2 { position: absolute; top: 30%; right: 15%; width: 100px; height: 100px; opacity: 0.04; font-size: 60px; color: #c00; z-index: 0; }
+
+  .content { display: flex; flex-direction: column; min-height: 320px; position: relative; z-index: 1; }
+
+  /* Header */
+  .header { display: flex; justify-content: space-between; align-items: flex-start; padding: 25px 30px 15px; }
+  .logo-area { }
+  .logo-icon { width: 45px; height: 45px; background: #c0392b; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; font-weight: 900; font-family: Georgia, serif; }
+  .logo-text { font-size: 7px; color: #c0392b; font-weight: 700; margin-top: 2px; text-align: center; }
+
+  .company-info { text-align: right; font-size: 7.5px; color: #555; line-height: 1.5; max-width: 250px; }
+  .company-info strong { color: #333; font-size: 8px; }
+
+  /* Receipt Title */
+  .receipt-title { text-align: center; font-size: 18px; font-weight: 700; color: #333; letter-spacing: 2px; margin-bottom: 15px; }
+
+  /* Form Fields */
+  .form-area { padding: 0 30px 15px; }
+  .form-fields { font-size: 11px; line-height: 2.8; }
+  .field-row { display: flex; align-items: center; gap: 8px; }
+  .field-row2 { display: flex; align-items: center; gap: 8px; }
+  .field-label { font-weight: 500; white-space: nowrap; }
+  .field-line { flex: 1; border-bottom: 1px solid #999; }
+  .field-short { width: 120px; border-bottom: 1px solid #999; }
+
+  /* Checkbox */
+  .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 10px; }
+  .cb { width: 10px; height: 10px; border: 1.5px solid #555; display: inline-block; margin-right: 2px; }
+
+  /* Amount & Signature */
+  .amount-sig { display: flex; justify-content: space-between; align-items: flex-end; padding: 0 30px; margin-top: 5px; }
+  .amount-area { display: flex; align-items: center; gap: 8px; }
+  .taka-label { font-weight: 700; font-size: 11px; }
+  .taka-box { width: 100px; height: 26px; border: 1.5px solid #333; }
+  .sig-block { text-align: center; font-size: 9px; }
+  .sig-line { width: 120px; border-bottom: 1px solid #999; margin-bottom: 3px; height: 18px; }
+
+  /* Footer */
+  .footer-bar { display: flex; margin-top: auto; }
+  .footer-dark { background: #333; flex: 1; padding: 8px 15px; }
+  .footer-dark .text { font-size: 7px; color: #ccc; font-style: italic; }
+  .footer-red1 { background: #c0392b; width: 100px; }
+  .footer-red2 { background: #8b1a1a; width: 80px; }
+  .footer-red3 { background: #5c0a0a; width: 80px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="watermark"></div>
+  <div class="watermark2">&#9877;</div>
+
+  <div class="content">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo-area">
+        <div class="logo-icon">Citi</div>
+        <div class="logo-text">Creative IT Institute</div>
+      </div>
+      <div class="company-info">
+        <strong>CREATIVE IT INSTITUTE</strong><br>
+        Momtaz Plaza (4th Floor), House # 07 Road # 04,<br>
+        Dhanmondi, Dhaka- 1205<br>
+        P: +88 9611726, M: 01624466000, 01688105122<br>
+        E: info@creativeit.com.bd, W: www.creativeit-inst.com
+      </div>
+    </div>
+
+    <!-- Receipt Title -->
+    <div class="receipt-title">MONEY RECEIPT</div>
+
+    <!-- Form Fields -->
+    <div class="form-area">
+      <div class="form-fields">
+        <div class="field-row">
+          <span class="field-label">MR. No.</span>
+          <span class="field-line" style="max-width:150px;"></span>
+          <span class="field-label" style="margin-left:auto;">Date</span>
+          <span class="field-short"></span>
+        </div>
+        <div class="field-row">
+          <span class="field-label">Received with thanks from</span>
+          <span class="field-line"></span>
+        </div>
+        <div class="field-row">
+          <span class="field-label">Amount of taka</span>
+          <span class="field-line"></span>
+        </div>
+        <div class="field-row2">
+          <span class="field-label">By Cash</span> <span class="cb"></span>
+          <span class="field-label">/ Cheque</span> <span class="cb"></span>
+          <span class="field-label">No.</span>
+          <span class="field-line" style="max-width:100px;"></span>
+          <span class="field-label" style="margin-left:15px;">Bank</span>
+          <span class="field-line"></span>
+          <span class="field-label">Date</span>
+          <span class="field-short" style="width:80px;"></span>
+        </div>
+        <div class="field-row">
+          <span class="field-label">for the purpose of</span>
+          <span class="field-line"></span>
+          <span class="field-label" style="margin-left:15px;">Contact No</span>
+          <span class="field-short"></span>
+        </div>
+      </div>
+
+      <div class="amount-sig">
+        <div class="amount-area">
+          <span class="taka-label">Taka</span>
+          <div class="taka-box"></div>
+        </div>
+        <div style="display:flex; gap: 40px;">
+          <div class="sig-block"><div class="sig-line"></div>Received by</div>
+          <div class="sig-block"><div class="sig-line"></div>Authorized Signature</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer-bar">
+      <div class="footer-dark"><div class="text">build your career, discover your creativity</div></div>
+      <div class="footer-red1"></div>
+      <div class="footer-red2"></div>
+      <div class="footer-red3"></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

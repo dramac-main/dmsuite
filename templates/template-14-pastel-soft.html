@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV — Pastel Soft</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        @page { size: A4; margin: 0; }
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+
+        :root {
+            --pink: #F8A4C8;
+            --lavender: #C4B5E0;
+            --mint: #A8E6CF;
+            --peach: #FFDAB9;
+            --sky: #B8D4E3;
+            --dark: #3D3D3D;
+            --text: #4A4A4A;
+            --light-text: #888;
+        }
+
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: #E8E4EF;
+            display: flex;
+            justify-content: center;
+            padding: 30px;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            background: #FFFBFE;
+            position: relative;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+        }
+
+        /* ====== HEADER ====== */
+        .header {
+            padding: 32px 36px 24px;
+            background: linear-gradient(135deg, #FDE8F0 0%, #F0E6F6 50%, #E6F0F8 100%);
+            position: relative;
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--pink), var(--lavender), var(--mint), var(--sky));
+        }
+        .header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        .name {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--dark);
+            line-height: 1.05;
+        }
+        .role {
+            font-size: 14px;
+            color: #9B7DB8;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+        .contact-col {
+            text-align: right;
+        }
+        .contact-item {
+            font-size: 11px;
+            color: #777;
+            margin-bottom: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 5px;
+        }
+        .contact-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* ====== BODY ====== */
+        .body {
+            display: grid;
+            grid-template-columns: 1fr 190px;
+            gap: 24px;
+            padding: 24px 36px 28px;
+        }
+
+        /* ====== SECTIONS ====== */
+        .section { margin-bottom: 18px; }
+        .section:last-child { margin-bottom: 0; }
+        .section-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--dark);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .section-title::before {
+            content: '';
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .section-title.pink::before { background: var(--pink); }
+        .section-title.lavender::before { background: var(--lavender); }
+        .section-title.mint::before { background: var(--mint); }
+        .section-title.peach::before { background: var(--peach); }
+        .section-title.sky::before { background: var(--sky); }
+
+        /* Summary */
+        .summary {
+            font-size: 12px;
+            line-height: 1.6;
+            color: var(--text);
+        }
+
+        /* Experience */
+        .exp-item {
+            margin-bottom: 14px;
+            padding-left: 14px;
+            border-left: 3px solid var(--lavender);
+        }
+        .exp-item:last-child { margin-bottom: 0; }
+        .exp-item:nth-child(2) { border-color: var(--mint); }
+        .exp-item:nth-child(3) { border-color: var(--pink); }
+        .exp-item:nth-child(4) { border-color: var(--sky); }
+        .exp-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .exp-role {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+        .exp-date {
+            font-size: 11px;
+            color: var(--light-text);
+            font-weight: 600;
+        }
+        .exp-company {
+            font-size: 12px;
+            color: #9B7DB8;
+            font-weight: 600;
+        }
+        .exp-desc {
+            font-size: 11px;
+            color: #666;
+            line-height: 1.5;
+            margin-top: 3px;
+        }
+
+        /* Education */
+        .edu-item {
+            background: #F8F5FA;
+            padding: 10px 12px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+        .edu-item:last-child { margin-bottom: 0; }
+        .edu-degree {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+        .edu-school {
+            font-size: 11px;
+            color: #888;
+        }
+        .edu-year {
+            font-size: 11px;
+            color: #AAA;
+        }
+
+        /* ====== SIDEBAR ====== */
+        .sb-section { margin-bottom: 16px; }
+        .sb-section:last-child { margin-bottom: 0; }
+        .sb-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--dark);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .sb-title::before {
+            content: '';
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .sb-title.pink::before { background: var(--pink); }
+        .sb-title.lavender::before { background: var(--lavender); }
+        .sb-title.mint::before { background: var(--mint); }
+        .sb-title.peach::before { background: var(--peach); }
+        .sb-title.sky::before { background: var(--sky); }
+
+        /* Skill Pills */
+        .skill-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .skill-pill {
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            color: #555;
+        }
+        .skill-pill:nth-child(5n+1) { background: #FDE8F0; }
+        .skill-pill:nth-child(5n+2) { background: #EDE6F6; }
+        .skill-pill:nth-child(5n+3) { background: #E6F8EF; }
+        .skill-pill:nth-child(5n+4) { background: #FFF3E6; }
+        .skill-pill:nth-child(5n+5) { background: #E6F0F8; }
+
+        /* Languages */
+        .lang-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .lang-name {
+            font-size: 11px;
+            color: #444;
+        }
+        .lang-dots {
+            display: flex;
+            gap: 3px;
+        }
+        .lang-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #E8E4EF;
+        }
+        .lang-dot.filled { background: var(--lavender); }
+
+        /* Certifications */
+        .cert-item {
+            margin-bottom: 8px;
+        }
+        .cert-name {
+            font-size: 11px;
+            font-weight: 600;
+            color: #444;
+        }
+        .cert-org {
+            font-size: 11px;
+            color: #AAA;
+        }
+
+        /* Interests */
+        .interest-item {
+            font-size: 11px;
+            color: #555;
+            margin-bottom: 4px;
+            padding-left: 14px;
+            position: relative;
+        }
+        .interest-item::before {
+            content: '♡';
+            position: absolute;
+            left: 0;
+            color: var(--pink);
+        }
+
+        @media print {
+            body { padding: 0; background: none; }
+            .section, .exp-item, .edu-item { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="header">
+            <div class="header-flex">
+                <div>
+                    <div class="name">Amara Osei</div>
+                    <div class="role">Early Childhood Education Specialist</div>
+                </div>
+                <div class="contact-col">
+                    <div class="contact-item">
+                        <span>amara.osei@email.com</span>
+                        <div class="contact-dot" style="background: var(--pink);"></div>
+                    </div>
+                    <div class="contact-item">
+                        <span>+233 50 678 9012</span>
+                        <div class="contact-dot" style="background: var(--lavender);"></div>
+                    </div>
+                    <div class="contact-item">
+                        <span>Accra, Ghana</span>
+                        <div class="contact-dot" style="background: var(--mint);"></div>
+                    </div>
+                    <div class="contact-item">
+                        <span>linkedin.com/in/amaraosei</span>
+                        <div class="contact-dot" style="background: var(--sky);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="body">
+            <div class="main">
+                <div class="section">
+                    <div class="section-title pink">Profile</div>
+                    <div class="summary">Passionate early childhood educator with 8 years of experience designing play-based curricula for children ages 2–6. Certified Montessori guide with expertise in inclusive education, multilingual classrooms, and social-emotional learning frameworks. Founded a community preschool serving 120+ children in underserved areas of Accra.</div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title lavender">Experience</div>
+
+                    <div class="exp-item">
+                        <div class="exp-top">
+                            <div class="exp-role">Founder & Lead Educator</div>
+                            <div class="exp-date">2021 – Present</div>
+                        </div>
+                        <div class="exp-company">Little Stars Montessori — Accra</div>
+                        <div class="exp-desc">Founded and operate a Montessori preschool serving 120 children across 3 classrooms. Designed bilingual (English/Twi) curriculum aligned with Ghana Education Service standards. Trained and mentor 8 teaching assistants. Secured GHS 150K in community and NGO funding.</div>
+                    </div>
+
+                    <div class="exp-item">
+                        <div class="exp-top">
+                            <div class="exp-role">Senior Montessori Guide</div>
+                            <div class="exp-date">2018 – 2021</div>
+                        </div>
+                        <div class="exp-company">Maple Bear Canadian Schools — Accra</div>
+                        <div class="exp-desc">Led classroom of 22 children (ages 3–6) using blended Montessori/Canadian methods. Implemented social-emotional learning program that reduced classroom incidents by 60%. Coordinated parent engagement workshops attended by 150+ families.</div>
+                    </div>
+
+                    <div class="exp-item">
+                        <div class="exp-top">
+                            <div class="exp-role">Early Years Teacher</div>
+                            <div class="exp-date">2016 – 2018</div>
+                        </div>
+                        <div class="exp-company">Okuapemman School — Accra</div>
+                        <div class="exp-desc">Taught nursery and kindergarten classes (20–25 students). Developed hands-on learning stations for literacy, numeracy, and creative arts. Organized biannual children's exhibitions showcasing student work.</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title mint">Education</div>
+                    <div class="edu-item">
+                        <div class="edu-degree">MA Early Childhood Education</div>
+                        <div class="edu-school">University of Ghana — Legon</div>
+                        <div class="edu-year">2019 – 2021 (Part-time)</div>
+                    </div>
+                    <div class="edu-item">
+                        <div class="edu-degree">BEd Primary Education</div>
+                        <div class="edu-school">University of Cape Coast</div>
+                        <div class="edu-year">2012 – 2016</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="sb-section">
+                    <div class="sb-title pink">Skills</div>
+                    <div class="skill-pills">
+                        <span class="skill-pill">Montessori Method</span>
+                        <span class="skill-pill">Curriculum Design</span>
+                        <span class="skill-pill">Child Psychology</span>
+                        <span class="skill-pill">Play Therapy</span>
+                        <span class="skill-pill">Inclusive Education</span>
+                        <span class="skill-pill">SEL Frameworks</span>
+                        <span class="skill-pill">Classroom Mgmt</span>
+                        <span class="skill-pill">Parent Engagement</span>
+                        <span class="skill-pill">Grant Writing</span>
+                    </div>
+                </div>
+
+                <div class="sb-section">
+                    <div class="sb-title lavender">Languages</div>
+                    <div class="lang-item">
+                        <span class="lang-name">English</span>
+                        <div class="lang-dots">
+                            <div class="lang-dot filled"></div>
+                            <div class="lang-dot filled"></div>
+                            <div class="lang-dot filled"></div>
+                            <div class="lang-dot filled"></div>
+                            <div class="lang-dot filled"></div>
+                        </div>
+                    </div>
+                    <div class="lang-item">
+                        <span class="lang-name">Twi</span>
+                        <div class="lang-dots">
+                            <div class="lang-dot filled"></div>
+                            <div class="lang-dot filled"></div>
+                            <div class="lang-dot filled"></div>
+                            <div class="lang-dot filled"></div>
+                            <div class="lang-dot filled"></div>
+                        </div>
+                    </div>
+                    <div class="lang-item">
+                        <span class="lang-name">French</span>
+                        <div class="lang-dots">
+                            <div class="lang-dot filled"></div>
+                            <div class="lang-dot filled"></div>
+                            <div class="lang-dot filled"></div>
+                            <div class="lang-dot"></div>
+                            <div class="lang-dot"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sb-section">
+                    <div class="sb-title mint">Certifications</div>
+                    <div class="cert-item">
+                        <div class="cert-name">AMI Montessori Diploma (3–6)</div>
+                        <div class="cert-org">Association Montessori, 2018</div>
+                    </div>
+                    <div class="cert-item">
+                        <div class="cert-name">Child Safeguarding Level 3</div>
+                        <div class="cert-org">NSPCC International, 2022</div>
+                    </div>
+                    <div class="cert-item">
+                        <div class="cert-name">First Aid for Children</div>
+                        <div class="cert-org">Red Cross Ghana, 2023</div>
+                    </div>
+                </div>
+
+                <div class="sb-section">
+                    <div class="sb-title peach">Interests</div>
+                    <div class="interest-item">Storytelling & Puppetry</div>
+                    <div class="interest-item">Children's Book Writing</div>
+                    <div class="interest-item">Community Gardening</div>
+                    <div class="interest-item">African Drumming</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

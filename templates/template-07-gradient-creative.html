@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV Template - Gradient Creative</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --gradient-1: linear-gradient(135deg, #667EEA, #764BA2);
+            --gradient-2: linear-gradient(135deg, #F093FB, #F5576C);
+            --gradient-3: linear-gradient(135deg, #4FACFE, #00F2FE);
+            --purple: #764BA2;
+            --pink: #F5576C;
+            --blue: #4FACFE;
+            --dark: #1A1030;
+            --medium: #4A4458;
+            --light: #8E859B;
+            --bg: #FAFAFE;
+            --white: #FFF;
+            --border: #EDE8F5;
+        }
+
+        body {
+            font-family: 'Sora', sans-serif;
+            background: #666;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            background: var(--white);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+        }
+
+        /* ====== GRADIENT HEADER ====== */
+        .grad-header {
+            background: var(--gradient-1);
+            padding: 32px 40px 28px;
+            position: relative;
+            overflow: hidden;
+        }
+        .grad-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 400px;
+            height: 400px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 50%;
+        }
+        .grad-header::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: 10%;
+            width: 200px;
+            height: 200px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 50%;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        .header-left {}
+        .header-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 20px;
+            font-size: 11px;
+            color: white;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            backdrop-filter: blur(10px);
+        }
+        .header-name {
+            font-size: 36px;
+            font-weight: 800;
+            color: white;
+            line-height: 1.05;
+            letter-spacing: -1px;
+        }
+        .header-subtitle {
+            font-size: 13px;
+            color: rgba(255,255,255,0.8);
+            font-weight: 400;
+            margin-top: 6px;
+        }
+
+        .header-contact {
+            text-align: right;
+        }
+        .hc-item {
+            font-size: 11px;
+            color: rgba(255,255,255,0.75);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+        .hc-item svg {
+            width: 11px; height: 11px;
+            fill: rgba(255,255,255,0.5);
+        }
+
+        /* ====== WAVE DIVIDER ====== */
+        .wave {
+            height: 24px;
+            background: var(--white);
+            position: relative;
+            margin-top: -24px;
+        }
+        .wave::before {
+            content: '';
+            position: absolute;
+            top: -24px;
+            left: 0; right: 0;
+            height: 24px;
+            background: var(--white);
+            border-radius: 24px 24px 0 0;
+        }
+
+        /* ====== BODY ====== */
+        .body {
+            display: grid;
+            grid-template-columns: 1fr 200px;
+            gap: 28px;
+            padding: 20px 40px 32px;
+        }
+
+        /* Sections */
+        .section { margin-bottom: 20px; }
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-icon {
+            width: 24px; height: 24px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .section-icon svg {
+            width: 13px; height: 13px;
+            fill: white;
+        }
+
+        /* Summary */
+        .summary {
+            font-size: 11px;
+            line-height: 1.8;
+            color: var(--medium);
+        }
+
+        /* Experience */
+        .exp-item {
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .exp-item:last-child { border: none; padding-bottom: 0; }
+        .exp-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .exp-role {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+        .exp-date {
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            color: white;
+            font-weight: 600;
+        }
+        .exp-company {
+            font-size: 11px;
+            color: var(--light);
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        .exp-desc {
+            font-size: 11px;
+            color: var(--medium);
+            line-height: 1.6;
+        }
+        .exp-desc li {
+            margin-left: 14px;
+            margin-bottom: 2px;
+        }
+
+        /* Education */
+        .edu-card {
+            padding: 14px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            margin-bottom: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        .edu-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; bottom: 0;
+            width: 4px;
+        }
+        .edu-degree {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+        .edu-school {
+            font-size: 11px;
+            color: var(--light);
+        }
+        .edu-year {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--purple);
+        }
+
+        /* Sidebar */
+        .side-col {}
+
+        /* Skills */
+        .skill-pill {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            color: white;
+            margin: 0 3px 6px 0;
+        }
+
+        /* Interests */
+        .interest-card {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg);
+            border-radius: 8px;
+            margin-bottom: 6px;
+        }
+        .interest-emoji { font-size: 16px; }
+        .interest-text {
+            font-size: 11px;
+            color: var(--medium);
+            font-weight: 500;
+        }
+
+        /* References */
+        .ref-card {
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 6px;
+        }
+        .ref-name {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+        .ref-title {
+            font-size: 11px;
+            color: var(--light);
+        }
+        .ref-contact {
+            font-size: 11px;
+            color: var(--purple);
+            font-weight: 500;
+            margin-top: 2px;
+        }
+
+        /* Certifications */
+        .cert-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .cert-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            min-width: 8px;
+        }
+        .cert-info {}
+        .cert-name {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        .cert-org {
+            font-size: 11px;
+            color: var(--light);
+        }
+
+        @media print {
+            body { background: none; padding: 0; }
+            .page { box-shadow: none; }
+            .exp-item, .edu-card, .section { break-inside: avoid; }
+        }
+        @page { size: A4; margin: 0; }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- HEADER -->
+        <div class="grad-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <div class="header-tag">Available for Hire</div>
+                    <div class="header-name">Priya<br>Sharma</div>
+                    <div class="header-subtitle">UX Researcher & Interaction Designer</div>
+                </div>
+                <div class="header-contact">
+                    <div class="hc-item">
+                        priya.sharma@email.com
+                        <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                    </div>
+                    <div class="hc-item">
+                        +44 7700 900123
+                        <svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+                    </div>
+                    <div class="hc-item">
+                        Berlin, Germany
+                        <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                    </div>
+                    <div class="hc-item">
+                        priyasharma.design
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="wave"></div>
+
+        <!-- BODY -->
+        <div class="body">
+            <div class="main-col">
+                <div class="section">
+                    <div class="section-title">
+                        <div class="section-icon" style="background: var(--gradient-1);">
+                            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                        </div>
+                        Summary
+                    </div>
+                    <div class="summary">
+                        Human-centered UX Researcher and Interaction Designer with 8 years of experience uncovering user insights that drive product innovation. Skilled at translating complex research findings into actionable design recommendations. Led research programs at scale for products serving 100M+ users across 30+ markets.
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">
+                        <div class="section-icon" style="background: var(--gradient-2);">
+                            <svg viewBox="0 0 24 24"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-2 .89-2 2v11c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>
+                        </div>
+                        Experience
+                    </div>
+
+                    <div class="exp-item">
+                        <div class="exp-top">
+                            <div class="exp-role">Lead UX Researcher</div>
+                            <div class="exp-date" style="background: var(--gradient-1);">2022 — Present</div>
+                        </div>
+                        <div class="exp-company">Spotify — Berlin, Germany</div>
+                        <ul class="exp-desc">
+                            <li>Lead a team of 6 researchers driving insights for Premium experience</li>
+                            <li>Designed and executed mixed-methods research across 15 countries</li>
+                            <li>Research insights led to 40% increase in podcast engagement</li>
+                        </ul>
+                    </div>
+
+                    <div class="exp-item">
+                        <div class="exp-top">
+                            <div class="exp-role">Senior UX Researcher</div>
+                            <div class="exp-date" style="background: var(--gradient-2);">2019 — 2022</div>
+                        </div>
+                        <div class="exp-company">Google — London, UK</div>
+                        <ul class="exp-desc">
+                            <li>Conducted foundational research for Google Maps features used by 1B+ users</li>
+                            <li>Established research ops framework reducing study setup time by 50%</li>
+                        </ul>
+                    </div>
+
+                    <div class="exp-item">
+                        <div class="exp-top">
+                            <div class="exp-role">UX Designer</div>
+                            <div class="exp-date" style="background: var(--gradient-3);">2017 — 2019</div>
+                        </div>
+                        <div class="exp-company">ThoughtWorks — Mumbai, India</div>
+                        <ul class="exp-desc">
+                            <li>Designed mobile experiences for fintech products serving 5M+ users</li>
+                            <li>Ran participatory design workshops with underserved communities</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">
+                        <div class="section-icon" style="background: var(--gradient-3);">
+                            <svg viewBox="0 0 24 24"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg>
+                        </div>
+                        Education
+                    </div>
+                    <div class="edu-card" style="--c: var(--purple);">
+                        <div class="edu-degree">M.Des. Interaction Design</div>
+                        <div class="edu-school">Royal College of Art, London</div>
+                        <div class="edu-year">2015 — 2017</div>
+                    </div>
+                    <div class="edu-card">
+                        <div class="edu-degree">B.Tech. Computer Science</div>
+                        <div class="edu-school">IIT Bombay, India</div>
+                        <div class="edu-year">2011 — 2015</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SIDEBAR -->
+            <div class="side-col">
+                <div class="section">
+                    <div class="section-title">
+                        <div class="section-icon" style="background: var(--gradient-1);">
+                            <svg viewBox="0 0 24 24"><path d="M12 2l-5.5 9h11L12 2zm0 3.84L13.93 9h-3.87L12 5.84z"/></svg>
+                        </div>
+                        Skills
+                    </div>
+                    <span class="skill-pill" style="background: var(--gradient-1);">User Research</span>
+                    <span class="skill-pill" style="background: var(--gradient-2);">Usability Testing</span>
+                    <span class="skill-pill" style="background: var(--gradient-3);">Prototyping</span>
+                    <span class="skill-pill" style="background: var(--gradient-1);">Survey Design</span>
+                    <span class="skill-pill" style="background: var(--gradient-2);">Data Analysis</span>
+                    <span class="skill-pill" style="background: var(--gradient-3);">Figma</span>
+                    <span class="skill-pill" style="background: var(--gradient-1);">Miro</span>
+                    <span class="skill-pill" style="background: var(--gradient-2);">SPSS</span>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">
+                        <div class="section-icon" style="background: var(--gradient-2);">
+                            <svg viewBox="0 0 24 24"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2z"/></svg>
+                        </div>
+                        Certifications
+                    </div>
+                    <div class="cert-badge">
+                        <div class="cert-dot" style="background: var(--gradient-1);"></div>
+                        <div class="cert-info">
+                            <div class="cert-name">UXPA Certified</div>
+                            <div class="cert-org">UXPA International — 2023</div>
+                        </div>
+                    </div>
+                    <div class="cert-badge">
+                        <div class="cert-dot" style="background: var(--gradient-2);"></div>
+                        <div class="cert-info">
+                            <div class="cert-name">Google UX Certificate</div>
+                            <div class="cert-org">Google — 2021</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">
+                        <div class="section-icon" style="background: var(--gradient-3);">
+                            <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
+                        </div>
+                        Interests
+                    </div>
+                    <div class="interest-card">
+                        <span class="interest-emoji">📚</span>
+                        <span class="interest-text">Behavioral Psychology</span>
+                    </div>
+                    <div class="interest-card">
+                        <span class="interest-emoji">🎭</span>
+                        <span class="interest-text">Improv Theater</span>
+                    </div>
+                    <div class="interest-card">
+                        <span class="interest-emoji">🌏</span>
+                        <span class="interest-text">World Travel</span>
+                    </div>
+                    <div class="interest-card">
+                        <span class="interest-emoji">🧘‍♀️</span>
+                        <span class="interest-text">Mindfulness</span>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">
+                        <div class="section-icon" style="background: var(--gradient-1);">
+                            <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+                        </div>
+                        References
+                    </div>
+                    <div class="ref-card">
+                        <div class="ref-name">Dr. Sarah Chen</div>
+                        <div class="ref-title">VP of Design, Spotify</div>
+                        <div class="ref-contact">Available on request</div>
+                    </div>
+                    <div class="ref-card">
+                        <div class="ref-name">Mark Peterson</div>
+                        <div class="ref-title">Head of UXR, Google</div>
+                        <div class="ref-contact">Available on request</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

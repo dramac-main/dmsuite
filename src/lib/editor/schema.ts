@@ -878,7 +878,7 @@ export function addLayer(doc: DesignDocumentV2, layer: LayerV2, parentId?: Layer
     return doc;
   }
 
-  const updatedParent = { ...parent, children: [layer.id, ...parent.children] } as LayerV2;
+  const updatedParent = { ...parent, children: [...parent.children, layer.id] } as LayerV2;
   const updatedLayer = { ...layer, parentId: targetParent };
 
   return {
@@ -971,20 +971,23 @@ export function reorderLayerV2(
   const idx = children.indexOf(layerId);
   if (idx === -1) return doc;
 
+  // Convention: children[0] = behind (drawn first), children[last] = on top (drawn last)
+  // "up" = bring forward = move towards end of array
+  // "down" = send backward = move towards start of array
   switch (direction) {
     case "up":
-      if (idx > 0) [children[idx], children[idx - 1]] = [children[idx - 1], children[idx]];
+      if (idx < children.length - 1) [children[idx], children[idx + 1]] = [children[idx + 1], children[idx]];
       break;
     case "down":
-      if (idx < children.length - 1) [children[idx], children[idx + 1]] = [children[idx + 1], children[idx]];
+      if (idx > 0) [children[idx], children[idx - 1]] = [children[idx - 1], children[idx]];
       break;
     case "top":
       children.splice(idx, 1);
-      children.unshift(layerId);
+      children.push(layerId);
       break;
     case "bottom":
       children.splice(idx, 1);
-      children.push(layerId);
+      children.unshift(layerId);
       break;
   }
 
@@ -997,7 +1000,7 @@ export function reorderLayerV2(
   };
 }
 
-/** Get flat ordered list of all layers (depth-first, front-to-back) */
+/** Get flat ordered list of all layers (depth-first, back-to-front: [0]=behind, [last]=on top) */
 export function getLayerOrder(doc: DesignDocumentV2, rootId?: LayerId): LayerV2[] {
   const result: LayerV2[] = [];
   const root = doc.layersById[rootId ?? doc.rootFrameId];

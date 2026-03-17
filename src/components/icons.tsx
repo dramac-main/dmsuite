@@ -728,6 +728,16 @@ export function IconCheck(props: IconProps) {
   );
 }
 
+export function IconAlertTriangle(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+
 export function IconHeart(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -797,6 +807,110 @@ export function IconPrinter(props: IconProps) {
   );
 }
 
+// ── Editor-specific icons ───────────────────────────────────
+
+export function IconCursor(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+      <path d="M13 13l6 6" />
+    </svg>
+  );
+}
+
+export function IconHand(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M18 11V6a2 2 0 00-4 0" />
+      <path d="M14 10V4a2 2 0 00-4 0v6" />
+      <path d="M10 10.5V6a2 2 0 00-4 0v8" />
+      <path d="M18 8a2 2 0 014 0v7a8 8 0 01-8 8h-2c-2.5 0-4.7-1.3-6.2-3.3L3 15" />
+    </svg>
+  );
+}
+
+export function IconEyeOff(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" />
+      <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" />
+      <path d="M14.12 14.12a3 3 0 11-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  );
+}
+
+export function IconLockOpen(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 019.9-1" />
+    </svg>
+  );
+}
+
+export function IconArrowUp(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="12" y1="19" x2="12" y2="5" />
+      <polyline points="5 12 12 5 19 12" />
+    </svg>
+  );
+}
+
+export function IconArrowDown(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <polyline points="19 12 12 19 5 12" />
+    </svg>
+  );
+}
+
+export function IconGripVertical(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="9" cy="5" r="1" fill="currentColor" />
+      <circle cx="15" cy="5" r="1" fill="currentColor" />
+      <circle cx="9" cy="12" r="1" fill="currentColor" />
+      <circle cx="15" cy="12" r="1" fill="currentColor" />
+      <circle cx="9" cy="19" r="1" fill="currentColor" />
+      <circle cx="15" cy="19" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function IconGuides(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <line x1="12" y1="2" x2="12" y2="22" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <polyline points="8 4 12 2 16 4" />
+      <polyline points="8 20 12 22 16 20" />
+    </svg>
+  );
+}
+
+export function IconBleedSafe(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <rect x="5" y="7" width="14" height="10" rx="1" strokeDasharray="3 2" />
+    </svg>
+  );
+}
+
+export function IconFitView(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M8 3H5a2 2 0 00-2 2v3" />
+      <path d="M21 8V5a2 2 0 00-2-2h-3" />
+      <path d="M3 16v3a2 2 0 002 2h3" />
+      <path d="M16 21h3a2 2 0 002-2v-3" />
+    </svg>
+  );
+}
+
 // ── Icon Map ────────────────────────────────────────────────
 
 export const iconMap: Record<string, React.FC<IconProps>> = {
@@ -827,6 +941,10 @@ export const iconMap: Record<string, React.FC<IconProps>> = {
   download: IconDownload, refresh: IconRefresh, arrowRight: IconArrowRight, externalLink: IconExternalLink,
   truck: IconTruck, send: IconSend, plus: IconPlus, trash: IconTrash,
   loader: IconLoader, copy: IconCopy, check: IconCheck, heart: IconHeart,
+  alertTriangle: IconAlertTriangle,
   zoomIn: IconZoomIn, zoomOut: IconZoomOut, undo: IconUndo, redo: IconRedo,
   crop: IconCrop, camera: IconCamera, printer: IconPrinter,
+  cursor: IconCursor, hand: IconHand, eyeOff: IconEyeOff, lockOpen: IconLockOpen,
+  arrowUp: IconArrowUp, arrowDown: IconArrowDown, gripVertical: IconGripVertical,
+  guides: IconGuides, bleedSafe: IconBleedSafe, fitView: IconFitView,
 };

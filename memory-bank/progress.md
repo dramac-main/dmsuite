@@ -4,7 +4,24 @@
 
 ---
 
-## Current Work: Chiko Layer 1 Action System — BUILD COMPLETE ✅
+## Current Work: Chiko Layer 2 File Processing Pipeline — BUILD COMPLETE ✅
+
+### Session 86 — Chiko Layer 2 Build (Complete)
+- [x] Installed `xlsx` (SheetJS) — only new npm dependency
+- [x] Created `src/lib/chiko/extractors/field-detector.ts` — Regex business field detection
+- [x] Created `src/lib/chiko/extractors/pdf-extractor.ts` — PDF extraction via pdf-parse
+- [x] Created `src/lib/chiko/extractors/docx-extractor.ts` — DOCX extraction via mammoth
+- [x] Created `src/lib/chiko/extractors/xlsx-extractor.ts` — XLSX extraction via SheetJS
+- [x] Created `src/lib/chiko/extractors/image-extractor.ts` — Image processing via sharp (resize, thumbnail, SVG sanitization)
+- [x] Created `src/lib/chiko/extractors/index.ts` — Barrel export + MIME-type router + TypeScript contracts
+- [x] Created `src/app/api/chiko/upload/route.ts` — POST endpoint for file uploads (10MB max, memory-only)
+- [x] Modified `src/stores/chiko.ts` — ChikoFileAttachment interface, attachments state, CRUD actions
+- [x] Modified `src/lib/chiko/manifests/sales-book.ts` — Added logoUrl to updateBranding
+- [x] Modified `src/app/api/chiko/route.ts` — fileContext parsing, file-aware system prompt, image placeholder instructions
+- [x] Modified `src/components/Chiko/ChikoAssistant.tsx` — Full file upload UI (paperclip button, drag-and-drop overlay, file chips, fileContext in API calls, __ATTACHED_IMAGE_N__ interception, auto-send on upload)
+- [x] Zero TypeScript errors — clean build confirmed (tsc --noEmit)
+- [x] Memory bank updated
+- [ ] **NEXT:** Layer 3 (Custom Blocks System) spec
 
 ### Session 84 — Chiko Layer 1 Action System Build (Complete)
 - [x] Created `src/stores/chiko-actions.ts` — Action registry store (register, unregister, execute, readState, getActionDescriptorsForAI)

@@ -102,16 +102,9 @@ export const spacing = {
   32: "8rem",
 } as const;
 
-/** Z-index scale */
-export const zIndex = {
-  dropdown: 50,
-  sticky: 100,
-  overlay: 200,
-  modal: 300,
-  popover: 400,
-  toast: 500,
-  tooltip: 600,
-} as const;
+/** Z-index scale — canonical source is `src/lib/z-index.ts`.
+ *  Re-exported here for convenience; prefer importing from `z-index.ts` directly. */
+export { Z as zIndex } from "./z-index";
 
 /** Animation durations */
 export const durations = {

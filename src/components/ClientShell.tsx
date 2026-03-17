@@ -13,10 +13,23 @@ const ShortcutsHelpModal = dynamic(
   () => import("@/components/ShortcutsHelpModal"),
   { ssr: false }
 );
+const ChikoFAB = dynamic(
+  () => import("@/components/Chiko/ChikoFAB").then((m) => ({ default: m.ChikoFAB })),
+  { ssr: false }
+);
+const ChikoAssistant = dynamic(
+  () => import("@/components/Chiko/ChikoAssistant").then((m) => ({ default: m.ChikoAssistant })),
+  { ssr: false }
+);
+const ChikoOnboarding = dynamic(
+  () => import("@/components/Chiko/ChikoOnboarding").then((m) => ({ default: m.ChikoOnboarding })),
+  { ssr: false }
+);
 
 /**
  * Client-side shell — wraps global shortcuts, mobile nav, install prompt,
- * and shortcuts help modal. Mounted once inside ThemeProvider in layout.tsx.
+ * shortcuts help modal, Chiko AI assistant, and onboarding tour.
+ * Mounted once inside ThemeProvider in layout.tsx.
  */
 export default function ClientShell() {
   useGlobalShortcuts();
@@ -26,6 +39,9 @@ export default function ClientShell() {
       <MobileBottomNav />
       <InstallPrompt />
       <ShortcutsHelpModal />
+      <ChikoFAB />
+      <ChikoAssistant />
+      <ChikoOnboarding />
     </>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
@@ -14,6 +14,9 @@ import {
   IconSparkles,
   IconZap,
 } from "@/components/icons";
+import { useSidebarStore } from "@/stores/sidebar";
+import { sidebar as sidebarConfig, surfaces, layout } from "@/lib/design-system";
+import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -41,7 +44,8 @@ export default function WorkspaceShell({ children }: WorkspaceShellProps) {
   const params = useParams();
   const categoryId = params.categoryId as string;
   const toolId = params.toolId as string;
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const pinned = useSidebarStore((s) => s.pinned);
+  const openMobile = useSidebarStore((s) => s.openMobile);
 
   // Resolve category & tool from the registry
   const category = toolCategories.find((c) => c.id === categoryId);
@@ -75,16 +79,19 @@ export default function WorkspaceShell({ children }: WorkspaceShellProps) {
   const iconBg = bgOpacity10[category.colorClass] || "bg-gray-500/10";
 
   return (
-    <div className="min-h-dvh bg-gray-50 dark:bg-gray-950 transition-colors">
-      <Sidebar
-        mobileOpen={sidebarOpen}
-        onMobileClose={() => setSidebarOpen(false)}
-      />
+    <div className={cn("min-h-dvh", surfaces.page, "transition-colors")}>
+      <Sidebar />
 
-      <main className="lg:ml-60 min-h-dvh">
-        <div className="px-4 py-4 sm:px-6 sm:py-6 max-w-screen-2xl mx-auto">
+      <main
+        className={cn(
+          "min-h-dvh",
+          sidebarConfig.transition,
+          pinned ? sidebarConfig.mainMarginExpanded : sidebarConfig.mainMarginCollapsed
+        )}
+      >
+        <div className={layout.container}>
           <TopBar
-            onMenuClick={() => setSidebarOpen(true)}
+            onMenuClick={openMobile}
             title={tool.name}
           />
 

@@ -37,7 +37,7 @@ export function hitTestDocument(
   const rootFrame = doc.layersById[doc.rootFrameId] as FrameLayerV2 | undefined;
   if (!rootFrame) return null;
 
-  // Walk children front-to-back (index 0 = topmost)
+  // Walk children front-to-back (last index = topmost in new convention)
   return hitTestChildren(doc, rootFrame.children, point);
 }
 
@@ -69,8 +69,9 @@ function hitTestChildren(
   childIds: LayerId[],
   point: Vec2
 ): HitResult | null {
-  // Front-to-back: first child in array is topmost
-  for (const id of childIds) {
+  // Front-to-back: last child in array is topmost (drawn last = visually on top)
+  for (let i = childIds.length - 1; i >= 0; i--) {
+    const id = childIds[i];
     const layer = doc.layersById[id];
     if (!layer || !layer.visible || layer.locked) continue;
 

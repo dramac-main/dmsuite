@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV — Retro Vintage</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Stint+Ultra+Expanded&family=Josefin+Sans:wght@300;400;500;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        @page { size: A4; margin: 0; }
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+
+        :root {
+            --brown: #5C3D2E;
+            --gold: #C4973B;
+            --cream: #FBF6EE;
+            --tan: #EDE4D4;
+            --text: #3A3A3A;
+        }
+
+        body {
+            font-family: 'Josefin Sans', sans-serif;
+            background: #A89F91;
+            display: flex;
+            justify-content: center;
+            padding: 30px;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            background: var(--cream);
+            border: 3px solid var(--brown);
+            position: relative;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+        }
+
+        /* ====== ORNAMENTAL BORDER ====== */
+        .inner-border {
+            position: absolute;
+            top: 6px; left: 6px; right: 6px; bottom: 6px;
+            border: 1px solid var(--gold);
+            pointer-events: none;
+        }
+
+        /* ====== HEADER ====== */
+        .header {
+            text-align: center;
+            padding: 28px 36px 18px;
+            border-bottom: 2px solid var(--brown);
+            margin: 0 10px;
+        }
+        .ornament {
+            font-size: 16px;
+            color: var(--gold);
+            letter-spacing: 6px;
+            margin-bottom: 4px;
+        }
+        .name {
+            font-family: 'Stint Ultra Expanded', serif;
+            font-size: 30px;
+            color: var(--brown);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            line-height: 1.1;
+        }
+        .role {
+            font-size: 12px;
+            color: var(--gold);
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            font-weight: 400;
+            margin-top: 6px;
+        }
+        .contact-row {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .contact-item {
+            font-size: 11px;
+            color: #777;
+        }
+        .contact-item span {
+            color: var(--gold);
+        }
+
+        /* ====== BODY ====== */
+        .body {
+            display: grid;
+            grid-template-columns: 1fr 170px;
+            gap: 0;
+            margin: 0 10px;
+        }
+        .main {
+            padding: 20px 20px 24px 26px;
+            border-right: 1px solid var(--tan);
+        }
+        .sidebar {
+            padding: 20px 16px 24px;
+            background: linear-gradient(180deg, var(--cream) 0%, #F5EDE0 100%);
+        }
+
+        /* ====== SECTIONS ====== */
+        .section { margin-bottom: 16px; }
+        .section:last-child { margin-bottom: 0; }
+        .section-title {
+            font-family: 'Stint Ultra Expanded', serif;
+            font-size: 12px;
+            color: var(--brown);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+            text-align: center;
+            position: relative;
+        }
+        .section-title::before,
+        .section-title::after {
+            content: '—';
+            margin: 0 6px;
+            color: var(--gold);
+        }
+
+        /* Summary */
+        .summary {
+            font-size: 12px;
+            line-height: 1.65;
+            color: var(--text);
+            text-align: center;
+            font-style: italic;
+            font-weight: 300;
+        }
+
+        /* Experience */
+        .exp-item {
+            margin-bottom: 14px;
+            text-align: center;
+        }
+        .exp-item:last-child { margin-bottom: 0; }
+        .exp-role {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--brown);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .exp-company {
+            font-size: 12px;
+            color: var(--gold);
+            font-weight: 500;
+        }
+        .exp-date {
+            font-size: 11px;
+            color: #999;
+        }
+        .exp-desc {
+            font-size: 11px;
+            color: #555;
+            line-height: 1.55;
+            margin-top: 4px;
+            text-align: left;
+        }
+        .exp-divider {
+            text-align: center;
+            color: var(--gold);
+            font-size: 11px;
+            margin: 8px 0;
+            letter-spacing: 4px;
+        }
+
+        /* Education */
+        .edu-item {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .edu-item:last-child { margin-bottom: 0; }
+        .edu-degree {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--brown);
+        }
+        .edu-school {
+            font-size: 11px;
+            color: #888;
+        }
+        .edu-year {
+            font-size: 11px;
+            color: var(--gold);
+        }
+
+        /* ====== SIDEBAR ====== */
+        .sb-section { margin-bottom: 14px; }
+        .sb-section:last-child { margin-bottom: 0; }
+        .sb-title {
+            font-family: 'Stint Ultra Expanded', serif;
+            font-size: 11px;
+            color: var(--brown);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--tan);
+        }
+
+        .skill-item {
+            font-size: 11px;
+            color: var(--text);
+            text-align: center;
+            margin-bottom: 4px;
+            padding: 2px 0;
+        }
+        .skill-item:last-child { margin-bottom: 0; }
+
+        .lang-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+        .lang-name { color: var(--text); }
+        .lang-level { color: var(--gold); font-style: italic; }
+
+        .cert-item {
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .cert-name {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text);
+        }
+        .cert-org {
+            font-size: 11px;
+            color: #AAA;
+            font-style: italic;
+        }
+
+        .interest-item {
+            font-size: 11px;
+            color: #666;
+            text-align: center;
+            margin-bottom: 3px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 8px;
+            margin: 0 10px;
+            border-top: 2px solid var(--brown);
+        }
+        .footer-ornament {
+            color: var(--gold);
+            font-size: 12px;
+            letter-spacing: 4px;
+        }
+
+        @media print {
+            body { padding: 0; background: none; }
+            .exp-item, .edu-item, .section { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="inner-border"></div>
+
+        <div class="header">
+            <div class="ornament">✦ ✦ ✦</div>
+            <div class="name">Isabelle Fontaine</div>
+            <div class="role">Sommelier & Wine Program Director</div>
+            <div class="contact-row">
+                <div class="contact-item"><span>✉</span> isabelle@email.com</div>
+                <div class="contact-item"><span>☎</span> +33 6 12 34 56 78</div>
+                <div class="contact-item"><span>⌂</span> Bordeaux, France</div>
+                <div class="contact-item"><span>↗</span> isabellefontaine.wine</div>
+            </div>
+        </div>
+
+        <div class="body">
+            <div class="main">
+                <div class="section">
+                    <div class="section-title">Profile</div>
+                    <div class="summary">Certified Master Sommelier with 14 years of experience curating wine programs for Michelin-starred restaurants and luxury hotels. Expertise in Old World and New World terroirs, cellar management, and staff education. Has built wine lists recognized by Wine Spectator Grand Award three consecutive years.</div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Experience</div>
+
+                    <div class="exp-item">
+                        <div class="exp-role">Wine Program Director</div>
+                        <div class="exp-company">Le Grand Véfour ★★ — Paris</div>
+                        <div class="exp-date">2021 – Present</div>
+                        <div class="exp-desc">Direct a 2,200-label wine program valued at €1.8M. Manage purchasing, cellar inventory, and sommelier team of 6. Achieved Wine Spectator Grand Award 2022, 2023, 2024. Train front-of-house staff on pairing and service protocols.</div>
+                    </div>
+                    <div class="exp-divider">❦</div>
+
+                    <div class="exp-item">
+                        <div class="exp-role">Head Sommelier</div>
+                        <div class="exp-company">The Dorchester ★★★ — London</div>
+                        <div class="exp-date">2017 – 2021</div>
+                        <div class="exp-desc">Managed 1,400-label cellar for Alain Ducasse restaurant. Introduced by-the-glass program increasing wine revenue by 30%. Won UK Sommelier of the Year Competition 2019. Led weekly tasting sessions for 25+ hospitality staff.</div>
+                    </div>
+                    <div class="exp-divider">❦</div>
+
+                    <div class="exp-item">
+                        <div class="exp-role">Sommelier</div>
+                        <div class="exp-company">Château Smith Haut Lafitte — Bordeaux</div>
+                        <div class="exp-date">2014 – 2017</div>
+                        <div class="exp-desc">Served as resident sommelier at Les Sources de Caudalie hotel and restaurant. Conducted cellar tours and hosted wine education events for international guests. Developed food-wine pairing menus for seasonal tasting dinners.</div>
+                    </div>
+                    <div class="exp-divider">❦</div>
+
+                    <div class="exp-item">
+                        <div class="exp-role">Assistant Sommelier</div>
+                        <div class="exp-company">L'Oustau de Baumanière ★★ — Provence</div>
+                        <div class="exp-date">2011 – 2014</div>
+                        <div class="exp-desc">Supported head sommelier with service, inventory, and purchasing across a 900-label list focused on Rhône and Provence appellations.</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Education</div>
+                    <div class="edu-item">
+                        <div class="edu-degree">WSET Diploma (Level 4)</div>
+                        <div class="edu-school">Wine & Spirit Education Trust — London</div>
+                        <div class="edu-year">2016</div>
+                    </div>
+                    <div class="edu-item">
+                        <div class="edu-degree">BTS Hôtellerie-Restauration</div>
+                        <div class="edu-school">Lycée Hôtelier — Bordeaux</div>
+                        <div class="edu-year">2009 – 2011</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="sb-section">
+                    <div class="sb-title">Expertise</div>
+                    <div class="skill-item">Wine List Curation</div>
+                    <div class="skill-item">Cellar Management</div>
+                    <div class="skill-item">Food–Wine Pairing</div>
+                    <div class="skill-item">Staff Training</div>
+                    <div class="skill-item">Spirits & Cocktails</div>
+                    <div class="skill-item">Sake & Sherry</div>
+                    <div class="skill-item">Purchasing & Costing</div>
+                    <div class="skill-item">Guest Relations</div>
+                </div>
+
+                <div class="sb-section">
+                    <div class="sb-title">Languages</div>
+                    <div class="lang-item">
+                        <span class="lang-name">French</span>
+                        <span class="lang-level">Native</span>
+                    </div>
+                    <div class="lang-item">
+                        <span class="lang-name">English</span>
+                        <span class="lang-level">Fluent</span>
+                    </div>
+                    <div class="lang-item">
+                        <span class="lang-name">Italian</span>
+                        <span class="lang-level">Conversational</span>
+                    </div>
+                    <div class="lang-item">
+                        <span class="lang-name">Spanish</span>
+                        <span class="lang-level">Basic</span>
+                    </div>
+                </div>
+
+                <div class="sb-section">
+                    <div class="sb-title">Certifications</div>
+                    <div class="cert-item">
+                        <div class="cert-name">Master Sommelier</div>
+                        <div class="cert-org">Court of Master Sommeliers, 2020</div>
+                    </div>
+                    <div class="cert-item">
+                        <div class="cert-name">Certified Sake Sommelier</div>
+                        <div class="cert-org">Sake Education Council, 2019</div>
+                    </div>
+                </div>
+
+                <div class="sb-section">
+                    <div class="sb-title">Interests</div>
+                    <div class="interest-item">Vineyard Photography</div>
+                    <div class="interest-item">Cheese Affinage</div>
+                    <div class="interest-item">Historical Gastronomy</div>
+                    <div class="interest-item">Cycling in Bordeaux</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="footer-ornament">✦ ✦ ✦ ✦ ✦</div>
+        </div>
+    </div>
+</body>
+</html>

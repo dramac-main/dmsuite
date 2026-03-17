@@ -103,10 +103,17 @@ Renderer (renderer.ts) — Canvas2D Drawing
   ├── Paint system: solid, gradient (linear/radial/conic), image, pattern
   ├── Effects: drop-shadow, inner-shadow, blur, glow, outline, color-adjust, noise
   ├── 16 blend modes mapped to Canvas API compositeOperation
-  └── renderToCanvas(doc, scale) — off-screen export
+  ├── renderToCanvas(doc, scale) — off-screen export
+  └── Z-ORDER CONVENTION: children[0]=behind (drawn first), children[last]=on top (drawn last)
+      - renderFrame & renderGroup iterate FORWARD (i=0 → length-1)
+      - addLayer APPENDS to children (new layers go on top)
+      - reorderLayerV2: "up"=bring forward (swap idx+1), "down"=send backward (swap idx-1)
+      - hitTestChildren iterates REVERSE (front-most checked first for selection)
+      - getLayerOrder returns [0]=behind, [last]=on top
+      - LayersListPanel reverses for display (front at panel top)
 
 HitTest (hit-test.ts) — Selection Engine
-  ├── hitTestDocument(doc, point) — top-down recursive
+  ├── hitTestDocument(doc, point) — front-to-back recursive (last child checked first)
   ├── hitTestHandles(doc, point) — resize/rotation handle detection
   ├── isPointInLayer() — rotation-aware local-space transform
   └── SpatialIndex — grid-based (64px cells) for large documents
@@ -179,6 +186,55 @@ Zustand Store (stores/editor.ts)
 - **Backward compatible** — old canvas-layers.ts kept for existing workspaces; migration is per-workspace
 - **Migration strategy**: BusinessCard first (reference), then roll to all 60+ canvas workspaces
 
+### 3d. Resume Template Architecture (Session 59)
+```
+Resume Template System (26 templates: 6 legacy + 20 pro)
+
+template-defs.ts — ProTemplateDefinition Registry
+  ├── PRO_TEMPLATES: ProTemplateDefinition[] (20 configs)
+  ├── Each config: id, name, layout, sidebarWidthPx, pagePadding
+  ├── ColorPalette (12 props): background, cardBg, sidebarBg, headerBg,
+  │   accent, accentLight, accentSecondary, accentTertiary,
+  │   textDark, textMedium, textLight, border
+  ├── Typography: defaultFontPairing, googleFontUrl, baseFontSize, headingSize, subheadingSize
+  ├── Styles: headerStyle (9 types), sectionTitleStyle (10 types), skillDisplay (6 types)
+  ├── Layout: mainSections[], sidebarSections[], isTwoColumn, hasDarkSidebar, hasAvatar
+  └── Helpers: getProTemplate(id), isProTemplate(id)
+
+UniversalTemplate.tsx — Config-Driven Universal Renderer
+  ├── generateTemplateCSS(config) → scoped <style> with [data-pro-template="id"] selectors
+  ├── Header styles: split, banner, bold-strip, gradient, code, masthead, in-sidebar, ornamental
+  ├── Section title decorations: all 10 styles with CSS
+  ├── Skill display: bar, dot, tag, simple, percentage, star
+  ├── Layout components: SidebarRight, SidebarLeft, TwoEqual, SingleColumn
+  └── createProTemplateComponent(id) → React component (factory function)
+
+templates.ts — Registry
+  ├── TEMPLATES: TemplateMetadata[] (26 total, pro first)
+  ├── TemplateMetadata: id, name, description, columns, isPro?, accentPreview?, isDark?
+  └── Merges pro (from template-defs) + legacy (6 hand-coded)
+
+TemplateRenderer.tsx — Dynamic Resolution
+  ├── LEGACY_COMPONENTS: Record<string, ComponentType> (6 templates)
+  ├── proComponentCache: Map for lazy creation via createProTemplateComponent()
+  ├── getTemplateComponent(id) → checks legacy → checks/creates pro
+  ├── Google Fonts <link> injection for pro templates
+  └── ResumePage applies pro palette (backgroundColor, textColor, fontFamily, fontSize, padding)
+
+schema.ts — 26 templateId values, 28 FONT_PAIRINGS, FONT_SCALE_MULTIPLIER (compact/standard/spacious)
+pagination.ts — TEMPLATE_CONFIG for all 26, MIN_FILL_RATIO=0.35
+export.ts — Triple-frame font wait, dynamic backgroundColor, onclone font resolution
+```
+
+**Key design decisions:**
+- **Config-driven templates** — All 20 pro templates share one UniversalTemplate component with per-template CSS
+- **Scoped CSS** — `[data-pro-template="id"]` attribute selectors prevent style leaking
+- **Google Fonts per template** — Each pro template has its own font URL loaded via `<link>` tag
+- **Factory pattern** — `createProTemplateComponent(id)` wraps UniversalTemplate with pre-bound config
+- **Lazy creation** — Pro components created on first use, cached in `proComponentCache` Map
+- **Pro-first ordering** — Pro templates shown before legacy in registry/carousel
+- **Template switching** — `changeTemplate()` in store auto-sets font pairing + layout from pro definition
+
 ### 4. Styling Patterns
 - **Tailwind tokens only** — never hex values, never pixel values
 - **Dark-first**: Write dark styles as default, add light with `dark:` inversion
@@ -212,6 +268,59 @@ const Component = forwardRef<HTMLElement, Props>(
 - Color custom properties: `--color-primary-500: #8ae600`
 - Available colors: primary, secondary, gray, success, error, warning, info, wire-transfer, bank-transfer
 - **NO pink, purple, or other default Tailwind colors** — only theme-defined colors
+
+### 6b. Central Design System (`src/lib/design-system.ts`) — Session 53
+Single source of truth for ALL layout constants, class patterns, and recipes:
+```
+sidebar:     expandedWidth, collapsedWidth, mainMarginExpanded, mainMarginCollapsed, expandedPx, collapsedPx, transition
+layout:      maxWidth, pagePadding, topBarHeight, container
+surfaces:    page, sidebar, card, glass, elevated, input, hoverItem, activeItem, muted
+borders:     default, subtle, sidebar, card, focusRing, dashed, accent
+typography:  pageTitle, sectionTitle, cardTitle, body, muted, label, breadcrumb, logo
+interactive: hoverLift, buttonHover, iconButton, iconButtonSm, navItem, searchInput
+statusBadge: ready, beta, coming-soon (each has bg/text/dot/label)
+animations:  fast, normal, slow, colors, sidebarSpring, fade
+gradients:   brand, brandSubtle, cardDark
+shadows:     brand, cardHover, sm
+radii:       sm, md, lg, xl, full
+recipes:     card, tag, aiBadge, notifDot, logoMark, avatar, placeholder
+```
+- Import: `import { sidebar, surfaces, typography } from "@/lib/design-system"`
+- Components NEVER hardcode repeated class patterns — always from design-system
+
+### 6c. Hover-to-Expand Sidebar Architecture — Session 53
+```
+useSidebarStore (Zustand, persisted in localStorage)
+  ├── mobileOpen: boolean (transient)
+  ├── hovered: boolean (transient — mouse enter/leave with debounce)
+  ├── pinned: boolean (persisted — user pins sidebar open permanently)
+  ├── openMobile() / closeMobile() / toggleMobile()
+  ├── setHovered(bool) — called by debounced mouse handlers
+  ├── togglePinned() — user clicks pin button
+  └── setPinned(bool) — explicit pin control
+
+design-system.ts sidebar config:
+  ├── expandedWidth: "w-60"   collapsedWidth: "w-18"
+  ├── mainMarginExpanded: "lg:ml-60" (used when pinned)
+  ├── mainMarginCollapsed: "lg:ml-18" (used when not pinned)
+  ├── hoverExpandDelay: 100ms   hoverCollapseDelay: 300ms
+  └── overlayShadow: "shadow-2xl shadow-black/20 dark:shadow-black/50"
+
+Sidebar.tsx (zero props, reads ALL state from store):
+  ├── isExpanded = pinned || hovered
+  ├── isOverlay = hovered && !pinned (overlay shadow applied)
+  ├── onMouseEnter: debounced expand (100ms)
+  ├── onMouseLeave: debounced collapse (300ms)
+  ├── Desktop: always starts collapsed (icons only)
+  │   ├── Hover → expands as overlay (shadow, no layout shift)
+  │   └── Pinned → expands and pushes content
+  ├── Mobile: unchanged overlay drawer with swipe-to-close
+  ├── Pin button: thumbtack icon (pinned=green, unpinned=gray+rotated)
+  └── Navigation clears hover state on pathname change
+
+Pages (dashboard, tools, WorkspaceShell):
+  └── Main margin: pinned ? lg:ml-60 : lg:ml-18
+```
 
 ### 7. Component Composition
 ```

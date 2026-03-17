@@ -6,3 +6,5 @@ export { useAdvancedSettingsStore } from "./advanced-settings";
 export type { AdvancedDesignSettings, TypographySettings, ColorEffectsSettings, SpacingLayoutSettings, IconGraphicSettings, BorderDividerSettings, ExportQualitySettings } from "./advanced-settings";
 export { useEditorStore } from "./editor";
 export type { InteractionMode, DragState, ViewportState, AIRevisionState } from "./editor";
+export { useChikoStore } from "./chiko";
+export type { ChikoMessage, ChikoAction, ChikoContext } from "./chiko";

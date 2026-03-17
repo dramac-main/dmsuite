@@ -37,6 +37,7 @@ export function createSalesBookManifest(): ChikoActionManifest {
             bankReference: { type: "string", description: "Payment reference" },
             bankCustomLabel: { type: "string", description: "Custom field label" },
             bankCustomValue: { type: "string", description: "Custom field value" },
+            logoUrl: { type: "string", description: "Company logo as a data URI (base64 encoded image)" },
           },
         },
         category: "Branding",

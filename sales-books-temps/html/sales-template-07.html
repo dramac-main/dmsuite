@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cash Receipt - Simple</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; background: #e0e0e0; color: #333; }
+  .page { width: 600px; min-height: 300px; margin: 50px auto; background: #fff; border-radius: 6px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); padding: 30px 35px; position: relative; }
+
+  /* Header */
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; }
+  .logo-area { display: flex; align-items: center; gap: 8px; }
+  .logo-circle { width: 40px; height: 40px; border: 2px solid #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; font-style: italic; text-align: center; line-height: 1.1; }
+
+  .cash-receipt-title { display: flex; align-items: center; gap: 10px; }
+  .title-badge { background: #333; color: #fff; padding: 8px 20px; font-size: 16px; font-weight: 900; letter-spacing: 2px; }
+
+  .date-area { font-size: 10px; color: #555; }
+  .date-label { font-weight: 600; }
+  .date-value { font-size: 10px; }
+
+  /* Form Fields */
+  .form-fields { font-size: 11px; line-height: 3; }
+  .field-row { display: flex; align-items: center; gap: 8px; }
+  .field-label { font-weight: 500; white-space: nowrap; font-size: 11px; }
+  .field-label.italic { font-style: italic; }
+  .field-line { flex: 1; border-bottom: 1px solid #999; min-height: 14px; }
+
+  /* Number fields */
+  .no-date-row { display: flex; justify-content: space-between; margin-bottom: 0; }
+
+  /* Amount Area */
+  .amount-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+  .rupee-circle { width: 28px; height: 28px; background: #e0e0e0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #333; }
+  .amount-box { width: 100px; height: 28px; border: 1.5px solid #333; border-radius: 3px; }
+
+  /* Signature */
+  .sig-area { display: flex; justify-content: flex-end; margin-top: 20px; }
+  .sig-block { text-align: center; font-size: 10px; color: #555; }
+  .sig-line { width: 130px; border-bottom: 1px solid #999; height: 20px; margin-bottom: 3px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-area">
+      <div class="logo-circle">Yc<br>Logo</div>
+    </div>
+    <div class="cash-receipt-title">
+      <div class="title-badge">CASH RECEIPT</div>
+    </div>
+    <div class="date-area">
+      <div class="date-label">Date : DD/MM/YYYY</div>
+    </div>
+  </div>
+
+  <!-- Form Fields -->
+  <div class="form-fields">
+    <div class="no-date-row">
+      <div class="field-row" style="flex:1;">
+        <span class="field-label italic">No.</span>
+        <span class="field-line" style="max-width:120px;"></span>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <span class="field-label italic">Date</span>
+      <span class="field-line" style="max-width:150px;"></span>
+    </div>
+
+    <div class="field-row">
+      <span class="field-label italic">Received from</span>
+      <span class="field-line"></span>
+    </div>
+
+    <div class="field-row">
+      <span class="field-line" style="flex:3;"></span>
+      <span class="field-label italic">Mob.</span>
+      <span class="field-line" style="flex:2;"></span>
+    </div>
+
+    <div class="field-row">
+      <span class="field-label italic">for</span>
+      <span class="field-line"></span>
+    </div>
+  </div>
+
+  <!-- Amount & Signature -->
+  <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 15px;">
+    <div class="amount-row">
+      <div class="rupee-circle">&#8377;</div>
+      <div class="amount-box"></div>
+    </div>
+    <div class="sig-block">
+      <div>Received</div>
+      <div>by</div>
+      <div class="sig-line"></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

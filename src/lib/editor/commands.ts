@@ -379,3 +379,23 @@ export function createBatchCommand(commands: Command[], label = "Batch edit"): C
     },
   };
 }
+
+/**
+ * Snapshot command — replaces the entire document with a new one.
+ * Used for AI revisions where the whole doc is swapped.
+ * Undo restores the original doc snapshot taken at execute time.
+ */
+export function createSnapshotCommand(newDoc: DesignDocumentV2, label = "AI revision"): Command {
+  let capturedBefore: DesignDocumentV2 | null = null;
+  return {
+    label,
+    category: "ai",
+    execute(doc) {
+      capturedBefore = doc;
+      return newDoc;
+    },
+    undo() {
+      return capturedBefore ?? newDoc;
+    },
+  };
+}

@@ -66,6 +66,7 @@ export const GLOBAL_SHORTCUTS: Shortcut[] = [
   { key: "b", ctrl: true, action: "toggle-sidebar", description: "Toggle sidebar", scope: "global" },
   { key: "h", ctrl: true, action: "go-dashboard", description: "Go to Dashboard", scope: "global" },
   { key: "F", ctrl: true, shift: true, action: "focus-search", description: "Focus global search", scope: "global" },
+  { key: ".", ctrl: true, action: "toggle-chiko", description: "Toggle Chiko AI assistant", scope: "global" },
   { key: "Escape", action: "close-overlay", description: "Close any modal/overlay", scope: "global" },
   { key: "?", action: "shortcuts-help", description: "Show keyboard shortcuts", scope: "global" },
 ];

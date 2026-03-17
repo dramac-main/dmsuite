@@ -21,6 +21,7 @@ import TextStyleEditor from "./TextStyleEditor";
 import { FillEditor, StrokeEditor } from "./FillStrokeEditor";
 import EffectsEditor from "./EffectsEditor";
 import ColorPickerPopover from "./ColorPickerPopover";
+import IconPickerPopover from "./IconPickerPopover";
 
 // ---------------------------------------------------------------------------
 // Blend Mode Options
@@ -241,12 +242,10 @@ export default function LayerPropertiesPanel() {
         <PanelSection title="Icon">
           <div className="space-y-2">
             <div>
-              <label className="text-[10px] text-gray-500 block mb-0.5">Icon ID</label>
-              <input
-                type="text"
-                value={(layer as IconLayerV2).iconId}
-                onChange={(e) => handleLayerChange({ iconId: e.target.value } as Partial<LayerV2>)}
-                className="w-full bg-gray-800 text-gray-200 rounded px-2 py-1 text-xs border border-gray-700 focus:border-primary-500 outline-none"
+              <label className="text-[10px] text-gray-500 block mb-1">Icon</label>
+              <IconPickerPopover
+                currentIconId={(layer as IconLayerV2).iconId}
+                onSelect={(iconId) => handleLayerChange({ iconId } as Partial<LayerV2>)}
               />
             </div>
             <div className="flex items-center gap-2">

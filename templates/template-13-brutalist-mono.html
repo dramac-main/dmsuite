@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV — Brutalist Mono</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        @page { size: A4; margin: 0; }
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: #888;
+            display: flex;
+            justify-content: center;
+            padding: 30px;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            background: #FAFAFA;
+            position: relative;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+        }
+
+        /* ====== HEADER BLOCK ====== */
+        .header {
+            background: #000;
+            color: #FFF;
+            padding: 32px 36px 28px;
+            position: relative;
+        }
+        .header-grid {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: end;
+            gap: 20px;
+        }
+        .name {
+            font-family: 'Space Mono', monospace;
+            font-size: 36px;
+            font-weight: 700;
+            line-height: 1;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .role {
+            font-size: 13px;
+            font-weight: 400;
+            color: #00FF88;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-top: 6px;
+        }
+        .header-contact {
+            text-align: right;
+        }
+        .hc-line {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            color: #AAA;
+            margin-bottom: 3px;
+        }
+        .hc-line span {
+            color: #00FF88;
+        }
+
+        /* ====== STRIPED DIVIDER ====== */
+        .stripe-bar {
+            height: 8px;
+            background: repeating-linear-gradient(
+                90deg,
+                #000 0px, #000 4px,
+                #00FF88 4px, #00FF88 8px,
+                #FFF 8px, #FFF 12px
+            );
+        }
+
+        /* ====== BODY ====== */
+        .body {
+            padding: 24px 36px 28px;
+        }
+
+        /* ====== SECTIONS ====== */
+        .section {
+            margin-bottom: 20px;
+        }
+        .section:last-child { margin-bottom: 0; }
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .section-number {
+            font-family: 'Space Mono', monospace;
+            font-size: 22px;
+            font-weight: 700;
+            color: #000;
+            line-height: 1;
+        }
+        .section-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: #000;
+            padding-bottom: 3px;
+            border-bottom: 3px solid #000;
+        }
+
+        /* Summary */
+        .summary {
+            font-size: 12px;
+            line-height: 1.6;
+            color: #333;
+            border-left: 4px solid #00FF88;
+            padding-left: 14px;
+        }
+
+        /* Experience grid */
+        .exp-grid {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 0;
+        }
+        .exp-item {
+            display: contents;
+        }
+        .exp-date-col {
+            padding: 10px 12px 10px 0;
+            border-right: 3px solid #000;
+            text-align: right;
+        }
+        .exp-date {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            color: #666;
+            font-weight: 700;
+        }
+        .exp-content {
+            padding: 10px 0 10px 14px;
+            border-bottom: 1px solid #E0E0E0;
+        }
+        .exp-item:last-child .exp-content {
+            border-bottom: none;
+        }
+        .exp-role {
+            font-size: 13px;
+            font-weight: 600;
+            color: #000;
+        }
+        .exp-company {
+            font-size: 11px;
+            color: #00AA66;
+            font-weight: 500;
+            margin-top: 1px;
+        }
+        .exp-desc {
+            font-size: 11px;
+            color: #555;
+            line-height: 1.5;
+            margin-top: 4px;
+        }
+
+        /* Two-column bottom */
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        /* Education */
+        .edu-item {
+            margin-bottom: 10px;
+            padding-left: 12px;
+            border-left: 3px solid #000;
+        }
+        .edu-item:last-child { margin-bottom: 0; }
+        .edu-degree {
+            font-size: 12px;
+            font-weight: 600;
+            color: #000;
+        }
+        .edu-school {
+            font-size: 11px;
+            color: #666;
+        }
+        .edu-year {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            color: #999;
+        }
+
+        /* Skills */
+        .skill-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+        }
+        .skill-tag {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            padding: 4px 8px;
+            background: #000;
+            color: #00FF88;
+            display: inline-block;
+        }
+
+        /* Certifications */
+        .cert-item {
+            margin-bottom: 6px;
+        }
+        .cert-name {
+            font-size: 11px;
+            font-weight: 500;
+            color: #000;
+        }
+        .cert-org {
+            font-size: 11px;
+            color: #888;
+        }
+
+        /* Languages */
+        .lang-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            padding: 3px 0;
+            border-bottom: 1px dashed #DDD;
+        }
+        .lang-name { color: #333; font-weight: 500; }
+        .lang-level { color: #888; }
+
+        @media print {
+            body { padding: 0; background: none; }
+            .section, .exp-item, .edu-item { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="header">
+            <div class="header-grid">
+                <div>
+                    <div class="name">Marcus<br>Okonkwo</div>
+                    <div class="role">Structural Engineer</div>
+                </div>
+                <div class="header-contact">
+                    <div class="hc-line"><span>@</span> marcus.okonkwo@email.com</div>
+                    <div class="hc-line"><span>#</span> +234 803 456 7890</div>
+                    <div class="hc-line"><span>⌘</span> Lagos, Nigeria</div>
+                    <div class="hc-line"><span>↗</span> linkedin.com/in/mokonkwo</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stripe-bar"></div>
+
+        <div class="body">
+            <!-- 01 Profile -->
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-number">01</div>
+                    <div class="section-title">Profile</div>
+                </div>
+                <div class="summary">Chartered structural engineer with 9 years of experience in high-rise, infrastructure, and sustainable building design across West Africa and the Middle East. Led structural teams on 15+ projects valued at over $200M combined. Proficient in advanced FEA analysis, BIM coordination, and earthquake-resistant design.</div>
+            </div>
+
+            <!-- 02 Experience -->
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-number">02</div>
+                    <div class="section-title">Experience</div>
+                </div>
+                <div class="exp-grid">
+                    <div class="exp-item">
+                        <div class="exp-date-col">
+                            <div class="exp-date">2022 –<br>Present</div>
+                        </div>
+                        <div class="exp-content">
+                            <div class="exp-role">Lead Structural Engineer</div>
+                            <div class="exp-company">Julius Berger Nigeria — Lagos</div>
+                            <div class="exp-desc">Lead structural design for the $80M Lekki Tower mixed-use development (42 floors). Manage team of 8 engineers and coordinate with MEP, architectural, and geotechnical consultants. Implemented parametric design workflows reducing iteration time by 35%.</div>
+                        </div>
+                    </div>
+                    <div class="exp-item">
+                        <div class="exp-date-col">
+                            <div class="exp-date">2019 –<br>2022</div>
+                        </div>
+                        <div class="exp-content">
+                            <div class="exp-role">Senior Structural Engineer</div>
+                            <div class="exp-company">Aurecon — Dubai, UAE</div>
+                            <div class="exp-desc">Designed lateral and gravity systems for 4 high-rise towers (25-55 floors) in Dubai Marina and Business Bay. Conducted wind tunnel analysis and progressive collapse assessments per UAE Fire and Life Safety Code.</div>
+                        </div>
+                    </div>
+                    <div class="exp-item">
+                        <div class="exp-date-col">
+                            <div class="exp-date">2016 –<br>2019</div>
+                        </div>
+                        <div class="exp-content">
+                            <div class="exp-role">Structural Engineer</div>
+                            <div class="exp-company">Arup — Lagos & London</div>
+                            <div class="exp-desc">Performed FEA modelling and reinforced concrete detailing for commercial and institutional buildings. Supported the Dangote Refinery structural assessment team. Contributed to Arup's Lagos office sustainability design standards.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom 2-column -->
+            <div class="bottom-grid">
+                <div>
+                    <!-- 03 Education -->
+                    <div class="section">
+                        <div class="section-header">
+                            <div class="section-number">03</div>
+                            <div class="section-title">Education</div>
+                        </div>
+                        <div class="edu-item">
+                            <div class="edu-degree">MSc Structural Engineering</div>
+                            <div class="edu-school">Imperial College London</div>
+                            <div class="edu-year">2014 – 2016</div>
+                        </div>
+                        <div class="edu-item">
+                            <div class="edu-degree">BEng Civil Engineering (First Class)</div>
+                            <div class="edu-school">University of Lagos</div>
+                            <div class="edu-year">2010 – 2014</div>
+                        </div>
+                    </div>
+
+                    <!-- 04 Certifications -->
+                    <div class="section">
+                        <div class="section-header">
+                            <div class="section-number">04</div>
+                            <div class="section-title">Certifications</div>
+                        </div>
+                        <div class="cert-item">
+                            <div class="cert-name">Chartered Engineer (CEng MIStructE)</div>
+                            <div class="cert-org">Institution of Structural Engineers, 2020</div>
+                        </div>
+                        <div class="cert-item">
+                            <div class="cert-name">COREN Registered Engineer</div>
+                            <div class="cert-org">Council of Registered Engineers, Nigeria</div>
+                        </div>
+                        <div class="cert-item">
+                            <div class="cert-name">LEED Green Associate</div>
+                            <div class="cert-org">U.S. Green Building Council, 2021</div>
+                        </div>
+                    </div>
+
+                    <!-- Languages -->
+                    <div class="section">
+                        <div class="section-header">
+                            <div class="section-number">05</div>
+                            <div class="section-title">Languages</div>
+                        </div>
+                        <div class="lang-row">
+                            <span class="lang-name">English</span>
+                            <span class="lang-level">Native</span>
+                        </div>
+                        <div class="lang-row">
+                            <span class="lang-name">Yoruba</span>
+                            <span class="lang-level">Native</span>
+                        </div>
+                        <div class="lang-row">
+                            <span class="lang-name">French</span>
+                            <span class="lang-level">Intermediate</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <!-- 06 Skills -->
+                    <div class="section">
+                        <div class="section-header">
+                            <div class="section-number">06</div>
+                            <div class="section-title">Skills</div>
+                        </div>
+                        <div class="skill-grid">
+                            <div class="skill-tag">ETABS</div>
+                            <div class="skill-tag">SAP2000</div>
+                            <div class="skill-tag">SAFE</div>
+                            <div class="skill-tag">Revit BIM</div>
+                            <div class="skill-tag">AutoCAD</div>
+                            <div class="skill-tag">Tekla</div>
+                            <div class="skill-tag">STAAD.Pro</div>
+                            <div class="skill-tag">Rhino/GH</div>
+                            <div class="skill-tag">Python</div>
+                            <div class="skill-tag">FEA Analysis</div>
+                            <div class="skill-tag">RC Design</div>
+                            <div class="skill-tag">Steel Design</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

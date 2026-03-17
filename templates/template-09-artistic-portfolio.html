@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV Template - Artistic Portfolio</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Crimson+Pro:wght@300;400;500;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --coral: #FF6B6B;
+            --coral-light: rgba(255, 107, 107, 0.08);
+            --mint: #51CF66;
+            --lavender: #845EF7;
+            --amber: #FCC419;
+            --sky: #339AF0;
+            --dark: #212529;
+            --medium: #495057;
+            --light: #ADB5BD;
+            --bg: #F8F9FA;
+            --white: #FFF;
+            --border: #E9ECEF;
+        }
+
+        body {
+            font-family: 'Crimson Pro', serif;
+            background: #555;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            background: var(--white);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: clip;
+            position: relative;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+        }
+
+        /* ====== DECORATIVE SHAPES ====== */
+        .deco-circle {
+            position: absolute;
+            border-radius: 50%;
+            z-index: 0;
+        }
+        .deco-1 {
+            width: 180px; height: 180px;
+            background: var(--coral-light);
+            top: -40px; right: -40px;
+        }
+        .deco-2 {
+            width: 120px; height: 120px;
+            background: rgba(81, 207, 102, 0.06);
+            bottom: 80px; left: -30px;
+        }
+        .deco-3 {
+            width: 80px; height: 80px;
+            background: rgba(132, 94, 247, 0.06);
+            top: 300px; right: 20px;
+        }
+
+        /* ====== HEADER ====== */
+        .header {
+            position: relative;
+            z-index: 1;
+            padding: 48px 48px 0;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 28px;
+            align-items: center;
+        }
+        .avatar-box {
+            width: 110px; height: 110px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, var(--coral), var(--lavender));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: rotate(-3deg);
+        }
+        .avatar-initials {
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-size: 38px;
+            font-weight: 800;
+            color: white;
+            transform: rotate(3deg);
+        }
+        .header-text {}
+        .name {
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--dark);
+            line-height: 1.1;
+            letter-spacing: -0.5px;
+        }
+        .role {
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-size: 14px;
+            color: var(--coral);
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+        .contact-row {
+            display: flex;
+            gap: 16px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .contact-pill {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-size: 11px;
+            color: var(--medium);
+            padding: 4px 10px;
+            background: var(--bg);
+            border-radius: 14px;
+        }
+        .contact-pill svg {
+            width: 10px; height: 10px;
+            fill: var(--coral);
+        }
+
+        /* ====== COLORED LINE ====== */
+        .color-bar {
+            margin: 24px 48px 0;
+            height: 4px;
+            border-radius: 2px;
+            display: flex;
+            gap: 4px;
+        }
+        .cb-seg {
+            flex: 1;
+            border-radius: 2px;
+        }
+
+        /* ====== BODY ====== */
+        .body {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: 1fr 210px;
+            gap: 28px;
+            padding: 24px 48px 32px;
+        }
+
+        /* Sections */
+        .section { margin-bottom: 20px; }
+        .section-title {
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .st-shape {
+            width: 18px; height: 18px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 11px;
+            transform: rotate(-5deg);
+        }
+
+        /* About */
+        .about {
+            font-size: 13px;
+            line-height: 1.7;
+            color: var(--medium);
+        }
+
+        /* Experience */
+        .exp-card {
+            margin-bottom: 16px;
+            padding: 14px 16px;
+            background: var(--bg);
+            border-radius: 12px;
+            position: relative;
+        }
+        .exp-accent {
+            position: absolute;
+            top: 14px; left: 0;
+            width: 4px; height: 20px;
+            border-radius: 0 3px 3px 0;
+        }
+        .exp-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .exp-role {
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+        .exp-date {
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--coral);
+        }
+        .exp-company {
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-size: 11px;
+            color: var(--light);
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .exp-desc {
+            font-size: 11px;
+            color: var(--medium);
+            line-height: 1.5;
+        }
+        .exp-desc li {
+            margin-left: 14px;
+            margin-bottom: 2px;
+        }
+
+        /* Project Showcase */
+        .project-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .project-card {
+            padding: 12px;
+            border-radius: 10px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        .project-card::before {
+            content: '';
+            position: absolute;
+            top: -15px; right: -15px;
+            width: 50px; height: 50px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+        .project-name {
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        .project-type {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+        .project-stat {
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-size: 16px;
+            font-weight: 800;
+            margin-top: 4px;
+        }
+
+        /* Sidebar */
+        .side-col {}
+
+        /* Skills with colored dots */
+        .skill-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .skill-dot {
+            width: 8px; height: 8px;
+            border-radius: 3px;
+            min-width: 8px;
+            transform: rotate(45deg);
+        }
+        .skill-name {
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        /* Awards */
+        .award-card {
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-bottom: 6px;
+        }
+        .award-year {
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--coral);
+            letter-spacing: 1px;
+        }
+        .award-name {
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+        .award-org {
+            font-size: 11px;
+            color: var(--light);
+        }
+
+        /* Education */
+        .edu-mini {
+            margin-bottom: 8px;
+        }
+        .edu-degree {
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+        .edu-school {
+            font-size: 11px;
+            color: var(--light);
+        }
+        .edu-year {
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-size: 11px;
+            color: var(--lavender);
+            font-weight: 600;
+        }
+
+        /* Hobbies */
+        .hobby-bubble {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            margin: 0 4px 5px 0;
+            border: 1.5px solid;
+        }
+
+        @media print {
+            body { background: none; padding: 0; }
+            .page { box-shadow: none; overflow: visible; }
+            .deco-circle { display: none; }
+            .exp-card, .edu-mini, .section, .project-card { break-inside: avoid; }
+        }
+        @page { size: A4; margin: 0; }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- Decorative shapes -->
+        <div class="deco-circle deco-1"></div>
+        <div class="deco-circle deco-2"></div>
+        <div class="deco-circle deco-3"></div>
+
+        <!-- HEADER -->
+        <div class="header">
+            <div class="avatar-box">
+                <div class="avatar-initials">OB</div>
+            </div>
+            <div class="header-text">
+                <div class="name">Olivia Bennett</div>
+                <div class="role">Art Director & Visual Designer</div>
+                <div class="contact-row">
+                    <div class="contact-pill">
+                        <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                        olivia.b@email.com
+                    </div>
+                    <div class="contact-pill">
+                        <svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+                        +1 (555) 987-6543
+                    </div>
+                    <div class="contact-pill">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+                        Portland, OR
+                    </div>
+                    <div class="contact-pill">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
+                        oliviabennett.art
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="color-bar">
+            <div class="cb-seg" style="background: var(--coral);"></div>
+            <div class="cb-seg" style="background: var(--lavender);"></div>
+            <div class="cb-seg" style="background: var(--mint);"></div>
+            <div class="cb-seg" style="background: var(--amber);"></div>
+            <div class="cb-seg" style="background: var(--sky);"></div>
+        </div>
+
+        <!-- BODY -->
+        <div class="body">
+            <div class="main-col">
+                <div class="section">
+                    <div class="section-title">
+                        <div class="st-shape" style="background: var(--coral);">✦</div>
+                        About
+                    </div>
+                    <div class="about">
+                        Multidisciplinary Art Director and Visual Designer with a passion for storytelling through bold aesthetics. 9 years of experience crafting brand identities, editorial layouts, and immersive digital experiences. I believe design should make people feel something — every pixel, every color, every word.
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">
+                        <div class="st-shape" style="background: var(--lavender);">◆</div>
+                        Experience
+                    </div>
+
+                    <div class="exp-card">
+                        <div class="exp-accent" style="background: var(--coral);"></div>
+                        <div class="exp-top">
+                            <div class="exp-role">Art Director</div>
+                            <div class="exp-date">2021 — Present</div>
+                        </div>
+                        <div class="exp-company">Nike Creative Studio — Portland, OR</div>
+                        <ul class="exp-desc">
+                            <li>Direct visual campaigns for Nike Women's and Jordan Brand</li>
+                            <li>Led the "Dream Louder" campaign — 1B+ media impressions</li>
+                            <li>Manage a team of 10 designers, photographers, and animators</li>
+                        </ul>
+                    </div>
+
+                    <div class="exp-card">
+                        <div class="exp-accent" style="background: var(--lavender);"></div>
+                        <div class="exp-top">
+                            <div class="exp-role">Senior Visual Designer</div>
+                            <div class="exp-date">2018 — 2021</div>
+                        </div>
+                        <div class="exp-company">Apple — Cupertino, CA</div>
+                        <ul class="exp-desc">
+                            <li>Designed product launch visuals for iPhone and MacBook campaigns</li>
+                            <li>Created motion design assets for Apple.com featured content</li>
+                        </ul>
+                    </div>
+
+                    <div class="exp-card">
+                        <div class="exp-accent" style="background: var(--mint);"></div>
+                        <div class="exp-top">
+                            <div class="exp-role">Junior Designer</div>
+                            <div class="exp-date">2016 — 2018</div>
+                        </div>
+                        <div class="exp-company">Collins — New York, NY</div>
+                        <ul class="exp-desc">
+                            <li>Contributed to brand identity projects for Spotify and Dropbox</li>
+                            <li>Designed editorial spreads for Communication Arts magazine</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">
+                        <div class="st-shape" style="background: var(--amber);">★</div>
+                        Featured Projects
+                    </div>
+                    <div class="project-grid">
+                        <div class="project-card" style="background: linear-gradient(135deg, var(--coral), #FF9999);">
+                            <div class="project-name">Dream Louder</div>
+                            <div class="project-type">Nike Campaign</div>
+                            <div class="project-stat">1B+ views</div>
+                        </div>
+                        <div class="project-card" style="background: linear-gradient(135deg, var(--lavender), #B197FC);">
+                            <div class="project-name">Chromatic</div>
+                            <div class="project-type">Art Exhibition</div>
+                            <div class="project-stat">12 cities</div>
+                        </div>
+                        <div class="project-card" style="background: linear-gradient(135deg, var(--sky), #74C0FC);">
+                            <div class="project-name">FORM Journal</div>
+                            <div class="project-type">Editorial Design</div>
+                            <div class="project-stat">50K copies</div>
+                        </div>
+                        <div class="project-card" style="background: linear-gradient(135deg, var(--mint), #8CE99A);">
+                            <div class="project-name">Wavelength</div>
+                            <div class="project-type">Brand Identity</div>
+                            <div class="project-stat">D&AD Winner</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SIDEBAR -->
+            <div class="side-col">
+                <div class="section">
+                    <div class="section-title">
+                        <div class="st-shape" style="background: var(--sky);">◇</div>
+                        Skills
+                    </div>
+                    <div class="skill-row">
+                        <div class="skill-dot" style="background: var(--coral);"></div>
+                        <span class="skill-name">Art Direction</span>
+                    </div>
+                    <div class="skill-row">
+                        <div class="skill-dot" style="background: var(--lavender);"></div>
+                        <span class="skill-name">Brand Identity</span>
+                    </div>
+                    <div class="skill-row">
+                        <div class="skill-dot" style="background: var(--mint);"></div>
+                        <span class="skill-name">Typography</span>
+                    </div>
+                    <div class="skill-row">
+                        <div class="skill-dot" style="background: var(--amber);"></div>
+                        <span class="skill-name">Motion Design</span>
+                    </div>
+                    <div class="skill-row">
+                        <div class="skill-dot" style="background: var(--sky);"></div>
+                        <span class="skill-name">Photo Direction</span>
+                    </div>
+                    <div class="skill-row">
+                        <div class="skill-dot" style="background: var(--coral);"></div>
+                        <span class="skill-name">Illustration</span>
+                    </div>
+                    <div class="skill-row">
+                        <div class="skill-dot" style="background: var(--lavender);"></div>
+                        <span class="skill-name">3D Rendering</span>
+                    </div>
+                    <div class="skill-row">
+                        <div class="skill-dot" style="background: var(--mint);"></div>
+                        <span class="skill-name">Print Design</span>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">
+                        <div class="st-shape" style="background: var(--amber);">🏆</div>
+                        Awards
+                    </div>
+                    <div class="award-card">
+                        <div class="award-year">2024</div>
+                        <div class="award-name">Cannes Lions Gold</div>
+                        <div class="award-org">Brand Campaign</div>
+                    </div>
+                    <div class="award-card">
+                        <div class="award-year">2023</div>
+                        <div class="award-name">D&AD Yellow Pencil</div>
+                        <div class="award-org">Visual Identity</div>
+                    </div>
+                    <div class="award-card">
+                        <div class="award-year">2022</div>
+                        <div class="award-name">ADC Annual Award</div>
+                        <div class="award-org">Editorial Design</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">
+                        <div class="st-shape" style="background: var(--lavender);">🎓</div>
+                        Education
+                    </div>
+                    <div class="edu-mini">
+                        <div class="edu-degree">MFA Visual Arts</div>
+                        <div class="edu-school">Yale School of Art</div>
+                        <div class="edu-year">2014 — 2016</div>
+                    </div>
+                    <div class="edu-mini">
+                        <div class="edu-degree">BFA Graphic Design</div>
+                        <div class="edu-school">RISD</div>
+                        <div class="edu-year">2010 — 2014</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">
+                        <div class="st-shape" style="background: var(--mint);">♡</div>
+                        Passions
+                    </div>
+                    <span class="hobby-bubble" style="border-color: var(--coral); color: var(--coral);">Film Photography</span>
+                    <span class="hobby-bubble" style="border-color: var(--lavender); color: var(--lavender);">Ceramics</span>
+                    <span class="hobby-bubble" style="border-color: var(--mint); color: var(--mint);">Zine Making</span>
+                    <span class="hobby-bubble" style="border-color: var(--amber); color: var(--amber);">Rock Climbing</span>
+                    <span class="hobby-bubble" style="border-color: var(--sky); color: var(--sky);">Vinyl Collecting</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

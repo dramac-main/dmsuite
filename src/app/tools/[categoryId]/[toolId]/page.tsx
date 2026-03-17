@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { toolCategories } from "@/data/tools";
@@ -9,6 +8,9 @@ import Sidebar from "@/components/dashboard/Sidebar";
 import TopBar from "@/components/dashboard/TopBar";
 import { bgOpacity10 } from "@/lib/colors";
 import { iconMap, IconArrowRight, IconChevronLeft, IconSparkles, IconZap } from "@/components/icons";
+import { useSidebarStore } from "@/stores/sidebar";
+import { sidebar as sidebarConfig, surfaces, layout } from "@/lib/design-system";
+import { cn } from "@/lib/utils";
 
 /* ── Dynamically imported workspace components ──────────────── */
 const workspaceComponents: Record<string, React.ComponentType> = {
@@ -24,8 +26,8 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   "flyer": dynamic(() => import("@/components/workspaces/PosterFlyerWorkspace")),
   "banner-ad": dynamic(() => import("@/components/workspaces/BannerAdWorkspace")),
   "presentation": dynamic(() => import("@/components/workspaces/PresentationWorkspace")),
-  "resume-cv": dynamic(() => import("@/components/workspaces/ResumeCVWorkspace")),
-  "invoice-designer": dynamic(() => import("@/components/workspaces/InvoiceDesignerWorkspace")),
+  "resume-cv": dynamic(() => import("@/components/workspaces/ResumeCVWorkspaceV2")),
+  "invoice-designer": dynamic(() => import("@/components/workspaces/SalesBookWrappers").then((m) => ({ default: m.InvoiceBookWorkspace }))),
   "email-template": dynamic(() => import("@/components/workspaces/EmailTemplateWorkspace")),
 
   // ── Phase 3: Print & Stationery ──
@@ -50,20 +52,23 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   // ── Phase 3: Business Documents ──
   "proposal-generator": dynamic(() => import("@/components/workspaces/ProposalWorkspace")),
   "contract-template": dynamic(() => import("@/components/workspaces/ContractWorkspace")),
-  "quote-estimate": dynamic(() => import("@/components/workspaces/QuotationWorkspace")),
+  "quote-estimate": dynamic(() => import("@/components/workspaces/SalesBookWrappers").then((m) => ({ default: m.QuotationBookWorkspace }))),
   "report-generator": dynamic(() => import("@/components/workspaces/ReportWorkspace")),
-  "receipt-designer": dynamic(() => import("@/components/workspaces/ReceiptWorkspace")),
+  "receipt-designer": dynamic(() => import("@/components/workspaces/SalesBookWrappers").then((m) => ({ default: m.ReceiptBookWorkspace }))),
   "product-catalog": dynamic(() => import("@/components/workspaces/CatalogWorkspace")),
 
   // ── Phase 3: Sales Materials ──
-  "sales-book-a4": dynamic(() => import("@/components/workspaces/SalesBookA4Workspace")),
-  "sales-book-a5": dynamic(() => import("@/components/workspaces/SalesBookA5Workspace")),
+  "sales-book-a4": dynamic(() => import("@/components/workspaces/SalesBookWrappers").then((m) => ({ default: m.SalesBookA4Workspace }))),
+  "sales-book-a5": dynamic(() => import("@/components/workspaces/SalesBookWrappers").then((m) => ({ default: m.SalesBookA5Workspace }))),
   "price-list": dynamic(() => import("@/components/workspaces/PriceListWorkspace")),
 
   // ── Phase 3: Document Tools (New) ──
   "company-profile": dynamic(() => import("@/components/workspaces/CompanyProfileWorkspace")),
   "business-plan": dynamic(() => import("@/components/workspaces/BusinessPlanWorkspace")),
-  "purchase-order": dynamic(() => import("@/components/workspaces/PurchaseOrderWorkspace")),
+  "purchase-order": dynamic(() => import("@/components/workspaces/SalesBookWrappers").then((m) => ({ default: m.PurchaseOrderBookWorkspace }))),
+  "delivery-note": dynamic(() => import("@/components/workspaces/SalesBookWrappers").then((m) => ({ default: m.DeliveryNoteBookWorkspace }))),
+  "credit-note": dynamic(() => import("@/components/workspaces/SalesBookWrappers").then((m) => ({ default: m.CreditNoteBookWorkspace }))),
+  "proforma-invoice": dynamic(() => import("@/components/workspaces/SalesBookWrappers").then((m) => ({ default: m.ProformaBookWorkspace }))),
   "diploma-designer": dynamic(() => import("@/components/workspaces/DiplomaDesignerWorkspace")),
   "statement-of-account": dynamic(() => import("@/components/workspaces/StatementOfAccountWorkspace")),
   "newsletter-print": dynamic(() => import("@/components/workspaces/NewsletterPrintWorkspace")),
@@ -141,7 +146,8 @@ export default function ToolWorkspacePage() {
   const params = useParams();
   const categoryId = params.categoryId as string;
   const toolId = params.toolId as string;
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const pinned = useSidebarStore((s) => s.pinned);
+  const openMobile = useSidebarStore((s) => s.openMobile);
 
   // Find the category and tool
   const category = toolCategories.find((c) => c.id === categoryId);
@@ -210,12 +216,18 @@ export default function ToolWorkspacePage() {
   }
 
   return (
-    <div className="min-h-dvh bg-gray-50 dark:bg-gray-950 transition-colors">
-      <Sidebar mobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
+    <div className={cn("min-h-dvh", surfaces.page, "transition-colors")}>
+      <Sidebar />
 
-      <main className="lg:ml-60 min-h-dvh">
-        <div className="px-4 py-4 sm:px-6 sm:py-6 max-w-screen-2xl mx-auto">
-          <TopBar onMenuClick={() => setSidebarOpen(true)} title={tool.name} />
+      <main
+        className={cn(
+          "min-h-dvh",
+          sidebarConfig.transition,
+          pinned ? sidebarConfig.mainMarginExpanded : sidebarConfig.mainMarginCollapsed
+        )}
+      >
+        <div className={layout.container}>
+          <TopBar onMenuClick={openMobile} title={tool.name} />
 
           {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-sm mb-6">

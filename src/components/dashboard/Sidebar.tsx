@@ -1,32 +1,107 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, type PanInfo } from "framer-motion";
 import { suiteNavGroups } from "@/data/tools";
 import { iconMap, IconSearch, IconChevronLeft, IconSparkles } from "@/components/icons";
+import { useSidebarStore } from "@/stores/sidebar";
+import {
+  sidebar as sidebarConfig,
+  surfaces,
+  borders,
+  typography,
+  interactive,
+  animations,
+  gradients,
+} from "@/lib/design-system";
+import { cn } from "@/lib/utils";
 
-interface SidebarProps {
-  mobileOpen: boolean;
-  onMobileClose: () => void;
-}
+/* ── Shared recipes (inline to avoid circular imports) ───────── */
+const LOGO_MARK =
+  "size-8 rounded-lg bg-linear-to-br from-primary-500 to-secondary-500 shrink-0 flex items-center justify-center shadow-lg shadow-primary-500/20";
 
-export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false);
+/** Inline pin icon (Bootstrap-style thumbtack) */
+const PinIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 16 16" fill="currentColor">
+    <path d="M4.146.146A.5.5 0 0 1 4.5 0h7a.5.5 0 0 1 .5.5c0 .68-.342 1.174-.646 1.479-.126.125-.25.224-.354.298v4.431l.078.048c.203.127.476.314.751.555C12.36 7.775 13 8.527 13 9.5a.5.5 0 0 1-.5.5h-4v4.5a.5.5 0 0 1-1 0V10h-4A.5.5 0 0 1 3 9.5c0-.973.64-1.725 1.17-2.189A5.921 5.921 0 0 1 5 6.708V2.277a2.77 2.77 0 0 1-.354-.298C4.342 1.674 4 1.179 4 .5a.5.5 0 0 1 .146-.354z" />
+  </svg>
+);
+
+/**
+ * Sidebar — Hover-to-expand with optional pin.
+ *
+ * Desktop behaviour:
+ *  • Default — collapsed (icons only, w-18). Content has lg:ml-18.
+ *  • Hover   — expands to w-60 as an **overlay** with shadow. No layout shift.
+ *  • Pinned  — expanded permanently, pushes content (lg:ml-60).
+ *
+ * Mobile — unchanged: overlay drawer with swipe-to-close.
+ *
+ * All state lives in `useSidebarStore` (Zustand, persisted).
+ * All dimensions/timings come from `design-system.ts`.
+ */
+export default function Sidebar() {
+  const {
+    mobileOpen,
+    hovered,
+    pinned,
+    closeMobile,
+    setHovered,
+    togglePinned,
+  } = useSidebarStore();
+
   const sidebarRef = useRef<HTMLElement>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pathname = usePathname();
 
-  // Close on navigation (mobile)
+  /** Whether the desktop sidebar shows expanded content */
+  const isExpanded = pinned || hovered;
+  /** Overlay mode = hover-expanded but not pinned (floats over content) */
+  const isOverlay = hovered && !pinned;
+
+  // ── Hover handlers (debounced) ────────────────────────────────
+  const handleMouseEnter = useCallback(() => {
+    if (pinned) return; // already expanded
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => {
+      setHovered(true);
+    }, sidebarConfig.hoverExpandDelay);
+  }, [pinned, setHovered]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (pinned) return;
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => {
+      setHovered(false);
+    }, sidebarConfig.hoverCollapseDelay);
+  }, [pinned, setHovered]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    };
+  }, []);
+
+  // ── Close on navigation (mobile) ─────────────────────────────
   const prevPathname = useRef(pathname);
   useEffect(() => {
     if (prevPathname.current !== pathname && mobileOpen) {
-      onMobileClose();
+      closeMobile();
     }
     prevPathname.current = pathname;
-  }, [pathname, mobileOpen, onMobileClose]);
+  }, [pathname, mobileOpen, closeMobile]);
 
-  // Focus trap when mobile sidebar is open
+  // ── Collapse hover on navigation (desktop) ───────────────────
+  useEffect(() => {
+    // When navigating via a link the hover state can linger; clear it.
+    setHovered(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  // ── Focus trap when mobile sidebar is open ───────────────────
   useEffect(() => {
     if (!mobileOpen) return;
     const sidebar = sidebarRef.current;
@@ -55,91 +130,77 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
     return () => window.removeEventListener("keydown", trap);
   }, [mobileOpen]);
 
-  // Swipe-to-close handler
+  // ── Swipe-to-close handler (mobile) ──────────────────────────
   const handleDragEnd = useCallback(
     (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-      // Close if swiped left > 80px or velocity > 300
       if (info.offset.x < -80 || info.velocity.x < -300) {
-        onMobileClose();
+        closeMobile();
       }
     },
-    [onMobileClose]
+    [closeMobile]
   );
 
-  return (
-    <>
-      {/* Mobile overlay with backdrop blur */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
-            onClick={onMobileClose}
-            aria-hidden="true"
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Sidebar — Desktop: static, Mobile: slide-in with swipe-to-close */}
-      {/* Desktop sidebar (always rendered) */}
-      <aside
-        ref={sidebarRef}
-        className={`
-          fixed top-0 left-0 z-50 h-dvh flex-col
-          bg-white dark:bg-gray-900
-          border-r border-gray-200 dark:border-gray-700
-          transition-all duration-200 ease-in-out
-          ${collapsed ? "w-18" : "w-60"}
-          hidden lg:flex
-        `}
-      >
+  // ── Shared content renderer ──────────────────────────────────
+  function renderNavContent(isCollapsed: boolean, isMobile: boolean) {
+    return (
+      <>
         {/* Logo row */}
         <div className="flex items-center h-14 px-4 shrink-0">
-          {/* Animated logo */}
-          <div className="size-8 rounded-lg bg-linear-to-br from-primary-500 to-secondary-500 shrink-0 flex items-center justify-center shadow-lg shadow-primary-500/20">
+          <div className={LOGO_MARK}>
             <IconSparkles className="size-4 text-gray-950" />
           </div>
 
-          {!collapsed && (
-            <span className="ml-3 text-base font-bold text-gray-900 dark:text-white tracking-tight">
+          {!isCollapsed && (
+            <span className={cn("ml-3", typography.logo)}>
               DM<span className="text-primary-500">Suite</span>
             </span>
           )}
 
-          <button
-            onClick={() => {
-              setCollapsed(!collapsed);
-              onMobileClose();
-            }}
-            className="ml-auto flex items-center justify-center size-7 rounded-md
-              text-gray-400 hover:text-gray-600 dark:hover:text-gray-200
-              hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            <IconChevronLeft
-              className={`size-4 transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`}
-            />
-          </button>
+          {/* Pin / close button — only visible when expanded */}
+          {!isCollapsed && (
+            <button
+              onClick={isMobile ? closeMobile : togglePinned}
+              className={cn(interactive.iconButtonSm, "ml-auto")}
+              aria-label={
+                isMobile
+                  ? "Close menu"
+                  : pinned
+                    ? "Unpin sidebar"
+                    : "Pin sidebar open"
+              }
+              title={
+                isMobile
+                  ? "Close menu"
+                  : pinned
+                    ? "Unpin sidebar"
+                    : "Pin sidebar open"
+              }
+            >
+              {isMobile ? (
+                <IconChevronLeft className="size-4" />
+              ) : (
+                <PinIcon
+                  className={cn(
+                    "size-3.5 transition-all duration-200",
+                    pinned
+                      ? "text-primary-500 rotate-0"
+                      : "text-gray-400 rotate-45 hover:text-gray-200"
+                  )}
+                />
+              )}
+            </button>
+          )}
         </div>
 
         {/* Search */}
-        {!collapsed && (
+        {!isCollapsed && (
           <div className="px-3 mb-2">
             <div className="relative">
               <IconSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-gray-500" />
               <input
                 type="text"
                 placeholder="Search tools..."
-                className="w-full h-9 rounded-lg pl-9 pr-3
-                  bg-gray-100 dark:bg-gray-800/50
-                  border border-gray-200 dark:border-gray-700/50
-                  text-sm text-gray-900 dark:text-gray-200
-                  placeholder:text-gray-500
-                  focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500/50
-                  transition-all"
+                className={interactive.searchInput}
               />
             </div>
           </div>
@@ -149,30 +210,31 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         <nav aria-label="Main navigation" className="flex-1 overflow-y-auto px-3 space-y-4 mt-2 scrollbar-thin">
           {suiteNavGroups.map((group) => (
             <div key={group.label}>
-              {!collapsed && (
-                <span className="block px-2 mb-1.5 text-[0.625rem] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+              {!isCollapsed && (
+                <span className={cn("block px-2 mb-1.5", typography.label)}>
                   {group.label}
                 </span>
               )}
               <ul className="space-y-0.5">
                 {group.items.map((item) => {
                   const Icon = iconMap[item.icon];
+                  const isActive =
+                    item.active ||
+                    pathname === item.href ||
+                    pathname.startsWith(item.href + "/");
                   return (
                     <li key={item.label}>
                       <Link
                         href={item.href}
-                        className={`
-                          flex items-center gap-3 h-10 rounded-lg transition-all duration-150
-                          ${collapsed ? "justify-center px-0" : "px-3"}
-                          ${
-                            item.active
-                              ? "bg-primary-500 text-gray-950 font-semibold shadow-sm shadow-primary-500/20"
-                              : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-gray-200"
-                          }
-                        `}
+                        className={cn(
+                          "flex items-center gap-3 h-10 rounded-lg",
+                          animations.fast,
+                          isCollapsed ? "justify-center px-0" : "px-3",
+                          isActive ? surfaces.activeItem : interactive.navItem
+                        )}
                       >
                         {Icon && <Icon className="size-5 shrink-0" />}
-                        {!collapsed && (
+                        {!isCollapsed && (
                           <span className="text-sm truncate">{item.label}</span>
                         )}
                       </Link>
@@ -185,12 +247,20 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         </nav>
 
         {/* Pro badge at bottom */}
-        {!collapsed && (
+        {!isCollapsed && (
           <div className="p-3 shrink-0">
-            <div className="rounded-xl bg-linear-to-br from-primary-500/10 to-secondary-500/10 border border-primary-500/20 p-4">
+            <div
+              className={cn(
+                "rounded-xl p-4",
+                gradients.brandSubtle,
+                borders.accent
+              )}
+            >
               <div className="flex items-center gap-2 mb-2">
                 <IconSparkles className="size-4 text-primary-500" />
-                <span className="text-sm font-semibold text-gray-900 dark:text-white">AI Powered</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                  AI Powered
+                </span>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Every tool uses advanced AI to deliver jaw-dropping results.
@@ -198,10 +268,47 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             </div>
           </div>
         )}
-        {collapsed && <div className="h-4 shrink-0" />}
+        {isCollapsed && <div className="h-4 shrink-0" />}
+      </>
+    );
+  }
+
+  return (
+    <>
+      {/* ── Mobile overlay backdrop ────────────────────────────── */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={animations.fade}
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+            onClick={closeMobile}
+            aria-hidden="true"
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Desktop sidebar (hover-to-expand + pin) ────────────── */}
+      <aside
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={cn(
+          "fixed top-0 left-0 z-50 h-dvh flex-col overflow-hidden",
+          surfaces.sidebar,
+          borders.sidebar,
+          sidebarConfig.transition,
+          isExpanded ? sidebarConfig.expandedWidth : sidebarConfig.collapsedWidth,
+          // Overlay shadow when hover-expanded (not pinned)
+          isOverlay && sidebarConfig.overlayShadow,
+          "hidden lg:flex"
+        )}
+      >
+        {renderNavContent(!isExpanded, false)}
       </aside>
 
-      {/* Mobile sidebar — slide-in with swipe-to-close */}
+      {/* ── Mobile sidebar — slide-in with swipe-to-close ──────── */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.aside
@@ -209,87 +316,21 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            transition={animations.sidebarSpring}
             drag="x"
             dragConstraints={{ left: -260, right: 0 }}
             dragElastic={0.1}
             onDragEnd={handleDragEnd}
-            className="fixed top-0 left-0 z-50 h-dvh w-60 flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 lg:hidden"
+            className={cn(
+              "fixed top-0 left-0 z-50 h-dvh flex flex-col lg:hidden",
+              sidebarConfig.expandedWidth,
+              surfaces.sidebar,
+              borders.sidebar
+            )}
             role="dialog"
             aria-label="Navigation menu"
           >
-            {/* Logo row */}
-            <div className="flex items-center h-14 px-4 shrink-0">
-              <div className="size-8 rounded-lg bg-linear-to-br from-primary-500 to-secondary-500 shrink-0 flex items-center justify-center shadow-lg shadow-primary-500/20">
-                <IconSparkles className="size-4 text-gray-950" />
-              </div>
-              <span className="ml-3 text-base font-bold text-gray-900 dark:text-white tracking-tight">
-                DM<span className="text-primary-500">Suite</span>
-              </span>
-              <button
-                onClick={onMobileClose}
-                className="ml-auto flex items-center justify-center size-7 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                aria-label="Close navigation"
-              >
-                <IconChevronLeft className="size-4" />
-              </button>
-            </div>
-
-            {/* Search */}
-            <div className="px-3 mb-2">
-              <div className="relative">
-                <IconSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="Search tools..."
-                  className="w-full h-9 rounded-lg pl-9 pr-3 bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700/50 text-sm text-gray-900 dark:text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500/50 transition-all"
-                />
-              </div>
-            </div>
-
-            {/* Nav groups */}
-            <nav aria-label="Main navigation" className="flex-1 overflow-y-auto px-3 space-y-4 mt-2 scrollbar-thin">
-              {suiteNavGroups.map((group) => (
-                <div key={group.label}>
-                  <span className="block px-2 mb-1.5 text-[0.625rem] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
-                    {group.label}
-                  </span>
-                  <ul className="space-y-0.5">
-                    {group.items.map((item) => {
-                      const Icon = iconMap[item.icon];
-                      return (
-                        <li key={item.label}>
-                          <Link
-                            href={item.href}
-                            className={`flex items-center gap-3 h-10 rounded-lg px-3 transition-all duration-150 ${
-                              item.active
-                                ? "bg-primary-500 text-gray-950 font-semibold shadow-sm shadow-primary-500/20"
-                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-gray-200"
-                            }`}
-                          >
-                            {Icon && <Icon className="size-5 shrink-0" />}
-                            <span className="text-sm truncate">{item.label}</span>
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              ))}
-            </nav>
-
-            {/* Pro badge */}
-            <div className="p-3 shrink-0">
-              <div className="rounded-xl bg-linear-to-br from-primary-500/10 to-secondary-500/10 border border-primary-500/20 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <IconSparkles className="size-4 text-primary-500" />
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white">AI Powered</span>
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Every tool uses advanced AI to deliver jaw-dropping results.
-                </p>
-              </div>
-            </div>
+            {renderNavContent(false, true)}
           </motion.aside>
         )}
       </AnimatePresence>

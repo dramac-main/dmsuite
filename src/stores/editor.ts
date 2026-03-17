@@ -8,12 +8,13 @@ import { create } from "zustand";
 import type {
   DesignDocumentV2, LayerV2, LayerId,
 } from "@/lib/editor/schema";
-import {
-  createDocumentV2, addLayer, removeLayer, updateLayer,
-  reorderLayerV2, duplicateLayerV2,
-} from "@/lib/editor/schema";
+import { createDocumentV2 } from "@/lib/editor/schema";
 import type { Command, CommandStackState } from "@/lib/editor/commands";
-import { createCommandStack, executeCommand, undo, redo, canUndo, canRedo } from "@/lib/editor/commands";
+import {
+  createCommandStack, executeCommand, undo, redo, canUndo, canRedo,
+  createAddLayerCommand, createDeleteCommand, createUpdateCommand,
+  createReorderCommand, createDuplicateCommand, createBatchCommand,
+} from "@/lib/editor/commands";
 import type { PatchOp, EditIntent, RevisionScope, PatchResult } from "@/lib/editor/ai-patch";
 import { validateAndApplyPatch, processIntent } from "@/lib/editor/ai-patch";
 
@@ -153,9 +154,10 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
 
   execute: (cmd) => {
     const state = get();
-    const newDoc = cmd.execute(state.doc);
-    const newStack = executeCommand(state.commandStack, cmd);
-    set({ doc: newDoc, commandStack: newStack });
+    // Sync commandStack document with current doc before executing
+    const syncedStack = { ...state.commandStack, document: state.doc };
+    const newStack = executeCommand(syncedStack, cmd);
+    set({ doc: newStack.document, commandStack: newStack });
   },
 
   undoCmd: () => {
@@ -199,36 +201,28 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
 
   // ---- Layer CRUD ----
   addLayerToDoc: (layer, parentId) => {
-    const state = get();
-    const newDoc = addLayer(state.doc, layer, parentId);
-    set({ doc: newDoc });
+    const cmd = createAddLayerCommand(layer, parentId);
+    get().execute(cmd);
   },
 
   removeLayersFromDoc: (ids) => {
-    const state = get();
-    let newDoc = state.doc;
-    for (const id of ids) {
-      newDoc = removeLayer(newDoc, id);
-    }
-    set({ doc: newDoc });
+    const cmd = createDeleteCommand(ids);
+    get().execute(cmd);
   },
 
   updateLayerInDoc: (id, partial) => {
-    const state = get();
-    const newDoc = updateLayer(state.doc, id, partial);
-    set({ doc: newDoc });
+    const cmd = createUpdateCommand(id, partial);
+    get().execute(cmd);
   },
 
   reorderLayerInDoc: (id, direction) => {
-    const state = get();
-    const newDoc = reorderLayerV2(state.doc, id, direction);
-    set({ doc: newDoc });
+    const cmd = createReorderCommand(id, direction);
+    get().execute(cmd);
   },
 
   duplicateLayerInDoc: (id) => {
-    const state = get();
-    const newDoc = duplicateLayerV2(state.doc, id);
-    set({ doc: newDoc });
+    const cmd = createDuplicateCommand(id);
+    get().execute(cmd);
   },
 
   // ---- Interaction ----
@@ -382,7 +376,7 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
   pasteClipboard: () => {
     const state = get();
     if (state.clipboardLayers.length === 0) return;
-    let doc = state.doc;
+    const addCmds: Command[] = [];
     const newIds: LayerId[] = [];
     for (const layer of state.clipboardLayers) {
       const clone = JSON.parse(JSON.stringify(layer)) as LayerV2;
@@ -396,17 +390,23 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
           y: clone.transform.position.y + 20,
         },
       };
-      doc = addLayer(doc, clone);
+      addCmds.push(createAddLayerCommand(clone));
       newIds.push(clone.id);
     }
-    set({
-      doc: { ...doc, selection: { ...doc.selection, ids: newIds } },
-    });
+    const batch = createBatchCommand(addCmds, "Paste layers");
+    get().execute(batch);
+    // Select the pasted layers
+    set((s) => ({
+      doc: { ...s.doc, selection: { ...s.doc.selection, ids: newIds } },
+    }));
   },
 
   cutSelection: () => {
     const state = get();
+    const ids = state.doc.selection.ids;
+    if (ids.length === 0) return;
     state.copySelection();
-    state.removeLayersFromDoc(state.doc.selection.ids);
+    const cmd = createDeleteCommand(ids);
+    get().execute(cmd);
   },
 }));

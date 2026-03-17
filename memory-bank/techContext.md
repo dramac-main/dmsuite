@@ -35,18 +35,35 @@ d:\dramac-ai-suite\
 │   │   ├── ThemeSwitch.tsx         # Toggle button
 │   │   ├── icons.tsx               # 81 SVG icons + iconMap (69 mapped)
 │   │   ├── dashboard/             # Hub components (7 files)
+│   │   ├── editor/                # vNext canvas editor components
 │   │   └── workspaces/            # Tool workspace components
-│   │       └── AIChatWorkspace.tsx # AI Chat with streaming
+│   │       ├── resume-cv/         # Resume builder (wizard + editor)
+│   │       │   ├── StepEditor.tsx  # 3-panel editor (20/60/20)
+│   │       │   └── editor/         # Design/Sections/Preview panels
+│   │       └── ...                 # Other workspace components
 │   ├── stores/                     # Zustand state management
 │   │   ├── sidebar.ts             # Sidebar state (persisted)
 │   │   ├── chat.ts                # Chat conversations (persisted)
 │   │   ├── preferences.ts         # User preferences (persisted)
+│   │   ├── resume-editor.ts       # Resume editor (temporal + immer + zundo)
+│   │   ├── editor.ts              # vNext canvas editor store
 │   │   └── index.ts               # Barrel export
 │   ├── lib/
 │   │   ├── utils.ts               # cn() class merge utility
 │   │   ├── tokens.ts              # TypeScript design tokens
 │   │   ├── jsonld.ts              # JSON-LD structured data helpers
-│   │   └── colors.ts              # Safe color class lookup maps
+│   │   ├── colors.ts              # Safe color class lookup maps
+│   │   ├── resume/                # Resume builder system
+│   │   │   ├── schema.ts          # Zod schema (26 templates, 28 fonts)
+│   │   │   ├── pagination.ts      # Pagination engine (26 configs)
+│   │   │   ├── export.ts          # PDF/DOCX/text/JSON export
+│   │   │   └── templates/
+│   │   │       ├── template-defs.ts    # 20 ProTemplateDefinition configs
+│   │   │       ├── UniversalTemplate.tsx # Config-driven universal renderer
+│   │   │       ├── templates.ts        # Registry (26 total)
+│   │   │       ├── TemplateRenderer.tsx # Renderer + pagination + fonts
+│   │   │       └── [6 legacy templates]
+│   │   └── editor/                # vNext editor infrastructure
 │   └── data/
 │       ├── config/colors.ts        # JS color config
 │       └── tools.ts                # 250+ tools, 8 categories, enhanced types
@@ -98,6 +115,10 @@ Dev dependencies: TypeScript types, ESLint, PostCSS, Tailwind.
 ## Known Technical Gotchas
 1. **ThemeProvider** uses lazy initializer (`getInitialTheme()`) to avoid hydration mismatch — do NOT use `useEffect` for initial state
 2. **Sidebar state** must be lifted to the dashboard page to avoid duplicate hamburger buttons
+3. **react-resizable-panels** v4.6.5: numeric size = pixels, string size = percentages; Group `defaultLayout` treats numbers as %
+4. **Resume Pro Templates** use `require()` in store `changeTemplate` action — may need dynamic import in Next.js client context
+5. **Google Fonts `<link>` injection** in TemplateRenderer — potential hydration warnings in Next.js SSR
+6. **Pro template measurement** in hidden container uses legacy PageHeader + SectionRenderer — pro templates may need their own measurement approach
 3. **Tailwind v4** requires PostCSS config with `@tailwindcss/postcss` plugin
 4. **Dev server port 6006** — configured in package.json, not default 3000
 

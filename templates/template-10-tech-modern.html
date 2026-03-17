@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV Template - Tech Modern</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #0C1222;
+            --bg-card: #111827;
+            --bg-card-alt: #1E293B;
+            --green: #22C55E;
+            --green-dim: rgba(34, 197, 94, 0.1);
+            --cyan: #06B6D4;
+            --amber: #F59E0B;
+            --purple: #A78BFA;
+            --red: #EF4444;
+            --text-white: #F1F5F9;
+            --text-gray: #94A3B8;
+            --text-dark: #64748B;
+            --border: #1E293B;
+            --line: #334155;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            background: var(--bg);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            color: var(--text-white);
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+        }
+
+        /* ====== TERMINAL HEADER ====== */
+        .terminal-bar {
+            background: var(--bg-card);
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .term-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+        }
+        .term-red { background: #EF4444; }
+        .term-yellow { background: #F59E0B; }
+        .term-green { background: #22C55E; }
+        .term-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-dark);
+            margin-left: 8px;
+        }
+
+        /* ====== HEADER ====== */
+        .header {
+            padding: 28px 36px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+        .header-grid {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 20px;
+            align-items: start;
+        }
+        .comment {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-dark);
+        }
+        .name-line {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-gray);
+            margin-top: 4px;
+        }
+        .name-line .keyword { color: var(--purple); }
+        .name-line .func { color: var(--cyan); }
+        .name-line .string { color: var(--green); }
+        .name-line .number { color: var(--amber); }
+        .name-line .paren { color: var(--text-dark); }
+
+        .big-name {
+            font-size: 32px;
+            font-weight: 800;
+            margin-top: 6px;
+            line-height: 1.1;
+        }
+        .big-name .first { color: var(--text-white); }
+        .big-name .last { color: var(--cyan); }
+        .big-role {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--green);
+            margin-top: 4px;
+        }
+
+        .status-badges {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: flex-end;
+        }
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-gray);
+        }
+        .status-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+        }
+
+        /* ====== CONTENT ====== */
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 200px;
+            gap: 24px;
+            padding: 20px 36px 28px;
+        }
+
+        /* Sections */
+        .section { margin-bottom: 18px; }
+        .section-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--cyan);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .section-title .bracket { color: var(--purple); }
+        .section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--line);
+        }
+
+        /* About / Config */
+        .config-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            line-height: 1.7;
+        }
+        .config-key { color: var(--cyan); }
+        .config-val { color: var(--green); }
+        .config-comment { color: var(--text-dark); }
+
+        /* Experience */
+        .exp-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 8px;
+        }
+        .exp-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .exp-role {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-white);
+        }
+        .exp-date {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--amber);
+        }
+        .exp-company {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--cyan);
+            margin-bottom: 6px;
+        }
+        .exp-bullets {
+            font-size: 11px;
+            color: var(--text-gray);
+            line-height: 1.55;
+        }
+        .exp-bullets li {
+            margin-left: 14px;
+            margin-bottom: 2px;
+        }
+        .exp-bullets li::marker { color: var(--green); }
+
+        .exp-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 6px;
+        }
+        .stack-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        /* Education */
+        .edu-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 6px;
+        }
+        .edu-degree {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-white);
+        }
+        .edu-school {
+            font-size: 11px;
+            color: var(--text-dark);
+        }
+        .edu-year {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--green);
+        }
+
+        /* ====== SIDEBAR ====== */
+        .sidebar {}
+
+        /* Tech Stack */
+        .tech-category {
+            margin-bottom: 10px;
+        }
+        .tech-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-dark);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .tech-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+        }
+        .tech-item {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            padding: 3px 7px;
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-gray);
+        }
+
+        /* GitHub Stats */
+        .gh-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .gh-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+        }
+        .gh-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-dark);
+        }
+        .gh-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        /* Certifications */
+        .cert-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .cert-icon {
+            width: 20px; height: 20px;
+            min-width: 20px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+        }
+        .cert-text {
+            font-size: 11px;
+            color: var(--text-gray);
+        }
+        .cert-text strong {
+            color: var(--text-white);
+            display: block;
+            font-size: 11px;
+        }
+
+        /* Contact */
+        .contact-code {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            line-height: 1.7;
+        }
+        .cc-key { color: var(--cyan); }
+        .cc-val { color: var(--green); }
+
+        @media print {
+            body { background: none; padding: 0; }
+            .page { box-shadow: none; }
+            .exp-card, .edu-card, .section { break-inside: avoid; }
+        }
+        @page { size: A4; margin: 0; }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- TERMINAL BAR -->
+        <div class="terminal-bar">
+            <div class="term-dot term-red"></div>
+            <div class="term-dot term-yellow"></div>
+            <div class="term-dot term-green"></div>
+            <span class="term-title">~/curriculum-vitae — bash</span>
+        </div>
+
+        <!-- HEADER -->
+        <div class="header">
+            <div class="header-grid">
+                <div>
+                    <div class="comment">// Senior DevOps & Cloud Infrastructure Engineer</div>
+                    <div class="name-line">
+                        <span class="keyword">const</span> <span class="func">engineer</span> <span class="paren">=</span> <span class="keyword">new</span> <span class="func">Person</span><span class="paren">(</span><span class="string">"Chen Wei"</span><span class="paren">,</span> <span class="number">2017</span><span class="paren">);</span>
+                    </div>
+                    <div class="big-name">
+                        <span class="first">Chen </span><span class="last">Wei</span>
+                    </div>
+                    <div class="big-role">$ DevOps & Cloud Infrastructure Engineer</div>
+                </div>
+                <div class="status-badges">
+                    <div class="status-badge">
+                        <div class="status-dot" style="background: var(--green);"></div>
+                        Open to work
+                    </div>
+                    <div class="status-badge">
+                        <div class="status-dot" style="background: var(--amber);"></div>
+                        8 years exp
+                    </div>
+                    <div class="status-badge">
+                        <div class="status-dot" style="background: var(--cyan);"></div>
+                        Remote OK
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTENT -->
+        <div class="content">
+            <div class="main-col">
+                <div class="section">
+                    <div class="section-title"><span class="bracket">{</span> config <span class="bracket">}</span></div>
+                    <div class="config-block">
+                        <span class="config-comment">// About me</span><br>
+                        <span class="config-key">"summary"</span>: <span class="config-val">"Infrastructure architect obsessed with<br>
+                        &nbsp;&nbsp;reliability, automation, and developer experience.<br>
+                        &nbsp;&nbsp;8 years building systems that scale from 0 to<br>
+                        &nbsp;&nbsp;millions. Zero-downtime migrations are my specialty."</span>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title"><span class="bracket">{</span> experience <span class="bracket">}</span></div>
+
+                    <div class="exp-card">
+                        <div class="exp-head">
+                            <div class="exp-role">Principal DevOps Engineer</div>
+                            <div class="exp-date">2022 → present</div>
+                        </div>
+                        <div class="exp-company">@ Cloudflare</div>
+                        <ul class="exp-bullets">
+                            <li>Architected multi-region infrastructure serving 20M+ RPM</li>
+                            <li>Built internal developer platform reducing deploy time by 70%</li>
+                            <li>Led zero-downtime migration of 500+ microservices to Kubernetes</li>
+                        </ul>
+                        <div class="exp-stack">
+                            <span class="stack-tag" style="background: var(--green-dim); color: var(--green);">Kubernetes</span>
+                            <span class="stack-tag" style="background: rgba(6,182,212,0.1); color: var(--cyan);">Terraform</span>
+                            <span class="stack-tag" style="background: rgba(167,139,250,0.1); color: var(--purple);">Go</span>
+                            <span class="stack-tag" style="background: rgba(245,158,11,0.1); color: var(--amber);">Prometheus</span>
+                        </div>
+                    </div>
+
+                    <div class="exp-card">
+                        <div class="exp-head">
+                            <div class="exp-role">Senior SRE</div>
+                            <div class="exp-date">2019 → 2022</div>
+                        </div>
+                        <div class="exp-company">@ Datadog</div>
+                        <ul class="exp-bullets">
+                            <li>Maintained 99.99% uptime for monitoring infrastructure</li>
+                            <li>Automated incident response reducing MTTR by 55%</li>
+                            <li>Built observability stack processing 10B+ data points daily</li>
+                        </ul>
+                        <div class="exp-stack">
+                            <span class="stack-tag" style="background: var(--green-dim); color: var(--green);">AWS</span>
+                            <span class="stack-tag" style="background: rgba(6,182,212,0.1); color: var(--cyan);">Python</span>
+                            <span class="stack-tag" style="background: rgba(167,139,250,0.1); color: var(--purple);">Ansible</span>
+                        </div>
+                    </div>
+
+                    <div class="exp-card">
+                        <div class="exp-head">
+                            <div class="exp-role">DevOps Engineer</div>
+                            <div class="exp-date">2017 → 2019</div>
+                        </div>
+                        <div class="exp-company">@ DigitalOcean</div>
+                        <ul class="exp-bullets">
+                            <li>Built CI/CD pipelines processing 2K+ deployments per day</li>
+                            <li>Implemented infrastructure-as-code across 3 data centers</li>
+                        </ul>
+                        <div class="exp-stack">
+                            <span class="stack-tag" style="background: var(--green-dim); color: var(--green);">Docker</span>
+                            <span class="stack-tag" style="background: rgba(245,158,11,0.1); color: var(--amber);">Jenkins</span>
+                            <span class="stack-tag" style="background: rgba(239,68,68,0.1); color: var(--red);">Bash</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title"><span class="bracket">{</span> education <span class="bracket">}</span></div>
+                    <div class="edu-card">
+                        <div class="edu-degree">M.S. Computer Engineering</div>
+                        <div class="edu-school">Georgia Institute of Technology</div>
+                        <div class="edu-year">2015 — 2017</div>
+                    </div>
+                    <div class="edu-card">
+                        <div class="edu-degree">B.S. Computer Science</div>
+                        <div class="edu-school">Tsinghua University, Beijing</div>
+                        <div class="edu-year">2011 — 2015</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SIDEBAR -->
+            <div class="sidebar">
+                <div class="section">
+                    <div class="section-title"><span class="bracket">{</span> stack <span class="bracket">}</span></div>
+                    <div class="tech-category">
+                        <div class="tech-label">Infrastructure</div>
+                        <div class="tech-items">
+                            <span class="tech-item">Kubernetes</span>
+                            <span class="tech-item">Docker</span>
+                            <span class="tech-item">Terraform</span>
+                            <span class="tech-item">Pulumi</span>
+                        </div>
+                    </div>
+                    <div class="tech-category">
+                        <div class="tech-label">Cloud</div>
+                        <div class="tech-items">
+                            <span class="tech-item">AWS</span>
+                            <span class="tech-item">GCP</span>
+                            <span class="tech-item">Azure</span>
+                        </div>
+                    </div>
+                    <div class="tech-category">
+                        <div class="tech-label">Languages</div>
+                        <div class="tech-items">
+                            <span class="tech-item">Go</span>
+                            <span class="tech-item">Python</span>
+                            <span class="tech-item">Rust</span>
+                            <span class="tech-item">Bash</span>
+                        </div>
+                    </div>
+                    <div class="tech-category">
+                        <div class="tech-label">Observability</div>
+                        <div class="tech-items">
+                            <span class="tech-item">Prometheus</span>
+                            <span class="tech-item">Grafana</span>
+                            <span class="tech-item">ELK</span>
+                        </div>
+                    </div>
+                    <div class="tech-category">
+                        <div class="tech-label">CI/CD</div>
+                        <div class="tech-items">
+                            <span class="tech-item">GitHub Actions</span>
+                            <span class="tech-item">ArgoCD</span>
+                            <span class="tech-item">Jenkins</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title"><span class="bracket">{</span> github <span class="bracket">}</span></div>
+                    <div class="gh-card">
+                        <div class="gh-stat">
+                            <span class="gh-label">Repos</span>
+                            <span class="gh-value" style="color: var(--cyan);">85+</span>
+                        </div>
+                        <div class="gh-stat">
+                            <span class="gh-label">Stars</span>
+                            <span class="gh-value" style="color: var(--amber);">3.2K</span>
+                        </div>
+                        <div class="gh-stat">
+                            <span class="gh-label">Contributions</span>
+                            <span class="gh-value" style="color: var(--green);">4,800+</span>
+                        </div>
+                        <div class="gh-stat">
+                            <span class="gh-label">Followers</span>
+                            <span class="gh-value" style="color: var(--purple);">1.1K</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title"><span class="bracket">{</span> certs <span class="bracket">}</span></div>
+                    <div class="cert-row">
+                        <div class="cert-icon" style="background: var(--green-dim);">☁️</div>
+                        <div class="cert-text">
+                            <strong>AWS Solutions Architect Pro</strong>
+                            Amazon — 2023
+                        </div>
+                    </div>
+                    <div class="cert-row">
+                        <div class="cert-icon" style="background: rgba(6,182,212,0.1);">⚙️</div>
+                        <div class="cert-text">
+                            <strong>CKA (Kubernetes Admin)</strong>
+                            CNCF — 2022
+                        </div>
+                    </div>
+                    <div class="cert-row">
+                        <div class="cert-icon" style="background: rgba(167,139,250,0.1);">🔒</div>
+                        <div class="cert-text">
+                            <strong>HashiCorp Terraform Assoc.</strong>
+                            HashiCorp — 2021
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title"><span class="bracket">{</span> contact <span class="bracket">}</span></div>
+                    <div class="contact-code">
+                        <span class="cc-key">email</span>: <span class="cc-val">"chen.wei@email.com"</span><br>
+                        <span class="cc-key">phone</span>: <span class="cc-val">"+1 555 777 8899"</span><br>
+                        <span class="cc-key">location</span>: <span class="cc-val">"San Jose, CA"</span><br>
+                        <span class="cc-key">github</span>: <span class="cc-val">"github.com/chenwei"</span><br>
+                        <span class="cc-key">blog</span>: <span class="cc-val">"infra.chenwei.dev"</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

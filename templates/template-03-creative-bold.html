@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV Template - Creative Bold</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:wght@400;500;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --hot-pink: #FF2E6C;
+            --electric-blue: #3B82F6;
+            --dark: #0F0F0F;
+            --off-white: #F5F5F0;
+            --text-dark: #1A1A1A;
+            --text-medium: #555;
+            --text-light: #999;
+            --yellow: #FBBF24;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: #444;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            background: var(--off-white);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+        }
+
+        /* ====== HERO SECTION ====== */
+        .hero {
+            background: var(--dark);
+            padding: 40px 44px 36px;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -60px;
+            right: -40px;
+            width: 200px;
+            height: 200px;
+            background: var(--hot-pink);
+            border-radius: 50%;
+            opacity: 0.15;
+        }
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: -30px;
+            right: 120px;
+            width: 100px;
+            height: 100px;
+            background: var(--electric-blue);
+            border-radius: 50%;
+            opacity: 0.1;
+        }
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: end;
+            gap: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        .hero-name {
+            font-family: 'Archivo Black', sans-serif;
+            font-size: 44px;
+            color: white;
+            line-height: 1;
+            letter-spacing: -1px;
+        }
+        .hero-name span {
+            color: var(--hot-pink);
+        }
+        .hero-title {
+            font-size: 13px;
+            color: var(--yellow);
+            font-weight: 700;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-top: 10px;
+        }
+        .hero-contact {
+            text-align: right;
+        }
+        .hero-contact-item {
+            font-size: 11px;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 4px;
+        }
+        .hero-contact-item strong {
+            color: var(--hot-pink);
+        }
+
+        /* ====== COLOR STRIP ====== */
+        .color-strip {
+            height: 5px;
+            display: flex;
+        }
+        .color-strip div { flex: 1; }
+        .strip-1 { background: var(--hot-pink); }
+        .strip-2 { background: var(--electric-blue); }
+        .strip-3 { background: var(--yellow); }
+        .strip-4 { background: var(--dark); }
+
+        /* ====== CONTENT ====== */
+        .content {
+            padding: 28px 44px;
+            display: grid;
+            grid-template-columns: 1fr 200px;
+            gap: 32px;
+        }
+
+        /* Sections */
+        .section { margin-bottom: 22px; }
+        .section-title {
+            font-family: 'Archivo Black', sans-serif;
+            font-size: 14px;
+            color: var(--dark);
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title .dot {
+            width: 8px; height: 8px;
+            background: var(--hot-pink);
+            border-radius: 2px;
+            transform: rotate(45deg);
+        }
+
+        /* About */
+        .about-text {
+            font-size: 11px;
+            line-height: 1.75;
+            color: var(--text-medium);
+            border-left: 3px solid var(--hot-pink);
+            padding-left: 14px;
+        }
+
+        /* Experience */
+        .exp-item {
+            margin-bottom: 18px;
+            position: relative;
+            padding-left: 16px;
+        }
+        .exp-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 6px;
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            border: 2px solid var(--electric-blue);
+        }
+        .exp-item::after {
+            content: '';
+            position: absolute;
+            left: 3.5px;
+            top: 18px;
+            width: 1px;
+            height: calc(100% - 4px);
+            background: #DDD;
+        }
+        .exp-item:last-child::after { display: none; }
+        .exp-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .exp-role {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+        .exp-date {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--hot-pink);
+            letter-spacing: 1px;
+            background: rgba(255, 46, 108, 0.08);
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        .exp-company {
+            font-size: 11px;
+            color: var(--electric-blue);
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .exp-desc {
+            font-size: 11px;
+            color: var(--text-medium);
+            line-height: 1.6;
+        }
+        .exp-desc li {
+            margin-bottom: 2px;
+            margin-left: 14px;
+        }
+        .exp-desc li::marker {
+            color: var(--yellow);
+        }
+
+        /* Education */
+        .edu-card {
+            background: var(--dark);
+            color: white;
+            padding: 14px 16px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .edu-degree {
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .edu-school {
+            font-size: 11px;
+            color: rgba(255,255,255,0.6);
+        }
+        .edu-year {
+            font-size: 11px;
+            color: var(--yellow);
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+        /* Sidebar */
+        .side-col {}
+
+        /* Skills */
+        .skill-bar-group { margin-bottom: 10px; }
+        .skill-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+        }
+        .skill-pct { color: var(--hot-pink); }
+        .skill-track {
+            height: 5px;
+            background: #E5E5E0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .skill-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: linear-gradient(to right, var(--hot-pink), var(--electric-blue));
+        }
+
+        /* Tools */
+        .tool-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 10px;
+            background: var(--dark);
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            border-radius: 4px;
+            margin: 0 4px 6px 0;
+        }
+
+        /* Awards */
+        .award-item {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: flex-start;
+        }
+        .award-badge {
+            width: 22px; height: 22px;
+            min-width: 22px;
+            background: var(--yellow);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+        }
+        .award-text {
+            font-size: 11px;
+            color: var(--text-medium);
+            line-height: 1.4;
+        }
+        .award-text strong {
+            color: var(--text-dark);
+            display: block;
+        }
+
+        /* Social */
+        .social-item {
+            font-size: 11px;
+            color: var(--text-medium);
+            padding: 6px 0;
+            border-bottom: 1px dashed #DDD;
+        }
+        .social-item:last-child { border: none; }
+        .social-item strong {
+            color: var(--electric-blue);
+            display: block;
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        @media print {
+            body { background: none; padding: 0; }
+            .page { box-shadow: none; }
+            .exp-item, .edu-card, .section { break-inside: avoid; }
+        }
+        @page { size: A4; margin: 0; }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- HERO -->
+        <div class="hero">
+            <div class="hero-grid">
+                <div>
+                    <div class="hero-name">MAYA<br><span>RODRIGUEZ</span></div>
+                    <div class="hero-title">Creative Director</div>
+                </div>
+                <div class="hero-contact">
+                    <div class="hero-contact-item"><strong>✉</strong> maya.rodriguez@email.com</div>
+                    <div class="hero-contact-item"><strong>☎</strong> +1 (555) 456-7890</div>
+                    <div class="hero-contact-item"><strong>◉</strong> Brooklyn, New York</div>
+                    <div class="hero-contact-item"><strong>◈</strong> behance.net/mayarodriguez</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="color-strip">
+            <div class="strip-1"></div>
+            <div class="strip-2"></div>
+            <div class="strip-3"></div>
+            <div class="strip-4"></div>
+        </div>
+
+        <!-- CONTENT -->
+        <div class="content">
+            <div class="main-col">
+                <div class="section">
+                    <div class="section-title"><div class="dot"></div> ABOUT ME</div>
+                    <div class="about-text">
+                        Multidisciplinary Creative Director with 10+ years of experience shaping visual identities for global brands. I blend strategy with artistry to create campaigns that don't just look good — they move people. Led rebrands for 3 Fortune 100 companies and launched 40+ award-winning campaigns.
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title"><div class="dot"></div> EXPERIENCE</div>
+
+                    <div class="exp-item">
+                        <div class="exp-header">
+                            <div class="exp-role">Creative Director</div>
+                            <div class="exp-date">2021 — NOW</div>
+                        </div>
+                        <div class="exp-company">Wieden+Kennedy</div>
+                        <ul class="exp-desc">
+                            <li>Oversee a creative team of 25 across brand, digital, and motion</li>
+                            <li>Led Nike's "Move Forward" campaign reaching 500M+ impressions</li>
+                            <li>Won 6 Cannes Lions, including 2 Grand Prix awards</li>
+                        </ul>
+                    </div>
+
+                    <div class="exp-item">
+                        <div class="exp-header">
+                            <div class="exp-role">Senior Art Director</div>
+                            <div class="exp-date">2018 — 2021</div>
+                        </div>
+                        <div class="exp-company">Pentagram</div>
+                        <ul class="exp-desc">
+                            <li>Designed visual identity systems for MasterCard, Slack, and Spotify</li>
+                            <li>Managed $2M+ project budgets and client relationships</li>
+                            <li>Mentored 8 junior designers into senior-level roles</li>
+                        </ul>
+                    </div>
+
+                    <div class="exp-item">
+                        <div class="exp-header">
+                            <div class="exp-role">Graphic Designer</div>
+                            <div class="exp-date">2015 — 2018</div>
+                        </div>
+                        <div class="exp-company">IDEO</div>
+                        <ul class="exp-desc">
+                            <li>Created design concepts for products, services, and experiences</li>
+                            <li>Collaborated on human-centered design projects for 15+ clients</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title"><div class="dot"></div> EDUCATION</div>
+                    <div class="edu-card">
+                        <div class="edu-degree">MFA Visual Communication</div>
+                        <div class="edu-school">Parsons School of Design, New York</div>
+                        <div class="edu-year">2013 — 2015</div>
+                    </div>
+                    <div class="edu-card">
+                        <div class="edu-degree">BFA Graphic Design</div>
+                        <div class="edu-school">California College of the Arts</div>
+                        <div class="edu-year">2009 — 2013</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="side-col">
+                <div class="section">
+                    <div class="section-title"><div class="dot"></div> SKILLS</div>
+                    <div class="skill-bar-group">
+                        <div class="skill-label"><span>Brand Strategy</span><span class="skill-pct">95%</span></div>
+                        <div class="skill-track"><div class="skill-fill" style="width: 95%"></div></div>
+                    </div>
+                    <div class="skill-bar-group">
+                        <div class="skill-label"><span>Visual Design</span><span class="skill-pct">98%</span></div>
+                        <div class="skill-track"><div class="skill-fill" style="width: 98%"></div></div>
+                    </div>
+                    <div class="skill-bar-group">
+                        <div class="skill-label"><span>Motion Graphics</span><span class="skill-pct">85%</span></div>
+                        <div class="skill-track"><div class="skill-fill" style="width: 85%"></div></div>
+                    </div>
+                    <div class="skill-bar-group">
+                        <div class="skill-label"><span>Typography</span><span class="skill-pct">92%</span></div>
+                        <div class="skill-track"><div class="skill-fill" style="width: 92%"></div></div>
+                    </div>
+                    <div class="skill-bar-group">
+                        <div class="skill-label"><span>UX/UI</span><span class="skill-pct">80%</span></div>
+                        <div class="skill-track"><div class="skill-fill" style="width: 80%"></div></div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title"><div class="dot"></div> TOOLS</div>
+                    <span class="tool-tag">Figma</span>
+                    <span class="tool-tag">After Effects</span>
+                    <span class="tool-tag">Photoshop</span>
+                    <span class="tool-tag">Illustrator</span>
+                    <span class="tool-tag">Cinema 4D</span>
+                    <span class="tool-tag">Blender</span>
+                    <span class="tool-tag">Framer</span>
+                </div>
+
+                <div class="section">
+                    <div class="section-title"><div class="dot"></div> AWARDS</div>
+                    <div class="award-item">
+                        <div class="award-badge">🏆</div>
+                        <div class="award-text">
+                            <strong>Cannes Grand Prix</strong>
+                            2023 — Brand Campaign
+                        </div>
+                    </div>
+                    <div class="award-item">
+                        <div class="award-badge">🏆</div>
+                        <div class="award-text">
+                            <strong>D&AD Pencil</strong>
+                            2022 — Visual Identity
+                        </div>
+                    </div>
+                    <div class="award-item">
+                        <div class="award-badge">🏆</div>
+                        <div class="award-text">
+                            <strong>Communication Arts</strong>
+                            2021 — Excellence
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title"><div class="dot"></div> CONNECT</div>
+                    <div class="social-item">
+                        <strong>Portfolio</strong>
+                        mayarodriguez.design
+                    </div>
+                    <div class="social-item">
+                        <strong>Dribbble</strong>
+                        dribbble.com/mayar
+                    </div>
+                    <div class="social-item">
+                        <strong>Instagram</strong>
+                        @maya.creates
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

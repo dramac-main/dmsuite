@@ -1,83 +1,45 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Session 84 — Chiko Layer 1 Action System — BUILD COMPLETE ✅
+**Phase:** Session 86 — Chiko Layer 2 File Processing Pipeline BUILD ✅ COMPLETE
 
-### Session 84: Chiko Layer 1 Action System Implementation
+### Session 86: Chiko Layer 2 Build (Complete)
 
-**Context:** Built the full Layer 1 Action System from CHIKO-LAYER-1-SPEC.md. Chiko can now read and write tool state via a universal action registry. This transforms Chiko from a chatbot/navigator into an AI agent that controls design tools.
+**Context:** Layer 2 spec (`PHASES/CHIKO-LAYER-2-SPEC.md`) was written in Session 85. This session implemented the full file processing pipeline.
 
 **Completed Work:**
 
-1. **Action Registry Store** (`src/stores/chiko-actions.ts`) — NEW:
-   - Zustand store with `ChikoActionDescriptor`, `ChikoActionManifest`, `ChikoActionResult`, `AIToolDescriptor`, `ChikoActionRequest` interfaces
-   - `register()` / `unregister()` for mount/unmount lifecycle
-   - `getActionDescriptorsForAI()` — converts manifests to Claude/OpenAI tool format (name: `tool_id__actionName`)
-   - `execute()` / `readState()` — dispatch actions to registered tool manifests
-   - No persistence — manifests live while tool components are mounted
+1. **Installed `xlsx` (SheetJS)** — Only new dependency needed
 
-2. **useChikoActions Hook** (`src/hooks/useChikoActions.ts`) — NEW:
-   - Takes `manifestFactory: () => ChikoActionManifest`
-   - Registers on mount, unregisters on unmount via `useRef` for toolId cleanup
+2. **Created 7 new files:**
+   - `src/lib/chiko/extractors/field-detector.ts` — Regex-based business field detection (company, phone, email, address, website, taxId, banking)
+   - `src/lib/chiko/extractors/pdf-extractor.ts` — PDF text/metadata extraction via pdf-parse
+   - `src/lib/chiko/extractors/docx-extractor.ts` — DOCX extraction via mammoth (text, tables, embedded images)
+   - `src/lib/chiko/extractors/xlsx-extractor.ts` — XLSX extraction via SheetJS (sheets, headers, rows)
+   - `src/lib/chiko/extractors/image-extractor.ts` — Image processing via sharp (resize, thumbnail, SVG sanitization)
+   - `src/lib/chiko/extractors/index.ts` — Barrel export + MIME-type router + all TypeScript contracts
+   - `src/app/api/chiko/upload/route.ts` — POST endpoint for multipart file uploads (10MB limit, memory-only)
 
-3. **Sales Book Manifest** (`src/lib/chiko/manifests/sales-book.ts`) — NEW:
-   - 9 actions: updateBranding, updateSerial, updateLayout, toggleColumn, updatePrint, updateStyle, convertToType, resetForm (destructive), readCurrentState
-   - `executeAction` dispatches to `useSalesBookEditor.getState()` methods
-   - `getState` returns shallow copy of form sections
+3. **Modified 4 existing files:**
+   - `src/stores/chiko.ts` — Added `ChikoFileAttachment` interface, `attachments` state, CRUD actions
+   - `src/lib/chiko/manifests/sales-book.ts` — Added `logoUrl` parameter to `updateBranding` action
+   - `src/app/api/chiko/route.ts` — Added `fileContext` field parsing, file-aware system prompt injection, image placeholder instructions
+   - `src/components/Chiko/ChikoAssistant.tsx` — Full file upload UI: attachment button (paperclip), drag-and-drop with overlay, file chips with progress, `fileContext` in API requests, `__ATTACHED_IMAGE_N__` placeholder interception in action execution, auto-send on upload via useEffect
 
-4. **Invoice Manifest** (`src/lib/chiko/manifests/invoice.ts`) — NEW:
-   - 18 actions covering business info, client info, dates, line items, currency, tax, payment, notes, terms, template, colors, reset
-   - Designed for `useInvoiceEditor` store (for when InvoiceDesignerWorkspaceV2 is enabled in routing)
-
-5. **Resume Manifest** (`src/lib/chiko/manifests/resume.ts`) — NEW:
-   - 13 actions: changeTemplate (20 IDs in enum), color, fonts, section CRUD, custom sections, reset
-   - `getState` returns summarized sections with item counts
-
-6. **Barrel Export** (`src/lib/chiko/manifests/index.ts`) — NEW
-
-7. **Chiko Store Types** (`src/stores/chiko.ts`) — MODIFIED:
-   - Added `executedActions?: { action: string; params: Record<string, unknown>; success: boolean }[]` to `ChikoMessage`
-
-8. **API Route** (`src/app/api/chiko/route.ts`) — MODIFIED:
-   - POST handler accepts `{ messages, context, actions, toolState }` in body
-   - When `actions` array is provided: appends Tool Control instructions + Current Tool State JSON to system prompt
-   - `streamClaude()` — tracks `content_block_start` (tool_use), `input_json_delta`, `content_block_stop` → emits `__CHIKO_ACTION__:{json}`
-   - `streamOpenAI()` — tracks `delta.tool_calls` by index → emits `__CHIKO_ACTION__:{json}` on `[DONE]`
-   - Both providers pass text through as plain text, actions as delimited events
-
-9. **ChikoAssistant** (`src/components/Chiko/ChikoAssistant.tsx`) — MODIFIED:
-   - Imports `useChikoActionRegistry`
-   - `sendMessage()`: reads `getActionDescriptorsForAI()` + builds `toolState` from all registered manifests → includes in fetch body
-   - Stream parsing: splits on `__CHIKO_ACTION__:`, parses JSON, executes via `executeChikoAction()` helper
-   - Destructive action handling: checks `descriptor.destructive`, queues to `pendingAction` state, shows confirmation UI bar (Yes/Cancel)
-   - Non-destructive actions execute immediately with ✅/❌ result messages
-   - Tracks `executedActions` array, stores on last assistant message via `useChikoStore.setState()`
-   - `executeChikoAction()` helper: parses `tool_id__actionName` format, converts underscored toolId back to kebab-case
-
-10. **Workspace Registrations** — MODIFIED:
-    - `SalesBookDesignerWorkspace.tsx`: `useChikoActions(createSalesBookManifest)` (covers all sales document types including invoice)
-    - `ResumeCVWorkspaceV2.tsx`: `useChikoActions(createResumeManifest)`
-
-**Key Design Decisions:**
-- Stream protocol: `__CHIKO_ACTION__:{json}` delimiter in mixed text+action stream
-- Tool name format: `tool_id_underscored__actionName` (Claude requires alphanumeric + underscores)
-- Destructive actions get confirmation UI, non-destructive execute immediately
-- Tool state sent as combined object from all registered manifests, truncated to 4000 chars
-- Invoice manifest exists for future use when InvoiceDesignerWorkspaceV2 is enabled in routing
+**Key Implementation Details:**
+- Files NEVER written to disk — all in-memory Buffer processing
+- SVG sanitization: strips scripts, event handlers, external refs
+- Image resize: max 2000px / 2MB cap, generates 200px thumbnail
+- Token efficiency: only summary/metadata/detected fields sent to AI (not raw text or base64)
+- `__ATTACHED_IMAGE_0__` placeholder: AI outputs placeholder → client replaces with actual base64 data URI before action execution
+- Auto-send: useEffect monitors attachment status, sends prompt when file becomes ready with no user text
+- Attachments excluded from localStorage persistence (not in `partialize`)
 
 **Build Status: ✅ Zero TypeScript errors (tsc --noEmit passes clean)**
 
-### Previous: Session 83 Part 2: TPIN + Progressive Disclosure
-
-**User Feedback:**
-1. "Tax ID" should be "TPIN" — Zambian standard terminology
-2. Banking fields should use progressive disclosure — basic fields visible, advanced hidden behind toggle
-3. Apply this pattern throughout the system for user-friendliness
-
-**Completed Work (Session 83 Part 2):**
-
-1. **TPIN Rename** — All "Tax ID" references updated:
-   - SBSectionBranding label: "Tax ID / TPIN" → "TPIN"
+**Next Steps:**
+- Layer 3 (Custom Blocks System) spec is next
+- Tool workspace registrations for invoice manifest (useChikoActions hook)
    - BlankFormRenderer header band: "Tax ID:" → "TPIN:"
    - BlankFormRenderer non-band header: "Tax ID:" → "TPIN:"
 

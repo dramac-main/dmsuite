@@ -123,6 +123,13 @@ export {
   suggestCombination, applyThemeToConfig,
 } from "./template-generator";
 
+// ---- AI Design Generator ----
+export type { GenerationInput, GenerationResult } from "./ai-design-generator";
+export {
+  buildDesignGenerationPrompt, parseDesignResponse,
+  hydrateImageLayers, generateMultipleDesigns,
+} from "./ai-design-generator";
+
 // ---- Abstract Asset Library ----
 export type {
   AbstractCategory, AbstractAssetType, AbstractMood,

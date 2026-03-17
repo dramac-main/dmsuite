@@ -9,7 +9,6 @@
 import React, {
   useRef, useCallback, useEffect, useState, useMemo,
   type MouseEvent as ReactMouseEvent,
-  type WheelEvent as ReactWheelEvent,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { useEditorStore } from "@/stores/editor";
@@ -51,6 +50,8 @@ export interface CanvasEditorProps {
   renderOverlay?: (ctx: CanvasRenderingContext2D, viewport: ViewportTransform) => void;
   /** Background color behind the canvas (workspace background) */
   workspaceBg?: string;
+  /** Called when user presses / to focus the AI revision input */
+  onRequestAIFocus?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -69,7 +70,8 @@ export default function CanvasEditor({
   onSelectionChange,
   onLayerDoubleClick,
   renderOverlay,
-  workspaceBg = "#1a1a2e",
+  workspaceBg = "#1e1e1e",
+  onRequestAIFocus,
 }: CanvasEditorProps) {
   // ---- Store ----
   const store = useEditorStore();
@@ -87,6 +89,8 @@ export default function CanvasEditor({
   // ---- Local state ----
   const [cursor, setCursor] = useState("default");
   const [canvasSize, setCanvasSize] = useState({ w: 800, h: 600 });
+  const [spaceHeld, setSpaceHeld] = useState(false);
+  const preDragDocRef = useRef<DesignDocumentV2 | null>(null);
 
   // ---- Viewport transform for interaction engine ----
   const vp: ViewportTransform = useMemo(() => ({
@@ -187,6 +191,43 @@ export default function CanvasEditor({
       ctx.restore();
     }
 
+    // Draw shape preview during draw-shape drag
+    if (istate.action.type === "draw-shape" && istate.phase === "dragging") {
+      const act = istate.action as { type: "draw-shape"; shapeType: string; startWorld: { x: number; y: number }; currentWorld: { x: number; y: number } };
+      ctx.save();
+      ctx.strokeStyle = "#67e8f9";
+      ctx.lineWidth = 1.5 / vp.zoom;
+      ctx.setLineDash([6 / vp.zoom, 3 / vp.zoom]);
+      ctx.fillStyle = "rgba(103, 232, 249, 0.08)";
+      const sx = Math.min(act.startWorld.x, act.currentWorld.x);
+      const sy = Math.min(act.startWorld.y, act.currentWorld.y);
+      const sw = Math.abs(act.currentWorld.x - act.startWorld.x);
+      const sh = Math.abs(act.currentWorld.y - act.startWorld.y);
+
+      if (act.shapeType === "ellipse") {
+        const cx = sx + sw / 2;
+        const cy = sy + sh / 2;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, sw / 2, sh / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      } else {
+        ctx.fillRect(sx, sy, sw, sh);
+        ctx.strokeRect(sx, sy, sw, sh);
+      }
+
+      // Dimension label
+      ctx.fillStyle = "#67e8f9";
+      ctx.font = `${11 / vp.zoom}px Inter, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.fillText(
+        `${Math.round(sw)} × ${Math.round(sh)}`,
+        sx + sw / 2,
+        sy + sh + 14 / vp.zoom
+      );
+      ctx.restore();
+    }
+
     ctx.restore(); // Undo viewport transform
 
     // Custom overlay (in screen space, receives viewport for coord conversion)
@@ -242,11 +283,20 @@ export default function CanvasEditor({
     e.preventDefault();
     const { screen, world } = getCanvasCoords(e);
 
+    // Use spacebar-overridden mode
+    const effectiveMode = spaceHeld ? "hand" as const : mode;
+
     const result = handlePointerDown(
-      doc, interactionRef.current, mode,
+      doc, interactionRef.current, effectiveMode,
       world, screen, vp,
       e.shiftKey, e.metaKey || e.ctrlKey
     );
+
+    // Save pre-drag snapshot for undoable move/resize/rotate
+    const actionType = result.state.action.type;
+    if (actionType === "move" || actionType === "resize" || actionType === "rotate") {
+      preDragDocRef.current = doc;
+    }
 
     interactionRef.current = result.state;
     setCursor(result.cursor);
@@ -263,7 +313,7 @@ export default function CanvasEditor({
       cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(render);
     }
-  }, [doc, mode, vp, readOnly, getCanvasCoords, store, render]);
+  }, [doc, mode, spaceHeld, vp, readOnly, getCanvasCoords, store, render]);
 
   const handleMouseMove = useCallback((e: ReactMouseEvent) => {
     const { screen, world } = getCanvasCoords(e);
@@ -349,6 +399,22 @@ export default function CanvasEditor({
       store.selectLayers(result.selection.ids);
     }
 
+    // Commit move/resize/rotate to undo stack using pre-drag snapshot
+    if (result.commitToUndoStack && result.commands.length > 0 && preDragDocRef.current) {
+      // Restore to pre-drag state, then execute through command stack
+      const preDoc = preDragDocRef.current;
+      store.setDoc(preDoc);
+      for (const cmd of result.commands) {
+        store.execute(cmd);
+      }
+      preDragDocRef.current = null;
+    } else if (result.commands.length > 0) {
+      // Non-drag commands (draw-shape, etc.) — execute normally
+      for (const cmd of result.commands) {
+        store.execute(cmd);
+      }
+    }
+
     if (result.needsRepaint) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(render);
@@ -368,8 +434,9 @@ export default function CanvasEditor({
     }
   }, [doc, readOnly, getCanvasCoords, onLayerDoubleClick]);
 
-  // ---- Wheel → zoom ----
-  const handleWheel = useCallback((e: ReactWheelEvent) => {
+  // ---- Wheel → zoom (native listener for { passive: false }) ----
+  const handleWheelRef = useRef<((e: WheelEvent) => void) | null>(null);
+  handleWheelRef.current = (e: WheelEvent) => {
     e.preventDefault();
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -397,7 +464,16 @@ export default function CanvasEditor({
 
     cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(render);
-  }, [viewport, minZoom, maxZoom, store, render]);
+  };
+
+  // Attach native wheel listener with { passive: false } to allow preventDefault
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const handler = (e: WheelEvent) => handleWheelRef.current?.(e);
+    canvas.addEventListener("wheel", handler, { passive: false });
+    return () => canvas.removeEventListener("wheel", handler);
+  }, []);
 
   // ---- Keyboard shortcuts ----
   const handleKeyDown = useCallback((e: ReactKeyboardEvent) => {
@@ -442,10 +518,21 @@ export default function CanvasEditor({
       return;
     }
 
+    // Spacebar → temporary hand mode (pan)
+    if (e.key === " " || e.code === "Space") {
+      e.preventDefault();
+      if (!spaceHeld) setSpaceHeld(true);
+      setCursor("grab");
+      return;
+    }
+
     // Tool shortcuts
     if (e.key === "v" || e.key === "V") { store.setMode("select"); return; }
     if (e.key === "h" || e.key === "H") { store.setMode("hand"); return; }
     if (e.key === "t" || e.key === "T") { store.setMode("text"); return; }
+
+    // Slash → focus AI revision input
+    if (e.key === "/") { onRequestAIFocus?.(); return; }
 
     // Arrow keys → nudge
     const action = handleKeyAction(doc, e.key, e.ctrlKey || e.metaKey, e.shiftKey);
@@ -460,7 +547,15 @@ export default function CanvasEditor({
       cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(render);
     }
-  }, [doc, readOnly, store, render]);
+  }, [doc, readOnly, store, render, onRequestAIFocus, spaceHeld]);
+
+  // ---- Key up — release spacebar pan ----
+  const handleKeyUp = useCallback((e: ReactKeyboardEvent) => {
+    if (e.key === " " || e.code === "Space") {
+      setSpaceHeld(false);
+      setCursor(mode === "hand" ? "grab" : "default");
+    }
+  }, [mode]);
 
   return (
     <div
@@ -468,7 +563,8 @@ export default function CanvasEditor({
       className={`relative w-full h-full overflow-hidden focus:outline-none ${className}`}
       tabIndex={0}
       onKeyDown={handleKeyDown}
-      style={{ cursor }}
+      onKeyUp={handleKeyUp}
+      style={{ cursor: spaceHeld ? "grab" : cursor }}
     >
       <canvas
         ref={canvasRef}
@@ -481,7 +577,6 @@ export default function CanvasEditor({
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
         onDoubleClick={handleDoubleClick}
-        onWheel={handleWheel}
         onContextMenu={(e) => e.preventDefault()}
       />
 

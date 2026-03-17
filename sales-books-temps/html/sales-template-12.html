@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ola Mummy Ventures - Cash Sales Invoice</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #333; }
+  .page { width: 595px; min-height: 842px; margin: 0 auto; padding: 20px 25px; }
+
+  /* Header */
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .header-left { }
+  .ola-mummy { font-size: 36px; font-weight: 900; color: #1a237e; line-height: 0.9; }
+  .ventures { font-size: 32px; font-weight: 400; font-style: italic; color: #1a237e; font-family: "Georgia", serif; }
+  .ibuy { font-size: 8px; color: #fff; background: #f39c12; padding: 2px 8px; display: inline-block; font-weight: 700; border-radius: 2px; margin-top: 3px; }
+
+  .header-right { text-align: right; }
+  .what-we-sell { background: #f39c12; color: #fff; font-size: 8px; font-weight: 900; padding: 3px 10px; display: inline-block; letter-spacing: 1px; }
+  .product-list { font-size: 9px; color: #333; line-height: 1.5; margin-top: 3px; text-align: left; }
+
+  /* Contact Bar */
+  .contact-bar { display: flex; align-items: center; justify-content: center; gap: 15px; font-size: 10px; color: #1a237e; font-weight: 700; margin: 8px 0; }
+  .contact-bar .icon { color: #f39c12; }
+
+  /* Invoice Title Row */
+  .invoice-row { display: flex; justify-content: center; align-items: center; gap: 20px; margin: 10px 0; }
+  .invoice-badge { background: #f39c12; color: #fff; font-size: 13px; font-weight: 900; padding: 5px 18px; letter-spacing: 2px; border: 2px solid #e67e22; }
+  .date-grid { display: grid; grid-template-columns: repeat(3, 1fr); border: 2px solid #1a237e; }
+  .date-grid .cell { padding: 3px 10px; text-align: center; font-size: 8px; font-weight: 700; color: #1a237e; border-right: 1px solid #1a237e; }
+  .date-grid .cell:last-child { border-right: none; }
+  .date-grid .cell.header { background: #1a237e; color: #fff; }
+
+  /* Customer Fields */
+  .customer-fields { font-size: 10px; margin: 12px 0; }
+  .customer-fields .row { display: flex; align-items: center; border: 1px solid #ddd; padding: 5px 8px; margin-bottom: -1px; background: #fafafa; }
+  .customer-fields .label { font-weight: 700; min-width: 100px; }
+
+  /* Items Table */
+  .items-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  .items-table thead th { background: #f39c12; color: #fff; font-size: 10px; font-weight: 900; padding: 8px 6px; text-align: center; border: 1px solid #e67e22; }
+  .items-table thead th:nth-child(1) { width: 10%; }
+  .items-table thead th:nth-child(2) { width: 40%; }
+  .items-table thead th:nth-child(3) { width: 12%; }
+  .items-table thead th:nth-child(4) { width: 19%; }
+  .items-table thead th:nth-child(5) { width: 19%; }
+  .items-table tbody td { padding: 6px; border: 1px solid #ddd; font-size: 10px; text-align: center; }
+  .items-table tbody tr { height: 28px; }
+
+  /* Footer */
+  .footer-row { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; border: 1px solid #ddd; padding: 6px 10px; background: #fafafa; }
+  .disclaimer { font-size: 8px; color: #555; max-width: 250px; }
+  .total-box { display: flex; align-items: center; gap: 5px; }
+  .total-label { font-weight: 900; color: #f39c12; font-size: 14px; }
+
+  /* Tested/Checked */
+  .check-row { display: flex; gap: 10px; margin-top: 8px; }
+  .check-box { display: flex; align-items: center; gap: 3px; font-size: 8px; font-weight: 700; }
+  .check-box .box { width: 35px; height: 18px; border: 2px solid #1a237e; background: #f39c12; }
+  .check-box .label { background: #1a237e; color: #fff; padding: 2px 6px; font-size: 7px; }
+
+  /* Amount in Words */
+  .amount-words { font-size: 10px; margin-top: 10px; }
+  .amount-line { border-bottom: 1px solid #999; display: inline-block; width: 400px; margin-left: 5px; }
+
+  /* Signatures */
+  .sig-section { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 25px; padding-top: 10px; }
+  .sig-block { text-align: center; font-size: 9px; font-style: italic; }
+  .sig-line { width: 140px; border-bottom: 1px solid #333; margin-bottom: 5px; height: 20px; }
+  .thanks { background: #f39c12; color: #fff; font-size: 8px; font-weight: 700; padding: 4px 15px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="ola-mummy">OLA MUMMY</div>
+      <div class="ventures">Ventures</div>
+      <div class="ibuy">iBuy, iSell, iSwap.</div>
+    </div>
+    <div class="header-right">
+      <div class="what-we-sell">WHAT WE SELL.</div>
+      <div class="product-list">
+        -iPhones<br>
+        -Android Phones<br>
+        - Samsungs Phones<br>
+        - Laptops<br>
+        - iWatches<br>
+        - Home Appliances<br>
+        - Power Bank<br>
+        - Play Station
+      </div>
+    </div>
+  </div>
+
+  <!-- Contact Bar -->
+  <div class="contact-bar">
+    <span><span class="icon">&#9673;</span> Orita Aduin Shopping Complex</span>
+    <span><span class="icon">&#9900;</span> 08131062719</span>
+    <span><span class="icon">&#9900;</span> 08131062719</span>
+  </div>
+
+  <!-- Invoice Row -->
+  <div class="invoice-row">
+    <div class="invoice-badge">CASH SALES INVOICE</div>
+    <div class="date-grid">
+      <div class="cell header">DAY</div>
+      <div class="cell header">MONTH</div>
+      <div class="cell header">YEAR</div>
+      <div class="cell">&nbsp;</div>
+      <div class="cell">&nbsp;</div>
+      <div class="cell">&nbsp;</div>
+    </div>
+  </div>
+
+  <!-- Customer Fields -->
+  <div class="customer-fields">
+    <div class="row"><span class="label">Name:</span></div>
+    <div class="row"><span class="label">Address:</span></div>
+    <div class="row"><span class="label">Phone Number:</span></div>
+  </div>
+
+  <!-- Items Table -->
+  <table class="items-table">
+    <thead>
+      <tr>
+        <th>QTY.</th>
+        <th>DESCRIPTION OF GOODS</th>
+        <th>UNIT</th>
+        <th>AMOUNT</th>
+        <th>K</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td><td></td></tr>
+      <tr><td></td><td></td><td></td><td></td><td></td></tr>
+    </tbody>
+  </table>
+
+  <!-- Footer -->
+  <div class="footer-row">
+    <div class="disclaimer">Goods received in good conditions are not returnable, Thanks.</div>
+    <div class="total-box">
+      <span class="total-label">TOTAL#</span>
+    </div>
+  </div>
+
+  <!-- Tested/Checked -->
+  <div class="check-row">
+    <div class="check-box"><span class="label">TESTED</span><div class="box"></div></div>
+    <div class="check-box"><span class="label">CHECKED</span><div class="box"></div></div>
+  </div>
+
+  <!-- Amount Words -->
+  <div class="amount-words">Total Amount in Words <span class="amount-line"></span></div>
+
+  <!-- Signatures -->
+  <div class="sig-section">
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      Customer's Signature
+    </div>
+    <div class="thanks">Thanks for your patronage</div>
+    <div class="sig-block">
+      <div class="sig-line"></div>
+      Manager's Signature
+    </div>
+  </div>
+</div>
+</body>
+</html>

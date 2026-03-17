@@ -1555,7 +1555,7 @@ export function buildAIPatchPrompt(
 Canvas: ${rootFrame?.transform.size.x}×${rootFrame?.transform.size.y}px
 Background: ${rootFrame?.fills[0]?.kind === "solid" ? rgbaToHex(rootFrame.fills[0].color) : "gradient/pattern"}
 
-### Layers (front-to-back):
+### Layers (back-to-front — first listed = behind, last listed = on top):
 ${layerDescriptions.join("\n")}
 
 ## SCOPE: "${scope}"

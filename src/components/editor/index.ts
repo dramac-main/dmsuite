@@ -9,6 +9,8 @@ export { default as EditorToolbar } from "./EditorToolbar";
 export { default as LayerPropertiesPanel } from "./LayerPropertiesPanel";
 export { default as LayersListPanel } from "./LayersListPanel";
 
+export { default as IconPickerPopover } from "./IconPickerPopover";
+
 // ---- Pro Sub-Editors ----
 export { default as ColorPickerPopover, ColorSwatch } from "./ColorPickerPopover";
 export { FillEditor, StrokeEditor } from "./FillStrokeEditor";

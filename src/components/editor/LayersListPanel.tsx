@@ -1,17 +1,20 @@
 "use client";
 
 // =============================================================================
-// DMSuite — Layers List Panel
-// Displays all layers in order with visibility/lock toggles.
-// Shows color swatches for text/shape layers so users can identify them quickly.
+// DMSuite — Layers List Panel (Rebuilt — Phase C.3)
+// Displays all layers with SVG type icons, color swatches, visibility/lock
+// toggles, reorder arrows, and delete button on hover.
 // =============================================================================
 
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import { useEditorStore } from "@/stores/editor";
 import type { LayerV2, LayerId, TextLayerV2, ShapeLayerV2, IconLayerV2 } from "@/lib/editor/schema";
 import { getLayerOrder, rgbaToHex } from "@/lib/editor/schema";
-
-// SINGLE DEFINITION — no duplicates below
+import {
+  IconEye, IconEyeOff, IconLock, IconLockOpen,
+  IconTrash, IconChevronUp, IconChevronDown,
+  IconType, IconImage, IconStar, IconPenTool, IconFolder, IconLayers,
+} from "@/components/icons";
 
 // ---------------------------------------------------------------------------
 // Component
@@ -25,9 +28,9 @@ export default function LayersListPanel() {
   const removeLayersFromDoc = useEditorStore((s) => s.removeLayersFromDoc);
   const selectedIds = doc.selection.ids;
 
-  // Get layers in render order (root frame excluded)
+  // Get layers in render order: [0]=behind, [last]=on top (root frame excluded)
   const layers = getLayerOrder(doc).filter((l) => l.id !== doc.rootFrameId);
-  // Reverse so top layer (last rendered) appears first in the list
+  // Reverse so topmost layer (last rendered = visually on top) appears first in the panel
   const reversedLayers = [...layers].reverse();
 
   const handleSelect = useCallback(
@@ -50,7 +53,7 @@ export default function LayersListPanel() {
         <h3 className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">
           Layers
         </h3>
-        <span className="text-gray-600">{layers.length}</span>
+        <span className="text-[10px] text-gray-600 font-mono">{layers.length}</span>
       </div>
       <div className="flex flex-col overflow-y-auto max-h-64">
         {reversedLayers.map((layer) => (
@@ -71,7 +74,7 @@ export default function LayersListPanel() {
           />
         ))}
         {layers.length === 0 && (
-          <div className="px-3 py-4 text-gray-600 text-center">
+          <div className="px-3 py-6 text-gray-600 text-center text-xs">
             No layers yet
           </div>
         )}
@@ -100,6 +103,44 @@ function getLayerSwatchColor(layer: LayerV2): string | null {
 }
 
 // ---------------------------------------------------------------------------
+// Layer Type Icon — SVG (not emoji)
+// ---------------------------------------------------------------------------
+
+function LayerTypeIcon({ type }: { type: string }) {
+  const cls = "w-3.5 h-3.5 text-gray-500";
+  switch (type) {
+    case "text":
+      return <IconType className={cls} />;
+    case "shape":
+      return (
+        <svg viewBox="0 0 24 24" className={cls} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+        </svg>
+      );
+    case "image":
+      return <IconImage className={cls} />;
+    case "icon":
+      return <IconStar className={cls} />;
+    case "path":
+      return <IconPenTool className={cls} />;
+    case "frame":
+      return (
+        <svg viewBox="0 0 24 24" className={cls} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <line x1="3" y1="9" x2="21" y2="9" />
+          <line x1="9" y1="3" x2="9" y2="21" />
+        </svg>
+      );
+    case "group":
+      return <IconFolder className={cls} />;
+    case "boolean-group":
+      return <IconLayers className={cls} />;
+    default:
+      return <span className="w-3.5 h-3.5 text-gray-600 text-[10px] flex items-center justify-center">?</span>;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Layer Row
 // ---------------------------------------------------------------------------
 
@@ -109,6 +150,9 @@ function LayerRow({
   onClick,
   onToggleVisible,
   onToggleLock,
+  onMoveUp,
+  onMoveDown,
+  onDelete,
 }: {
   layer: LayerV2;
   isSelected: boolean;
@@ -119,31 +163,54 @@ function LayerRow({
   onMoveDown: () => void;
   onDelete: () => void;
 }) {
-  const typeIcon: Record<string, string> = {
-    text: "T",
-    shape: "□",
-    image: "🖼",
-    icon: "★",
-    path: "✎",
-    frame: "▢",
-    group: "▣",
-    "boolean-group": "⊕",
-  };
-
+  const [hovered, setHovered] = useState(false);
   const swatchColor = getLayerSwatchColor(layer);
+
+  const dimClass = !layer.visible ? "opacity-40" : layer.locked ? "opacity-60" : "";
 
   return (
     <div
       onClick={onClick}
-      className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer border-l-2 transition-colors ${
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className={`group flex items-center gap-1.5 px-2 py-1.5 cursor-pointer border-l-2 transition-colors ${dimClass} ${
         isSelected
           ? "bg-primary-500/10 border-l-primary-500 text-gray-200"
           : "border-l-transparent text-gray-400 hover:bg-gray-800/50 hover:text-gray-300"
       }`}
     >
+      {/* Drag handle */}
+      <span className="w-3 flex-shrink-0 flex items-center justify-center text-gray-600 cursor-grab">
+        <svg viewBox="0 0 24 24" className="w-3 h-3" fill="currentColor">
+          <circle cx="9" cy="5" r="1.5" /><circle cx="15" cy="5" r="1.5" />
+          <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
+          <circle cx="9" cy="19" r="1.5" /><circle cx="15" cy="19" r="1.5" />
+        </svg>
+      </span>
+
+      {/* Reorder arrows (visible on hover) */}
+      {hovered && (
+        <div className="flex flex-col gap-0 flex-shrink-0">
+          <button
+            title="Move Up"
+            onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
+            className="w-3 h-3 flex items-center justify-center text-gray-500 hover:text-gray-200 transition-colors"
+          >
+            <IconChevronUp className="w-3 h-3" />
+          </button>
+          <button
+            title="Move Down"
+            onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
+            className="w-3 h-3 flex items-center justify-center text-gray-500 hover:text-gray-200 transition-colors"
+          >
+            <IconChevronDown className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+
       {/* Type icon */}
-      <span className="w-4 text-center text-gray-500 text-[10px] shrink-0">
-        {typeIcon[layer.type] ?? "?"}
+      <span className="flex-shrink-0">
+        <LayerTypeIcon type={layer.type} />
       </span>
 
       {/* Color swatch */}
@@ -158,7 +225,7 @@ function LayerRow({
       )}
 
       {/* Name + text preview */}
-      <span className="flex-1 truncate text-xs">
+      <span className={`flex-1 truncate text-xs ${!layer.visible ? "line-through" : ""}`}>
         {layer.name}
         {layer.type === "text" && (layer as TextLayerV2).text && (
           <span className="ml-1 text-gray-600 truncate">
@@ -167,21 +234,38 @@ function LayerRow({
         )}
       </span>
 
-      {/* Controls */}
+      {/* Controls — always show visibility/lock, delete on hover */}
       <div className="flex items-center gap-0.5 shrink-0">
+        {/* Delete button (hover only) */}
+        {hovered && (
+          <MiniBtn
+            title="Delete layer"
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          >
+            <IconTrash className="w-3 h-3 text-red-400/70 hover:text-red-400" />
+          </MiniBtn>
+        )}
+
+        {/* Visibility toggle */}
         <MiniBtn
           title={layer.visible ? "Hide" : "Show"}
           onClick={(e) => { e.stopPropagation(); onToggleVisible(); }}
-          active={layer.visible}
         >
-          {layer.visible ? "👁" : "👁‍🗨"}
+          {layer.visible
+            ? <IconEye className="w-3.5 h-3.5 opacity-50 hover:opacity-100" />
+            : <IconEyeOff className="w-3.5 h-3.5 opacity-30 hover:opacity-60" />
+          }
         </MiniBtn>
+
+        {/* Lock toggle */}
         <MiniBtn
           title={layer.locked ? "Unlock" : "Lock"}
           onClick={(e) => { e.stopPropagation(); onToggleLock(); }}
-          active={layer.locked}
         >
-          {layer.locked ? "🔒" : "🔓"}
+          {layer.locked
+            ? <IconLock className="w-3.5 h-3.5 opacity-60 hover:opacity-100 text-yellow-500/70" />
+            : <IconLockOpen className="w-3.5 h-3.5 opacity-30 hover:opacity-60" />
+          }
         </MiniBtn>
       </div>
     </div>
@@ -195,21 +279,17 @@ function LayerRow({
 function MiniBtn({
   title,
   onClick,
-  active,
   children,
 }: {
   title: string;
   onClick: (e: React.MouseEvent) => void;
-  active: boolean;
   children: React.ReactNode;
 }) {
   return (
     <button
       title={title}
       onClick={onClick}
-      className={`w-5 h-5 flex items-center justify-center rounded text-[10px] transition-opacity ${
-        active ? "opacity-60 hover:opacity-100" : "opacity-30 hover:opacity-60"
-      }`}
+      className="w-5 h-5 flex items-center justify-center rounded transition-colors hover:bg-gray-700/50"
     >
       {children}
     </button>

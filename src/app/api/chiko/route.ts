@@ -144,7 +144,7 @@ Remember: You're Chiko, the friendliest and most capable creative AI assistant i
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { messages, context, actions, toolState } = body as {
+    const { messages, context, actions, toolState, fileContext } = body as {
       messages: { role: string; content: string }[];
       context?: {
         currentPath?: string;
@@ -154,6 +154,14 @@ export async function POST(request: NextRequest) {
       };
       actions?: { name: string; description: string; input_schema: Record<string, unknown> }[];
       toolState?: Record<string, unknown>;
+      fileContext?: {
+        fileName: string;
+        extractionType: string;
+        summary: string;
+        detectedFields?: Record<string, string>;
+        tables?: { title?: string; headers?: string[]; rowCount: number }[];
+        images?: { name: string; width: number; height: number; mimeType: string }[];
+      };
     };
 
     if (!messages || !Array.isArray(messages)) {
@@ -191,6 +199,41 @@ export async function POST(request: NextRequest) {
       if (context.currentCategoryId) {
         systemPrompt += `- Current category: ${context.currentCategoryId}\n`;
       }
+    }
+
+    // ── Add file context when files are attached ──
+    if (fileContext && typeof fileContext === "object") {
+      systemPrompt += `\n\n## Uploaded File Context
+The user has uploaded a file. Here are the extracted details:
+
+File: ${fileContext.fileName} (${fileContext.extractionType}, ${fileContext.summary})`;
+
+      if (fileContext.detectedFields && Object.keys(fileContext.detectedFields).length > 0) {
+        systemPrompt += `\n\nDetected Business Fields:\n${JSON.stringify(fileContext.detectedFields, null, 2)}`;
+      }
+
+      if (fileContext.tables && fileContext.tables.length > 0) {
+        systemPrompt += `\n\nTables Found: ${fileContext.tables.length}`;
+        for (const t of fileContext.tables) {
+          systemPrompt += `\n- ${t.title || "Untitled"}: ${t.headers?.join(", ") || "no headers"} (${t.rowCount} rows)`;
+        }
+      }
+
+      if (fileContext.images && fileContext.images.length > 0) {
+        systemPrompt += `\n\nImages Found: ${fileContext.images.length}`;
+        for (const img of fileContext.images) {
+          systemPrompt += `\n- ${img.name}: ${img.width}\u00d7${img.height} ${img.mimeType}`;
+        }
+      }
+
+      systemPrompt += `\n\nInstructions:
+- Present the extracted information clearly to the user
+- Offer to use the data to populate the current tool's fields
+- Always confirm with the user before making changes based on extracted data
+- For images: offer to set as company logo if on a branding-enabled tool
+- For tables: explain what data you found and how you'd map it to the tool
+- If no tool actions are available, suggest which tool the user should navigate to
+- When you want to set a logo or image from the uploaded file, use the placeholder "__ATTACHED_IMAGE_0__" as the value. The client will replace this with the actual image data.`;
     }
 
     // ── Add action system context when tools are registered ──

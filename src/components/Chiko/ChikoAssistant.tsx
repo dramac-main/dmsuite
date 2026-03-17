@@ -23,12 +23,43 @@ import {
   IconArrowRight,
   IconTrash,
 } from "@/components/icons";
+import type { ChikoFileAttachment } from "@/stores/chiko";
+import type { ExtractedFileData } from "@/lib/chiko/extractors";
 import {
   searchTools,
   toolCategories,
   getAllToolsFlat,
   type FlatTool,
 } from "@/data/tools";
+
+/* ── File upload constants ─────────────────────────────── */
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-excel",
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/svg+xml",
+  "image/webp",
+];
+const ACCEPT_STRING = ALLOWED_TYPES.join(",");
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getFileIcon(mimeType: string): string {
+  if (mimeType.startsWith("image/")) return "🖼️";
+  if (mimeType === "application/pdf") return "📄";
+  if (mimeType.includes("wordprocessingml") || mimeType.includes("msword")) return "📝";
+  if (mimeType.includes("spreadsheetml") || mimeType.includes("ms-excel")) return "📊";
+  return "📎";
+}
 
 /* ============================================================
    Chiko Assistant Panel — Industry-Quality AI Chat
@@ -313,6 +344,7 @@ export function ChikoAssistant() {
     inputDraft,
     context,
     hasGreeted,
+    attachments,
     close,
     minimize,
     setIsGenerating,
@@ -323,13 +355,19 @@ export function ChikoAssistant() {
     appendToLastAssistantMessage,
     setHasGreeted,
     clearMessages,
+    addAttachment,
+    updateAttachment,
+    removeAttachment,
+    clearAttachments,
   } = useChikoStore();
 
   const [slashResults, setSlashResults] = useState<{ label: string; path: string }[]>([]);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [chikoExpression, setChikoExpression] = useState<ChikoExpression>("idle");
   const [pendingAction, setPendingAction] = useState<{ action: string; params: Record<string, unknown> } | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Abort in-flight stream when panel closes ─────────────
   useEffect(() => {
@@ -606,10 +644,140 @@ export function ChikoAssistant() {
       const actionName = actionStr.slice(sep + 2);
       // Convert underscored tool ID back to kebab-case
       const toolId = toolIdRaw.replace(/_/g, "-");
+
+      // Intercept __ATTACHED_IMAGE_N__ placeholders in params
+      const readyAttachments = useChikoStore.getState().attachments.filter(
+        (a) => a.status === "ready" && a.extractedData?.images?.length
+      );
+      const resolvedParams = { ...params };
+      for (const [key, value] of Object.entries(resolvedParams)) {
+        if (typeof value === "string" && /^__ATTACHED_IMAGE_\d+__$/.test(value)) {
+          const idx = parseInt(value.replace(/__ATTACHED_IMAGE_(\d+)__/, "$1"), 10);
+          const attachment = readyAttachments[idx];
+          if (attachment?.extractedData?.images?.[0]?.dataUri) {
+            resolvedParams[key] = attachment.extractedData.images[0].dataUri;
+          }
+        }
+      }
+
       const registry = useChikoActionRegistry.getState();
-      return registry.execute(toolId, actionName, params);
+      return registry.execute(toolId, actionName, resolvedParams);
     },
     []
+  );
+
+  /* ── File upload handler ───────────────────────────────── */
+  const handleFileUpload = useCallback(
+    async (file: File) => {
+      // Client-side validation
+      if (file.size > MAX_FILE_SIZE) {
+        addMessage({
+          role: "assistant",
+          content: `❌ File too large (${formatFileSize(file.size)}). Maximum is 10 MB.`,
+        });
+        return;
+      }
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        addMessage({
+          role: "assistant",
+          content: `❌ Unsupported file type: ${file.type}. I accept PDF, DOCX, XLSX, PNG, JPEG, SVG, and WebP files.`,
+        });
+        return;
+      }
+
+      // Create pending attachment
+      const id = addAttachment({
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type,
+      });
+      updateAttachment(id, { status: "uploading", progress: 30 });
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        updateAttachment(id, { status: "uploading", progress: 60 });
+
+        const response = await fetch("/api/chiko/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        updateAttachment(id, { status: "processing", progress: 85 });
+
+        const result = await response.json() as { success: boolean; data?: ExtractedFileData; error?: string };
+
+        if (!result.success || !result.data) {
+          updateAttachment(id, {
+            status: "error",
+            error: result.error || "Upload failed",
+            progress: 0,
+          });
+          addMessage({
+            role: "assistant",
+            content: `❌ Failed to process **${file.name}**: ${result.error || "Unknown error"}`,
+          });
+          return;
+        }
+
+        updateAttachment(id, {
+          status: "ready",
+          progress: 100,
+          extractedData: result.data,
+          thumbnail: result.data.thumbnail,
+        });
+      } catch (error) {
+        updateAttachment(id, {
+          status: "error",
+          error: "Network error — upload failed",
+          progress: 0,
+        });
+        addMessage({
+          role: "assistant",
+          content: `❌ Failed to upload **${file.name}** — network error. Please try again.`,
+        });
+      }
+    },
+    [addAttachment, updateAttachment, addMessage]
+  );
+
+  /* ── Drag and drop handlers ────────────────────────────── */
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragOver(false);
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFileUpload(files[0]);
+      }
+    },
+    [handleFileUpload]
+  );
+
+  const handleFileInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (files && files.length > 0) {
+        handleFileUpload(files[0]);
+      }
+      // Reset the input so the same file can be selected again
+      e.target.value = "";
+    },
+    [handleFileUpload]
   );
 
   /* ── Send message ──────────────────────────────────────── */
@@ -680,6 +848,24 @@ export function ChikoAssistant() {
           toolState = state;
         }
 
+        // Build fileContext from ready attachments
+        const readyAttachments = attachments.filter((a) => a.status === "ready" && a.extractedData);
+        let fileContext: Record<string, unknown> | undefined;
+        if (readyAttachments.length > 0) {
+          const att = readyAttachments[0]; // First ready attachment
+          const ed = att.extractedData!;
+          fileContext = {
+            fileName: att.fileName,
+            extractionType: ed.extractionType,
+            summary: ed.summary,
+            ...(ed.detectedFields ? { detectedFields: ed.detectedFields } : {}),
+            ...(ed.tables && ed.tables.length > 0 ? { tables: ed.tables } : {}),
+            ...(ed.images && ed.images.length > 0
+              ? { images: ed.images.map((img) => ({ name: img.name, mimeType: img.mimeType })) }
+              : {}),
+          };
+        }
+
         const response = await fetch("/api/chiko", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -687,6 +873,7 @@ export function ChikoAssistant() {
             messages: apiMessages,
             context,
             ...(hasTools ? { actions: actionDescriptors, toolState } : {}),
+            ...(fileContext ? { fileContext } : {}),
           }),
           signal: controller.signal,
         });
@@ -822,6 +1009,10 @@ export function ChikoAssistant() {
       } finally {
         abortRef.current = null;
         setIsGenerating(false);
+        // Clear attachments after send
+        if (attachments.some((a) => a.status === "ready")) {
+          clearAttachments();
+        }
       }
     },
     [
@@ -829,6 +1020,7 @@ export function ChikoAssistant() {
       isGenerating,
       messages,
       context,
+      attachments,
       router,
       handleLocalCommand,
       setInputDraft,
@@ -837,6 +1029,7 @@ export function ChikoAssistant() {
       appendToLastAssistantMessage,
       setIsGenerating,
       executeChikoAction,
+      clearAttachments,
     ]
   );
 
@@ -849,6 +1042,19 @@ export function ChikoAssistant() {
     },
     [sendMessage]
   );
+
+  /* ── Auto-send when file becomes ready with no user text ── */
+  const prevReadyCountRef = useRef(0);
+  useEffect(() => {
+    const readyCount = attachments.filter((a) => a.status === "ready").length;
+    if (readyCount > prevReadyCountRef.current && !inputDraft.trim() && !isGenerating) {
+      const lastReady = attachments.find((a) => a.status === "ready");
+      if (lastReady) {
+        sendMessage(`I've uploaded ${lastReady.fileName}`);
+      }
+    }
+    prevReadyCountRef.current = readyCount;
+  }, [attachments, inputDraft, isGenerating, sendMessage]);
 
   const suggestions = useMemo(
     () => getContextSuggestions(context.pageType, context.currentToolId, context.currentCategoryId),
@@ -887,6 +1093,9 @@ export function ChikoAssistant() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
             className={cn(
               "fixed z-90 flex flex-col",
               "border border-gray-700/60 bg-gray-900/98 shadow-2xl shadow-black/50",
@@ -903,6 +1112,25 @@ export function ChikoAssistant() {
               paddingBottom: keyboardOpen ? "0px" : "env(safe-area-inset-bottom, 0px)",
             }}
           >
+            {/* ── Drag-over overlay ────────────────────── */}
+            <AnimatePresence>
+              {isDragOver && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center rounded-2xl border-2 border-dashed border-primary-500/60 bg-primary-500/10 backdrop-blur-sm"
+                >
+                  <div className="flex flex-col items-center gap-2 text-primary-400">
+                    <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M12 16V4m0 0L8 8m4-4 4 4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span className="text-sm font-medium">Drop file here</span>
+                    <span className="text-xs text-primary-500/60">PDF, DOCX, XLSX, PNG, JPEG, SVG, WebP</span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
             {/* ── Header ──────────────────────────────── */}
             <div className="flex shrink-0 items-center gap-3 border-b border-gray-700/50 px-4 py-3">
               <Chiko3DAvatar size="sm" animated expression={chikoExpression} showGlow={false} />
@@ -1099,7 +1327,79 @@ export function ChikoAssistant() {
               className="shrink-0 border-t border-gray-700/50 p-3"
               style={{ paddingBottom: keyboardOpen ? "8px" : undefined }}
             >
+              {/* ── File Attachment Chips ─────────────── */}
+              {attachments.length > 0 && (
+                <div className="mb-2 flex flex-wrap gap-1.5">
+                  {attachments.map((att) => (
+                    <div
+                      key={att.id}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs",
+                        att.status === "error"
+                          ? "border-error-500/40 bg-error-500/10 text-error-400"
+                          : att.status === "ready"
+                            ? "border-primary-500/40 bg-primary-500/10 text-primary-300"
+                            : "border-gray-700/40 bg-gray-800/40 text-gray-400"
+                      )}
+                    >
+                      {att.thumbnail ? (
+                        <img
+                          src={att.thumbnail}
+                          alt=""
+                          className="h-5 w-5 rounded object-cover"
+                        />
+                      ) : (
+                        <span className="text-[11px]">{getFileIcon(att.mimeType)}</span>
+                      )}
+                      <span className="max-w-24 truncate">{att.fileName}</span>
+                      {(att.status === "uploading" || att.status === "processing") && (
+                        <div className="h-1 w-10 overflow-hidden rounded-full bg-gray-700">
+                          <motion.div
+                            className="h-full rounded-full bg-primary-500"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${att.progress}%` }}
+                          />
+                        </div>
+                      )}
+                      {att.status === "ready" && (
+                        <span className="text-[10px] text-primary-500">✓</span>
+                      )}
+                      {att.status === "error" && (
+                        <span className="text-[10px]" title={att.error}>✗</span>
+                      )}
+                      <button
+                        onClick={() => removeAttachment(att.id)}
+                        className="ml-0.5 text-gray-500 transition-colors hover:text-gray-300"
+                        aria-label={`Remove ${att.fileName}`}
+                      >
+                        <IconX className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="flex items-end gap-2 rounded-xl border border-gray-700/50 bg-gray-800/40 px-3 py-2 transition-colors focus-within:border-primary-500/40 focus-within:ring-1 focus-within:ring-primary-500/20">
+                {/* ── Hidden file input ──────────────── */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={ACCEPT_STRING}
+                  onChange={handleFileInputChange}
+                  className="hidden"
+                  aria-hidden="true"
+                />
+                {/* ── Attachment button ──────────────── */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isGenerating}
+                  className="mb-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded text-gray-500 transition-colors hover:text-primary-400 disabled:opacity-30"
+                  aria-label="Attach file"
+                  title="Attach a file (PDF, DOCX, XLSX, Image)"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                  </svg>
+                </button>
                 <IconSparkles className="mb-0.5 h-4 w-4 shrink-0 text-primary-500/60" />
                 <textarea
                   ref={inputRef}
@@ -1122,7 +1422,7 @@ export function ChikoAssistant() {
                 />
                 <button
                   onClick={() => sendMessage()}
-                  disabled={!inputDraft.trim() || isGenerating}
+                  disabled={(!inputDraft.trim() && !attachments.some((a) => a.status === "ready")) || isGenerating}
                   className={cn(
                     "mb-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all",
                     "bg-primary-500 text-gray-950",
