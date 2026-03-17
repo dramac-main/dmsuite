@@ -4,7 +4,28 @@
 
 ---
 
-## Current Work: Chiko Layer 3 Custom Blocks System — BUILT ✅ — Zero TSC Errors
+## Current Work: Chiko Layer 4 Business Memory System — BUILT ✅
+
+### Session 90 — Chiko Layer 4 Business Memory Build (Complete)
+- [x] Created `src/stores/business-memory.ts` — Zustand persist store, 30 canonical fields, auto-profileId
+- [x] Created `src/lib/chiko/field-mapper.ts` — 6 cross-tool mappers, privacy masking, AI summary
+- [x] Created `src/lib/chiko/manifests/business-memory.ts` — 8 actions, global manifest, prefillCurrentTool
+- [x] Modified `src/lib/chiko/manifests/index.ts` — Barrel export
+- [x] Modified `src/lib/chiko/manifests/sales-book.ts` — prefillFromMemory action
+- [x] Modified `src/lib/chiko/manifests/invoice.ts` — prefillFromMemory action
+- [x] Modified `src/app/api/chiko/route.ts` — businessProfile in body + system prompt injection
+- [x] Modified `src/components/Chiko/ChikoAssistant.tsx` — Global registration + payload integration
+- [x] Zero TypeScript errors on first pass — clean build (tsc --noEmit)
+- [x] Memory bank updated
+- [ ] **NEXT:** Layer 5 (Full Agent Workflows) spec
+
+### Session 89 — Chiko Layer 4 Business Memory Spec (Complete)
+- [x] Deep codebase exploration: all 18 stores, all persistence patterns, all localStorage keys
+- [x] Full field overlap analysis across Sales Book, Invoice, Business Card, Resume
+- [x] Created `PHASES/CHIKO-LAYER-4-SPEC.md` — comprehensive build spec (~650 lines)
+- [x] 30 canonical fields, 6 mapper functions, 8 manifest actions, 3 new files, 5 modified files
+- [x] Memory bank updated
+- [ ] **NEXT:** Layer 4 build (external builder)
 
 ### Session 88 — Chiko Layer 3 Custom Blocks Build (Complete)
 - [x] Installed `qrcode` + `@types/qrcode` dependency

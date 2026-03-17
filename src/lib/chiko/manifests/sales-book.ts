@@ -6,6 +6,8 @@
 import type { ChikoActionManifest, ChikoActionResult } from "@/stores/chiko-actions";
 import { useSalesBookEditor } from "@/stores/sales-book-editor";
 import type { CustomBlockType, BlockPosition } from "@/lib/sales-book/custom-blocks";
+import { useBusinessMemory } from "@/stores/business-memory";
+import { mapProfileToSalesBookBranding } from "@/lib/chiko/field-mapper";
 
 /** Build the sales book action manifest. Call from the workspace component. */
 export function createSalesBookManifest(): ChikoActionManifest {
@@ -184,6 +186,12 @@ export function createSalesBookManifest(): ChikoActionManifest {
         category: "Read",
       },
       {
+        name: "prefillFromMemory",
+        description: "Pre-fill the Sales Book with the user's saved business profile (company name, address, phone, email, banking details, logo). Only call this after the user confirms they want to pre-fill.",
+        parameters: { type: "object", properties: {} },
+        category: "Branding",
+      },
+      {
         name: "addCustomBlock",
         description: "Add a custom block to the form. Types: qr-code (QR code for URLs/payment links), text (custom text/tagline), divider (horizontal line), spacer (empty space), image (custom image), signature-box (additional signature line)",
         parameters: {
@@ -302,6 +310,19 @@ export function createSalesBookManifest(): ChikoActionManifest {
               message: "Current state read",
               newState: readSalesBookState(),
             };
+
+          case "prefillFromMemory": {
+            const memory = useBusinessMemory.getState();
+            if (!memory.hasProfile) {
+              return { success: false, message: "No business profile saved yet." };
+            }
+            const mapped = mapProfileToSalesBookBranding(memory.profile);
+            if (Object.keys(mapped).length === 0) {
+              return { success: false, message: "Business profile has no fields to pre-fill." };
+            }
+            store.updateBranding(mapped as Parameters<typeof store.updateBranding>[0]);
+            return { success: true, message: `Pre-filled branding with ${Object.keys(mapped).length} fields from Business Memory.` };
+          }
 
           case "addCustomBlock": {
             const blockId = store.addCustomBlock(

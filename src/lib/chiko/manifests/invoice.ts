@@ -10,6 +10,8 @@ import type {
   SalesDocumentType,
 } from "@/lib/invoice/schema";
 import type { CustomBlockType, BlockPosition } from "@/lib/sales-book/custom-blocks";
+import { useBusinessMemory } from "@/stores/business-memory";
+import { mapProfileToInvoiceBusinessInfo, mapProfileToInvoicePaymentInfo } from "@/lib/chiko/field-mapper";
 
 /** Build the invoice action manifest. Call from the workspace component. */
 export function createInvoiceManifest(): ChikoActionManifest {
@@ -255,6 +257,12 @@ export function createInvoiceManifest(): ChikoActionManifest {
         category: "Read",
       },
       {
+        name: "prefillFromMemory",
+        description: "Pre-fill the Invoice with the user's saved business profile (company info, banking/payment details, logo). Only call this after the user confirms.",
+        parameters: { type: "object", properties: {} },
+        category: "Business Info",
+      },
+      {
         name: "addCustomBlock",
         description: "Add a custom block to the invoice. Types: qr-code, text, divider, spacer, image, signature-box",
         parameters: {
@@ -430,6 +438,28 @@ export function createInvoiceManifest(): ChikoActionManifest {
                 metadata: { ...invoice.metadata },
               },
             };
+          }
+
+          case "prefillFromMemory": {
+            const memory = useBusinessMemory.getState();
+            if (!memory.hasProfile) {
+              return { success: false, message: "No business profile saved yet." };
+            }
+            const bizMapped = mapProfileToInvoiceBusinessInfo(memory.profile);
+            const payMapped = mapProfileToInvoicePaymentInfo(memory.profile);
+            let count = 0;
+            if (Object.keys(bizMapped).length > 0) {
+              store.updateBusinessInfo(bizMapped as Parameters<typeof store.updateBusinessInfo>[0]);
+              count += Object.keys(bizMapped).length;
+            }
+            if (Object.keys(payMapped).length > 0) {
+              store.updatePaymentInfo(payMapped as Parameters<typeof store.updatePaymentInfo>[0]);
+              count += Object.keys(payMapped).length;
+            }
+            if (count === 0) {
+              return { success: false, message: "Business profile has no fields to pre-fill." };
+            }
+            return { success: true, message: `Pre-filled ${count} fields from Business Memory.` };
           }
 
           case "addCustomBlock": {

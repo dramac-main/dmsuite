@@ -1,89 +1,58 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Session 88 — Chiko Layer 3 Custom Blocks System Built ✅ — Zero TSC Errors
+**Phase:** Session 90 — Chiko Layer 4 Business Memory System Built ✅
 
-### Session 88: Chiko Layer 3 Custom Blocks System Implementation
+### Session 90: Chiko Layer 4 Business Memory System Build
 
-**Context:** Layer 3 spec (`CHIKO-LAYER-3-SPEC.md`) was written in Session 87. This session implemented the full specification.
+**Context:** Layer 4 spec was written in Session 89. This session implemented the full Business Memory System — persistent business profile store, cross-tool field mapping, global Chiko manifest, API route enhancement, and client-side registration. Zero tsc errors on first pass.
 
 **Completed Work:**
 
-1. **Installed `qrcode` + `@types/qrcode`** — Single new dependency for QR code generation
+1. **Created `src/stores/business-memory.ts`** (~280 lines):
+   - `BusinessProfile` interface with 30 canonical fields across 5 groups (company, banking, social, design, team)
+   - `BusinessMemoryState` with all mutations and helpers
+   - Zustand persist middleware (key: `dmsuite-business-memory`), partializes only `profile` + `hasProfile`
+   - `updateProfile(patch)` auto-generates `profileId` via `crypto.randomUUID()` on first save
+   - `importFromFields()` maps Layer 2 detected fields to canonical names via `DETECTED_FIELD_MAP`
+   - `getProfileSummary()` returns "CompanyName — email — phone"
+   - `getBusinessProfile()` synchronous snapshot reader export
 
-2. **Created `src/lib/sales-book/custom-blocks.ts`** — Pure types + constants + factory:
-   - 6 block types: QR code, text, divider, spacer, image, signature box
-   - 4 block positions: after-header, after-items, before-signature, after-footer
-   - `CustomBlockBase` interface + 6 type-specific interfaces + `CustomBlock` union
-   - `BLOCK_TYPES` and `BLOCK_POSITIONS` constant arrays
-   - `createDefaultBlock(type)` factory with uuid and sensible defaults
-   - `getBlockSummary(block)` helper for Chiko state summaries
+2. **Created `src/lib/chiko/field-mapper.ts`** (~210 lines):
+   - 6 mapper functions: Sales Book branding (19 fields), Invoice business info (7), Invoice payment (5), Business Card details (11), Resume basics (7), Detected fields → profile (9)
+   - `filterPopulated()` helper excludes empty strings from all outputs
+   - `describeProfileForAI()` multi-line summary with masked bankAccountNumber + taxId (****last4)
+   - `getPopulatedFieldCount()` counts non-empty non-metadata fields
 
-3. **Modified `src/lib/sales-book/schema.ts`**:
-   - Added `customBlocks` field to `salesBookFormSchema` using `z.array(z.any()).default([])` with cast
-   - Re-exported all custom block types from `custom-blocks.ts`
-   - Updated `createDefaultSalesBookForm()` with `customBlocks: []`
-   - Updated `convertSalesBookType()` to preserve `customBlocks`
+3. **Created `src/lib/chiko/manifests/business-memory.ts`** (~260 lines):
+   - toolId: "business-memory", toolName: "Business Memory"
+   - 8 actions: saveProfile, saveBanking, saveLogo, readProfile, clearProfile, prefillCurrentTool, addTeamMember, removeTeamMember
+   - `getState()` returns summary (never raw data): hasProfile, profileName, populatedFieldCount, company fields, hasLogo, hasBanking, teamMemberCount, designPreferences
+   - `prefillCurrentTool` iterates registry.manifests to find active tool, maps profile fields via field-mapper, calls tool's update actions
 
-4. **Modified `src/stores/sales-book-editor.ts`**:
-   - Added 4 CRUD actions: `addCustomBlock`, `updateCustomBlock`, `removeCustomBlock`, `reorderCustomBlocks`
-   - All use Immer draft mutations with proper type handling
+4. **Modified `src/lib/chiko/manifests/index.ts`** — Added barrel export for `createBusinessMemoryManifest`
 
-5. **Created `src/lib/sales-book/CustomBlockRenderer.tsx`**:
-   - `CustomBlocksRegion` component: filters blocks by position, renders in array order
-   - 6 individual block renderers with density scaling and accent color resolution
-   - QR code uses wrapper component with `useState`/`useEffect` for async `toDataURL()`
-   - All dimensions scale by `density` parameter for multi-form layouts
+5. **Modified `src/lib/chiko/manifests/sales-book.ts`** — Added `prefillFromMemory` action + executeAction case (reads memory, maps 19 fields, calls `updateBranding`)
 
-6. **Modified `src/lib/sales-book/BlankFormRenderer.tsx`**:
-   - Added `<CustomBlocksRegion>` at 4 positions in `BlankFormSlip` (table-based forms)
-   - Added `<CustomBlocksRegion>` at 4 positions in `BlankReceiptSlip` (receipt cards)
-   - Passes `blocks`, `position`, `accentColor`, `density` to each region
+6. **Modified `src/lib/chiko/manifests/invoice.ts`** — Added `prefillFromMemory` action + executeAction case (reads memory, maps business info + payment info, calls both update methods)
 
-7. **Created `src/components/workspaces/sales-book-designer/SBSectionCustomBlocks.tsx`**:
-   - Full sidebar panel with Add Block type selector grid (6 types)
-   - Sortable block list using `@dnd-kit/sortable` for drag-and-drop reordering
-   - Collapsible block cards with type icon, summary, enable/disable toggle, delete button
-   - Type-specific config panels for all 6 block types (sliders, inputs, color pickers, file upload)
-   - Position and alignment selectors, margin controls
+7. **Modified `src/app/api/chiko/route.ts`** — Added `businessProfile` to request body, injects profile summary + 7 memory management instructions into system prompt
 
-8. **Modified `SalesBookDesignerWorkspace.tsx`**:
-   - Added "Custom Blocks" accordion section between "Brand & Supplier Logos" and "Start Over"
-   - Badge shows block count when blocks exist
+8. **Modified `src/components/Chiko/ChikoAssistant.tsx`** — Imports, global manifest registration via useEffect (no cleanup), `businessProfile` summary in fetch payload via `describeProfileForAI()`
 
-9. **Modified `src/lib/chiko/manifests/sales-book.ts`**:
-   - Added 4 new actions: addCustomBlock, updateCustomBlock, removeCustomBlock, reorderCustomBlocks
-   - Updated `getState()` to include customBlocks metadata summary
-   - Import of CustomBlockType, BlockPosition types
-
-10. **Modified Invoice System** (manifests + store + schema):
-    - Added `customBlocks` field to `invoiceDataSchema` and both default/sample data functions
-    - Added 4 CRUD actions to `invoice-editor.ts` store
-    - Added 4 actions to `invoice.ts` manifest with executeAction cases
-    - Updated `getState()` to include customBlocks summary
-    - Invoice renderer integration deferred per spec (only manifest + store ready)
-
-**Build Status: ✅ Zero TypeScript errors (tsc --noEmit passes clean)**
+**Build Status: ✅ Zero TypeScript errors on first pass (tsc --noEmit)**
 
 **Key Technical Decisions:**
-- Zod v4 compatibility: Used `z.array(z.any()).default([]) as unknown as z.ZodType<CustomBlock[]>` double cast
-- Invoice store: Cast `s.invoice.customBlocks as CustomBlock[]` since Zod infers `unknown` from `z.any()`
-- QR code: Wrapper component approach (not store pre-generation) — cleanest for async rendering
-- Block field names: `BLOCK_TYPES` uses `.type` not `.id`, `BLOCK_POSITIONS` uses `.value` not `.id`
+- No immer/temporal — simple key-value store doesn't need it
+- Privacy: `maskValue()` shows only `****last4` for bank account and tax ID in AI context
+- Global manifest: useEffect with no cleanup (always available, unlike tool manifests)
+- businessProfile sent as text summary string, never raw data or logo URIs
+- All mappers use `filterPopulated()` to exclude empty strings from output
 
 **Next Steps:**
-- Layer 4 (Business Memory) spec is next
+- Layer 5 (Full Agent Workflows) spec
 - Invoice renderer custom blocks integration (deferred from Layer 3)
 - Remaining business tools: Cover Letter Writer, Proposal & Pitch Deck, Certificate Designer, Contract Creator
-   - BlankFormRenderer header band: "Tax ID:" → "TPIN:"
-   - BlankFormRenderer non-band header: "Tax ID:" → "TPIN:"
-
-2. **Progressive Disclosure Pattern** — Reusable `AdvancedToggle` component:
-   - Chevron icon that rotates 90° on expand
-   - Consistent styling: text-[10px], gray-500 → gray-300 hover
-   - Applied with left border indicator (`border-l-2 border-gray-700/50 pl-2`)
-
-3. **Banking Fields Restructured** (SBSectionBranding):
    - **Basic (always visible):** Bank name, Account holder, Account number, Branch
    - **Advanced (behind toggle):** Branch code, Sort/routing code, SWIFT/BIC, IBAN, Reference, Custom field pair
    - Toggle label: "More banking fields"

@@ -13,6 +13,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useChikoStore } from "@/stores/chiko";
 import { useChikoActionRegistry } from "@/stores/chiko-actions";
+import { useBusinessMemory } from "@/stores/business-memory";
+import { describeProfileForAI } from "@/lib/chiko/field-mapper";
+import { createBusinessMemoryManifest } from "@/lib/chiko/manifests";
 import { useTheme } from "@/components/ThemeProvider";
 import { Chiko3DAvatar } from "./Chiko3DAvatar";
 import type { ChikoExpression } from "./Chiko3DAvatar";
@@ -376,6 +379,13 @@ export function ChikoAssistant() {
       abortRef.current = null;
     }
   }, [isOpen]);
+
+  // ── Register Business Memory manifest globally (always available) ──
+  useEffect(() => {
+    const registry = useChikoActionRegistry.getState();
+    registry.register(createBusinessMemoryManifest());
+    // intentionally no cleanup — business memory is always available
+  }, []);
 
   // ── Detect virtual keyboard (mobile) ─────────────────────
   useEffect(() => {
@@ -866,6 +876,12 @@ export function ChikoAssistant() {
           };
         }
 
+        // Build business profile summary for system prompt injection
+        const memoryState = useBusinessMemory.getState();
+        const profileSummary = memoryState.hasProfile
+          ? describeProfileForAI(memoryState.profile)
+          : "";
+
         const response = await fetch("/api/chiko", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -874,6 +890,7 @@ export function ChikoAssistant() {
             context,
             ...(hasTools ? { actions: actionDescriptors, toolState } : {}),
             ...(fileContext ? { fileContext } : {}),
+            ...(profileSummary ? { businessProfile: profileSummary } : {}),
           }),
           signal: controller.signal,
         });

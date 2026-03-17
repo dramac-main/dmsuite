@@ -144,7 +144,7 @@ Remember: You're Chiko, the friendliest and most capable creative AI assistant i
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { messages, context, actions, toolState, fileContext } = body as {
+    const { messages, context, actions, toolState, fileContext, businessProfile } = body as {
       messages: { role: string; content: string }[];
       context?: {
         currentPath?: string;
@@ -162,6 +162,7 @@ export async function POST(request: NextRequest) {
         tables?: { title?: string; headers?: string[]; rowCount: number }[];
         images?: { name: string; width: number; height: number; mimeType: string }[];
       };
+      businessProfile?: string;
     };
 
     if (!messages || !Array.isArray(messages)) {
@@ -185,6 +186,12 @@ export async function POST(request: NextRequest) {
 
     // Build context-aware system message
     let systemPrompt = CHIKO_SYSTEM_PROMPT;
+
+    // ── Inject Business Memory profile when available ──
+    if (businessProfile && typeof businessProfile === "string" && businessProfile.trim() !== "") {
+      systemPrompt += `\n\n## User's Business Profile\n${businessProfile}\n\nInstructions for Business Memory:\n- When the user mentions business details, offer to save them\n- When a design tool is open and you have saved data, proactively offer to pre-fill\n- NEVER auto-fill without explicit user confirmation\n- Compare uploaded file fields with stored profile — offer to update differences\n- Profile is local-only — reassure about privacy if asked\n- Respond to "what do you know about me" with the stored profile\n- If no profile: "I don't have any business details saved yet. Tell me about your business!"`;
+    }
+
     if (context) {
       systemPrompt += `\n\n## Current User Context\n`;
       if (context.currentPath) {
