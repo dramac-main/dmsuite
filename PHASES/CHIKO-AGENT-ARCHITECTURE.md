@@ -106,6 +106,22 @@ Each layer is built, tested, and documented before the next layer's spec is writ
 - Extracted data is sanitized before being passed to tool actions
 - This layer depends on Layer 1 being complete (it uses actions to populate fields)
 
+**Layer 2 — Reality vs. Plan (Session 86):**
+- 7 new files created, 4 existing files modified — matches spec exactly
+- 1 new dependency installed: `xlsx` (SheetJS) — as planned
+- Extractors: PDF (pdf-parse), DOCX (mammoth), XLSX (SheetJS), Image (sharp) — all working
+- Field detector: regex-based detection of company, phone, email, address, website, taxId, banking
+- SVG sanitization: scripts, event handlers, external refs stripped — comprehensive
+- Image handling: magic byte validation, resize >2MB/2000px, thumbnail generation at 200px
+- Upload route: memory-only processing, 10MB cap, MIME allowlist — no disk I/O
+- Client UI: paperclip button, drag-and-drop overlay, file chips with progress bars, auto-send via useEffect
+- `__ATTACHED_IMAGE_N__` placeholder interception: resolved in `executeChikoAction` before dispatch
+- `fileContext` sent as summary only (not raw text/base64) — token-efficient as spec'd
+- Invoice manifest already had `logoUrl` — no modification needed (spec assumed it didn't)
+- `pdf-parse` required `require()` instead of ESM import — minor deviation, typed via `as` cast
+- Zero TypeScript errors — tsc --noEmit passes clean
+- No significant architectural deviations from the spec
+
 ---
 
 ## 5. Layer 3 — Custom Blocks System
