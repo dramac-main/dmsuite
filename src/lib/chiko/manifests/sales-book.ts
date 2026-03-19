@@ -270,13 +270,17 @@ export function createSalesBookManifest(options?: SalesBookManifestOptions): Chi
 
     getState: () => {
       const { form } = useSalesBookEditor.getState();
+      // Strip logoUrl data URI to prevent state bloat — color extraction happens client-side
+      const { logoUrl, ...brandingWithoutLogo } = form.companyBranding;
+      // Strip watermarkImage data URI from style
+      const { watermarkImage, ...styleWithoutWatermark } = form.style;
       return {
         documentType: form.documentType,
-        companyBranding: { ...form.companyBranding },
+        companyBranding: { ...brandingWithoutLogo, hasLogo: !!logoUrl },
         serialConfig: { ...form.serialConfig },
         formLayout: { ...form.formLayout },
         printConfig: { ...form.printConfig },
-        style: { ...form.style },
+        style: { ...styleWithoutWatermark, hasWatermarkImage: !!watermarkImage },
         brandLogos: {
           enabled: form.brandLogos.enabled,
           position: form.brandLogos.position,

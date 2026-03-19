@@ -16,7 +16,10 @@ import { useChikoActionRegistry } from "@/stores/chiko-actions";
 import { useBusinessMemory } from "@/stores/business-memory";
 import { useChikoWorkflows } from "@/stores/chiko-workflows";
 import { describeProfileForAI } from "@/lib/chiko/field-mapper";
+import { extractDominantColors } from "@/lib/color-extractor";
 import { createBusinessMemoryManifest, createWorkflowManifest } from "@/lib/chiko/manifests";
+import { useInvoiceEditor } from "@/stores/invoice-editor";
+import { useSalesBookEditor } from "@/stores/sales-book-editor";
 import { useTheme } from "@/components/ThemeProvider";
 import { Chiko3DAvatar } from "./Chiko3DAvatar";
 import type { ChikoExpression } from "./Chiko3DAvatar";
@@ -82,6 +85,42 @@ function getFileIcon(mimeType: string): string {
    ============================================================ */
 
 /* ── Tool search + action helpers ────────────────────────── */
+
+/** Walk a nested object to find the first data URI that looks like a logo image */
+function findLogoDataUri(obj: Record<string, unknown>): string | undefined {
+  const logoKeys = ["logoUrl", "logoImage", "logo"];
+  for (const key of Object.keys(obj)) {
+    const val = obj[key];
+    if (logoKeys.includes(key) && typeof val === "string" && val.startsWith("data:image/")) {
+      return val;
+    }
+    if (val && typeof val === "object" && !Array.isArray(val)) {
+      const found = findLogoDataUri(val as Record<string, unknown>);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Get the logo data URI from the active tool's store.
+ * We read the store directly because manifests strip logoUrl from state.
+ */
+function getActiveToolLogoUri(currentToolId?: string): string | undefined {
+  try {
+    if (currentToolId === "invoice-designer") {
+      const { invoice } = useInvoiceEditor.getState();
+      return invoice.businessInfo.logoUrl || undefined;
+    }
+    if (currentToolId === "sales-book-a4" || currentToolId === "sales-book-a5") {
+      const { form } = useSalesBookEditor.getState();
+      return form.companyBranding.logoUrl || undefined;
+    }
+  } catch {
+    // Store not available
+  }
+  return undefined;
+}
 
 function findToolByQuery(query: string): FlatTool | null {
   const q = query.toLowerCase().trim();
@@ -1061,6 +1100,24 @@ export function ChikoAssistant() {
         const workflowSummary = useChikoWorkflows.getState().getProgressSummary();
         const workflowContext = workflowSummary !== "No workflow is currently active." ? workflowSummary : "";
 
+        // ── Extract logo for vision + color analysis ──
+        let logoImage: { data: string; mediaType: string } | undefined;
+        let logoColors: string[] | undefined;
+        {
+          // Read logo from the active tool's store directly (manifest strips logoUrl from state)
+          const logoUri = getActiveToolLogoUri(context.currentToolId);
+          if (logoUri) {
+            // Extract dominant colors client-side for reliable hex values
+            const colors = await extractDominantColors(logoUri, 5);
+            if (colors.length > 0) logoColors = colors;
+            // Prepare logo for Claude vision (strip data URI prefix)
+            const match = logoUri.match(/^data:(image\/[^;]+);base64,(.+)$/);
+            if (match) {
+              logoImage = { data: match[2], mediaType: match[1] };
+            }
+          }
+        }
+
         const response = await fetch("/api/chiko", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1071,6 +1128,8 @@ export function ChikoAssistant() {
             ...(fileContext ? { fileContext } : {}),
             ...(profileSummary ? { businessProfile: profileSummary } : {}),
             ...(workflowContext ? { workflowContext } : {}),
+            ...(logoImage ? { logoImage } : {}),
+            ...(logoColors ? { logoColors } : {}),
           }),
           signal: controller.signal,
         });

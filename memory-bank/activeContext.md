@@ -1,43 +1,51 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Session 101 — Activity Log + Color Persistence ✅
+**Phase:** Session 102 — Logo Color Matching Fix ✅
 
-### Session 101: Activity Log System + Color Persistence Fix
+### Session 102: Fix Chiko Logo Color Matching
 
-**Context:** User requested (1) an activity log system so Chiko can revert to previous states, and (2) a fix for accent colors being lost when switching templates.
+**Context:** User reported that when asking Chiko to "match colors from my logo", Chiko applied wrong teal/green colors instead of the blue from the DRAMAC logo. Root cause: Chiko could never actually see or analyze the logo image.
+
+### Root Cause (3 compounding issues)
+1. **State bloat**: `getState()` in invoice/sales-book manifests included raw `logoUrl` data URI (100KB+ base64) in toolState JSON
+2. **Truncation**: API route truncated toolState at 4000 chars, corrupting the base64 mid-stream
+3. **No vision**: `streamClaude()` sent all messages as plain text — no multimodal/image blocks despite Claude supporting vision
 
 ### Changes Made
 
-#### 1. Activity Log Store (`src/stores/activity-log.ts`) — NEW
-- `ActivityEntry` type: id, timestamp, toolId, action, description, snapshot (JSON string), source (user/chiko)
-- `useActivityLog` Zustand store (non-persisted, session-only): logActivity, getLog, getEntry, getSnapshot, clearLog
-- 50-entry cap per tool to prevent memory bloat
-- `actionSource()` helper with `_chikoMode` flag for source tracking
-- `withActivityLogging()` HOF wrapper for manifests:
-  - Auto-logs every executed Chiko action with before-snapshot
-  - Adds `getActivityLog` and `revertToState` actions to any manifest
-  - `revertToState` restores a snapshot and logs the revert itself
-  - Read-only actions (`readCurrentState`, `getActivityLog`) are not logged
+#### 1. Color Extractor Utility (`src/lib/color-extractor.ts`) — NEW
+- Canvas-based dominant color extraction from image data URIs
+- `extractDominantColors(dataUri, count)` — async, samples at 64x64, buckets by RGB
+- Filters: skips transparent/white/black pixels, deduplicates similar colors (min distance 30)
+- Caching system: `extractDominantColorsCached()`, `getCachedLogoColors()`, `primeColorCache()`
 
-#### 2. Color Persistence — Invoice Store (`src/stores/invoice-editor.ts`)
-- Added module-level `_accentLocked` boolean flag
-- `setAccentColor()` sets `_accentLocked = true` — once user/Chiko explicitly customizes color, it persists
-- `setTemplate()` only syncs accent if `!_accentLocked` — font pairing still syncs
-- `updateMetadata()` respects lock: explicit accentColor in patch sets lock, template-switch only auto-syncs if unlocked
-- `setInvoice()` and `resetInvoice()` reset lock (fresh data = start over)
-- Exported `isInvoiceAccentLocked()` and `setInvoiceAccentLock()` for testing
+#### 2. Invoice Manifest — Strip logoUrl from getState()
+- Destructures `{ logoUrl, ...bizWithoutLogo }` from businessInfo
+- Sends `hasLogo: !!logoUrl` instead of massive data URI
 
-#### 3. Color Persistence — Sales Book Store (`src/stores/sales-book-editor.ts`)
-- Same `_accentLocked` pattern as invoice
-- `updateStyle({ accentColor })` sets lock; template-switch in updateStyle respects lock
-- `setForm()` and `resetForm()` reset lock
-- Exported helpers: `isSalesBookAccentLocked()`, `setSalesBookAccentLock()`
+#### 3. Sales Book Manifest — Strip logoUrl + watermarkImage
+- Strips `logoUrl` from companyBranding → `hasLogo: !!logoUrl`
+- Strips `watermarkImage` from style → `hasWatermarkImage: !!watermarkImage`
 
-#### 4. Resume Manifest — No Color Fix Needed
-- Resume `changeTemplate()` already preserves `primaryColor` (never touches it)
+#### 4. ChikoAssistant — Logo extraction + vision pipeline
+- Imports `useInvoiceEditor` and `useSalesBookEditor` stores directly
+- `getActiveToolLogoUri(currentToolId)` — reads logo data URI from the active tool's store
+- In `sendMessage()`: extracts dominant colors via Canvas, prepares base64 for Claude vision
+- Sends `logoImage` (base64 + mediaType) and `logoColors` (hex array) to API
 
-#### 5. All Three Manifests Wrapped with Activity Logging
+#### 5. API Route — Vision + color matching support
+- Accepts `logoImage` and `logoColors` in request body
+- `streamClaude()` now accepts optional `logoImage` parameter
+- Last user message becomes multimodal when logo image present: `[{type:"image",...}, {type:"text",...}]`
+- Logo colors injected into system prompt as exact hex values
+- System prompt updated with explicit "Logo color matching" rule
+- Tool state truncation increased from 4000→8000 chars (logos stripped, so states are smaller now)
+
+### Previous Session
+
+#### Session 101: Activity Log + Color Persistence — COMPLETE ✅
+- Activity log store, withActivityLogging wrapper, color persistence for invoice/sales-book
 - `createResumeManifest()` → `withActivityLogging(base, getSnapshot, restoreSnapshot)`
 - `createInvoiceManifest()` → same pattern
 - `createSalesBookManifest()` → same pattern

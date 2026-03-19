@@ -443,9 +443,11 @@ export function createInvoiceManifest(options?: InvoiceManifestOptions): ChikoAc
 
     getState: () => {
       const { invoice } = useInvoiceEditor.getState();
+      // Strip logoUrl data URI to prevent state bloat — color extraction happens client-side
+      const { logoUrl, ...bizWithoutLogo } = invoice.businessInfo;
       return {
         documentType: invoice.documentType,
-        businessInfo: { ...invoice.businessInfo },
+        businessInfo: { ...bizWithoutLogo, hasLogo: !!logoUrl },
         clientInfo: { ...invoice.clientInfo },
         invoiceNumber: invoice.invoiceNumber,
         issueDate: invoice.issueDate,

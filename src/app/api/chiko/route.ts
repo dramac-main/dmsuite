@@ -60,7 +60,7 @@ function needsToolRegistry(messages: { role: string; content: string }[]): boole
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { messages, context, actions, toolState, fileContext, businessProfile, workflowContext } = body as {
+    const { messages, context, actions, toolState, fileContext, businessProfile, workflowContext, logoImage, logoColors } = body as {
       messages: { role: string; content: string }[];
       context?: {
         currentPath?: string;
@@ -80,6 +80,10 @@ export async function POST(request: NextRequest) {
       };
       businessProfile?: string;
       workflowContext?: string;
+      /** Base64 logo image (without data URI prefix) for vision input */
+      logoImage?: { data: string; mediaType: string };
+      /** Dominant colors extracted from the logo, as hex strings */
+      logoColors?: string[];
     };
 
     if (!messages || !Array.isArray(messages)) {
@@ -194,6 +198,7 @@ The current tool state is provided in the "Current Tool State" section below. Yo
 - Accent colors: blue(#1e40af)=corporate, teal(#0f766e)=modern, purple(#7c3aed)=creative, emerald(#059669)=fresh.
 - Brand consistency: ALL elements must use the same accent color family. Never mix unrelated colors. Match new additions to the existing template tone.
 - Color persistence: user-chosen accent colors persist across template switches. Changing template changes layout/fonts but NOT the user's colors.
+- **Logo color matching**: When the user asks to match their logo colors, the "Logo Colors" section (if present) contains the EXACT hex values extracted from the image. Use the most prominent brand color as the accent. You can also see the logo image directly attached to the last message for visual reference. NEVER guess colors — always use the provided hex values.
 
 ### Activity Log & Revert
 You have access to an activity log that records every action. When the user asks to undo, revert, or go back:
@@ -205,9 +210,14 @@ Users may say "undo that", "go back", "revert the colors", etc. — use the log 
       if (toolState && typeof toolState === "object") {
         // Only include a reasonable chunk of state to avoid token overflow
         const stateStr = JSON.stringify(toolState, null, 2);
-        const truncated = stateStr.length > 4000 ? stateStr.slice(0, 4000) + "\n..." : stateStr;
+        const truncated = stateStr.length > 8000 ? stateStr.slice(0, 8000) + "\n..." : stateStr;
         systemPrompt += `\n## Current Tool State\n\`\`\`json\n${truncated}\n\`\`\`\n`;
       }
+    }
+
+    // ── Inject extracted logo colors into tool state context ──
+    if (logoColors && logoColors.length > 0) {
+      systemPrompt += `\n\n## Logo Colors\nThe user's logo contains these dominant colors (extracted automatically): ${logoColors.map(c => c).join(", ")}\nWhen asked to match logo colors, use THESE exact hex values for the accent color. Pick the most prominent non-white, non-black brand color.\n`;
     }
 
     const provider = resolveProvider();
@@ -215,7 +225,7 @@ Users may say "undo that", "go back", "revert the colors", etc. — use the log 
     if (provider === "openai") {
       return streamOpenAI(messages, systemPrompt, hasActions ? actions : undefined, hasWorkflow);
     }
-    return streamClaude(messages, systemPrompt, hasActions ? actions : undefined, hasWorkflow);
+    return streamClaude(messages, systemPrompt, hasActions ? actions : undefined, hasWorkflow, logoImage);
   } catch (error) {
     console.error("Chiko API error:", error);
     return new Response("Internal server error", { status: 500 });
@@ -237,6 +247,7 @@ async function streamClaude(
   systemPrompt: string,
   tools?: { name: string; description: string; input_schema: Record<string, unknown> }[],
   hasWorkflow?: boolean,
+  logoImage?: { data: string; mediaType: string },
 ) {
   if (!ANTHROPIC_API_KEY) {
     return new Response(
@@ -248,14 +259,34 @@ async function streamClaude(
     );
   }
 
+  // Build messages — last user message may be multimodal if logo image is provided
+  const apiMessages = messages.map((m: { role: string; content: string }, i: number) => {
+    const role = m.role === "user" ? "user" as const : "assistant" as const;
+    // For the LAST user message, attach the logo image as a vision block
+    if (logoImage && role === "user" && i === messages.length - 1) {
+      return {
+        role,
+        content: [
+          {
+            type: "image" as const,
+            source: {
+              type: "base64" as const,
+              media_type: logoImage.mediaType,
+              data: logoImage.data,
+            },
+          },
+          { type: "text" as const, text: m.content },
+        ],
+      };
+    }
+    return { role, content: m.content };
+  });
+
   const apiBody: Record<string, unknown> = {
     model: ANTHROPIC_MODEL,
     max_tokens: hasWorkflow ? 4096 : 2048,
     system: systemPrompt,
-    messages: messages.map((m: { role: string; content: string }) => ({
-      role: m.role === "user" ? "user" : "assistant",
-      content: m.content,
-    })),
+    messages: apiMessages,
     stream: true,
   };
 
