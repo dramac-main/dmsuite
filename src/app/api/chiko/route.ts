@@ -59,7 +59,12 @@ function needsToolRegistry(messages: { role: string; content: string }[]): boole
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return new Response("Invalid JSON in request body", { status: 400 });
+    }
     const { messages, context, actions, toolState, fileContext, businessProfile, workflowContext, logoImage, logoColors } = body as {
       messages: { role: string; content: string }[];
       context?: {
@@ -222,10 +227,16 @@ Users may say "undo that", "go back", "revert the colors", etc. — use the log 
 
     const provider = resolveProvider();
 
+    // Validate logo image format for vision API (only jpeg/png/gif/webp)
+    const SUPPORTED_VISION_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
+    const validLogoImage = logoImage?.data && logoImage?.mediaType && SUPPORTED_VISION_TYPES.has(logoImage.mediaType)
+      ? logoImage
+      : undefined;
+
     if (provider === "openai") {
       return streamOpenAI(messages, systemPrompt, hasActions ? actions : undefined, hasWorkflow);
     }
-    return streamClaude(messages, systemPrompt, hasActions ? actions : undefined, hasWorkflow, logoImage);
+    return streamClaude(messages, systemPrompt, hasActions ? actions : undefined, hasWorkflow, validLogoImage);
   } catch (error) {
     console.error("Chiko API error:", error);
     return new Response("Internal server error", { status: 500 });
@@ -312,10 +323,12 @@ async function streamClaude(
   if (!response.ok) {
     const errorText = await response.text();
     console.error("Chiko Claude error:", response.status, errorText);
+    // Include status hint in dev mode for debugging
+    const hint = process.env.NODE_ENV === "development" ? ` (API ${response.status})` : "";
     return new Response(
       JSON.stringify({
         fallback: true,
-        content: "Hmm, I'm having a little trouble connecting right now. Try again in a sec! — Chiko ✨",
+        content: `Hmm, I'm having a little trouble connecting right now.${hint} Try again in a sec! — Chiko ✨`,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );

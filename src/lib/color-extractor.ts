@@ -21,7 +21,16 @@ export async function extractDominantColors(
   return new Promise<string[]>((resolve) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
+
+    // Timeout: don't block sendMessage forever if image fails to load
+    const timeout = setTimeout(() => {
+      img.onload = null;
+      img.onerror = null;
+      resolve([]);
+    }, 5000);
+
     img.onload = () => {
+      clearTimeout(timeout);
       try {
         // Sample at a small size for performance
         const sampleSize = 64;
@@ -93,7 +102,10 @@ export async function extractDominantColors(
         resolve([]);
       }
     };
-    img.onerror = () => resolve([]);
+    img.onerror = () => {
+      clearTimeout(timeout);
+      resolve([]);
+    };
     img.src = dataUri;
   });
 }

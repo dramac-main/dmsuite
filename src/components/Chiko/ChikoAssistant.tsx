@@ -86,20 +86,12 @@ function getFileIcon(mimeType: string): string {
 
 /* ── Tool search + action helpers ────────────────────────── */
 
-/** Walk a nested object to find the first data URI that looks like a logo image */
-function findLogoDataUri(obj: Record<string, unknown>): string | undefined {
-  const logoKeys = ["logoUrl", "logoImage", "logo"];
-  for (const key of Object.keys(obj)) {
-    const val = obj[key];
-    if (logoKeys.includes(key) && typeof val === "string" && val.startsWith("data:image/")) {
-      return val;
-    }
-    if (val && typeof val === "object" && !Array.isArray(val)) {
-      const found = findLogoDataUri(val as Record<string, unknown>);
-      if (found) return found;
-    }
-  }
-  return undefined;
+/** Supported media types for Claude vision API */
+const VISION_SUPPORTED_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
+
+/** Check if user message is about logo colors / brand colors */
+function isLogoColorQuery(text: string): boolean {
+  return /\b(match|logo|brand)\b.*\b(color|colour|accent|theme|palette)\b|\b(color|colour|accent|theme|palette)\b.*\b(match|logo|brand)\b|match.*logo|logo.*color|brand.*color|color.*logo|color.*brand/i.test(text);
 }
 
 /**
@@ -1100,21 +1092,24 @@ export function ChikoAssistant() {
         const workflowSummary = useChikoWorkflows.getState().getProgressSummary();
         const workflowContext = workflowSummary !== "No workflow is currently active." ? workflowSummary : "";
 
-        // ── Extract logo for vision + color analysis ──
+        // ── Extract logo for vision + color analysis (only for color/logo queries) ──
         let logoImage: { data: string; mediaType: string } | undefined;
         let logoColors: string[] | undefined;
-        {
-          // Read logo from the active tool's store directly (manifest strips logoUrl from state)
-          const logoUri = getActiveToolLogoUri(context.currentToolId);
-          if (logoUri) {
-            // Extract dominant colors client-side for reliable hex values
-            const colors = await extractDominantColors(logoUri, 5);
-            if (colors.length > 0) logoColors = colors;
-            // Prepare logo for Claude vision (strip data URI prefix)
-            const match = logoUri.match(/^data:(image\/[^;]+);base64,(.+)$/);
-            if (match) {
-              logoImage = { data: match[2], mediaType: match[1] };
+        if (isLogoColorQuery(text)) {
+          try {
+            const logoUri = getActiveToolLogoUri(context.currentToolId);
+            if (logoUri) {
+              // Extract dominant colors client-side for reliable hex values
+              const colors = await extractDominantColors(logoUri, 5);
+              if (colors.length > 0) logoColors = colors;
+              // Prepare logo for Claude vision — only if supported format and < 4MB
+              const match = logoUri.match(/^data:(image\/[^;]+);base64,(.+)$/);
+              if (match && VISION_SUPPORTED_TYPES.has(match[1]) && match[2].length < 4_000_000) {
+                logoImage = { data: match[2], mediaType: match[1] };
+              }
             }
+          } catch {
+            // Logo extraction failed — continue without it, colors will be sent if available
           }
         }
 
