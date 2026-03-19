@@ -6,3 +6,4 @@ export { createSalesBookManifest } from "./sales-book";
 export { createInvoiceManifest } from "./invoice";
 export { createResumeManifest } from "./resume";
 export { createBusinessMemoryManifest } from "./business-memory";
+export { createWorkflowManifest } from "./workflow-engine";

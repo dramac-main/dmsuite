@@ -28,8 +28,22 @@ import {
   convertDocumentType,
   DOCUMENT_TYPE_CONFIGS,
 } from "@/lib/invoice/schema";
+import { getInvoiceTemplate } from "@/lib/invoice/templates/template-defs";
 import type { CustomBlock, CustomBlockType } from "@/lib/sales-book/custom-blocks";
 import { createDefaultBlock } from "@/lib/sales-book/custom-blocks";
+
+// ---------------------------------------------------------------------------
+// Accent Color Lock — once user/Chiko explicitly sets a color, preserve it
+// across template switches. Reset only on full form reset or data load.
+// ---------------------------------------------------------------------------
+
+let _accentLocked = false;
+
+/** Check if accent color is locked (user has explicitly customized it) */
+export function isInvoiceAccentLocked(): boolean { return _accentLocked; }
+
+/** Explicitly lock/unlock accent (used by tests or programmatic reset) */
+export function setInvoiceAccentLock(v: boolean): void { _accentLocked = v; }
 
 // ---------------------------------------------------------------------------
 // Types
@@ -131,20 +145,24 @@ export const useInvoiceEditor = create<InvoiceEditorState>()(
         }),
 
       // ── Document mutations ──
-      setInvoice: (data) =>
+      setInvoice: (data) => {
+        _accentLocked = false; // fresh data load — reset lock
         set((s) => {
           s.invoice = data;
-        }),
+        });
+      },
 
       updateInvoice: (recipe) =>
         set((s) => {
           recipe(s.invoice);
         }),
 
-      resetInvoice: (docType) =>
+      resetInvoice: (docType) => {
+        _accentLocked = false; // full reset — unlock
         set((s) => {
           s.invoice = createDefaultInvoiceData(docType ?? s.invoice.documentType);
-        }),
+        });
+      },
 
       // ── Business Info ──
       updateBusinessInfo: (info) =>
@@ -293,12 +311,22 @@ export const useInvoiceEditor = create<InvoiceEditorState>()(
       setTemplate: (template) =>
         set((s) => {
           s.invoice.metadata.template = template;
+          const tpl = getInvoiceTemplate(template);
+          if (tpl) {
+            // Only sync accent color if user hasn't explicitly customized it
+            if (!_accentLocked) {
+              s.invoice.metadata.accentColor = tpl.accent;
+            }
+            s.invoice.metadata.fontPairing = tpl.defaultFontPairing;
+          }
         }),
 
-      setAccentColor: (color) =>
+      setAccentColor: (color) => {
+        _accentLocked = true; // user explicitly chose a color — lock it
         set((s) => {
           s.invoice.metadata.accentColor = color;
-        }),
+        });
+      },
 
       setFontPairing: (fp) =>
         set((s) => {
@@ -310,10 +338,24 @@ export const useInvoiceEditor = create<InvoiceEditorState>()(
           s.invoice.metadata.pageFormat = pf;
         }),
 
-      updateMetadata: (patch) =>
+      updateMetadata: (patch) => {
+        // If caller explicitly provides accent color, lock it
+        if (patch.accentColor) _accentLocked = true;
         set((s) => {
+          // Sync font to template defaults on template change
+          // Only sync accent color if not locked and not explicitly provided
+          if (patch.template && patch.template !== s.invoice.metadata.template) {
+            const tpl = getInvoiceTemplate(patch.template);
+            if (tpl) {
+              if (!_accentLocked && !patch.accentColor) {
+                patch.accentColor = tpl.accent;
+              }
+              if (!patch.fontPairing) patch.fontPairing = tpl.defaultFontPairing;
+            }
+          }
           Object.assign(s.invoice.metadata, patch);
-        }),
+        });
+      },
 
       // ── Custom Blocks ──
       addCustomBlock: (type, overrides) => {

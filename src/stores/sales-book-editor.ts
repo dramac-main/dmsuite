@@ -21,9 +21,23 @@ import type { SalesDocumentType } from "@/lib/invoice/schema";
 import {
   createDefaultSalesBookForm,
   convertSalesBookType,
+  getTemplateConfig,
 } from "@/lib/sales-book/schema";
 import type { CustomBlock, CustomBlockType } from "@/lib/sales-book/custom-blocks";
 import { createDefaultBlock } from "@/lib/sales-book/custom-blocks";
+
+// ---------------------------------------------------------------------------
+// Accent Color Lock — once user/Chiko explicitly sets a color, preserve it
+// across template switches. Reset only on full form reset or data load.
+// ---------------------------------------------------------------------------
+
+let _accentLocked = false;
+
+/** Check if accent color is locked (user has explicitly customized it) */
+export function isSalesBookAccentLocked(): boolean { return _accentLocked; }
+
+/** Explicitly lock/unlock accent (used by tests or programmatic reset) */
+export function setSalesBookAccentLock(v: boolean): void { _accentLocked = v; }
 
 // ---------------------------------------------------------------------------
 // Types
@@ -89,15 +103,19 @@ export const useSalesBookEditor = create<SalesBookEditorState>()(
         }),
 
       // ── Top-level ──
-      setForm: (form) =>
+      setForm: (form) => {
+        _accentLocked = false; // fresh data load — reset lock
         set((s) => {
           s.form = form;
-        }),
+        });
+      },
 
-      resetForm: (docType) =>
+      resetForm: (docType) => {
+        _accentLocked = false; // full reset — unlock
         set((s) => {
           s.form = createDefaultSalesBookForm(docType ?? (s.form.documentType as SalesDocumentType));
-        }),
+        });
+      },
 
       // ── Company Branding ──
       updateBranding: (patch) =>
@@ -135,10 +153,19 @@ export const useSalesBookEditor = create<SalesBookEditorState>()(
         }),
 
       // ── Style ──
-      updateStyle: (patch) =>
+      updateStyle: (patch) => {
+        // If caller explicitly provides accent color, lock it
+        if (patch.accentColor) _accentLocked = true;
         set((s) => {
+          // When template changes, sync font but only sync accent if not locked
+          if (patch.template && patch.template !== s.form.style.template) {
+            const tpl = getTemplateConfig(patch.template);
+            if (!_accentLocked && !patch.accentColor) patch.accentColor = tpl.accent;
+            if (!patch.fontPairing) patch.fontPairing = tpl.font;
+          }
           Object.assign(s.form.style, patch);
-        }),
+        });
+      },
 
       // ── Brand Logos ──
       updateBrandLogos: (patch) =>

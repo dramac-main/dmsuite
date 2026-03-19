@@ -1,5 +1,5 @@
-// =============================================================================
-// DMSuite — Blank Form Renderer (v4 — 20-Template Visual Overhaul)
+﻿// =============================================================================
+// DMSuite â€” Blank Form Renderer (v4 â€” 20-Template Visual Overhaul)
 // Renders blank sales book forms (invoices, receipts, quotations, etc.)
 // for physical printing. All fields are empty slots designed to be
 // filled in with a pen after printing.
@@ -12,11 +12,11 @@
 // - Totals rendered as stacked, boxed, or badge styles
 //
 // Print Standards:
-// - Min font: 7pt body (≈9.3px @96dpi), 6pt fine print (≈8px)
+// - Min font: 7pt body (â‰ˆ9.3px @96dpi), 6pt fine print (â‰ˆ8px)
 // - Binding gutter: 12mm (46px) for stapled booklets
 // - Safe margin: 8mm (30px) from trim edge all sides
 // - Proper density scaling for multi-form-per-page layouts
-// - A4 (210×297mm), A5 (148×210mm), Letter (8.5×11in), Legal (8.5×14in)
+// - A4 (210Ã—297mm), A5 (148Ã—210mm), Letter (8.5Ã—11in), Legal (8.5Ã—14in)
 // =============================================================================
 
 "use client";
@@ -30,7 +30,7 @@ import {
   getTemplateConfig,
 } from "@/lib/sales-book/schema";
 import type { SalesDocumentType, PageFormat } from "@/lib/invoice/schema";
-import type { SalesBookTemplate } from "@/lib/sales-book/schema";
+import type { SalesBookTemplate, FieldStyle } from "@/lib/sales-book/schema";
 import { CustomBlocksRegion } from "@/lib/sales-book/CustomBlockRenderer";
 
 // ---------------------------------------------------------------------------
@@ -48,17 +48,17 @@ const PAGE_PX: Record<PageFormat, { w: number; h: number }> = {
 // Print-quality constants
 // ---------------------------------------------------------------------------
 
-/** Safe margin from page edge in px (≈8mm at 96 DPI) */
+/** Safe margin from page edge in px (â‰ˆ8mm at 96 DPI) */
 const SAFE_MARGIN = 30;
 
-/** Binding gutter for booklet stapling in px (≈12mm at 96 DPI) */
+/** Binding gutter for booklet stapling in px (â‰ˆ12mm at 96 DPI) */
 const BINDING_GUTTER = 46;
 
-/** Min font size to guarantee print legibility (≈7pt) */
-const MIN_FONT_PX = 10;
+/** Min font size to guarantee print legibility (â8pt) */
+const MIN_FONT_PX = 11;
 
-/** Min label / caption font (≈6pt) */
-const MIN_LABEL_PX = 8;
+/** Min label / caption font (≈7pt) */
+const MIN_LABEL_PX = 9;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -81,43 +81,74 @@ function clampFont(size: number, min = MIN_FONT_PX): number {
   return Math.max(min, Math.round(size));
 }
 
+/** Perceived luminance in [0,1] — returns > 0.5 for light colours */
+function luminance(hex: string): number {
+  const c = hex.replace("#", "").slice(0, 6);
+  if (c.length < 6) return 0;
+  const r = parseInt(c.substring(0, 2), 16) / 255;
+  const g = parseInt(c.substring(2, 4), 16) / 255;
+  const b = parseInt(c.substring(4, 6), 16) / 255;
+  const srgb = [r, g, b].map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
+  return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+}
+
+/** Return white or dark text colour depending on background lightness */
+function contrastText(bgHex: string): string {
+  // Strip alpha suffixes and rgba() — extract first 7 chars (#RRGGBB)
+  const clean = bgHex.startsWith("rgba") ? "#888888" : bgHex.slice(0, 7);
+  return luminance(clean) > 0.35 ? "#1a1a1a" : "#ffffff";
+}
+
 /** Map table border weight to pixel value */
 function getBorderPx(weight: "light" | "medium" | "heavy"): number {
   return weight === "heavy" ? 3 : weight === "medium" ? 1.5 : 1;
 }
 
 // ---------------------------------------------------------------------------
-// Decorative Overlays — Watermarks, corners, page borders, footer bars
+// Decorative Overlays â€” Watermarks, corners, page borders, footer bars
 // ---------------------------------------------------------------------------
 
-function WatermarkOverlay({ tpl, density, title }: { tpl: SalesBookTemplate; density: number; title: string }) {
-  if (tpl.watermark === "none") return null;
+function WatermarkOverlay({ tpl, density, title, watermarkImage, watermarkOpacity }: { tpl: SalesBookTemplate; density: number; title: string; watermarkImage?: string; watermarkOpacity?: number }) {
+  const hasImage = !!watermarkImage;
+  const hasTemplate = tpl.watermark !== "none";
+  if (!hasImage && !hasTemplate) return null;
 
-  if (tpl.watermark === "text") {
-    return (
-      <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
+  return (
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
+      {/* User-uploaded watermark image (logo etc.) */}
+      {hasImage && (
+        <img
+          src={watermarkImage}
+          alt=""
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            maxWidth: `${Math.round(220 * density)}px`,
+            maxHeight: `${Math.round(220 * density)}px`,
+            objectFit: "contain",
+            opacity: watermarkOpacity ?? 0.06,
+          }}
+        />
+      )}
+      {/* Template watermarks â€” suppressed when user uploads their own image */}
+      {hasTemplate && !hasImage && tpl.watermark === "text" && (
         <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%) rotate(-30deg)", fontSize: `${Math.round(60 * density)}px`, fontWeight: 900, color: tpl.accent, opacity: 0.04, whiteSpace: "nowrap", letterSpacing: "8px", textTransform: "uppercase" }}>
           {title}
         </div>
-      </div>
-    );
-  }
-
-  if (tpl.watermark === "logo") {
-    return (
-      <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
-        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: `${Math.round(200 * density)}px`, height: `${Math.round(200 * density)}px`, borderRadius: "50%", border: `${Math.round(6 * density)}px solid ${tpl.accent}`, opacity: 0.05 }} />
-        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: `${Math.round(160 * density)}px`, height: `${Math.round(160 * density)}px`, borderRadius: "50%", border: `${Math.round(3 * density)}px solid ${tpl.accent}`, opacity: 0.04 }} />
-      </div>
-    );
-  }
-
-  // faded-title
-  return (
-    <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
-      <div style={{ position: "absolute", top: "45%", left: "50%", transform: "translate(-50%, -50%)", fontSize: `${Math.round(90 * density)}px`, fontWeight: 900, color: tpl.accent, opacity: 0.03, whiteSpace: "nowrap", letterSpacing: "4px", textTransform: "uppercase" }}>
-        {title}
-      </div>
+      )}
+      {hasTemplate && !hasImage && tpl.watermark === "logo" && (
+        <>
+          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: `${Math.round(200 * density)}px`, height: `${Math.round(200 * density)}px`, borderRadius: "50%", border: `${Math.round(6 * density)}px solid ${tpl.accent}`, opacity: 0.05 }} />
+          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: `${Math.round(160 * density)}px`, height: `${Math.round(160 * density)}px`, borderRadius: "50%", border: `${Math.round(3 * density)}px solid ${tpl.accent}`, opacity: 0.04 }} />
+        </>
+      )}
+      {hasTemplate && !hasImage && tpl.watermark === "faded-title" && (
+        <div style={{ position: "absolute", top: "45%", left: "50%", transform: "translate(-50%, -50%)", fontSize: `${Math.round(90 * density)}px`, fontWeight: 900, color: tpl.accent, opacity: 0.03, whiteSpace: "nowrap", letterSpacing: "4px", textTransform: "uppercase" }}>
+          {title}
+        </div>
+      )}
     </div>
   );
 }
@@ -159,7 +190,7 @@ function PageBorderOverlay({ tpl, density }: { tpl: SalesBookTemplate; density: 
   );
 }
 
-/** Colored strip along an edge — visible structural accent */
+/** Colored strip along an edge â€” visible structural accent */
 function AccentStripOverlay({ tpl, density }: { tpl: SalesBookTemplate; density: number }) {
   if (tpl.accentStrip === "none") return null;
   const stripW = Math.round(6 * density);
@@ -185,7 +216,7 @@ function AccentStripOverlay({ tpl, density }: { tpl: SalesBookTemplate; density:
   );
 }
 
-/** Background tint — subtle accent wash */
+/** Background tint â€” subtle accent wash */
 function BackgroundTint({ tpl }: { tpl: SalesBookTemplate }) {
   if (!tpl.backgroundTint) return null;
   const accent2 = tpl.accentSecondary ?? tpl.accent;
@@ -198,7 +229,7 @@ function BackgroundTint({ tpl }: { tpl: SalesBookTemplate }) {
   );
 }
 
-/** Header divider — the separator below the header section (non-band headers only) */
+/** Header divider â€” the separator below the header section (non-band headers only) */
 function getHeaderDividerStyle(tpl: SalesBookTemplate, density: number): React.CSSProperties {
   const accent = tpl.accent;
   switch (tpl.headerDividerStyle) {
@@ -230,16 +261,16 @@ function getHeaderDividerStyle(tpl: SalesBookTemplate, density: number): React.C
   }
 }
 
-function FooterBar({ tpl, density, branding }: { tpl: SalesBookTemplate; density: number; branding: SalesBookFormData["companyBranding"] }) {
+function FooterBar({ tpl, density, branding, bleedL, bleedR, bleedB }: { tpl: SalesBookTemplate; density: number; branding: SalesBookFormData["companyBranding"]; bleedL?: number; bleedR?: number; bleedB?: number }) {
   if (tpl.footerStyle === "none") return null;
   const fontSize = clampFont(Math.round(8 * density), MIN_LABEL_PX);
   const contactParts = [branding.phone, branding.email, branding.website].filter(Boolean);
 
   if (tpl.footerStyle === "bar") {
     return (
-      <div style={{ backgroundColor: tpl.accent, color: "#ffffff", padding: `${Math.round(6 * density)}px ${Math.round(12 * density)}px`, fontSize: `${fontSize}px`, display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "auto" }}>
+      <div style={{ backgroundColor: tpl.accent, color: contrastText(tpl.accent), padding: `${Math.round(6 * density)}px ${(bleedR ?? 0) + Math.round(12 * density)}px ${Math.round(6 * density)}px ${(bleedL ?? 0) + Math.round(12 * density)}px`, fontSize: `${fontSize}px`, display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "auto", marginLeft: bleedL ? `-${bleedL}px` : undefined, marginRight: bleedR ? `-${bleedR}px` : undefined, marginBottom: bleedB ? `-${bleedB}px` : undefined }}>
         <span style={{ fontWeight: 600 }}>{branding.name || "\u00A0"}</span>
-        {contactParts.length > 0 && <span style={{ opacity: 0.8 }}>{contactParts.join(" · ")}</span>}
+        {contactParts.length > 0 && <span style={{ opacity: 0.8 }}>{contactParts.join(" \u00B7 ")}</span>}
       </div>
     );
   }
@@ -249,19 +280,19 @@ function FooterBar({ tpl, density, branding }: { tpl: SalesBookTemplate; density
       <div style={{ display: "flex", justifyContent: "center", gap: `${Math.round(16 * density)}px`, padding: `${Math.round(6 * density)}px 0`, borderTop: `1.5px solid ${tpl.accent}30`, marginTop: "auto", fontSize: `${fontSize}px`, color: "#6b7280" }}>
         {branding.phone && (
           <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-            <span style={{ width: `${Math.round(14 * density)}px`, height: `${Math.round(14 * density)}px`, borderRadius: "50%", backgroundColor: tpl.accent, display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: `${clampFont(Math.round(7 * density), 7)}px` }}>✆</span>
+            <span style={{ width: `${Math.round(14 * density)}px`, height: `${Math.round(14 * density)}px`, borderRadius: "50%", backgroundColor: tpl.accent, display: "inline-flex", alignItems: "center", justifyContent: "center" }}><PhoneIcon size={Math.round(8 * density)} color="#fff" /></span>
             {branding.phone}
           </span>
         )}
         {branding.email && (
           <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-            <span style={{ width: `${Math.round(14 * density)}px`, height: `${Math.round(14 * density)}px`, borderRadius: "50%", backgroundColor: tpl.accent, display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: `${clampFont(Math.round(7 * density), 7)}px` }}>✉</span>
+            <span style={{ width: `${Math.round(14 * density)}px`, height: `${Math.round(14 * density)}px`, borderRadius: "50%", backgroundColor: tpl.accent, display: "inline-flex", alignItems: "center", justifyContent: "center" }}><EmailIcon size={Math.round(8 * density)} color="#fff" /></span>
             {branding.email}
           </span>
         )}
         {branding.website && (
           <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-            <span style={{ width: `${Math.round(14 * density)}px`, height: `${Math.round(14 * density)}px`, borderRadius: "50%", backgroundColor: tpl.accent, display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: `${clampFont(Math.round(7 * density), 7)}px` }}>⊕</span>
+            <span style={{ width: `${Math.round(14 * density)}px`, height: `${Math.round(14 * density)}px`, borderRadius: "50%", backgroundColor: tpl.accent, display: "inline-flex", alignItems: "center", justifyContent: "center" }}><GlobeIcon size={Math.round(8 * density)} color="#fff" /></span>
             {branding.website}
           </span>
         )}
@@ -272,25 +303,52 @@ function FooterBar({ tpl, density, branding }: { tpl: SalesBookTemplate; density
   // line footer
   return (
     <div style={{ borderTop: `1px solid ${tpl.accent}30`, paddingTop: `${Math.round(4 * density)}px`, marginTop: "auto", fontSize: `${fontSize}px`, color: "#9ca3af", textAlign: "center" }}>
-      {contactParts.length > 0 ? contactParts.join(" · ") : " "}
+      {contactParts.length > 0 ? contactParts.join(" Â· ") : " "}
     </div>
+  );
+}
+
+/** Inline SVG contact icons — render cleanly at any size, no font dependency */
+function PhoneIcon({ size, color }: { size: number; color: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  );
+}
+function EmailIcon({ size, color }: { size: number; color: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="M22 7l-10 7L2 7" />
+    </svg>
+  );
+}
+function GlobeIcon({ size, color }: { size: number; color: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
   );
 }
 
 function ContactIconRow({ branding, accent, density }: { branding: SalesBookFormData["companyBranding"]; accent: string; density: number }) {
   const iconSize = Math.round(14 * density);
+  const svgSize = Math.round(8 * density);
   const fontSize = clampFont(Math.round(9 * density), MIN_LABEL_PX);
-  const items: { icon: string; value: string }[] = [];
-  if (branding.phone) items.push({ icon: "✆", value: branding.phone });
-  if (branding.email) items.push({ icon: "✉", value: branding.email });
-  if (branding.website) items.push({ icon: "⊕", value: branding.website });
+  const items: { icon: React.ReactNode; value: string }[] = [];
+  if (branding.phone) items.push({ icon: <PhoneIcon size={svgSize} color="#fff" />, value: branding.phone });
+  if (branding.email) items.push({ icon: <EmailIcon size={svgSize} color="#fff" />, value: branding.email });
+  if (branding.website) items.push({ icon: <GlobeIcon size={svgSize} color="#fff" />, value: branding.website });
   if (items.length === 0) return null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "2px", marginTop: "3px" }}>
       {items.map((item, i) => (
         <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: `${fontSize}px`, color: "#6b7280" }}>
-          <span style={{ width: `${iconSize}px`, height: `${iconSize}px`, borderRadius: "50%", backgroundColor: accent, display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: `${clampFont(Math.round(7 * density), 7)}px`, flexShrink: 0 }}>
+          <span style={{ width: `${iconSize}px`, height: `${iconSize}px`, borderRadius: "50%", backgroundColor: accent, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             {item.icon}
           </span>
           {item.value}
@@ -386,29 +444,77 @@ function BlankCheckbox({ label, size = 13, fontSize = 10 }: { label: string; siz
   );
 }
 
-/** Date grid — DAY / MONTH / YEAR boxes (common on African/Asian print forms) */
+/** Date grid â€” DAY / MONTH / YEAR boxes (common on African/Asian print forms) */
 function DateGrid({ accentColor, density = 1 }: { accentColor: string; density?: number }) {
-  const cellW = Math.round(38 * density);
+  const cellW = Math.round(48 * density);
   const cellH = Math.round(22 * density);
   const labelFS = clampFont(Math.round(7 * density), MIN_LABEL_PX);
+  const textCol = contrastText(accentColor);
   return (
     <div style={{ display: "inline-flex", gap: "1px", border: `1.5px solid ${accentColor}`, borderRadius: "3px", overflow: "hidden" }}>
       {["DAY", "MONTH", "YEAR"].map((lbl) => (
         <div key={lbl} style={{ width: `${cellW}px`, textAlign: "center" }}>
-          <div style={{ fontSize: `${labelFS}px`, fontWeight: 700, color: "#ffffff", backgroundColor: accentColor, padding: "1px 0", letterSpacing: "0.5px" }}>
+          <div style={{ fontSize: `${labelFS}px`, fontWeight: 700, color: textCol, backgroundColor: accentColor, padding: "3px 6px", letterSpacing: "0.3px", lineHeight: 1.2, textShadow: textCol === "#ffffff" ? "0 0 2px rgba(0,0,0,0.4)" : "none" }}>
             {lbl}
           </div>
-          <div style={{ height: `${cellH}px` }} />
+          <div style={{ height: `${cellH}px`, backgroundColor: "#ffffff" }} />
         </div>
       ))}
     </div>
   );
 }
 
+/** Date line â€” simple "Date: ___________" underline style */
+function DateLine({ accentColor, density = 1, fieldStyle = "underline" as FieldStyle }: { accentColor: string; density?: number; fieldStyle?: FieldStyle }) {
+  const w = Math.round(140 * density);
+  const h = Math.round(20 * density);
+  const fs = clampFont(Math.round(11 * density));
+  return (
+    <div style={{ display: "inline-flex", alignItems: "baseline", gap: `${Math.round(6 * density)}px` }}>
+      <span style={{ fontSize: `${fs}px`, fontWeight: 600, color: accentColor, letterSpacing: "0.5px" }}>Date:</span>
+      <span style={{ display: "inline-block", width: `${w}px`, height: `${h}px`, borderBottom: fieldStyle === "dotted" ? `1.5px dotted ${accentColor}60` : `1.5px solid ${accentColor}60` }}>&nbsp;</span>
+    </div>
+  );
+}
+
+/** Date slashed â€” DD / MM / YYYY with individual cells and slash separators */
+function DateSlashed({ accentColor, density = 1 }: { accentColor: string; density?: number }) {
+  const cellW = Math.round(28 * density);
+  const yearW = Math.round(48 * density);
+  const cellH = Math.round(22 * density);
+  const fs = clampFont(Math.round(9 * density), MIN_LABEL_PX);
+  const slashFS = clampFont(Math.round(14 * density));
+  return (
+    <div style={{ display: "inline-flex", alignItems: "center", gap: `${Math.round(4 * density)}px` }}>
+      {/* DD */}
+      <div style={{ width: `${cellW}px`, height: `${cellH}px`, borderBottom: `1.5px solid ${accentColor}`, textAlign: "center" }}>
+        <div style={{ fontSize: `${fs}px`, fontWeight: 600, color: `${accentColor}80`, letterSpacing: "0.5px", lineHeight: 1 }}>DD</div>
+      </div>
+      <span style={{ fontSize: `${slashFS}px`, color: `${accentColor}90`, fontWeight: 300 }}>/</span>
+      {/* MM */}
+      <div style={{ width: `${cellW}px`, height: `${cellH}px`, borderBottom: `1.5px solid ${accentColor}`, textAlign: "center" }}>
+        <div style={{ fontSize: `${fs}px`, fontWeight: 600, color: `${accentColor}80`, letterSpacing: "0.5px", lineHeight: 1 }}>MM</div>
+      </div>
+      <span style={{ fontSize: `${slashFS}px`, color: `${accentColor}90`, fontWeight: 300 }}>/</span>
+      {/* YYYY */}
+      <div style={{ width: `${yearW}px`, height: `${cellH}px`, borderBottom: `1.5px solid ${accentColor}`, textAlign: "center" }}>
+        <div style={{ fontSize: `${fs}px`, fontWeight: 600, color: `${accentColor}80`, letterSpacing: "0.5px", lineHeight: 1 }}>YYYY</div>
+      </div>
+    </div>
+  );
+}
+
+/** Dispatcher: render date field based on template dateStyle */
+function DateDisplay({ dateStyle, accentColor, density, fieldStyle }: { dateStyle: "grid" | "line" | "slashed"; accentColor: string; density?: number; fieldStyle?: FieldStyle }) {
+  if (dateStyle === "line") return <DateLine accentColor={accentColor} density={density} fieldStyle={fieldStyle} />;
+  if (dateStyle === "slashed") return <DateSlashed accentColor={accentColor} density={density} />;
+  return <DateGrid accentColor={accentColor} density={density} />;
+}
+
 // ---------------------------------------------------------------------------
-// Receipt Slip — Horizontal card layout (3-up on portrait A4)
+// Receipt Slip â€” Horizontal card layout (3-up on portrait A4)
 // Each receipt is a landscape-oriented card stacked vertically.
-// ~794×374px per card. Properly sized fonts — NO density shrinking.
+// ~794Ã—374px per card. Properly sized fonts â€” NO density shrinking.
 // Content flows: [Main Fields | Amount Box] with optional colored sidebar.
 // ---------------------------------------------------------------------------
 
@@ -420,9 +526,11 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
   const layout = form.formLayout;
   const serial = form.serialConfig;
   const fieldStyle = form.style.fieldStyle;
-  const tpl = getTemplateConfig(form.style.template);
+  const rawTpl = getTemplateConfig(form.style.template);
+  // Override template accent with user's chosen color so ALL elements are consistent
+  const tpl = { ...rawTpl, accent, accentSecondary: rawTpl.accentSecondary ?? accent };
 
-  // Receipt cards use FULL-SIZE fonts — each card is ~794×374px which is plenty
+  // Receipt cards use FULL-SIZE fonts â€” each card is ~794Ã—374px which is plenty
   // No density shrinking. These sizes produce readable 8-10pt printed text.
   const bindTop = form.printConfig.bindingPosition === "top";
   const gutterPx = BINDING_GUTTER;  // ~12mm binding gutter
@@ -467,7 +575,7 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
       }}
     >
       {/* Decorative overlays */}
-      <WatermarkOverlay tpl={tpl} density={1} title={config.title} />
+      <WatermarkOverlay tpl={tpl} density={1} title={layout.columnLabels?.["doc_title"] || config.title} watermarkImage={form.style.watermarkImage} watermarkOpacity={form.style.watermarkOpacity} />
       <DecorativeOverlay tpl={tpl} density={1} />
       <PageBorderOverlay tpl={tpl} density={1} />
       <AccentStripOverlay tpl={tpl} density={1} />
@@ -478,10 +586,10 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
         <div style={{ position: "absolute", inset: "4px", border: form.style.borderStyle === "double" ? `3px double ${accent}` : `1.5px solid ${accent}50`, pointerEvents: "none", borderRadius: "2px", zIndex: 1 }} />
       )}
 
-      {/* MAIN CONTENT — horizontal card layout */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", zIndex: 2, overflow: "hidden" }}>
+      {/* MAIN CONTENT â€” horizontal card layout */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", zIndex: 2 }}>
 
-        {/* Header band — full-width, content-aware height, stretches to edges */}
+        {/* Header band â€” full-width, content-aware height, stretches to edges */}
         {tpl.headerBand ? (
           <div style={{
             background: tpl.headerGradient ? `linear-gradient(135deg, ${accent}, ${accent}cc)` : accent,
@@ -499,7 +607,7 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
                 <img src={form.companyBranding.logoUrl} alt="" style={{ height: "34px", marginBottom: "3px", objectFit: "contain", display: "block" }} />
               )}
               {form.companyBranding.name && (
-                <div style={{ fontSize: `${headingSize}px`, fontWeight: 800, fontFamily: `'${fonts.heading}', sans-serif`, color: "#fff", lineHeight: 1.2 }}>
+                <div style={{ fontSize: `${headingSize}px`, fontWeight: 800, fontFamily: `'${fonts.heading}', sans-serif`, color: contrastText(accent), lineHeight: 1.2 }}>
                   {form.companyBranding.name}
                 </div>
               )}
@@ -507,35 +615,35 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
                 <BlankField width="160px" height="18px" fieldStyle={fieldStyle} label="Company" accentColor="rgba(255,255,255,0.7)" fontSize={9} />
               )}
               {form.companyBranding.address && (
-                <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.8)", marginTop: "2px", whiteSpace: "pre-line", lineHeight: 1.4 }}>{form.companyBranding.address}</div>
+                <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.8)", marginTop: "2px", whiteSpace: "pre-line", lineHeight: 1.4 }}>{form.companyBranding.address}</div>
               )}
               {tpl.contactIcons && <ContactIconRow branding={form.companyBranding} accent="rgba(255,255,255,0.5)" density={1} />}
               {!tpl.contactIcons && (form.companyBranding.phone || form.companyBranding.email) && (
-                <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.7)", marginTop: "1px" }}>
-                  {[form.companyBranding.phone, form.companyBranding.email].filter(Boolean).join(" · ")}
+                <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.7)", marginTop: "1px" }}>
+                  {[form.companyBranding.phone, form.companyBranding.email].filter(Boolean).join(" Â· ")}
                 </div>
               )}
             </div>
 
             {/* Center: Receipt title */}
             <div style={{ textAlign: "center", flex: "0 0 auto" }}>
-              <div style={{ fontSize: `${titleSize}px`, fontWeight: 900, textTransform: "uppercase", letterSpacing: "3px", fontFamily: `'${fonts.heading}', sans-serif`, color: "#fff" }}>
-                {config.title}
+              <div style={{ fontSize: `${titleSize}px`, fontWeight: 900, textTransform: "uppercase", letterSpacing: "3px", fontFamily: `'${fonts.heading}', sans-serif`, color: contrastText(accent) }}>
+                {layout.columnLabels?.["doc_title"] || config.title}
               </div>
             </div>
 
             {/* Right: serial + date */}
             <div style={{ textAlign: "right", flex: "0 0 auto" }}>
               {serial.showSerial && (
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "flex-end", gap: "3px" }}>
-                  <span style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.9)" }}>No.</span>
-                  <span style={{ fontSize: "12px", fontWeight: 700, fontFamily: "'Courier New', monospace", color: "rgba(255,255,255,0.85)", letterSpacing: "1px" }}>{serial.prefix}</span>
-                  <span style={{ display: "inline-block", width: "65px", borderBottom: "2px solid rgba(255,255,255,0.5)", height: "16px" }}>&nbsp;</span>
+                <div style={{ display: "inline-flex", alignItems: "center", backgroundColor: "#ffffff", borderRadius: "3px", padding: "2px 6px", gap: "3px" }}>
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: "#374151" }}>{config.numberLabel}</span>
+                  <span style={{ fontSize: "12px", fontWeight: 700, fontFamily: "'Courier New', monospace", color: "#374151", letterSpacing: "1px" }}>{serial.prefix}</span>
+                  <span style={{ display: "inline-block", width: "90px", height: "20px" }}>&nbsp;</span>
                 </div>
               )}
               {layout.showDate && (
                 <div style={{ marginTop: "6px" }}>
-                  <DateGrid accentColor={accent} density={0.92} />
+                  <DateDisplay dateStyle={tpl.dateStyle ?? "grid"} accentColor={accent} density={0.92} fieldStyle={fieldStyle} />
                 </div>
               )}
             </div>
@@ -557,76 +665,76 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
                 <BlankField width="160px" height="18px" fieldStyle={fieldStyle} label="Company" accentColor={accent} fontSize={9} />
               )}
               {form.companyBranding.address && (
-                <div style={{ fontSize: "9px", color: "#6b7280", marginTop: "2px", whiteSpace: "pre-line", lineHeight: 1.4 }}>{form.companyBranding.address}</div>
+                <div style={{ fontSize: "10px", color: "#6b7280", marginTop: "2px", whiteSpace: "pre-line", lineHeight: 1.4 }}>{form.companyBranding.address}</div>
               )}
               {tpl.contactIcons && <ContactIconRow branding={form.companyBranding} accent={accent} density={1} />}
               {!tpl.contactIcons && (form.companyBranding.phone || form.companyBranding.email) && (
-                <div style={{ fontSize: "9px", color: "#9ca3af", marginTop: "1px" }}>
-                  {[form.companyBranding.phone, form.companyBranding.email].filter(Boolean).join(" · ")}
+                <div style={{ fontSize: "10px", color: "#9ca3af", marginTop: "1px" }}>
+                  {[form.companyBranding.phone, form.companyBranding.email].filter(Boolean).join(" \u00B7 ")}
                 </div>
               )}
             </div>
 
             <div style={{ textAlign: "center", flex: "0 0 auto" }}>
               <div style={{ fontSize: `${titleSize}px`, fontWeight: 900, textTransform: "uppercase", letterSpacing: "3px", fontFamily: `'${fonts.heading}', sans-serif`, color: accent }}>
-                {config.title}
+                {layout.columnLabels?.["doc_title"] || config.title}
               </div>
             </div>
 
             <div style={{ textAlign: "right", flex: "0 0 auto" }}>
               {serial.showSerial && (
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "flex-end", gap: "3px" }}>
-                  <span style={{ fontSize: "11px", fontWeight: 700, color: "#374151" }}>No.</span>
-                  <span style={{ fontSize: "12px", fontWeight: 700, fontFamily: "'Courier New', monospace", color: "#374151", letterSpacing: "1px" }}>{serial.prefix}</span>
-                  <span style={{ display: "inline-block", width: "65px", borderBottom: fieldStyle === "dotted" ? "2px dotted #9ca3af" : "2px solid #9ca3af", height: "16px" }}>&nbsp;</span>
+                <div style={{ display: "inline-flex", alignItems: "center", padding: "2px 6px", gap: "3px" }}>
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: accent }}>{config.numberLabel}</span>
+                  <span style={{ fontSize: "12px", fontWeight: 700, fontFamily: "'Courier New', monospace", color: accent, letterSpacing: "1px" }}>{serial.prefix}</span>
+                  <span style={{ display: "inline-block", width: "90px", height: "20px" }}>&nbsp;</span>
                 </div>
               )}
               {layout.showDate && (
                 <div style={{ marginTop: "6px" }}>
-                  <DateGrid accentColor={accent} density={0.92} />
+                  <DateDisplay dateStyle={tpl.dateStyle ?? "grid"} accentColor={accent} density={0.92} fieldStyle={fieldStyle} />
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* Custom blocks — after-header */}
+        {/* Custom blocks â€” after-header */}
         {form.customBlocks && form.customBlocks.length > 0 && (
           <div style={{ padding: `0 ${pad}px` }}>
             <CustomBlocksRegion blocks={form.customBlocks} position="after-header" accentColor={accent} density={1} />
           </div>
         )}
 
-        {/* BODY — two-column: fields left, amount right */}
+        {/* BODY â€” two-column: fields left, amount right */}
         <div style={{ flex: 1, display: "flex", gap: "18px", padding: tpl.headerBand ? `12px ${pad}px 0` : `8px ${pad}px 0`, minHeight: 0 }}>
           {/* Left column: form fields */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
             {layout.showRecipient && (
               <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-                <span style={{ fontSize: `${fontSize}px`, fontWeight: 600, color: accent, whiteSpace: "nowrap" }}>Received from:</span>
+                <span style={{ fontSize: `${fontSize}px`, fontWeight: 600, color: accent, whiteSpace: "nowrap" }}>{layout.columnLabels?.["receipt_receivedFrom"] || "Received from:"}</span>
                 <div style={{ flex: 1, height: `${rowHeight}px`, borderBottom: lineBottom }}>&nbsp;</div>
               </div>
             )}
             {layout.showAmountInWords && (
               <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-                <span style={{ fontSize: `${fontSize}px`, fontWeight: 600, color: accent, whiteSpace: "nowrap" }}>The sum of:</span>
+                <span style={{ fontSize: `${fontSize}px`, fontWeight: 600, color: accent, whiteSpace: "nowrap" }}>{layout.columnLabels?.["receipt_sumOf"] || "The sum of:"}</span>
                 <div style={{ flex: 1, height: `${rowHeight}px`, borderBottom: lineBottom }}>&nbsp;</div>
               </div>
             )}
             <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-              <span style={{ fontSize: `${fontSize}px`, fontWeight: 600, color: accent, whiteSpace: "nowrap" }}>Being payment for:</span>
+              <span style={{ fontSize: `${fontSize}px`, fontWeight: 600, color: accent, whiteSpace: "nowrap" }}>{layout.columnLabels?.["receipt_paymentFor"] || "Being payment for:"}</span>
               <div style={{ flex: 1, height: `${rowHeight}px`, borderBottom: lineBottom }}>&nbsp;</div>
             </div>
             {/* Payment checkboxes */}
             <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "14px", marginTop: "4px" }}>
-              <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, color: accent, whiteSpace: "nowrap" }}>Payment:</span>
-              <BlankCheckbox label="Cash" size={13} fontSize={11} />
-              <BlankCheckbox label="Cheque" size={13} fontSize={11} />
-              <BlankCheckbox label="Transfer" size={13} fontSize={11} />
-              <BlankCheckbox label="Mobile" size={13} fontSize={11} />
+              <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, color: accent, whiteSpace: "nowrap" }}>{layout.columnLabels?.["receipt_payment"] || "Payment:"}</span>
+              <BlankCheckbox label={layout.columnLabels?.["receipt_cashLabel"] || "Cash"} size={13} fontSize={11} />
+              <BlankCheckbox label={layout.columnLabels?.["receipt_chequeLabel"] || "Cheque"} size={13} fontSize={11} />
+              <BlankCheckbox label={layout.columnLabels?.["receipt_transferLabel"] || "Transfer"} size={13} fontSize={11} />
+              <BlankCheckbox label={layout.columnLabels?.["receipt_mobileLabel"] || "Mobile"} size={13} fontSize={11} />
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-              <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, color: accent, whiteSpace: "nowrap" }}>Cheque/Ref No:</span>
+              <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, color: accent, whiteSpace: "nowrap" }}>{layout.columnLabels?.["receipt_chequeRef"] || "Cheque/Ref No:"}</span>
               <div style={{ flex: 1, height: `${rowHeight}px`, borderBottom: lineBottom }}>&nbsp;</div>
             </div>
           </div>
@@ -634,7 +742,7 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
           {/* Right column: amount box */}
           <div style={{ flex: "0 0 auto", width: "155px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
             <div style={{ width: "100%", border: `2.5px solid ${accent}`, borderRadius: "5px", padding: "14px", textAlign: "center", backgroundColor: `${accent}08` }}>
-              <div style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px", color: accent, marginBottom: "8px" }}>Amount</div>
+              <div style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px", color: accent, marginBottom: "8px" }}>{layout.columnLabels?.["receipt_amount"] || "Amount"}</div>
               <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                 <span style={{ fontSize: "20px", fontWeight: 800, color: accent }}>{getCurrencyLabel(layout)}</span>
                 <div style={{ flex: 1, height: "24px", borderBottom: `2px solid ${accent}40` }}>&nbsp;</div>
@@ -643,14 +751,14 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
           </div>
         </div>
 
-        {/* Custom blocks — after-items */}
+        {/* Custom blocks â€” after-items */}
         {form.customBlocks && form.customBlocks.length > 0 && (
           <div style={{ padding: `0 ${pad}px` }}>
             <CustomBlocksRegion blocks={form.customBlocks} position="after-items" accentColor={accent} density={1} />
           </div>
         )}
 
-        {/* Custom blocks — before-signature */}
+        {/* Custom blocks â€” before-signature */}
         {form.customBlocks && form.customBlocks.length > 0 && (
           <div style={{ padding: `0 ${pad}px` }}>
             <CustomBlocksRegion blocks={form.customBlocks} position="before-signature" accentColor={accent} density={1} />
@@ -662,25 +770,25 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
           <div style={{ display: "flex", justifyContent: "space-between", padding: `0 ${pad}px`, paddingTop: "10px", marginTop: "auto" }}>
             <div>
               <div style={{ width: "150px", borderBottom: `1.5px solid ${accent}50`, height: "24px" }}>&nbsp;</div>
-              <div style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent, marginTop: "3px" }}>Cashier / Received By</div>
+              <div style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent, marginTop: "3px" }}>{layout.columnLabels?.["sig_left"] || "Cashier / Received By"}</div>
             </div>
             <div>
               <div style={{ width: "150px", borderBottom: `1.5px solid ${accent}50`, height: "24px" }}>&nbsp;</div>
-              <div style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent, marginTop: "3px" }}>Authorized Signature</div>
+              <div style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent, marginTop: "3px" }}>{layout.columnLabels?.["sig_right"] || "Authorized Signature"}</div>
             </div>
           </div>
         )}
 
         {layout.showTerms && layout.termsText && (
-          <div style={{ fontSize: "9px", color: "#9ca3af", marginTop: "5px", padding: `0 ${pad}px`, lineHeight: 1.35 }}>{layout.termsText}</div>
+          <div style={{ fontSize: "10px", color: "#9ca3af", marginTop: "5px", padding: `0 ${pad}px`, lineHeight: 1.35 }}>{layout.termsText}</div>
         )}
         {layout.customFooterText && (
-          <div style={{ fontSize: "9px", color: "#6b7280", marginTop: "3px", padding: `0 ${pad}px`, lineHeight: 1.35 }}>{layout.customFooterText}</div>
+          <div style={{ fontSize: "10px", color: "#6b7280", marginTop: "3px", padding: `0 ${pad}px`, lineHeight: 1.35 }}>{layout.customFooterText}</div>
         )}
 
         {/* Footer bar */}
         <div style={{ padding: `0 ${tpl.footerStyle === "bar" ? 0 : pad}px` }}>
-          <FooterBar tpl={tpl} density={1} branding={form.companyBranding} />
+          <FooterBar tpl={tpl} density={1} branding={form.companyBranding} bleedL={padL} bleedR={padR} bleedB={padB} />
         </div>
 
         {/* Brand logos */}
@@ -693,7 +801,7 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
           </div>
         )}
 
-        {/* Custom blocks — after-footer */}
+        {/* Custom blocks â€” after-footer */}
         {form.customBlocks && form.customBlocks.length > 0 && (
           <div style={{ padding: `0 ${pad}px` }}>
             <CustomBlocksRegion blocks={form.customBlocks} position="after-footer" accentColor={accent} density={1} />
@@ -704,11 +812,11 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
         <div style={{ height: `${pad - 6}px`, flexShrink: 0 }} />
       </div>
 
-      {/* RIGHT SIDEBAR — colored strip with vertical text */}
+      {/* RIGHT SIDEBAR â€” colored strip with vertical text */}
       {tpl.receiptSidebar && (
         <div style={{ width: `${sidebarW}px`, backgroundColor: sidebarColor, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <div style={{ writingMode: "vertical-rl", textOrientation: "mixed", transform: "rotate(180deg)", color: "#ffffff", fontSize: "18px", fontWeight: 900, letterSpacing: "5px", textTransform: "uppercase" }}>
-            {config.title}
+          <div style={{ writingMode: "vertical-rl", textOrientation: "mixed", transform: "rotate(180deg)", color: contrastText(sidebarColor), fontSize: "18px", fontWeight: 900, letterSpacing: "5px", textTransform: "uppercase" }}>
+            {layout.columnLabels?.["doc_title"] || config.title}
           </div>
         </div>
       )}
@@ -728,6 +836,649 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
 // ---------------------------------------------------------------------------
 // Table-based Form Slip (Invoice, Quotation, Delivery Note, etc.)
 // ---------------------------------------------------------------------------
+// Layout Archetype System â€” 6 structural layouts for the header + field area
+//
+// Each layout function renders the header (company branding, doc title,
+// serial, contacts) and field rows (date, customer, etc.) differently.
+// The items table, totals, signatures, footer remain shared below.
+//
+// standard:       Company LEFT | Title RIGHT, 2-col fields below
+// centered:       Everything center-stacked, minimal whitespace
+// dual-column:    From/To split boxes, structured sections  
+// compact-header: 3-zone (brand LEFT | title CENTER | date RIGHT)
+// bold-header:    Oversized name, services text, DAY/MONTH/YEAR
+// grid-info:      Company info in bordered grid cells
+// ---------------------------------------------------------------------------
+
+interface LayoutCtx {
+  form: SalesBookFormData;
+  tpl: SalesBookTemplate;
+  config: (typeof DOCUMENT_TYPE_CONFIGS)[SalesDocumentType];
+  fonts: { heading: string; body: string };
+  accent: string;
+  density: number;
+  spacingMultiplier: number;
+  headingSize: number;
+  fontSize: number;
+  labelSize: number;
+  rowHeight: number;
+  fieldStyle: FieldStyle;
+  formsPerPage: number;
+  isBand: boolean;
+  padV: number;
+  padL: number;
+  padR: number;
+}
+
+/** Shared: company branding block (logo + name + tagline + address + contacts) */
+function BrandingBlock({ ctx, color, contactColor }: { ctx: LayoutCtx; color: string; contactColor: string }) {
+  const { form, tpl, density, headingSize, fonts, fieldStyle } = ctx;
+  const b = form.companyBranding;
+  return (
+    <>
+      {b.logoUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={b.logoUrl} alt="" style={{ height: `${Math.round(40 * density)}px`, marginBottom: "5px", objectFit: "contain", display: "inline-block" }} />
+      )}
+      {b.name && (
+        <div style={{ fontSize: `${headingSize}px`, fontWeight: 800, fontFamily: `'${fonts.heading}', sans-serif`, color, lineHeight: 1.2 }}>{b.name}</div>
+      )}
+      {!b.name && !b.logoUrl && (
+        <BlankField width="200px" height={`${Math.round(22 * density)}px`} fieldStyle={fieldStyle} label={ctx.form.formLayout.columnLabels?.["grid_company"] || "Company Name"} accentColor={color} />
+      )}
+      {b.tagline && (
+        <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: contactColor, marginTop: "2px", fontStyle: "italic" }}>{b.tagline}</div>
+      )}
+      {b.address && (
+        <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: contactColor, marginTop: "3px", whiteSpace: "pre-line", lineHeight: 1.4 }}>{b.address}</div>
+      )}
+      {(b.phone || b.email) && !tpl.contactIcons && (
+        <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: contactColor, marginTop: "2px" }}>{[b.phone, b.email].filter(Boolean).join(" Â· ")}</div>
+      )}
+      {b.website && !tpl.contactIcons && (
+        <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: contactColor, marginTop: "1px", opacity: 0.8 }}>{b.website}</div>
+      )}
+      {tpl.contactIcons && <ContactIconRow branding={b} accent={ctx.isBand ? "rgba(255,255,255,0.5)" : ctx.accent} density={density} />}
+      {b.taxId && (
+        <div style={{ fontSize: `${clampFont(Math.round(9 * density))}px`, color: contactColor, marginTop: "1px", opacity: 0.8 }}>{ctx.form.formLayout.columnLabels?.["field_tpinLabel"] || "TPIN"}: {b.taxId}</div>
+      )}
+    </>
+  );
+}
+
+/** Shared: document title + serial number block */
+function DocTitleBlock({ ctx, color, align }: { ctx: LayoutCtx; color: string; align: "left" | "center" | "right" }) {
+  const { config, fonts, density, tpl } = ctx;
+  const layout = ctx.form.formLayout;
+  const docTitle = layout.columnLabels?.["doc_title"] || config.title;
+  const serial = ctx.form.serialConfig;
+  const serialStyle = tpl.serialStyle ?? "inline";
+  const numFS = clampFont(Math.round(12 * density));
+  const stampW = Math.round(100 * density);
+  const stampH = Math.round(22 * density);
+  const justify = align === "center" ? "center" : align === "right" ? "flex-end" : "flex-start";
+  const onBand = color !== ctx.accent; // true when rendered on accent-colored background
+
+  /* Serial number stamp area — white bg only when on a colored band, otherwise transparent */
+  const serialStampArea = (
+    <div style={{ display: "inline-flex", alignItems: "center", ...(onBand ? { backgroundColor: "#ffffff", borderRadius: "3px" } : {}), padding: `${Math.round(3 * density)}px ${Math.round(6 * density)}px`, gap: "3px" }}>
+      <span style={{ fontSize: `${numFS}px`, fontWeight: 700, color: onBand ? "#374151" : ctx.accent }}>{config.numberLabel}</span>
+      <span style={{ fontSize: `${numFS}px`, fontWeight: 700, fontFamily: "'Courier New', monospace", color: onBand ? "#374151" : ctx.accent, letterSpacing: "1px" }}>{serial.prefix}</span>
+      <span style={{ display: "inline-block", width: `${stampW}px`, height: `${stampH}px` }}>&nbsp;</span>
+    </div>
+  );
+
+  return (
+    <div style={{ textAlign: align }}>
+      <div style={{ fontSize: `${clampFont(Math.round(28 * density), 18)}px`, fontWeight: 900, textTransform: "uppercase", letterSpacing: "3px", fontFamily: `'${fonts.heading}', sans-serif`, color }}>
+        {docTitle}
+      </div>
+      {serial.showSerial && serialStyle === "inline" && (
+        <div style={{ display: "flex", justifyContent: justify, marginTop: "6px" }}>
+          {serialStampArea}
+        </div>
+      )}
+      {serial.showSerial && serialStyle === "boxed" && (
+        <div style={{ display: "flex", justifyContent: justify, marginTop: "6px" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", border: `1.5px solid ${onBand ? (color === "#ffffff" ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.25)") : "#d1d5db"}`, borderRadius: "4px", overflow: "hidden" }}>
+            <div style={{ padding: `${Math.round(4 * density)}px ${Math.round(8 * density)}px`, backgroundColor: onBand ? (color === "#ffffff" ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.08)") : `${ctx.accent}12`, borderRight: `1.5px solid ${onBand ? (color === "#ffffff" ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.25)") : "#d1d5db"}` }}>
+              <span style={{ fontSize: `${numFS}px`, fontWeight: 700, color: onBand ? color : "#374151", letterSpacing: "0.5px" }}>{config.numberLabel}</span>
+            </div>
+            <div style={{ display: "inline-flex", alignItems: "center", ...(onBand ? { backgroundColor: "#ffffff" } : {}), padding: `${Math.round(3 * density)}px ${Math.round(6 * density)}px`, gap: "2px" }}>
+              <span style={{ fontSize: `${numFS}px`, fontWeight: 700, fontFamily: "'Courier New', monospace", color: onBand ? "#374151" : ctx.accent, letterSpacing: "1px" }}>{serial.prefix}</span>
+              <span style={{ display: "inline-block", width: `${stampW}px`, height: `${stampH}px` }}>&nbsp;</span>
+            </div>
+          </div>
+        </div>
+      )}
+      {serial.showSerial && serialStyle === "stacked" && (
+        <div style={{ display: "flex", justifyContent: justify, marginTop: "6px" }}>
+          <div style={{ textAlign: align }}>
+            <div style={{ fontSize: `${clampFont(Math.round(9 * density), MIN_LABEL_PX)}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", color: onBand ? color : "#374151", marginBottom: "3px" }}>{config.numberLabel}</div>
+            {serialStampArea}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Shared: standard 2-column field grid (date, recipient, PO#, customs) */
+function StandardFieldGrid({ ctx }: { ctx: LayoutCtx }) {
+  const { form, tpl, config, accent, density, labelSize, rowHeight, fieldStyle, formsPerPage } = ctx;
+  const layout = form.formLayout;
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${Math.round(6 * density)}px ${Math.round(18 * density)}px`, marginBottom: `${Math.round(10 * density)}px` }}>
+      {layout.showDate && (
+        <div>
+          <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_date"] || "Date"}</span>
+          <div style={{ marginTop: "3px" }}>{formsPerPage <= 2 ? <DateDisplay dateStyle={tpl.dateStyle ?? "grid"} accentColor={accent} density={density} fieldStyle={fieldStyle} /> : <BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} />}</div>
+        </div>
+      )}
+      {layout.showDueDate && (
+        <div>
+          <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_dueDate"] || "Due Date"}</span>
+          <div style={{ marginTop: "3px" }}>{formsPerPage <= 2 ? <DateDisplay dateStyle={tpl.dateStyle ?? "grid"} accentColor={accent} density={density} fieldStyle={fieldStyle} /> : <BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} />}</div>
+        </div>
+      )}
+      {layout.showRecipient && (
+        <div>
+          <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_recipient"] || config.recipientLabel}</span>
+          <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
+        </div>
+      )}
+      {layout.showSender && !form.companyBranding.name && !form.companyBranding.logoUrl && (
+        <div>
+          <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_sender"] || config.senderLabel}</span>
+          <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
+        </div>
+      )}
+      {layout.showPoNumber && (
+        <div>
+          <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_poNumber"] || "P.O. Number"}</span>
+          <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
+        </div>
+      )}
+      {layout.showCustomField1 && layout.customField1Label && (
+        <div>
+          <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.customField1Label}</span>
+          <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
+        </div>
+      )}
+      {layout.showCustomField2 && layout.customField2Label && (
+        <div>
+          <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.customField2Label}</span>
+          <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// â”€â”€ Layout 1: STANDARD â€” Company LEFT | Title RIGHT, 2-col fields below â”€â”€
+
+function LayoutStandard({ ctx }: { ctx: LayoutCtx }) {
+  const { tpl, accent, density, form, padV, padL, padR } = ctx;
+  const isBand = ctx.isBand;
+  const textColor = isBand ? contrastText(accent) : accent;
+  const contactColor = isBand ? (contrastText(accent) === "#ffffff" ? "rgba(255,255,255,0.75)" : "rgba(0,0,0,0.55)") : "#6b7280";
+
+  return (
+    <>
+      {/* Header */}
+      {isBand ? (
+        <div style={{ background: tpl.headerGradient ? `linear-gradient(135deg, ${accent}, ${accent}cc)` : accent, marginLeft: `-${padL}px`, marginRight: `-${padR}px`, marginTop: `-${padV}px`, padding: `${Math.round(14 * density)}px ${padR}px ${Math.round(12 * density)}px ${padL}px`, marginBottom: `${Math.round(14 * density)}px`, position: "relative", zIndex: 1 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div style={{ flex: 1, minWidth: 0 }}><BrandingBlock ctx={ctx} color={textColor} contactColor={contactColor} /></div>
+            <div style={{ flexShrink: 0, marginLeft: "12px" }}><DocTitleBlock ctx={ctx} color={textColor} align="right" /></div>
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: `${Math.round(14 * density)}px`, paddingBottom: `${Math.round(10 * density)}px`, ...getHeaderDividerStyle(tpl, density), position: "relative", zIndex: 1, ...(tpl.headerStyle === "boxed" ? { border: `1.5px solid ${accent}60`, padding: `${Math.round(12 * density)}px`, borderRadius: "3px", marginBottom: `${Math.round(16 * density)}px` } : {}) }}>
+          <div style={{ flex: 1, minWidth: 0 }}><BrandingBlock ctx={ctx} color={textColor} contactColor={contactColor} /></div>
+          <div style={{ flexShrink: 0, marginLeft: "12px" }}><DocTitleBlock ctx={ctx} color={textColor} align="right" /></div>
+        </div>
+      )}
+      <StandardFieldGrid ctx={ctx} />
+    </>
+  );
+}
+
+// â”€â”€ Layout 2: CENTERED â€” Everything center-stacked, clean minimal â”€â”€
+
+function LayoutCentered({ ctx }: { ctx: LayoutCtx }) {
+  const { tpl, accent, density, form, fonts, headingSize, labelSize, rowHeight, fieldStyle, formsPerPage, config } = ctx;
+  const b = form.companyBranding;
+  const serial = form.serialConfig;
+  const layout = form.formLayout;
+
+  return (
+    <>
+      {/* Center-stacked header */}
+      <div style={{ textAlign: "center", marginBottom: `${Math.round(14 * density)}px`, paddingBottom: `${Math.round(10 * density)}px`, ...getHeaderDividerStyle(tpl, density), position: "relative", zIndex: 1 }}>
+        {b.logoUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={b.logoUrl} alt="" style={{ height: `${Math.round(44 * density)}px`, margin: "0 auto 6px", objectFit: "contain", display: "block" }} />
+        )}
+        {b.name && (
+          <div style={{ fontSize: `${headingSize}px`, fontWeight: 800, fontFamily: `'${fonts.heading}', sans-serif`, color: accent, lineHeight: 1.2 }}>{b.name}</div>
+        )}
+        {b.tagline && (
+          <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: "#6b7280", marginTop: "2px", fontStyle: "italic" }}>{b.tagline}</div>
+        )}
+        {b.address && (
+          <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: "#6b7280", marginTop: "3px" }}>{b.address}</div>
+        )}
+        {(b.phone || b.email || b.website) && (
+          <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: "#9ca3af", marginTop: "2px" }}>{[b.phone, b.email, b.website].filter(Boolean).join(" Â· ")}</div>
+        )}
+        {b.taxId && (
+          <div style={{ fontSize: `${clampFont(Math.round(9 * density))}px`, color: "#9ca3af", marginTop: "1px" }}>{layout.columnLabels?.["field_tpinLabel"] || "TPIN"}: {b.taxId}</div>
+        )}
+        {/* Title below branding */}
+        <div style={{ marginTop: `${Math.round(12 * density)}px` }}>
+          <div style={{ fontSize: `${clampFont(Math.round(28 * density), 18)}px`, fontWeight: 900, textTransform: "uppercase", letterSpacing: "3px", fontFamily: `'${fonts.heading}', sans-serif`, color: accent }}>{layout.columnLabels?.["doc_title"] || config.title}</div>
+          {serial.showSerial && (
+            <div style={{ display: "flex", justifyContent: "center", marginTop: "6px" }}>
+              <div style={{ display: "inline-flex", alignItems: "center", padding: `${Math.round(3 * density)}px ${Math.round(6 * density)}px`, gap: "3px" }}>
+                <span style={{ fontSize: `${clampFont(Math.round(12 * density))}px`, fontWeight: 700, color: accent }}>{config.numberLabel}</span>
+                <span style={{ fontSize: `${clampFont(Math.round(12 * density))}px`, fontWeight: 700, fontFamily: "'Courier New', monospace", color: accent, letterSpacing: "1px" }}>{serial.prefix}</span>
+                <span style={{ display: "inline-block", width: `${Math.round(100 * density)}px`, height: `${Math.round(22 * density)}px` }}>&nbsp;</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      {/* Centered 2-col fields */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${Math.round(6 * density)}px ${Math.round(18 * density)}px`, marginBottom: `${Math.round(10 * density)}px` }}>
+        {layout.showDate && (
+          <div style={{ textAlign: "center" }}>
+            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_date"] || "Date"}</span>
+            <div style={{ marginTop: "3px", display: "flex", justifyContent: "center" }}>{formsPerPage <= 2 ? <DateDisplay dateStyle={tpl.dateStyle ?? "grid"} accentColor={accent} density={density} fieldStyle={fieldStyle} /> : <BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} />}</div>
+          </div>
+        )}
+        {layout.showRecipient && (
+          <div>
+            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_recipient"] || config.recipientLabel}</span>
+            <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// â”€â”€ Layout 3: DUAL-COLUMN â€” From/To split info boxes â”€â”€
+
+function LayoutDualColumn({ ctx }: { ctx: LayoutCtx }) {
+  const { tpl, accent, density, form, fonts, headingSize, labelSize, rowHeight, fieldStyle, formsPerPage, config, padV, padL, padR } = ctx;
+  const b = form.companyBranding;
+  const serial = form.serialConfig;
+  const layout = form.formLayout;
+  const isBand = ctx.isBand;
+
+  return (
+    <>
+      {/* Top row: branding LEFT, title+serial+date RIGHT */}
+      {isBand ? (
+        <div style={{ background: tpl.headerGradient ? `linear-gradient(135deg, ${accent}, ${accent}cc)` : accent, marginLeft: `-${padL}px`, marginRight: `-${padR}px`, marginTop: `-${padV}px`, padding: `${Math.round(14 * density)}px ${padR}px ${Math.round(12 * density)}px ${padL}px`, marginBottom: `${Math.round(14 * density)}px`, position: "relative", zIndex: 1 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div style={{ flex: 1, minWidth: 0 }}><BrandingBlock ctx={ctx} color={contrastText(accent)} contactColor={contrastText(accent) === "#ffffff" ? "rgba(255,255,255,0.75)" : "rgba(0,0,0,0.55)"} /></div>
+            <div style={{ flexShrink: 0, marginLeft: "12px" }}><DocTitleBlock ctx={ctx} color={contrastText(accent)} align="right" /></div>
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: `${Math.round(10 * density)}px`, paddingBottom: `${Math.round(8 * density)}px`, ...getHeaderDividerStyle(tpl, density), position: "relative", zIndex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}><BrandingBlock ctx={ctx} color={accent} contactColor="#6b7280" /></div>
+          <div style={{ flexShrink: 0, marginLeft: "12px" }}>
+            <DocTitleBlock ctx={ctx} color={accent} align="right" />
+            {layout.showDate && (
+              <div style={{ marginTop: `${Math.round(8 * density)}px`, textAlign: "right" }}>
+                <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>Date: </span>
+                {formsPerPage <= 2 ? <DateDisplay dateStyle={tpl.dateStyle ?? "grid"} accentColor={accent} density={density} fieldStyle={fieldStyle} /> : <BlankField width="120px" height={`${rowHeight}px`} fieldStyle={fieldStyle} />}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Dual-column: FROM (sender) | TO (recipient) boxes */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${Math.round(12 * density)}px`, marginBottom: `${Math.round(10 * density)}px` }}>
+        {/* FROM box */}
+        <div style={{ border: `1.5px solid ${accent}30`, borderRadius: "4px", padding: `${Math.round(8 * density)}px`, backgroundColor: `${accent}05` }}>
+          <div style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", color: accent, marginBottom: `${Math.round(6 * density)}px`, borderBottom: `1.5px solid ${accent}20`, paddingBottom: "4px" }}>{layout.columnLabels?.["field_sender"] || config.senderLabel || "From"}</div>
+          {b.name ? (
+            <div style={{ fontSize: `${clampFont(Math.round(11 * density))}px`, color: "#374151", lineHeight: 1.5 }}>
+              <div style={{ fontWeight: 700 }}>{b.name}</div>
+              {b.address && <div style={{ color: "#6b7280", whiteSpace: "pre-line" }}>{b.address}</div>}
+              {b.phone && <div style={{ color: "#6b7280" }}>Tel: {b.phone}</div>}
+              {b.email && <div style={{ color: "#6b7280" }}>{b.email}</div>}
+            </div>
+          ) : (
+            <>
+              <BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} label="Name" accentColor="#9ca3af" fontSize={Math.round(9 * density)} />
+              <BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} label="Address" accentColor="#9ca3af" fontSize={Math.round(9 * density)} />
+            </>
+          )}
+        </div>
+        {/* TO box */}
+        <div style={{ border: `1.5px solid ${accent}30`, borderRadius: "4px", padding: `${Math.round(8 * density)}px`, backgroundColor: `${accent}05` }}>
+          <div style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", color: accent, marginBottom: `${Math.round(6 * density)}px`, borderBottom: `1.5px solid ${accent}20`, paddingBottom: "4px" }}>{layout.columnLabels?.["field_recipient"] || config.recipientLabel || "To"}</div>
+          <BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} label="Name" accentColor="#9ca3af" fontSize={Math.round(9 * density)} />
+          <BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} label="Address" accentColor="#9ca3af" fontSize={Math.round(9 * density)} />
+          <BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} label="Phone / Email" accentColor="#9ca3af" fontSize={Math.round(9 * density)} />
+        </div>
+      </div>
+
+      {/* Remaining fields (due date, PO#, customs) in compact row */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${Math.round(6 * density)}px ${Math.round(18 * density)}px`, marginBottom: `${Math.round(10 * density)}px` }}>
+        {layout.showDueDate && (
+          <div>
+            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_dueDate"] || "Due Date"}</span>
+            <div style={{ marginTop: "3px" }}>{formsPerPage <= 2 ? <DateDisplay dateStyle={tpl.dateStyle ?? "grid"} accentColor={accent} density={density} fieldStyle={fieldStyle} /> : <BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} />}</div>
+          </div>
+        )}
+        {layout.showPoNumber && (
+          <div>
+            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_poNumber"] || "P.O. Number"}</span>
+            <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
+          </div>
+        )}
+        {layout.showCustomField1 && layout.customField1Label && (
+          <div>
+            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.customField1Label}</span>
+            <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
+          </div>
+        )}
+        {layout.showCustomField2 && layout.customField2Label && (
+          <div>
+            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.customField2Label}</span>
+            <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// â”€â”€ Layout 4: COMPACT-HEADER â€” 3-zone (brand LEFT | title CENTER | date+serial RIGHT) â”€â”€
+
+function LayoutCompactHeader({ ctx }: { ctx: LayoutCtx }) {
+  const { tpl, accent, density, form, fonts, headingSize, labelSize, rowHeight, fieldStyle, formsPerPage, config } = ctx;
+  const b = form.companyBranding;
+  const serial = form.serialConfig;
+  const layout = form.formLayout;
+
+  return (
+    <>
+      {/* 3-zone header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: `${Math.round(12 * density)}px`, paddingBottom: `${Math.round(8 * density)}px`, ...getHeaderDividerStyle(tpl, density), position: "relative", zIndex: 1 }}>
+        {/* LEFT: Logo + company (compact) */}
+        <div style={{ flex: "0 0 38%", minWidth: 0 }}>
+          {b.logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={b.logoUrl} alt="" style={{ height: `${Math.round(34 * density)}px`, marginBottom: "3px", objectFit: "contain" }} />
+          )}
+          {b.name && (
+            <div style={{ fontSize: `${clampFont(Math.round(16 * density), 12)}px`, fontWeight: 800, fontFamily: `'${fonts.heading}', sans-serif`, color: accent, lineHeight: 1.2 }}>{b.name}</div>
+          )}
+          {b.address && (
+            <div style={{ fontSize: `${clampFont(Math.round(9 * density))}px`, color: "#6b7280", marginTop: "2px", whiteSpace: "pre-line", lineHeight: 1.3 }}>{b.address}</div>
+          )}
+          {(b.phone || b.email) && (
+            <div style={{ fontSize: `${clampFont(Math.round(9 * density))}px`, color: "#9ca3af", marginTop: "1px" }}>{[b.phone, b.email].filter(Boolean).join(" Â· ")}</div>
+          )}
+        </div>
+
+        {/* CENTER: Title */}
+        <div style={{ flex: "0 0 auto", textAlign: "center" }}>
+          <div style={{ fontSize: `${clampFont(Math.round(22 * density), 16)}px`, fontWeight: 900, textTransform: "uppercase", letterSpacing: "2px", fontFamily: `'${fonts.heading}', sans-serif`, color: accent }}>{layout.columnLabels?.["doc_title"] || config.title}</div>
+          {serial.showSerial && (
+            <div style={{ display: "flex", justifyContent: "center", marginTop: "4px" }}>
+              <div style={{ display: "inline-flex", alignItems: "center", padding: `${Math.round(2 * density)}px ${Math.round(5 * density)}px`, gap: "2px" }}>
+                <span style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, fontWeight: 700, color: accent }}>{config.numberLabel}</span>
+                <span style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, fontWeight: 700, fontFamily: "'Courier New', monospace", color: accent, letterSpacing: "1px" }}>{serial.prefix}</span>
+                <span style={{ display: "inline-block", width: `${Math.round(90 * density)}px`, height: `${Math.round(20 * density)}px` }}>&nbsp;</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT: Date + reference */}
+        <div style={{ flex: "0 0 auto", textAlign: "right" }}>
+          {layout.showDate && (
+            <div>
+              <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_date"] || "Date"}</span>
+              <div style={{ marginTop: "3px" }}>{formsPerPage <= 2 ? <DateDisplay dateStyle={tpl.dateStyle ?? "grid"} accentColor={accent} density={density} fieldStyle={fieldStyle} /> : <BlankField width="120px" height={`${rowHeight}px`} fieldStyle={fieldStyle} />}</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Compact field rows â€” single row where possible */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: `${Math.round(6 * density)}px ${Math.round(12 * density)}px`, marginBottom: `${Math.round(10 * density)}px` }}>
+        {layout.showRecipient && (
+          <div style={{ gridColumn: "1 / 3" }}>
+            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_recipient"] || config.recipientLabel}</span>
+            <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
+          </div>
+        )}
+        {layout.showDueDate && (
+          <div>
+            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_dueDate"] || "Due Date"}</span>
+            <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
+          </div>
+        )}
+        {layout.showPoNumber && (
+          <div>
+            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_poNumber"] || "P.O. Number"}</span>
+            <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
+          </div>
+        )}
+        {layout.showCustomField1 && layout.customField1Label && (
+          <div>
+            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.customField1Label}</span>
+            <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// â”€â”€ Layout 5: BOLD-HEADER â€” Oversized company name, services text, big contacts â”€â”€
+
+function LayoutBoldHeader({ ctx }: { ctx: LayoutCtx }) {
+  const { tpl, accent, density, form, fonts, labelSize, rowHeight, fieldStyle, formsPerPage, config } = ctx;
+  const b = form.companyBranding;
+  const serial = form.serialConfig;
+  const layout = form.formLayout;
+
+  return (
+    <>
+      {/* OVERSIZED company branding â€” dominates top section */}
+      <div style={{ textAlign: "center", marginBottom: `${Math.round(8 * density)}px`, position: "relative", zIndex: 1 }}>
+        {b.logoUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={b.logoUrl} alt="" style={{ height: `${Math.round(52 * density)}px`, margin: "0 auto 4px", objectFit: "contain", display: "block" }} />
+        )}
+        {b.name && (
+          <div style={{ fontSize: `${clampFont(Math.round(32 * density), 22)}px`, fontWeight: 900, fontFamily: `'${fonts.heading}', sans-serif`, color: accent, lineHeight: 1.1, textTransform: "uppercase", letterSpacing: "1px" }}>{b.name}</div>
+        )}
+        {b.tagline && (
+          <div style={{ fontSize: `${clampFont(Math.round(12 * density))}px`, color: accent, marginTop: "2px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "1px" }}>{b.tagline}</div>
+        )}
+        {b.address && (
+          <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: "#4b5563", marginTop: "4px", fontWeight: 500 }}>{b.address}</div>
+        )}
+        {/* Contact row â€” prominent horizontal display */}
+        {(b.phone || b.email || b.website) && (
+          <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: `${Math.round(14 * density)}px`, marginTop: `${Math.round(6 * density)}px`, fontSize: `${clampFont(Math.round(11 * density))}px`, fontWeight: 600, color: "#374151" }}>
+            {b.phone && <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><PhoneIcon size={Math.round(11 * density)} color="#374151" /> {b.phone}</span>}
+            {b.email && <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><EmailIcon size={Math.round(11 * density)} color="#374151" /> {b.email}</span>}
+            {b.website && <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><GlobeIcon size={Math.round(11 * density)} color="#374151" /> {b.website}</span>}
+          </div>
+        )}
+        {b.taxId && (
+          <div style={{ fontSize: `${clampFont(Math.round(9 * density))}px`, color: "#9ca3af", marginTop: "2px" }}>{layout.columnLabels?.["field_tpinLabel"] || "TPIN"}: {b.taxId}</div>
+        )}
+      </div>
+
+      {/* Title banner â€” full width accent bar */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: accent, color: contrastText(accent), padding: `${Math.round(8 * density)}px ${Math.round(12 * density)}px`, borderRadius: "4px", marginBottom: `${Math.round(10 * density)}px`, position: "relative", zIndex: 1 }}>
+        <div style={{ fontSize: `${clampFont(Math.round(18 * density), 14)}px`, fontWeight: 900, textTransform: "uppercase", letterSpacing: "2px", fontFamily: `'${fonts.heading}', sans-serif` }}>{layout.columnLabels?.["doc_title"] || config.title}</div>
+        <div style={{ display: "flex", alignItems: "stretch", gap: `${Math.round(8 * density)}px` }}>
+          {serial.showSerial && (
+            <div style={{ display: "inline-flex", alignItems: "center", backgroundColor: "#ffffff", borderRadius: "3px", padding: `${Math.round(2 * density)}px ${Math.round(8 * density)}px`, gap: "3px" }}>
+              <span style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, fontWeight: 700, color: "#374151" }}>{config.numberLabel}</span>
+              <span style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, fontWeight: 700, fontFamily: "'Courier New', monospace", color: "#374151", letterSpacing: "1px" }}>{serial.prefix}</span>
+              <span style={{ display: "inline-block", width: `${Math.round(90 * density)}px` }}>&nbsp;</span>
+            </div>
+          )}
+          {layout.showDate && formsPerPage <= 2 && <DateDisplay dateStyle={tpl.dateStyle ?? "grid"} accentColor={accent} density={density} />}
+        </div>
+      </div>
+
+      {/* Customer info fields â€” prominent labels */}
+      <div style={{ marginBottom: `${Math.round(10 * density)}px` }}>
+        {layout.showRecipient && (
+          <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginBottom: `${Math.round(6 * density)}px` }}>
+            <span style={{ fontSize: `${clampFont(Math.round(12 * density))}px`, fontWeight: 800, color: accent, whiteSpace: "nowrap" }}>{layout.columnLabels?.["field_recipient"] || config.recipientLabel}:</span>
+            <div style={{ flex: 1 }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
+          </div>
+        )}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${Math.round(4 * density)}px ${Math.round(14 * density)}px` }}>
+          {layout.showDueDate && (
+            <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+              <span style={{ fontSize: `${labelSize}px`, fontWeight: 700, color: accent, whiteSpace: "nowrap" }}>{layout.columnLabels?.["field_dueDate"] || "Due"}:</span>
+              <div style={{ flex: 1 }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
+            </div>
+          )}
+          {layout.showPoNumber && (
+            <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+              <span style={{ fontSize: `${labelSize}px`, fontWeight: 700, color: accent, whiteSpace: "nowrap" }}>{layout.columnLabels?.["field_poNumber"] || "P.O.#"}:</span>
+              <div style={{ flex: 1 }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
+            </div>
+          )}
+          {layout.showCustomField1 && layout.customField1Label && (
+            <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+              <span style={{ fontSize: `${labelSize}px`, fontWeight: 700, color: accent, whiteSpace: "nowrap" }}>{layout.customField1Label}:</span>
+              <div style={{ flex: 1 }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
+            </div>
+          )}
+          {layout.showCustomField2 && layout.customField2Label && (
+            <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+              <span style={{ fontSize: `${labelSize}px`, fontWeight: 700, color: accent, whiteSpace: "nowrap" }}>{layout.customField2Label}:</span>
+              <div style={{ flex: 1 }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// â”€â”€ Layout 6: GRID-INFO â€” Company details in bordered grid cells â”€â”€
+
+function LayoutGridInfo({ ctx }: { ctx: LayoutCtx }) {
+  const { tpl, accent, density, form, fonts, headingSize, labelSize, rowHeight, fieldStyle, formsPerPage, config } = ctx;
+  const b = form.companyBranding;
+  const serial = form.serialConfig;
+  const layout = form.formLayout;
+
+  const cellStyle: React.CSSProperties = {
+    border: `1px solid ${accent}30`,
+    padding: `${Math.round(5 * density)}px ${Math.round(7 * density)}px`,
+    fontSize: `${clampFont(Math.round(10 * density))}px`,
+  };
+  const cellLabel: React.CSSProperties = {
+    fontSize: `${clampFont(Math.round(8 * density), MIN_LABEL_PX)}px`,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+    color: accent,
+    marginBottom: "2px",
+  };
+
+  return (
+    <>
+      {/* Logo + Title row */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: `${Math.round(10 * density)}px`, position: "relative", zIndex: 1 }}>
+        <div>
+          {b.logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={b.logoUrl} alt="" style={{ height: `${Math.round(40 * density)}px`, marginBottom: "4px", objectFit: "contain" }} />
+          )}
+          {b.name && (
+            <div style={{ fontSize: `${headingSize}px`, fontWeight: 800, fontFamily: `'${fonts.heading}', sans-serif`, color: accent, lineHeight: 1.2 }}>{b.name}</div>
+          )}
+        </div>
+        <DocTitleBlock ctx={ctx} color={accent} align="right" />
+      </div>
+
+      {/* Info grid â€” company + document fields in bordered cells */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0", marginBottom: `${Math.round(10 * density)}px`, border: `1px solid ${accent}30`, borderRadius: "3px", overflow: "hidden" }}>
+        {/* Row 1: Company/Address | Date */}
+        <div style={{ ...cellStyle, borderRight: `1px solid ${accent}30` }}>
+          <div style={cellLabel}>{layout.columnLabels?.["grid_company"] || (b.name ? "Company" : "Company Name")}</div>
+          {b.name ? <div style={{ fontWeight: 600, color: "#374151" }}>{b.name}</div> : <BlankField width="100%" height={`${Math.round(18 * density)}px`} fieldStyle={fieldStyle} />}
+        </div>
+        <div style={cellStyle}>
+          <div style={cellLabel}>{layout.columnLabels?.["field_date"] || "Date"}</div>
+          {layout.showDate && formsPerPage <= 2 ? <DateDisplay dateStyle={tpl.dateStyle ?? "grid"} accentColor={accent} density={density} fieldStyle={fieldStyle} /> : <BlankField width="100%" height={`${Math.round(18 * density)}px`} fieldStyle={fieldStyle} />}
+        </div>
+        {/* Row 2: Phone/Fax | Address */}
+        <div style={{ ...cellStyle, borderRight: `1px solid ${accent}30`, borderTop: "none" }}>
+          <div style={cellLabel}>{layout.columnLabels?.["grid_phone"] || "Tel / Phone"}</div>
+          {b.phone ? <div style={{ color: "#374151" }}>{b.phone}</div> : <BlankField width="100%" height={`${Math.round(18 * density)}px`} fieldStyle={fieldStyle} />}
+        </div>
+        <div style={{ ...cellStyle, borderTop: "none" }}>
+          <div style={cellLabel}>{layout.columnLabels?.["grid_address"] || "Address"}</div>
+          {b.address ? <div style={{ color: "#374151", fontSize: `${clampFont(Math.round(9 * density))}px` }}>{b.address}</div> : <BlankField width="100%" height={`${Math.round(18 * density)}px`} fieldStyle={fieldStyle} />}
+        </div>
+        {/* Row 3: Email | Website */}
+        <div style={{ ...cellStyle, borderRight: `1px solid ${accent}30`, borderTop: "none" }}>
+          <div style={cellLabel}>{layout.columnLabels?.["grid_email"] || "Email"}</div>
+          {b.email ? <div style={{ color: "#374151" }}>{b.email}</div> : <BlankField width="100%" height={`${Math.round(18 * density)}px`} fieldStyle={fieldStyle} />}
+        </div>
+        <div style={{ ...cellStyle, borderTop: "none" }}>
+          <div style={cellLabel}>{layout.columnLabels?.["field_recipient"] || config.recipientLabel}</div>
+          <BlankField width="100%" height={`${Math.round(18 * density)}px`} fieldStyle={fieldStyle} />
+        </div>
+      </div>
+
+      {/* Extra fields if needed */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${Math.round(6 * density)}px ${Math.round(18 * density)}px`, marginBottom: `${Math.round(10 * density)}px` }}>
+        {layout.showDueDate && (
+          <div>
+            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_dueDate"] || "Due Date"}</span>
+            <div style={{ marginTop: "3px" }}>{formsPerPage <= 2 ? <DateDisplay dateStyle={tpl.dateStyle ?? "grid"} accentColor={accent} density={density} fieldStyle={fieldStyle} /> : <BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} />}</div>
+          </div>
+        )}
+        {layout.showPoNumber && (
+          <div>
+            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_poNumber"] || "P.O. Number"}</span>
+            <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+/** Dispatch to the right layout component based on template layout type */
+function LayoutHeader({ ctx }: { ctx: LayoutCtx }) {
+  switch (ctx.tpl.layout) {
+    case "centered":       return <LayoutCentered ctx={ctx} />;
+    case "dual-column":    return <LayoutDualColumn ctx={ctx} />;
+    case "compact-header": return <LayoutCompactHeader ctx={ctx} />;
+    case "bold-header":    return <LayoutBoldHeader ctx={ctx} />;
+    case "grid-info":      return <LayoutGridInfo ctx={ctx} />;
+    default:               return <LayoutStandard ctx={ctx} />;
+  }
+}
+
+// ---------------------------------------------------------------------------
 
 function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormSlipProps) {
   const docType = form.documentType as SalesDocumentType;
@@ -738,7 +1489,9 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
   const serial = form.serialConfig;
   const fieldStyle = form.style.fieldStyle;
   const formsPerPage = form.printConfig.formsPerPage;
-  const tpl = getTemplateConfig(form.style.template);
+  const rawTpl = getTemplateConfig(form.style.template);
+  // Override template accent with user's chosen color so ALL elements are consistent
+  const tpl = { ...rawTpl, accent, accentSecondary: rawTpl.accentSecondary ?? accent };
 
   const activeColumns = ITEM_COLUMNS.filter(
     (col) => col.alwaysOn || layout.columns.includes(col.id),
@@ -761,7 +1514,7 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
     if (colId === "index") return "38px";
     if (colId === "description") return "1fr";
     if (colId === "quantity" || colId === "unit") return "66px";
-    return "82px";
+    return "100px"; // min ~10 figures (10,000,000.00)
   };
 
   return (
@@ -796,239 +1549,32 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
       )}
 
       {/* Decorative overlays */}
-      <WatermarkOverlay tpl={tpl} density={density} title={config.title} />
+      <WatermarkOverlay tpl={tpl} density={density} title={layout.columnLabels?.["doc_title"] || config.title} watermarkImage={form.style.watermarkImage} watermarkOpacity={form.style.watermarkOpacity} />
       <DecorativeOverlay tpl={tpl} density={density} />
       <PageBorderOverlay tpl={tpl} density={density} />
       <AccentStripOverlay tpl={tpl} density={density} />
       <BackgroundTint tpl={tpl} />
 
-      {/* HEADER — Content-aware band (stretches to fit content) */}
-      {tpl.headerBand ? (
-        <div
-          style={{
-            background: tpl.headerGradient ? `linear-gradient(135deg, ${accent}, ${accent}cc)` : accent,
-            marginLeft: form.style.borderStyle !== "none" ? `${Math.round(6 * density) - padL}px` : `-${padL}px`,
-            marginRight: form.style.borderStyle !== "none" ? `${Math.round(6 * density) - padR}px` : `-${padR}px`,
-            marginTop: form.style.borderStyle !== "none" ? `${Math.round(6 * density) - padV}px` : `-${padV}px`,
-            padding: `${Math.round(14 * density)}px ${padR}px ${Math.round(12 * density)}px ${padL}px`,
-            marginBottom: `${Math.round(14 * density)}px`,
-            position: "relative",
-            zIndex: 1,
-          }}
-        >
-          <div style={{
-            display: tpl.headerStyle === "centered" ? "flex" : "flex",
-            flexDirection: tpl.headerStyle === "centered" ? "column" : "row",
-            justifyContent: tpl.headerStyle === "centered" ? "center" : "space-between",
-            alignItems: tpl.headerStyle === "centered" ? "center" : "flex-start",
-          }}>
-            {/* Left: Company branding */}
-            <div style={{ flex: tpl.headerStyle === "centered" ? undefined : 1, textAlign: tpl.headerStyle === "centered" ? "center" : "left", minWidth: 0 }}>
-              {form.companyBranding.logoUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={form.companyBranding.logoUrl}
-                  alt=""
-                  style={{
-                    height: `${Math.round(40 * density)}px`,
-                    marginBottom: "5px",
-                    objectFit: "contain",
-                    display: tpl.headerStyle === "centered" ? "block" : "inline-block",
-                    ...(tpl.headerStyle === "centered" ? { margin: "0 auto 5px" } : {}),
-                  }}
-                />
-              )}
-              {form.companyBranding.name && (
-                <div style={{ fontSize: `${headingSize}px`, fontWeight: 800, fontFamily: `'${fonts.heading}', sans-serif`, color: "#ffffff", lineHeight: 1.2 }}>
-                  {form.companyBranding.name}
-                </div>
-              )}
-              {!form.companyBranding.name && !form.companyBranding.logoUrl && (
-                <BlankField width="200px" height={`${Math.round(22 * density)}px`} fieldStyle={fieldStyle} label="Company Name" accentColor="rgba(255,255,255,0.7)" />
-              )}
-              {form.companyBranding.tagline && (
-                <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: "rgba(255,255,255,0.8)", marginTop: "2px", fontStyle: "italic" }}>{form.companyBranding.tagline}</div>
-              )}
-              {form.companyBranding.address && (
-                <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: "rgba(255,255,255,0.75)", marginTop: "3px", whiteSpace: "pre-line", lineHeight: 1.4 }}>{form.companyBranding.address}</div>
-              )}
-              {(form.companyBranding.phone || form.companyBranding.email) && !tpl.contactIcons && (
-                <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: "rgba(255,255,255,0.7)", marginTop: "2px" }}>{[form.companyBranding.phone, form.companyBranding.email].filter(Boolean).join(" · ")}</div>
-              )}
-              {form.companyBranding.website && !tpl.contactIcons && (
-                <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: "rgba(255,255,255,0.6)", marginTop: "1px" }}>{form.companyBranding.website}</div>
-              )}
-              {tpl.contactIcons && <ContactIconRow branding={form.companyBranding} accent="rgba(255,255,255,0.5)" density={density} />}
-              {form.companyBranding.taxId && (
-                <div style={{ fontSize: `${clampFont(Math.round(9 * density))}px`, color: "rgba(255,255,255,0.6)", marginTop: "1px" }}>TPIN: {form.companyBranding.taxId}</div>
-              )}
-            </div>
-
-            {/* Right: Document title + serial */}
-            <div style={{ textAlign: tpl.headerStyle === "centered" ? "center" : "right", flexShrink: 0, marginLeft: tpl.headerStyle === "centered" ? 0 : "12px", ...(tpl.headerStyle === "centered" ? { marginTop: `${Math.round(6 * density)}px` } : {}) }}>
-              <div style={{ fontSize: `${clampFont(Math.round(28 * density), 18)}px`, fontWeight: 900, textTransform: "uppercase", letterSpacing: "3px", fontFamily: `'${fonts.heading}', sans-serif`, color: "#ffffff" }}>
-                {config.title}
-              </div>
-              {serial.showSerial && (
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: tpl.headerStyle === "centered" ? "center" : "flex-end", gap: "3px", marginTop: "6px" }}>
-                  <span style={{ fontSize: `${clampFont(Math.round(12 * density))}px`, fontWeight: 700, color: "rgba(255,255,255,0.9)" }}>{config.numberLabel}</span>
-                  <span style={{ fontSize: `${clampFont(Math.round(12 * density))}px`, fontWeight: 700, fontFamily: "'Courier New', monospace", color: "rgba(255,255,255,0.85)", letterSpacing: "1px" }}>{serial.prefix}</span>
-                  <span style={{ display: "inline-block", width: `${Math.round(75 * density)}px`, borderBottom: "2px solid rgba(255,255,255,0.5)", height: `${Math.round(18 * density)}px` }}>&nbsp;</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <>
-        {/* Non-band HEADER */}
-        <div
-          style={{
-            display: tpl.headerStyle === "centered" ? "flex" : "flex",
-            flexDirection: tpl.headerStyle === "centered" ? "column" : "row",
-            justifyContent: tpl.headerStyle === "centered" ? "center" : "space-between",
-            alignItems: tpl.headerStyle === "centered" ? "center" : "flex-start",
-            marginBottom: `${Math.round(14 * density)}px`,
-            paddingBottom: `${Math.round(10 * density)}px`,
-            ...getHeaderDividerStyle(tpl, density),
-            position: "relative",
-            zIndex: 1,
-            ...(tpl.headerStyle === "boxed" ? {
-              border: `1.5px solid ${accent}60`,
-              padding: `${Math.round(12 * density)}px`,
-              borderRadius: "3px",
-              marginBottom: `${Math.round(16 * density)}px`,
-            } : {}),
-          }}
-        >
-          {/* Left: Company branding */}
-          <div style={{ flex: tpl.headerStyle === "centered" ? undefined : 1, textAlign: tpl.headerStyle === "centered" ? "center" : "left", minWidth: 0 }}>
-            {form.companyBranding.logoUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={form.companyBranding.logoUrl}
-                alt=""
-                style={{
-                  height: `${Math.round(40 * density)}px`,
-                  marginBottom: "5px",
-                  objectFit: "contain",
-                  display: tpl.headerStyle === "centered" ? "block" : "inline-block",
-                  ...(tpl.headerStyle === "centered" ? { margin: "0 auto 5px" } : {}),
-                }}
-              />
-            )}
-            {form.companyBranding.name && (
-              <div style={{ fontSize: `${headingSize}px`, fontWeight: 800, fontFamily: `'${fonts.heading}', sans-serif`, color: accent, lineHeight: 1.2 }}>
-                {form.companyBranding.name}
-              </div>
-            )}
-            {!form.companyBranding.name && !form.companyBranding.logoUrl && (
-              <BlankField width="200px" height={`${Math.round(22 * density)}px`} fieldStyle={fieldStyle} label="Company Name" accentColor={accent} />
-            )}
-            {form.companyBranding.tagline && (
-              <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: "#6b7280", marginTop: "2px", fontStyle: "italic" }}>{form.companyBranding.tagline}</div>
-            )}
-            {form.companyBranding.address && (
-              <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: "#6b7280", marginTop: "3px", whiteSpace: "pre-line", lineHeight: 1.4 }}>{form.companyBranding.address}</div>
-            )}
-            {(form.companyBranding.phone || form.companyBranding.email) && !tpl.contactIcons && (
-              <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: "#6b7280", marginTop: "2px" }}>{[form.companyBranding.phone, form.companyBranding.email].filter(Boolean).join(" · ")}</div>
-            )}
-            {form.companyBranding.website && !tpl.contactIcons && (
-              <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: "#9ca3af", marginTop: "1px" }}>{form.companyBranding.website}</div>
-            )}
-            {tpl.contactIcons && <ContactIconRow branding={form.companyBranding} accent={accent} density={density} />}
-            {form.companyBranding.taxId && (
-              <div style={{ fontSize: `${clampFont(Math.round(9 * density))}px`, color: "#9ca3af", marginTop: "1px" }}>TPIN: {form.companyBranding.taxId}</div>
-            )}
-          </div>
-
-        {/* Right: Document title + serial */}
-          <div style={{ textAlign: tpl.headerStyle === "centered" ? "center" : "right", flexShrink: 0, marginLeft: tpl.headerStyle === "centered" ? 0 : "12px", ...(tpl.headerStyle === "centered" ? { marginTop: `${Math.round(6 * density)}px` } : {}) }}>
-            <div style={{ fontSize: `${clampFont(Math.round(28 * density), 18)}px`, fontWeight: 900, textTransform: "uppercase", letterSpacing: "3px", fontFamily: `'${fonts.heading}', sans-serif`, color: accent }}>
-              {config.title}
-            </div>
-            {serial.showSerial && (
-              <div style={{ display: "flex", alignItems: "baseline", justifyContent: tpl.headerStyle === "centered" ? "center" : "flex-end", gap: "3px", marginTop: "6px" }}>
-                <span style={{ fontSize: `${clampFont(Math.round(12 * density))}px`, fontWeight: 700, color: "#374151" }}>{config.numberLabel}</span>
-                <span style={{ fontSize: `${clampFont(Math.round(12 * density))}px`, fontWeight: 700, fontFamily: "'Courier New', monospace", color: "#374151", letterSpacing: "1px" }}>{serial.prefix}</span>
-                <span style={{ display: "inline-block", width: `${Math.round(75 * density)}px`, borderBottom: fieldStyle === "dotted" ? "2px dotted #9ca3af" : "2px solid #9ca3af", height: `${Math.round(20 * density)}px` }}>&nbsp;</span>
-              </div>
-            )}
-          </div>
-        </div>
-        </>
-      )}
-
-      {/* FIELD ROWS */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: `${Math.round(6 * density)}px ${Math.round(18 * density)}px`,
-          marginBottom: `${Math.round(10 * density)}px`,
-        }}
-      >
-        {layout.showDate && (
-          <div>
-            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>Date</span>
-            <div style={{ marginTop: "3px" }}>
-              {formsPerPage <= 2 ? <DateGrid accentColor={accent} density={density} /> : <BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} />}
-            </div>
-          </div>
-        )}
-        {layout.showDueDate && (
-          <div>
-            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>Due Date</span>
-            <div style={{ marginTop: "3px" }}>
-              {formsPerPage <= 2 ? <DateGrid accentColor={accent} density={density} /> : <BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} />}
-            </div>
-          </div>
-        )}
-        {layout.showRecipient && (
-          <div>
-            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{config.recipientLabel}</span>
-            <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
-          </div>
-        )}
-        {layout.showSender && !form.companyBranding.name && !form.companyBranding.logoUrl && (
-          <div>
-            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{config.senderLabel}</span>
-            <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
-          </div>
-        )}
-        {layout.showPoNumber && (
-          <div>
-            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>P.O. Number</span>
-            <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
-          </div>
-        )}
-        {layout.showCustomField1 && layout.customField1Label && (
-          <div>
-            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.customField1Label}</span>
-            <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
-          </div>
-        )}
-        {layout.showCustomField2 && layout.customField2Label && (
-          <div>
-            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.customField2Label}</span>
-            <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
-          </div>
-        )}
-      </div>
+      {/* HEADER + FIELD ROWS â€” dispatched by template layout archetype */}
+      <LayoutHeader ctx={{
+        form, tpl, config, fonts, accent, density, spacingMultiplier,
+        headingSize, fontSize, labelSize, rowHeight, fieldStyle,
+        formsPerPage, isBand: !!tpl.headerBand,
+        padV, padL, padR,
+      }} />
 
       {/* TYPE-SPECIFIC FIELDS */}
       {docType === "quotation" && layout.showValidFor !== false && (
         <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginBottom: `${Math.round(8 * density)}px` }}>
-          <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent, whiteSpace: "nowrap" }}>Valid For</span>
+          <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent, whiteSpace: "nowrap" }}>{layout.columnLabels?.["field_validFor"] || "Valid For"}</span>
           <div style={{ width: "65px", height: `${rowHeight}px`, borderBottom: fieldStyle === "dotted" ? "1.5px dotted #9ca3af" : "1.5px solid #9ca3af" }}>&nbsp;</div>
-          <span style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: "#6b7280" }}>Days from date of issue</span>
+          <span style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: "#6b7280" }}>{layout.columnLabels?.["field_validForSuffix"] || "Days from date of issue"}</span>
         </div>
       )}
       {docType === "proforma-invoice" && layout.showValidUntil !== false && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${Math.round(6 * density)}px ${Math.round(18 * density)}px`, marginBottom: `${Math.round(8 * density)}px` }}>
           <div>
-            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>Valid Until</span>
+            <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_validUntil"] || "Valid Until"}</span>
             <div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div>
           </div>
         </div>
@@ -1036,44 +1582,44 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
       {docType === "credit-note" && (layout.showOriginalInvoice !== false || layout.showReasonForCredit !== false) && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${Math.round(6 * density)}px ${Math.round(18 * density)}px`, marginBottom: `${Math.round(8 * density)}px` }}>
           {layout.showOriginalInvoice !== false && (
-            <div><span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>Original Invoice #</span><div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div></div>
+            <div><span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_originalInvoiceNum"] || "Original Invoice #"}</span><div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div></div>
           )}
           {layout.showOriginalInvoice !== false && (
-            <div><span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>Original Invoice Date</span><div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div></div>
+            <div><span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_originalInvoiceDate"] || "Original Invoice Date"}</span><div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div></div>
           )}
           {layout.showReasonForCredit !== false && (
-            <div style={{ gridColumn: "1 / -1" }}><span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>Reason for Credit</span><div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div></div>
+            <div style={{ gridColumn: "1 / -1" }}><span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_reasonForCredit"] || "Reason for Credit"}</span><div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div></div>
           )}
         </div>
       )}
       {docType === "purchase-order" && (layout.showShipTo !== false || layout.showDeliveryBy !== false) && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${Math.round(6 * density)}px ${Math.round(18 * density)}px`, marginBottom: `${Math.round(8 * density)}px` }}>
           {layout.showShipTo !== false && (
-            <div><span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>Ship To</span><div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${Math.round(rowHeight * 1.5)}px`} fieldStyle={fieldStyle === "underline" ? "box" : fieldStyle} /></div></div>
+            <div><span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_shipTo"] || "Ship To"}</span><div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${Math.round(rowHeight * 1.5)}px`} fieldStyle={fieldStyle === "underline" ? "box" : fieldStyle} /></div></div>
           )}
           {layout.showDeliveryBy !== false && (
-            <div><span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>Delivery Required By</span><div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div></div>
+            <div><span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_deliveryReqBy"] || "Delivery Required By"}</span><div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div></div>
           )}
         </div>
       )}
       {docType === "delivery-note" && (layout.showVehicleNo !== false || layout.showDriverName !== false) && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${Math.round(6 * density)}px ${Math.round(18 * density)}px`, marginBottom: `${Math.round(8 * density)}px` }}>
           {layout.showVehicleNo !== false && (
-            <div><span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>Vehicle No.</span><div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div></div>
+            <div><span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_vehicleNo"] || "Vehicle No."}</span><div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div></div>
           )}
           {layout.showDriverName !== false && (
-            <div><span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>Driver Name</span><div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div></div>
+            <div><span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_driverName"] || "Driver Name"}</span><div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div></div>
           )}
         </div>
       )}
 
-      {/* Custom blocks — after-header */}
+      {/* Custom blocks â€” after-header */}
       {form.customBlocks && form.customBlocks.length > 0 && (
         <CustomBlocksRegion blocks={form.customBlocks} position="after-header" accentColor={accent} density={density} />
       )}
 
-      {/* ITEM TABLE */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", marginBottom: `${Math.round(10 * density)}px`, minHeight: 0 }}>
+      {/* ITEM TABLE + TOTALS (connected) */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", marginBottom: `${Math.round(6 * density)}px`, minHeight: 0 }}>
         {/* Table header */}
         <div
           style={{
@@ -1081,7 +1627,7 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
             gridTemplateColumns: activeColumns.map((col) => getColumnWidth(col.id)).join(" "),
             gap: "0",
             backgroundColor: tpl.tableHeaderFill ? accent : "transparent",
-            color: tpl.tableHeaderFill ? "#ffffff" : accent,
+            color: tpl.tableHeaderFill ? contrastText(accent) : accent,
             border: `${borderPx}px solid ${accent}`,
             borderBottom: `${borderPx}px solid ${accent}`,
             fontSize: `${labelSize}px`,
@@ -1099,10 +1645,10 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
                 padding: `0 ${Math.round(5 * density)}px`,
                 textAlign: col.id === "index" || col.id === "description" ? "left" : "right",
                 borderRight: tpl.fieldSeparators && col.id !== activeColumns[activeColumns.length - 1].id
-                  ? `1px solid ${tpl.tableHeaderFill ? "rgba(255,255,255,0.3)" : `${accent}30`}` : "none",
+                  ? `1px solid ${tpl.tableHeaderFill ? (contrastText(accent) === "#ffffff" ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.15)") : `${accent}30`}` : "none",
               }}
             >
-              {col.label}
+              {layout.columnLabels?.[col.id] || col.label}
             </div>
           ))}
         </div>
@@ -1138,20 +1684,19 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
                   borderRight: (tpl.tableStyle === "bordered" || tpl.fieldSeparators) && col.id !== activeColumns[activeColumns.length - 1].id ? `${borderPx}px solid #e5e7eb` : "none",
                 }}
               >
-                {col.id === "index" ? `${rowIdx + 1}` : ""}
+                {""}
               </div>
             ))}
           </div>
         ))}
-      </div>
 
-      {/* TOTALS */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: `${Math.round(10 * density)}px` }}>
+        {/* TOTALS â€” attached directly to item table */}
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <div style={{ width: formsPerPage >= 3 ? "55%" : "44%", minWidth: "210px" }}>
           {layout.showSubtotal && (
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${Math.round(5 * density)}px ${tpl.totalsStyle === "boxed" ? `${Math.round(8 * density)}px` : "0"}`, borderBottom: "1px solid #e5e7eb", fontSize: `${clampFont(Math.round(12 * density))}px`, ...(tpl.totalsStyle === "boxed" ? { border: "1px solid #e5e7eb" } : {}) }}>
-              <span style={{ fontWeight: 600, color: "#4b5563" }}>Subtotal</span>
-              <span style={{ display: "inline-flex", alignItems: "baseline", minWidth: "95px", borderBottom: fieldStyle === "dotted" ? "1px dotted #9ca3af" : "1px solid #d1d5db" }}>
+              <span style={{ fontWeight: 600, color: "#4b5563" }}>{layout.subtotalLabel || "Subtotal"}</span>
+              <span style={{ display: "inline-flex", alignItems: "baseline", minWidth: "120px", borderBottom: fieldStyle === "dotted" ? "1px dotted #9ca3af" : "1px solid #d1d5db" }}>
                 {getCurrencyLabel(layout) && <span style={{ color: "#b0b5bd", marginRight: "3px", fontSize: `${clampFont(Math.round(11 * density))}px`, flexShrink: 0 }}>{getCurrencyLabel(layout)}</span>}
                 <span style={{ flex: 1 }}>&nbsp;</span>
               </span>
@@ -1159,8 +1704,8 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
           )}
           {layout.showDiscount && (
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${Math.round(5 * density)}px ${tpl.totalsStyle === "boxed" ? `${Math.round(8 * density)}px` : "0"}`, borderBottom: "1px solid #e5e7eb", fontSize: `${clampFont(Math.round(12 * density))}px`, ...(tpl.totalsStyle === "boxed" ? { borderLeft: "1px solid #e5e7eb", borderRight: "1px solid #e5e7eb" } : {}) }}>
-              <span style={{ fontWeight: 600, color: "#4b5563" }}>Discount</span>
-              <span style={{ display: "inline-flex", alignItems: "baseline", minWidth: "95px", borderBottom: fieldStyle === "dotted" ? "1px dotted #9ca3af" : "1px solid #d1d5db" }}>
+              <span style={{ fontWeight: 600, color: "#4b5563" }}>{layout.discountLabel || "Discount"}</span>
+              <span style={{ display: "inline-flex", alignItems: "baseline", minWidth: "120px", borderBottom: fieldStyle === "dotted" ? "1px dotted #9ca3af" : "1px solid #d1d5db" }}>
                 {getCurrencyLabel(layout) && <span style={{ color: "#b0b5bd", marginRight: "3px", fontSize: `${clampFont(Math.round(11 * density))}px`, flexShrink: 0 }}>{getCurrencyLabel(layout)}</span>}
                 <span style={{ flex: 1 }}>&nbsp;</span>
               </span>
@@ -1168,8 +1713,8 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
           )}
           {layout.showTax && (
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: `${Math.round(5 * density)}px ${tpl.totalsStyle === "boxed" ? `${Math.round(8 * density)}px` : "0"}`, borderBottom: "1px solid #e5e7eb", fontSize: `${clampFont(Math.round(12 * density))}px`, ...(tpl.totalsStyle === "boxed" ? { borderLeft: "1px solid #e5e7eb", borderRight: "1px solid #e5e7eb" } : {}) }}>
-              <span style={{ fontWeight: 600, color: "#4b5563" }}>Tax / VAT</span>
-              <span style={{ display: "inline-flex", alignItems: "baseline", minWidth: "95px", borderBottom: fieldStyle === "dotted" ? "1px dotted #9ca3af" : "1px solid #d1d5db" }}>
+              <span style={{ fontWeight: 600, color: "#4b5563" }}>{layout.taxLabel || "Tax / VAT"}</span>
+              <span style={{ display: "inline-flex", alignItems: "baseline", minWidth: "120px", borderBottom: fieldStyle === "dotted" ? "1px dotted #9ca3af" : "1px solid #d1d5db" }}>
                 {getCurrencyLabel(layout) && <span style={{ color: "#b0b5bd", marginRight: "3px", fontSize: `${clampFont(Math.round(11 * density))}px`, flexShrink: 0 }}>{getCurrencyLabel(layout)}</span>}
                 <span style={{ flex: 1 }}>&nbsp;</span>
               </span>
@@ -1182,24 +1727,32 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
               fontSize: `${clampFont(Math.round(15 * density), 13)}px`, fontWeight: 800,
               marginTop: `${Math.round(4 * density)}px`, borderRadius: "3px",
               ...(tpl.totalsStyle === "badge" ? {
-                backgroundColor: accent, color: "#ffffff",
+                backgroundColor: accent, color: contrastText(accent),
               } : {
                 backgroundColor: `${accent}10`,
                 borderTop: `3px solid ${accent}`, borderBottom: tpl.totalsBorder ? `3px solid ${accent}` : "none",
                 color: accent,
               }),
             }}>
-              <span style={{ color: tpl.totalsStyle === "badge" ? "#ffffff" : accent, letterSpacing: "0.5px" }}>{config.amountLabel}</span>
-              <span style={{ display: "inline-flex", alignItems: "baseline", minWidth: "95px", borderBottom: tpl.totalsStyle === "badge" ? "2px solid rgba(255,255,255,0.4)" : (fieldStyle === "dotted" ? "2px dotted #9ca3af" : "2px solid #d1d5db") }}>
-                {getCurrencyLabel(layout) && <span style={{ color: tpl.totalsStyle === "badge" ? "rgba(255,255,255,0.7)" : `${accent}80`, marginRight: "3px", flexShrink: 0 }}>{getCurrencyLabel(layout)}</span>}
-                <span style={{ flex: 1 }}>&nbsp;</span>
-              </span>
+              <span style={{ color: tpl.totalsStyle === "badge" ? contrastText(accent) : accent, letterSpacing: "0.5px" }}>{layout.totalLabel || config.amountLabel}</span>
+              {tpl.totalsStyle === "badge" ? (
+                <span style={{ display: "inline-flex", alignItems: "center", minWidth: "130px", backgroundColor: "#ffffff", borderRadius: "2px", padding: `${Math.round(3 * density)}px ${Math.round(6 * density)}px` }}>
+                  {getCurrencyLabel(layout) && <span style={{ color: `${accent}90`, marginRight: "3px", flexShrink: 0, fontWeight: 700 }}>{getCurrencyLabel(layout)}</span>}
+                  <span style={{ flex: 1, minHeight: `${Math.round(18 * density)}px` }}>&nbsp;</span>
+                </span>
+              ) : (
+                <span style={{ display: "inline-flex", alignItems: "baseline", minWidth: "120px", borderBottom: fieldStyle === "dotted" ? "2px dotted #9ca3af" : "2px solid #d1d5db" }}>
+                  {getCurrencyLabel(layout) && <span style={{ color: `${accent}80`, marginRight: "3px", flexShrink: 0 }}>{getCurrencyLabel(layout)}</span>}
+                  <span style={{ flex: 1 }}>&nbsp;</span>
+                </span>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {/* Custom blocks — after-items */}
+      </div>
+      {/* Custom blocks â€” after-items */}
       {form.customBlocks && form.customBlocks.length > 0 && (
         <CustomBlocksRegion blocks={form.customBlocks} position="after-items" accentColor={accent} density={density} />
       )}
@@ -1207,43 +1760,43 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
       {/* AMOUNT IN WORDS */}
       {layout.showAmountInWords && docType !== "delivery-note" && (
         <div style={{ marginBottom: `${Math.round(10 * density)}px` }}>
-          <span style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>Amount in Words</span>
+          <span style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_amountWords"] || "Amount in Words"}</span>
           <div style={{ marginTop: "4px" }}><BlankField width="100%" height={`${Math.round(30 * density)}px`} fieldStyle={fieldStyle} /></div>
         </div>
       )}
 
-      {/* PAYMENT INFO — pre-printed when banking details are provided */}
+      {/* PAYMENT INFO â€” pre-printed when banking details are provided */}
       {layout.showPaymentInfo && (
         <div style={{ marginBottom: `${Math.round(10 * density)}px` }}>
-          <span style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>Payment Details</span>
+          <span style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["bank_sectionTitle"] || "Payment Details"}</span>
           {(form.companyBranding.bankName || form.companyBranding.bankAccount) ? (
             <div style={{ marginTop: "4px", fontSize: `${clampFont(Math.round(11 * density))}px`, color: "#374151", lineHeight: 1.6, padding: `${Math.round(6 * density)}px`, border: `1px solid ${accent}20`, borderRadius: "3px", backgroundColor: `${accent}05` }}>
               {form.companyBranding.bankName && (
-                <div><span style={{ fontWeight: 600, color: accent }}>Bank:</span> {form.companyBranding.bankName}</div>
+                <div><span style={{ fontWeight: 600, color: accent }}>{layout.columnLabels?.["bank_bankName"] || "Bank:"}</span> {form.companyBranding.bankName}</div>
               )}
               {form.companyBranding.bankAccountName && (
-                <div><span style={{ fontWeight: 600, color: accent }}>Account Name:</span> {form.companyBranding.bankAccountName}</div>
+                <div><span style={{ fontWeight: 600, color: accent }}>{layout.columnLabels?.["bank_accountName"] || "Account Name:"}</span> {form.companyBranding.bankAccountName}</div>
               )}
               {form.companyBranding.bankAccount && (
-                <div><span style={{ fontWeight: 600, color: accent }}>Account No:</span> {form.companyBranding.bankAccount}</div>
+                <div><span style={{ fontWeight: 600, color: accent }}>{layout.columnLabels?.["bank_accountNo"] || "Account No:"}</span> {form.companyBranding.bankAccount}</div>
               )}
               {form.companyBranding.bankBranch && (
-                <div><span style={{ fontWeight: 600, color: accent }}>Branch:</span> {form.companyBranding.bankBranch}</div>
+                <div><span style={{ fontWeight: 600, color: accent }}>{layout.columnLabels?.["bank_branch"] || "Branch:"}</span> {form.companyBranding.bankBranch}</div>
               )}
               {form.companyBranding.bankBranchCode && (
-                <div><span style={{ fontWeight: 600, color: accent }}>Branch Code:</span> {form.companyBranding.bankBranchCode}</div>
+                <div><span style={{ fontWeight: 600, color: accent }}>{layout.columnLabels?.["bank_branchCode"] || "Branch Code:"}</span> {form.companyBranding.bankBranchCode}</div>
               )}
               {form.companyBranding.bankSwiftBic && (
-                <div><span style={{ fontWeight: 600, color: accent }}>SWIFT/BIC:</span> {form.companyBranding.bankSwiftBic}</div>
+                <div><span style={{ fontWeight: 600, color: accent }}>{layout.columnLabels?.["bank_swiftBic"] || "SWIFT/BIC:"}</span> {form.companyBranding.bankSwiftBic}</div>
               )}
               {form.companyBranding.bankIban && (
-                <div><span style={{ fontWeight: 600, color: accent }}>IBAN:</span> {form.companyBranding.bankIban}</div>
+                <div><span style={{ fontWeight: 600, color: accent }}>{layout.columnLabels?.["bank_iban"] || "IBAN:"}</span> {form.companyBranding.bankIban}</div>
               )}
               {form.companyBranding.bankSortCode && (
-                <div><span style={{ fontWeight: 600, color: accent }}>Sort/Routing Code:</span> {form.companyBranding.bankSortCode}</div>
+                <div><span style={{ fontWeight: 600, color: accent }}>{layout.columnLabels?.["bank_sortCode"] || "Sort/Routing Code:"}</span> {form.companyBranding.bankSortCode}</div>
               )}
               {form.companyBranding.bankReference && (
-                <div><span style={{ fontWeight: 600, color: accent }}>Reference:</span> {form.companyBranding.bankReference}</div>
+                <div><span style={{ fontWeight: 600, color: accent }}>{layout.columnLabels?.["bank_reference"] || "Reference:"}</span> {form.companyBranding.bankReference}</div>
               )}
               {form.companyBranding.bankCustomLabel && form.companyBranding.bankCustomValue && (
                 <div><span style={{ fontWeight: 600, color: accent }}>{form.companyBranding.bankCustomLabel}:</span> {form.companyBranding.bankCustomValue}</div>
@@ -1251,8 +1804,8 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${Math.round(6 * density)}px`, marginTop: "4px" }}>
-              <BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} label="Bank" accentColor="#9ca3af" fontSize={Math.round(10 * density)} />
-              <BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} label="Account #" accentColor="#9ca3af" fontSize={Math.round(10 * density)} />
+              <BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} label={layout.columnLabels?.["bank_bankName"] || "Bank"} accentColor="#9ca3af" fontSize={Math.round(10 * density)} />
+              <BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} label={layout.columnLabels?.["bank_accountNo"] || "Account #"} accentColor="#9ca3af" fontSize={Math.round(10 * density)} />
             </div>
           )}
         </div>
@@ -1272,7 +1825,7 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
         <div style={{ fontSize: `${clampFont(Math.round(9 * density))}px`, color: "#6b7280", marginBottom: `${Math.round(6 * density)}px`, lineHeight: 1.4 }}>{layout.customFooterText}</div>
       )}
 
-      {/* Custom blocks — before-signature */}
+      {/* Custom blocks â€” before-signature */}
       {form.customBlocks && form.customBlocks.length > 0 && (
         <CustomBlocksRegion blocks={form.customBlocks} position="before-signature" accentColor={accent} density={density} />
       )}
@@ -1283,29 +1836,29 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
           {docType === "delivery-note" ? (
             <>
               <div>
-                <div style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: accent, marginBottom: "6px" }}>Delivered By</div>
+                <div style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: accent, marginBottom: "6px" }}>{layout.columnLabels?.["sig_left"] || "Delivered By"}</div>
                 <div style={{ width: `${Math.round(155 * density)}px`, borderBottom: `2px solid ${accent}50`, height: `${Math.round(28 * density)}px` }}>&nbsp;</div>
               </div>
               <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: accent, marginBottom: "6px" }}>Goods Condition</div>
+                <div style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: accent, marginBottom: "6px" }}>{layout.columnLabels?.["field_goodsCondition"] || "Goods Condition"}</div>
                 <div style={{ display: "flex", gap: `${Math.round(12 * density)}px`, justifyContent: "center" }}>
-                  <BlankCheckbox label="Good" size={Math.round(14 * density)} fontSize={Math.round(11 * density)} />
-                  <BlankCheckbox label="Damaged" size={Math.round(14 * density)} fontSize={Math.round(11 * density)} />
+                  <BlankCheckbox label={layout.columnLabels?.["field_goodLabel"] || "Good"} size={Math.round(14 * density)} fontSize={Math.round(11 * density)} />
+                  <BlankCheckbox label={layout.columnLabels?.["field_damagedLabel"] || "Damaged"} size={Math.round(14 * density)} fontSize={Math.round(11 * density)} />
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: accent, marginBottom: "6px" }}>Received By</div>
+                <div style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: accent, marginBottom: "6px" }}>{layout.columnLabels?.["sig_right"] || "Received By"}</div>
                 <div style={{ width: `${Math.round(155 * density)}px`, borderBottom: `2px solid ${accent}50`, height: `${Math.round(28 * density)}px` }}>&nbsp;</div>
               </div>
             </>
           ) : (
             <>
               <div>
-                <div style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: accent, marginBottom: "6px" }}>{docType === "purchase-order" ? "Authorized By" : "Prepared By"}</div>
+                <div style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: accent, marginBottom: "6px" }}>{layout.columnLabels?.["sig_left"] || (docType === "purchase-order" ? "Authorized By" : "Prepared By")}</div>
                 <div style={{ width: `${Math.round(155 * density)}px`, borderBottom: `2px solid ${accent}50`, height: `${Math.round(28 * density)}px` }}>&nbsp;</div>
               </div>
               <div>
-                <div style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: accent, marginBottom: "6px" }}>{docType === "purchase-order" ? "Approved By" : "Customer Signature"}</div>
+                <div style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: accent, marginBottom: "6px" }}>{layout.columnLabels?.["sig_right"] || (docType === "purchase-order" ? "Approved By" : "Customer Signature")}</div>
                 <div style={{ width: `${Math.round(155 * density)}px`, borderBottom: `2px solid ${accent}50`, height: `${Math.round(28 * density)}px` }}>&nbsp;</div>
               </div>
             </>
@@ -1314,7 +1867,7 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
       )}
 
       {/* FOOTER BAR */}
-      <FooterBar tpl={tpl} density={density} branding={form.companyBranding} />
+      <FooterBar tpl={tpl} density={density} branding={form.companyBranding} bleedL={padL} bleedR={padR} bleedB={padV} />
 
       {/* BRAND LOGOS */}
       {form.brandLogos.enabled && form.brandLogos.logos.length > 0 && form.brandLogos.position === "bottom" && (
@@ -1326,7 +1879,7 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
         </div>
       )}
 
-      {/* Custom blocks — after-footer */}
+      {/* Custom blocks â€” after-footer */}
       {form.customBlocks && form.customBlocks.length > 0 && (
         <CustomBlocksRegion blocks={form.customBlocks} position="after-footer" accentColor={accent} density={density} />
       )}
@@ -1344,7 +1897,7 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
 }
 
 // ---------------------------------------------------------------------------
-// Single Page — contains N forms
+// Single Page â€” contains N forms
 // ---------------------------------------------------------------------------
 
 interface BlankFormPageProps {

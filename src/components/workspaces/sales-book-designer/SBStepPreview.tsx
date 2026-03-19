@@ -8,6 +8,7 @@
 import { useState, useRef, useCallback, useMemo } from "react";
 import { useSalesBookWizard } from "@/stores/sales-book-wizard";
 import { useSalesBookEditor, useSalesBookUndo } from "@/stores/sales-book-editor";
+import { printHTML } from "@/lib/print";
 import {
   SALES_DOCUMENT_TYPES,
   DOCUMENT_TYPE_CONFIGS,
@@ -44,26 +45,16 @@ export default function SBStepPreview() {
   const handlePrint = useCallback(() => {
     const printEl = document.getElementById("sb-print-area");
     if (!printEl) return;
-    const win = window.open("", "_blank");
-    if (!win) return;
-    win.document.write(`
-      <!DOCTYPE html>
-      <html><head>
-        <title>${config.title} - Sales Book</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          @page { size: ${form.printConfig.pageSize === "a4" ? "A4" : form.printConfig.pageSize === "letter" ? "letter" : "legal"} portrait; margin: 0; }
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          [data-sales-book-page] { page-break-after: always; }
-          [data-sales-book-page]:last-child { page-break-after: auto; }
-        </style>
-      </head><body>
-        ${printEl.innerHTML}
-      </body></html>
-    `);
-    win.document.close();
-    win.focus();
-    setTimeout(() => { win.print(); win.close(); }, 500);
+    const html = `<!DOCTYPE html><html><head>
+      <title>${config.title} - Sales Book</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @page { size: ${form.printConfig.pageSize === "a4" ? "A4" : form.printConfig.pageSize === "letter" ? "letter" : "legal"} portrait; margin: 0; }
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        [data-sales-book-page] { page-break-after: always; }
+        [data-sales-book-page]:last-child { page-break-after: auto; }
+      </style></head><body>${printEl.innerHTML}</body></html>`;
+    printHTML(html);
   }, [config.title, form.printConfig.pageSize]);
 
   return (

@@ -7,11 +7,13 @@
 
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Panel, Group, Separator, usePanelRef } from "react-resizable-panels";
 import { useResumeEditor, useResumeTemporalStore } from "@/stores/resume-editor";
 import { useResumeEditorUI } from "@/stores/resume-editor-ui";
 import { useResumeCVWizard } from "@/stores/resume-cv-wizard";
+import { useChikoActions } from "@/hooks/useChikoActions";
+import { createResumeManifest } from "@/lib/chiko/manifests/resume";
 import EditorSectionsPanel from "./editor/EditorSectionsPanel";
 import EditorPreviewPanel, { type PendingDiffState } from "./editor/EditorPreviewPanel";
 import EditorDesignPanel from "./editor/EditorDesignPanel";
@@ -272,6 +274,11 @@ export default function StepEditor() {
       setIsExporting(false);
     }
   }, [resume, setIsExporting]);
+
+  // Register Chiko resume manifest with export ref
+  const exportRef = useRef<((format: string) => Promise<void>) | null>(null);
+  exportRef.current = handleExport as (format: string) => Promise<void>;
+  useChikoActions(() => createResumeManifest({ onExportRef: exportRef }));
 
   return (
     <div className="flex flex-col h-full bg-gray-950">

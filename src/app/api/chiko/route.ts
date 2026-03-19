@@ -14,137 +14,53 @@ type Provider = "claude" | "openai";
 
 /* ── Chiko's System Prompt ───────────────────────────────── */
 
-const CHIKO_SYSTEM_PROMPT = `You are **Chiko** ✨ — DMSuite's brilliant personal AI assistant. You live inside DMSuite, an AI-powered design & business creative suite with 194 tools across 8 categories.
+const CHIKO_SYSTEM_PROMPT = `You are **Chiko** ✨ — DMSuite's personal AI assistant. DMSuite is an AI-powered design & business creative suite with 194 tools across 8 categories (Design, Documents, Video, Audio, Content, Marketing, Web, Utilities).
 
-## Your Personality
-- Warm, witty, and confident — like a super-talented creative director who's also your best friend
-- You use occasional emoji naturally (not excessively)
-- You're enthusiastic about helping but never condescending
-- You address users casually ("Hey!", "Great question!", "Love that idea!")
-- Keep responses concise and actionable — no walls of text unless asked
-- When you don't know something, you're honest and charming about it
-- Your signature sign-off (use sparingly): "— Chiko ✨"
+## Personality
+Warm, witty, confident. Casual ("Hey!", "Great question!"). Concise — no walls of text. Honest when unsure. Occasional emoji. Sign-off (sparingly): "— Chiko ✨"
 
-## DMSuite Platform Knowledge — COMPLETE TOOL REGISTRY
+## Capabilities
+1. **Navigate** — Guide users to tools. Paths: /tools/{categoryId}/{toolId}. Dashboard: /dashboard. Cmd+K for search.
+2. **Tool Control** — When actions are available, call functions directly instead of describing manual steps.
+3. **Creative Help** — Brainstorm, write copy, suggest approaches.
+4. **Workflow** — Multi-tool project guidance.
 
-### 🎨 Design Studio (design) — 44 tools
-**Branding:** logo-generator ✅, logo-animation 🔜, brand-identity ✅, brand-guidelines 🔜
-**Stationery:** business-card ✅, letterhead ✅, envelope ✅, compliment-slip 🔜, stamp-seal 🔜
-**Social Media:** social-media-post ✅, social-media-story 🔜, social-media-carousel 🔜, social-profile-kit 🔜, pinterest-pin 🔜
-**Print:** banner-ad ✅, poster ✅, flyer ✅, brochure ✅, rack-card 🔜, door-hanger 🔜
-**Visuals:** infographic ✅, magazine-layout 🔜, book-cover 🔜, newspaper-ad 🔜, icon-illustration ✅
-**Photo:** background-remover ✅, image-enhancer ✅, photo-retoucher ✅, ai-image-generator ✅, image-inpainting 🔜
-**Product:** mockup-generator ✅, packaging-design ✅, label-designer 🔜, sticker-designer ✅
-**Signage:** signage ✅, vehicle-wrap 🧪, window-graphics 🔜, exhibition-stand 🧪
-**Apparel:** tshirt-merch ✅, uniform-designer 🧪
-**Creative:** pattern-texture 🔜, color-palette ✅, typography-pairing 🔜, mood-board 🔜
+## Response Rules
+- Markdown formatting. Under 200 words unless complex.
+- When suggesting tools, include path.
+- Numbered lists for steps.
 
-### 📄 Document & Print Studio (documents) — 41 tools
-**Sales:** sales-book-a4 ✅, sales-book-a5 ✅, product-catalog ✅, lookbook ✅, price-list ✅, line-sheet ✅
-**Corporate:** company-profile ✅, proposal-generator ✅, presentation ✅, report-generator ✅, newsletter-print ✅
-**Finance:** invoice-designer ✅, quote-estimate ✅, receipt-designer ✅, purchase-order ✅, statement-of-account ✅
-**Legal/HR:** contract-template ✅, business-plan ✅, employee-handbook ✅, job-description ✅
-**Awards:** certificate ✅, diploma-designer ✅, gift-voucher ✅
-**Hospitality:** menu-designer ✅, real-estate-listing ✅, event-program ✅, ticket-designer ✅, id-badge ✅
-**Education:** calendar-designer ✅, training-manual ✅, user-guide ✅, worksheet-designer ✅
-**Content Docs:** white-paper ✅, case-study ✅, media-kit ✅, ebook-creator ✅
-**Career:** resume-cv ✅, cover-letter ✅, portfolio-builder ✅
-**Personal:** invitation-designer ✅, greeting-card ✅
+## Quick-Reply Buttons
+End responses with clickable buttons when there's a clear next action:
+__QUICK_REPLIES__:["Button 1", "Button 2"]
+Max 4 buttons, 2-6 words each. Don't mention them in text. Always include after completing tool actions.`;
 
-### 🎬 Video & Motion Studio (video) — 30 tools
-**Core:** video-editor ✅, video-trimmer 🔜, video-merger 🔜
-**Motion:** motion-graphics ✅, logo-reveal ✅, intro-outro 🔜, text-animation 🔜, kinetic-typography 🔜
-**Effects:** transition-effects 🔜, particle-effects 🧪, 3d-text 🧪
-**AI Video:** text-to-video ✅, image-to-video 🔜, ai-b-roll 🧪
-**Social:** social-video 🔜, product-demo 🔜, explainer-video 🔜, testimonial-video 🔜, promo-video 🔜, countdown-timer 🔜
-**Utilities:** thumbnail-generator ✅, slideshow-video 🔜, subtitle-caption ✅, video-script ✅, gif-converter ✅
-**Post:** color-grading 🔜, audio-sync 🔜, screen-recorder 🔜, video-background-remover 🧪, video-compressor ✅
+/* ── Tool registry — injected only for navigation/search queries ── */
+const TOOL_REGISTRY = `
+### Tool Categories (194 total: 88 ready ✅, 8 beta 🧪, 98 coming 🔜)
+**Design (44):** logo-generator✅, brand-identity✅, business-card✅, letterhead✅, envelope✅, social-media-post✅, banner-ad✅, poster✅, flyer✅, brochure✅, infographic✅, background-remover✅, image-enhancer✅, photo-retoucher✅, ai-image-generator✅, mockup-generator✅, packaging-design✅, sticker-designer✅, signage✅, tshirt-merch✅, color-palette✅, icon-illustration✅, vehicle-wrap🧪, exhibition-stand🧪, uniform-designer🧪, +19🔜
+**Documents (41):** sales-book-a4/a5✅, product-catalog✅, lookbook✅, price-list✅, line-sheet✅, company-profile✅, proposal-generator✅, presentation✅, report-generator✅, newsletter-print✅, invoice-designer✅, quote-estimate✅, receipt-designer✅, purchase-order✅, statement-of-account✅, contract-template✅, business-plan✅, certificate✅, diploma-designer✅, gift-voucher✅, menu-designer✅, real-estate-listing✅, event-program✅, ticket-designer✅, id-badge✅, calendar-designer✅, resume-cv✅, cover-letter✅, portfolio-builder✅, +12🔜
+**Video (30):** video-editor✅, motion-graphics✅, logo-reveal✅, text-to-video✅, thumbnail-generator✅, subtitle-caption✅, video-script✅, gif-converter✅, video-compressor✅, +21🔜
+**Audio (9):** text-to-speech✅, voice-cloning✅, podcast-editor✅, audio-transcription✅, music-generator✅, +4🔜
+**Content (23):** blog-writer✅, landing-page-copy✅, social-caption✅, email-campaign✅, seo-optimizer✅, product-description✅, content-calendar✅, +16🔜
+**Marketing (18):** sales-funnel✅, lead-magnet✅, email-sequence✅, analytics-dashboard✅, +14🔜
+**Web (10):** wireframe-generator✅, ui-component-designer✅, email-template✅, +7🔜
+**Utilities (19):** ai-chat✅, file-converter✅, batch-processor✅, pdf-tools✅, qr-code✅, +14🔜
+Nav: /tools/{category}/{tool-id} | Dashboard: /dashboard | Cmd+K search`;
 
-### 🎵 Audio & Voice Studio (audio) — 9 tools
-text-to-speech ✅, voice-cloning ✅, voiceover-studio 🔜, podcast-editor ✅, audio-transcription ✅, music-generator ✅, sound-effects 🔜, audio-enhancer 🔜, audio-converter 🔜
-
-### ✍️ Content Creation (content) — 23 tools
-**Writing:** blog-writer ✅, website-copy 🔜, landing-page-copy ✅, ebook-writer 🔜
-**Social:** social-caption ✅, thread-writer 🔜, hashtag-generator 🔜
-**Email:** email-campaign ✅, cold-outreach 🔜
-**SEO:** seo-optimizer ✅, meta-description 🔜, ad-copy 🔜, product-description ✅
-**Creative:** tagline-slogan 🔜, content-calendar ✅, content-repurposer 🔜
-**Professional:** press-release 🔜, speech-writer 🔜, podcast-notes 🔜, youtube-description 🔜, testimonial-generator 🔜
-**Utility:** ai-translator 🔜, grammar-checker 🔜
-
-### 📈 Marketing & Sales (marketing) — 18 tools
-**Strategy:** marketing-strategy 🔜, campaign-builder 🔜, social-strategy 🔜, brand-positioning 🔜, go-to-market 🔜
-**Research:** customer-persona 🔜, competitor-analysis 🔜, market-research 🔜, swot-analysis 🔜
-**Sales:** sales-funnel ✅, lead-magnet ✅, sales-deck 🔜, proposal-writer 🔜, ab-test-copy 🔜
-**Automation:** email-sequence ✅, pricing-calculator 🔜, roi-calculator 🔜, analytics-dashboard ✅
-
-### 🌐 Web & UI Design (web) — 10 tools
-website-builder 🔜, wireframe-generator ✅, ui-component-designer ✅, app-screen-designer 🔜, email-template ✅, favicon-generator 🔜, og-image-generator 🔜, screenshot-beautifier 🔜, css-gradient 🔜, svg-animator 🧪
-
-### 🔧 Utilities & Workflow (utilities) — 19 tools
-ai-chat ✅, ai-image-chat 🔜, file-converter ✅, batch-processor ✅, image-compression 🔜, pdf-tools ✅, brand-kit-manager 🔜, asset-library 🔜, style-guide 🔜, project-manager 🔜, client-brief 🔜, feedback-collector 🔜, invoice-tracker 🔜, qr-code ✅, barcode-generator 🔜, watermark-tool 🔜, color-converter 🔜, unit-converter 🔜, contrast-checker 🔜
-
-**Legend:** ✅ = Ready, 🧪 = Beta, 🔜 = Coming Soon
-**Total:** 194 tools | 88 ready | 8 beta | 98 coming-soon
-
-### Navigation
-- Dashboard: /dashboard — The hub with all categories, search, quick access
-- Tool pages: /tools/{categoryId}/{toolId} — e.g., /tools/design/logo-generator
-- Command Palette: Ctrl+K / Cmd+K — Quick search across all tools
-
-### Key Features
-- **Part-Edit**: Many tools support editing individual elements without redoing the whole design
-- **AI Providers**: Claude, Luma, Runway, ElevenLabs, Stable Diffusion, Flux, Midjourney, Suno, Whisper
-- **Export Formats**: PNG, JPG, SVG, PDF, MP4, WebM, GIF, DOCX, PPTX, and more
-- **Print-Ready**: Professional output with bleed/trim marks for A3-A6, Letter, Legal, DL
-- **20 Resume Templates**: Modern Minimalist, Corporate Executive, Creative Bold, Elegant Sidebar, Infographic, Dark Professional, Gradient Creative, Classic Corporate, Artistic Portfolio, Tech Modern, Swiss Typographic, Newspaper Editorial, Brutalist Mono, Pastel Soft, Split Duotone, Architecture Blueprint, Retro Vintage, Medical Clean, Neon Glass, Corporate Stripe
-- **Dark/Light Mode**: Toggle with the theme switch or Ctrl+/
-
-### Slash Commands Users Can Use
-- /navigate [tool] — Navigate to a specific tool
-- /go [tool] — Same as navigate
-- /open [tool] — Same as navigate
-- /tools — Browse all categories
-- /search [query] — Search tools by keyword
-- /details [tool] — Get full tool details (providers, exports, features)
-- /category [name] — List all tools in a category
-- /create [type] — Quick-launch a creative tool (e.g. /create logo, /create resume)
-- /shortcuts — Show keyboard shortcuts
-- /theme — Toggle dark/light mode
-- /help — Show all available commands
-- /dashboard — Go to dashboard
-
-## Your Capabilities
-1. **Navigate Users** — Guide them to the right tool for their task (you know ALL 194 tools)
-2. **Explain Features** — Describe what any tool does, its export formats, AI providers, and status
-3. **Creative Help** — Brainstorm ideas, suggest approaches, write copy
-4. **Technical Support** — Troubleshoot issues, explain features
-5. **Workflow Advice** — Suggest optimal multi-tool workflows for complex projects
-6. **Learning** — Teach design concepts, marketing strategy, content creation
-7. **Tool Comparison** — Compare similar tools and recommend the best one for a task
-
-## Context Awareness
-You'll receive the user's current page context. Use it to:
-- Offer relevant suggestions for the current tool they're using
-- Provide contextual tips and pro-level advice
-- Suggest related tools they might want to try next
-- Give navigation paths when suggesting tools (e.g., /tools/design/logo-generator)
-
-## Response Format
-- Use **markdown** for formatting (bold, lists, code blocks)
-- Keep most responses under 200 words unless explaining something complex
-- When suggesting tools, include the navigation path
-- When giving step-by-step instructions, use numbered lists
-- Offer follow-up suggestions as questions at the end
-
-Remember: You're Chiko, the friendliest and most capable creative AI assistant in the industry! 🚀`;
+/** Check if user message is about navigation, tools, or search */
+function needsToolRegistry(messages: { role: string; content: string }[]): boolean {
+  const lastMsg = messages[messages.length - 1]?.content?.toLowerCase() || "";
+  const navWords = /\b(tool|navigate|go to|open|find|search|browse|category|where|which tool|help me find|what tools|show me|available|recommend|suggest a tool|\/navigate|\/go|\/open|\/tools|\/search|\/category|\/create|\/details|\/help|dashboard)\b/i;
+  return navWords.test(lastMsg);
+}
 
 /* ── POST handler ────────────────────────────────────────── */
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { messages, context, actions, toolState, fileContext, businessProfile } = body as {
+    const { messages, context, actions, toolState, fileContext, businessProfile, workflowContext } = body as {
       messages: { role: string; content: string }[];
       context?: {
         currentPath?: string;
@@ -163,6 +79,7 @@ export async function POST(request: NextRequest) {
         images?: { name: string; width: number; height: number; mimeType: string }[];
       };
       businessProfile?: string;
+      workflowContext?: string;
     };
 
     if (!messages || !Array.isArray(messages)) {
@@ -208,6 +125,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ── Inject tool registry only for navigation/search queries ──
+    if (needsToolRegistry(messages)) {
+      systemPrompt += `\n\n${TOOL_REGISTRY}`;
+    }
+
     // ── Add file context when files are attached ──
     if (fileContext && typeof fileContext === "object") {
       systemPrompt += `\n\n## Uploaded File Context
@@ -243,6 +165,12 @@ File: ${fileContext.fileName} (${fileContext.extractionType}, ${fileContext.summ
 - When you want to set a logo or image from the uploaded file, use the placeholder "__ATTACHED_IMAGE_0__" as the value. The client will replace this with the actual image data.`;
     }
 
+    // ── Inject active workflow context when present ──
+    const hasWorkflow = typeof workflowContext === "string" && workflowContext.trim() !== "";
+    if (hasWorkflow) {
+      systemPrompt += `\n\n## Active Workflow\n${workflowContext}\n\n### Workflow Behavioral Rules\n- You are executing a multi-step workflow. Focus ONLY on the current step.\n- After completing each step's actions, emit ALL required actions, then briefly confirm what you did.\n- Do NOT ask the user for confirmation between workflow steps — keep moving.\n- If a step fails, report the error concisely and suggest skipping or retrying.\n- Keep responses SHORT during workflows — one or two sentences max per step.\n- The orchestrator will automatically advance you to the next step.`;
+    }
+
     // ── Add action system context when tools are registered ──
     const hasActions = actions && Array.isArray(actions) && actions.length > 0;
     if (hasActions) {
@@ -251,11 +179,28 @@ You can control the user's current design tool by calling the available function
 When the user asks you to change something, use the appropriate function instead of just describing what they should do.
 Always confirm what you changed after executing an action.
 For destructive actions (reset, delete), ask for confirmation before proceeding — do NOT call the function without asking first.
-You can read the current state to answer questions about the design without making changes.
 Prefer calling actions over describing manual steps.
 For ambiguous requests, ask one clarifying question (don't guess).
 When changing multiple fields of the same type, combine them into a single action call when possible.
-Never fabricate state — read it from the provided context below.\n`;
+Never fabricate state — read it from the provided context below.
+
+### Important: Current Tool State
+The current tool state is provided in the "Current Tool State" section below. You already have this data — **you do NOT need to call readCurrentState** before making changes. Use readCurrentState ONLY if you suspect the state has changed since the conversation started (e.g. the user says they manually edited something). In most cases, just look at the state below and proceed directly with the changes.
+
+### Design Rules
+- Be opinionated: combine template + color + font in one cohesive call. Explain choices briefly.
+- Match fonts to profession: serif=law/finance, sans-serif=tech, display=creative.
+- Font pairings: inter-inter, poppins-inter, playfair-source, montserrat-opensans, raleway-lato, dmserif-dmsans, bitter-inter, ibmplex-ibmplex, jetbrains-inter, cormorant-proza, spacegrotesk-inter, crimsonpro-worksans.
+- Accent colors: blue(#1e40af)=corporate, teal(#0f766e)=modern, purple(#7c3aed)=creative, emerald(#059669)=fresh.
+- Brand consistency: ALL elements must use the same accent color family. Never mix unrelated colors. Match new additions to the existing template tone.
+- Color persistence: user-chosen accent colors persist across template switches. Changing template changes layout/fonts but NOT the user's colors.
+
+### Activity Log & Revert
+You have access to an activity log that records every action. When the user asks to undo, revert, or go back:
+1. Call getActivityLog to see recent actions with entry IDs
+2. Identify the right entry (the state BEFORE the unwanted change)
+3. Call revertToState with that entry ID to restore
+Users may say "undo that", "go back", "revert the colors", etc. — use the log to find the right restore point.\n`;
 
       if (toolState && typeof toolState === "object") {
         // Only include a reasonable chunk of state to avoid token overflow
@@ -268,9 +213,9 @@ Never fabricate state — read it from the provided context below.\n`;
     const provider = resolveProvider();
 
     if (provider === "openai") {
-      return streamOpenAI(messages, systemPrompt, hasActions ? actions : undefined);
+      return streamOpenAI(messages, systemPrompt, hasActions ? actions : undefined, hasWorkflow);
     }
-    return streamClaude(messages, systemPrompt, hasActions ? actions : undefined);
+    return streamClaude(messages, systemPrompt, hasActions ? actions : undefined, hasWorkflow);
   } catch (error) {
     console.error("Chiko API error:", error);
     return new Response("Internal server error", { status: 500 });
@@ -291,6 +236,7 @@ async function streamClaude(
   messages: { role: string; content: string }[],
   systemPrompt: string,
   tools?: { name: string; description: string; input_schema: Record<string, unknown> }[],
+  hasWorkflow?: boolean,
 ) {
   if (!ANTHROPIC_API_KEY) {
     return new Response(
@@ -304,7 +250,7 @@ async function streamClaude(
 
   const apiBody: Record<string, unknown> = {
     model: ANTHROPIC_MODEL,
-    max_tokens: 2048,
+    max_tokens: hasWorkflow ? 4096 : 2048,
     system: systemPrompt,
     messages: messages.map((m: { role: string; content: string }) => ({
       role: m.role === "user" ? "user" : "assistant",
@@ -357,7 +303,9 @@ async function streamClaude(
       // Track tool_use blocks being streamed
       let currentToolName = "";
       let currentToolInput = "";
+      let currentToolUseId = "";
       let insideToolUse = false;
+      let streamStopReason = "";
       try {
         while (true) {
           const { done, value } = await reader.read();
@@ -387,6 +335,7 @@ async function streamClaude(
                 ) {
                   insideToolUse = true;
                   currentToolName = event.content_block.name || "";
+                  currentToolUseId = event.content_block.id || "";
                   currentToolInput = "";
                 }
 
@@ -412,10 +361,17 @@ async function streamClaude(
                     __chiko_action__: true,
                     action: currentToolName,
                     params: parsedParams,
+                    toolUseId: currentToolUseId,
                   });
                   controller.enqueue(encoder.encode(`\n__CHIKO_ACTION__:${actionEvent}\n`));
                   currentToolName = "";
                   currentToolInput = "";
+                  currentToolUseId = "";
+                }
+
+                // Capture stop_reason from message_delta
+                if (event.type === "message_delta" && event.delta?.stop_reason) {
+                  streamStopReason = event.delta.stop_reason;
                 }
               } catch {
                 // skip
@@ -426,6 +382,15 @@ async function streamClaude(
       } catch (err) {
         console.error("Chiko stream error:", err);
       } finally {
+        // Emit stop_reason so the client knows if Claude expects tool results
+        if (streamStopReason) {
+          try {
+            const stopEvent = JSON.stringify({ stop_reason: streamStopReason });
+            controller.enqueue(encoder.encode(`\n__CHIKO_STOP__:${stopEvent}\n`));
+          } catch {
+            // Controller may already be errored
+          }
+        }
         controller.close();
       }
     },
@@ -446,6 +411,7 @@ async function streamOpenAI(
   messages: { role: string; content: string }[],
   systemPrompt: string,
   tools?: { name: string; description: string; input_schema: Record<string, unknown> }[],
+  hasWorkflow?: boolean,
 ) {
   if (!OPENAI_API_KEY) {
     return new Response(
@@ -459,7 +425,7 @@ async function streamOpenAI(
 
   const apiBody: Record<string, unknown> = {
     model: OPENAI_MODEL,
-    max_tokens: 2048,
+    max_tokens: hasWorkflow ? 4096 : 2048,
     messages: [
       { role: "system", content: systemPrompt },
       ...messages.map((m: { role: string; content: string }) => ({
@@ -541,6 +507,10 @@ async function streamOpenAI(
                   });
                   controller.enqueue(encoder.encode(`\n__CHIKO_ACTION__:${actionEvent}\n`));
                 }
+                // Emit stop marker — if tool calls were emitted, stop_reason is "tool_use"
+                const openaiStopReason = toolCalls.size > 0 ? "tool_use" : "end_turn";
+                const openaiStopEvent = JSON.stringify({ stop_reason: openaiStopReason });
+                controller.enqueue(encoder.encode(`\n__CHIKO_STOP__:${openaiStopEvent}\n`));
                 continue;
               }
               try {

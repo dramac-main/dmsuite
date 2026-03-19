@@ -38,6 +38,10 @@ export interface ChikoMessage {
   actions?: ChikoAction[];
   /** Actions executed by Chiko during this message (Layer 1) */
   executedActions?: { action: string; params: Record<string, unknown>; success: boolean }[];
+  /** Snapshot of files attached to this user message (captured at send time) */
+  files?: { fileName: string; mimeType: string; thumbnail?: string }[];
+  /** Quick-reply suggestions shown as clickable buttons below the message */
+  suggestedReplies?: string[];
 }
 
 export interface ChikoAction {

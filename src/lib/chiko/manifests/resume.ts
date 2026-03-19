@@ -5,11 +5,19 @@
 
 import type { ChikoActionManifest, ChikoActionResult } from "@/stores/chiko-actions";
 import { useResumeEditor } from "@/stores/resume-editor";
+import { withActivityLogging } from "@/stores/activity-log";
 import type { TemplateId } from "@/lib/resume/schema";
+import type { ResumeData } from "@/lib/resume/schema";
+
+/** Options for the resume manifest factory */
+export interface ResumeManifestOptions {
+  /** Ref to the export handler — called by exportDocument action */
+  onExportRef?: React.RefObject<((format: string) => Promise<void>) | null>;
+}
 
 /** Build the resume action manifest. Call from the workspace component. */
-export function createResumeManifest(): ChikoActionManifest {
-  return {
+export function createResumeManifest(options?: ResumeManifestOptions): ChikoActionManifest {
+  const baseManifest: ChikoActionManifest = {
     toolId: "resume-editor",
     toolName: "Resume & CV Builder",
     actions: [
@@ -40,11 +48,11 @@ export function createResumeManifest(): ChikoActionManifest {
       },
       {
         name: "setAccentColor",
-        description: "Change the accent/primary color of the resume",
+        description: "Change the accent/primary color of the resume. Professional picks: #1e40af (deep blue), #0f766e (teal), #7c3aed (purple), #dc2626 (red), #059669 (emerald), #d97706 (amber), #0284c7 (ocean), #334155 (slate)",
         parameters: {
           type: "object",
           properties: {
-            color: { type: "string", description: "Hex color (e.g. #2563eb)" },
+            color: { type: "string", description: "Hex color (e.g. #2563eb, #0f766e)" },
           },
           required: ["color"],
         },
@@ -52,11 +60,11 @@ export function createResumeManifest(): ChikoActionManifest {
       },
       {
         name: "setFontPairing",
-        description: "Change the font combination used in the resume",
+        description: "Change the font combination used in the resume. Options: inter-inter (clean modern), poppins-inter (friendly), playfair-source (elegant serif), montserrat-opensans (geometric), raleway-lato (thin modern), dmserif-dmsans (sophisticated), bitter-inter (editorial), ibmplex-ibmplex (tech), jetbrains-inter (developer), cormorant-proza (luxury), spacegrotesk-inter (startup), crimsonpro-worksans (classic)",
         parameters: {
           type: "object",
           properties: {
-            pairingId: { type: "string", description: "Font pairing ID" },
+            pairingId: { type: "string", description: "Font pairing ID (e.g. playfair-source)" },
           },
           required: ["pairingId"],
         },
@@ -190,6 +198,23 @@ export function createResumeManifest(): ChikoActionManifest {
         parameters: { type: "object", properties: {} },
         category: "Read",
       },
+      {
+        name: "exportDocument",
+        description:
+          "Export the current resume as the specified format: pdf, docx, txt, json, clipboard, or print",
+        parameters: {
+          type: "object",
+          properties: {
+            format: {
+              type: "string",
+              enum: ["pdf", "docx", "txt", "json", "clipboard", "print"],
+              description: "Export format",
+            },
+          },
+          required: ["format"],
+        },
+        category: "Export",
+      },
     ],
 
     getState: () => {
@@ -300,6 +325,17 @@ export function createResumeManifest(): ChikoActionManifest {
             };
           }
 
+          case "exportDocument": {
+            const format = params.format as string;
+            if (!format) return { success: false, message: "Missing format parameter" };
+            const handler = options?.onExportRef?.current;
+            if (!handler) {
+              return { success: false, message: "Export not ready yet — please wait a moment and try again." };
+            }
+            handler(format);
+            return { success: true, message: `Exported resume as ${format}.` };
+          }
+
           default:
             return { success: false, message: `Unknown action: ${actionName}` };
         }
@@ -308,4 +344,10 @@ export function createResumeManifest(): ChikoActionManifest {
       }
     },
   };
+
+  return withActivityLogging(
+    baseManifest,
+    () => useResumeEditor.getState().resume,
+    (snapshot) => useResumeEditor.getState().setResume(snapshot as ResumeData),
+  );
 }

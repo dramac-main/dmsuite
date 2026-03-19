@@ -8,3 +8,5 @@ export { useEditorStore } from "./editor";
 export type { InteractionMode, DragState, ViewportState, AIRevisionState } from "./editor";
 export { useChikoStore } from "./chiko";
 export type { ChikoMessage, ChikoAction, ChikoContext } from "./chiko";
+export { useActivityLog, withActivityLogging } from "./activity-log";
+export type { ActivityEntry } from "./activity-log";

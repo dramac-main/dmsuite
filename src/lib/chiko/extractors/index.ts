@@ -98,16 +98,21 @@ export type { DetectedBusinessFields } from "./field-detector";
 
 // ── MIME type → extractor routing ────────────────────────────────────────────
 
-import { extractPdf } from "./pdf-extractor";
 import { extractDocx } from "./docx-extractor";
 import { extractXlsx } from "./xlsx-extractor";
 import { extractImage } from "./image-extractor";
+
+/** Lazy-load PDF extractor to avoid top-level pdfjs-dist DOM polyfill crash */
+async function lazyExtractPdf(buf: Buffer, name: string): Promise<ExtractedFileData> {
+  const { extractPdf } = await import("./pdf-extractor");
+  return extractPdf(buf, name);
+}
 
 const MIME_TO_EXTRACTOR: Record<
   string,
   (buffer: Buffer, fileName: string, mimeType: string) => Promise<ExtractedFileData>
 > = {
-  "application/pdf": (buf, name) => extractPdf(buf, name),
+  "application/pdf": (buf, name) => lazyExtractPdf(buf, name),
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": (buf, name) =>
     extractDocx(buf, name),
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": (buf, name) =>

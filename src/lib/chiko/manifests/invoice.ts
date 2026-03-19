@@ -5,7 +5,9 @@
 
 import type { ChikoActionManifest, ChikoActionResult } from "@/stores/chiko-actions";
 import { useInvoiceEditor } from "@/stores/invoice-editor";
+import { withActivityLogging } from "@/stores/activity-log";
 import type {
+  InvoiceData,
   CurrencyConfig,
   SalesDocumentType,
 } from "@/lib/invoice/schema";
@@ -13,9 +15,15 @@ import type { CustomBlockType, BlockPosition } from "@/lib/sales-book/custom-blo
 import { useBusinessMemory } from "@/stores/business-memory";
 import { mapProfileToInvoiceBusinessInfo, mapProfileToInvoicePaymentInfo } from "@/lib/chiko/field-mapper";
 
+/** Options for the invoice manifest factory */
+export interface InvoiceManifestOptions {
+  /** Ref to the export handler — called by exportDocument action */
+  onExportRef?: React.RefObject<((format: string) => Promise<void>) | null>;
+}
+
 /** Build the invoice action manifest. Call from the workspace component. */
-export function createInvoiceManifest(): ChikoActionManifest {
-  return {
+export function createInvoiceManifest(options?: InvoiceManifestOptions): ChikoActionManifest {
+  const baseManifest: ChikoActionManifest = {
     toolId: "invoice-editor",
     toolName: "Invoice Designer",
     actions: [
@@ -200,7 +208,7 @@ export function createInvoiceManifest(): ChikoActionManifest {
       },
       {
         name: "setTemplate",
-        description: "Change the visual template",
+        description: "Change the visual template. Options: modern-clean, classic-professional, minimal-white, bold-corporate, elegant-line, tech-startup, creative-studio, executive-premium, freelancer-simple, international",
         parameters: {
           type: "object",
           properties: {
@@ -212,11 +220,11 @@ export function createInvoiceManifest(): ChikoActionManifest {
       },
       {
         name: "setAccentColor",
-        description: "Change the accent color",
+        description: "Change the accent color used for headers, labels, and highlights",
         parameters: {
           type: "object",
           properties: {
-            color: { type: "string", description: "Hex color (e.g. #2563eb)" },
+            color: { type: "string", description: "Hex color (e.g. #2563eb, #0f766e, #7c3aed)" },
           },
           required: ["color"],
         },
@@ -224,13 +232,109 @@ export function createInvoiceManifest(): ChikoActionManifest {
       },
       {
         name: "setFontPairing",
-        description: "Change the font pairing",
+        description: "Change the font pairing. Options: inter-inter, poppins-inter, playfair-source, montserrat-opensans, raleway-lato, dmserif-dmsans, bitter-inter, ibmplex-ibmplex, jetbrains-inter, cormorant-proza, spacegrotesk-inter, crimsonpro-worksans",
         parameters: {
           type: "object",
           properties: {
-            fp: { type: "string", description: "Font pairing ID" },
+            fp: { type: "string", description: "Font pairing ID (e.g. playfair-source)" },
           },
           required: ["fp"],
+        },
+        category: "Design",
+      },
+      {
+        name: "setPageFormat",
+        description: "Change the page format / paper size",
+        parameters: {
+          type: "object",
+          properties: {
+            format: { type: "string", enum: ["a4", "a5", "letter", "legal"], description: "Page format" },
+          },
+          required: ["format"],
+        },
+        category: "Design",
+      },
+      {
+        name: "setHeaderStyle",
+        description: "Change the header layout style independently from the template",
+        parameters: {
+          type: "object",
+          properties: {
+            style: { type: "string", enum: ["full", "compact", "minimal"], description: "Header layout" },
+          },
+          required: ["style"],
+        },
+        category: "Design",
+      },
+      {
+        name: "setTableStyle",
+        description: "Change the line-items table style independently from the template",
+        parameters: {
+          type: "object",
+          properties: {
+            style: { type: "string", enum: ["striped", "bordered", "clean", "minimal"], description: "Table style" },
+          },
+          required: ["style"],
+        },
+        category: "Design",
+      },
+      {
+        name: "setWatermark",
+        description: "Add or remove a watermark text overlay (e.g. DRAFT, PAID, CONFIDENTIAL). Pass empty string to remove.",
+        parameters: {
+          type: "object",
+          properties: {
+            text: { type: "string", description: "Watermark text (empty to remove)" },
+          },
+          required: ["text"],
+        },
+        category: "Design",
+      },
+      {
+        name: "setFooterText",
+        description: "Set a custom footer line at the bottom of the invoice. Pass empty string to remove.",
+        parameters: {
+          type: "object",
+          properties: {
+            text: { type: "string", description: "Footer text" },
+          },
+          required: ["text"],
+        },
+        category: "Design",
+      },
+      {
+        name: "toggleSection",
+        description: "Show or hide an invoice section: logo, paymentInfo, signature, notes, taxBreakdown",
+        parameters: {
+          type: "object",
+          properties: {
+            section: { type: "string", enum: ["logo", "paymentInfo", "signature", "notes", "taxBreakdown"], description: "Section name" },
+            visible: { type: "boolean", description: "true to show, false to hide" },
+          },
+          required: ["section", "visible"],
+        },
+        category: "Design",
+      },
+      {
+        name: "updateStyling",
+        description: "Batch-update multiple design/styling properties at once. Accepts any combination of: template, accentColor, fontPairing, pageFormat, headerStyle, tableStyle, watermark, footerText, showLogo, showPaymentInfo, showSignature, showNotes, showTaxBreakdown",
+        parameters: {
+          type: "object",
+          properties: {
+            template: { type: "string", description: "Template name" },
+            accentColor: { type: "string", description: "Hex color" },
+            fontPairing: { type: "string", description: "Font pairing ID" },
+            pageFormat: { type: "string", enum: ["a4", "a5", "letter", "legal"] },
+            headerStyle: { type: "string", enum: ["full", "compact", "minimal"] },
+            tableStyle: { type: "string", enum: ["striped", "bordered", "clean", "minimal"] },
+            watermark: { type: "string" },
+            footerText: { type: "string" },
+            showLogo: { type: "boolean" },
+            showPaymentInfo: { type: "boolean" },
+            showSignature: { type: "boolean" },
+            showNotes: { type: "boolean" },
+            showTaxBreakdown: { type: "boolean" },
+          },
         },
         category: "Design",
       },
@@ -317,6 +421,23 @@ export function createInvoiceManifest(): ChikoActionManifest {
           required: ["fromIndex", "toIndex"],
         },
         category: "Customization",
+      },
+      {
+        name: "exportDocument",
+        description:
+          "Export the current invoice/document as the specified format: pdf, csv, txt, json, clipboard, or print",
+        parameters: {
+          type: "object",
+          properties: {
+            format: {
+              type: "string",
+              enum: ["pdf", "csv", "txt", "json", "clipboard", "print"],
+              description: "Export format",
+            },
+          },
+          required: ["format"],
+        },
+        category: "Export",
       },
     ],
 
@@ -419,6 +540,48 @@ export function createInvoiceManifest(): ChikoActionManifest {
             store.setFontPairing(params.fp as string);
             return { success: true, message: `Font pairing changed` };
 
+          case "setPageFormat":
+            store.setPageFormat(params.format as "a4" | "a5" | "letter" | "legal");
+            return { success: true, message: `Page format set to ${params.format}` };
+
+          case "setHeaderStyle":
+            store.updateMetadata({ headerStyle: params.style as "full" | "compact" | "minimal" });
+            return { success: true, message: `Header style set to ${params.style}` };
+
+          case "setTableStyle":
+            store.updateMetadata({ tableStyle: params.style as "striped" | "bordered" | "clean" | "minimal" });
+            return { success: true, message: `Table style set to ${params.style}` };
+
+          case "setWatermark":
+            store.updateMetadata({ watermark: params.text as string });
+            return { success: true, message: params.text ? `Watermark set to "${params.text}"` : "Watermark removed" };
+
+          case "setFooterText":
+            store.updateMetadata({ footerText: params.text as string });
+            return { success: true, message: params.text ? `Footer text updated` : "Footer text removed" };
+
+          case "toggleSection": {
+            const sectionMap: Record<string, string> = {
+              logo: "showLogo",
+              paymentInfo: "showPaymentInfo",
+              signature: "showSignature",
+              notes: "showNotes",
+              taxBreakdown: "showTaxBreakdown",
+            };
+            const key = sectionMap[params.section as string];
+            if (!key) return { success: false, message: `Unknown section: ${params.section}` };
+            store.updateMetadata({ [key]: params.visible as boolean });
+            return { success: true, message: `${params.section} ${params.visible ? "shown" : "hidden"}` };
+          }
+
+          case "updateStyling": {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { ...styling } = params;
+            store.updateMetadata(styling as Parameters<typeof store.updateMetadata>[0]);
+            const fields = Object.keys(styling).join(", ");
+            return { success: true, message: `Updated styling: ${fields}` };
+          }
+
           case "resetInvoice":
             store.resetInvoice(params.docType as SalesDocumentType | undefined);
             return { success: true, message: "Invoice reset to defaults" };
@@ -488,6 +651,17 @@ export function createInvoiceManifest(): ChikoActionManifest {
             store.reorderCustomBlocks(params.fromIndex as number, params.toIndex as number);
             return { success: true, message: "Blocks reordered" };
 
+          case "exportDocument": {
+            const format = params.format as string;
+            if (!format) return { success: false, message: "Missing format parameter" };
+            const handler = options?.onExportRef?.current;
+            if (!handler) {
+              return { success: false, message: "Export not ready yet — please wait a moment and try again." };
+            }
+            handler(format);
+            return { success: true, message: `Exported invoice as ${format}.` };
+          }
+
           default:
             return { success: false, message: `Unknown action: ${actionName}` };
         }
@@ -496,4 +670,10 @@ export function createInvoiceManifest(): ChikoActionManifest {
       }
     },
   };
+
+  return withActivityLogging(
+    baseManifest,
+    () => useInvoiceEditor.getState().invoice,
+    (snapshot) => useInvoiceEditor.getState().setInvoice(snapshot as InvoiceData),
+  );
 }

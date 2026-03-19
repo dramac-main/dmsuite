@@ -5,20 +5,27 @@
 
 import type { ChikoActionManifest, ChikoActionResult } from "@/stores/chiko-actions";
 import { useSalesBookEditor } from "@/stores/sales-book-editor";
+import { withActivityLogging } from "@/stores/activity-log";
 import type { CustomBlockType, BlockPosition } from "@/lib/sales-book/custom-blocks";
 import { useBusinessMemory } from "@/stores/business-memory";
 import { mapProfileToSalesBookBranding } from "@/lib/chiko/field-mapper";
+import type { SalesBookFormData } from "@/lib/sales-book/schema";
+
+/** Options for the sales book manifest factory */
+export interface SalesBookManifestOptions {
+  /** Ref to the print handler — called by exportPrint action */
+  onPrintRef?: React.RefObject<(() => void) | null>;
+}
 
 /** Build the sales book action manifest. Call from the workspace component. */
-export function createSalesBookManifest(): ChikoActionManifest {
-  return {
+export function createSalesBookManifest(options?: SalesBookManifestOptions): ChikoActionManifest {
+  const baseManifest: ChikoActionManifest = {
     toolId: "sales-book-editor",
     toolName: "Sales Book Designer",
     actions: [
       {
         name: "updateBranding",
-        description:
-          "Update company branding fields: name, tagline, address, phone, email, website, taxId (TPIN), and banking details (bankName, bankAccount, bankAccountName, bankBranch, bankBranchCode, bankSwiftBic, bankIban, bankSortCode, bankReference, bankCustomLabel, bankCustomValue)",
+        description: "Update company branding — name, contact info, tax ID, banking details, logo. See params for all fields.",
         parameters: {
           type: "object",
           properties: {
@@ -63,8 +70,7 @@ export function createSalesBookManifest(): ChikoActionManifest {
       },
       {
         name: "updateLayout",
-        description:
-          "Change form layout: itemRowCount, currency (currencySymbol, currencyCode, currencyDisplay), toggle fields (showDate, showDueDate, showPoNumber, showRecipient, showSender, showSubtotal, showDiscount, showTax, showTotal, showAmountInWords, showPaymentInfo, showSignature, showNotes, showTerms, termsText, notesLabel), custom fields (showCustomField1, customField1Label, showCustomField2, customField2Label, customFooterText)",
+        description: "Change form layout — row count, currency, toggle sections, custom fields, and columnLabels to rename ANY label on the form.",
         parameters: {
           type: "object",
           properties: {
@@ -93,6 +99,11 @@ export function createSalesBookManifest(): ChikoActionManifest {
             showCustomField2: { type: "boolean" },
             customField2Label: { type: "string" },
             customFooterText: { type: "string", description: "Pre-printed footer text" },
+            columnLabels: { type: "object", description: "Override any label. Keys match what's on the form — column headers (index,description,quantity,unit,unitPrice,discount,tax,amount), doc fields (doc_title,field_recipient,field_sender,field_date,field_dueDate,field_poNumber,field_amountWords), sigs (sig_left,sig_right), receipt (receipt_*), banking (bank_*), type-specific (field_*), grid (grid_*), field_tpinLabel. Example: {description:'Items'}" },
+            subtotalLabel: { type: "string", description: "Override Subtotal label" },
+            discountLabel: { type: "string", description: "Override Discount label" },
+            taxLabel: { type: "string", description: "Override Tax/VAT label" },
+            totalLabel: { type: "string", description: "Override total amount label" },
           },
         },
         category: "Layout",
@@ -115,8 +126,7 @@ export function createSalesBookManifest(): ChikoActionManifest {
       },
       {
         name: "updatePrint",
-        description:
-          "Change print settings: formsPerPage, pageSize (a4/a5/letter/legal), pageCount, showCutLines, showPageNumbers, bindingPosition (left/top)",
+        description: "Change print settings — page size, forms per page, cut lines, page numbers, binding.",
         parameters: {
           type: "object",
           properties: {
@@ -132,16 +142,17 @@ export function createSalesBookManifest(): ChikoActionManifest {
       },
       {
         name: "updateStyle",
-        description:
-          "Change visual style: template name, accentColor (hex), fontPairing, fieldStyle (underline/box/dotted), borderStyle (none/solid/double)",
+        description: "Change visual style — template, accentColor (any hex), fontPairing, fieldStyle, borderStyle, watermark.",
         parameters: {
           type: "object",
           properties: {
-            template: { type: "string", description: "Template name" },
-            accentColor: { type: "string", description: "Accent color hex (e.g. #2563eb)" },
+            template: { type: "string", description: "Template ID" },
+            accentColor: { type: "string", description: "Any hex color (e.g. #2563eb)" },
             fontPairing: { type: "string", description: "Font pairing ID" },
             fieldStyle: { type: "string", enum: ["underline", "box", "dotted"] },
             borderStyle: { type: "string", enum: ["none", "solid", "double"] },
+            watermarkImage: { type: "string", description: "Data URL or URL of an image to use as watermark background (usually a logo)" },
+            watermarkOpacity: { type: "number", description: "Watermark image opacity 0–1 (default 0.06, very faint)" },
           },
         },
         category: "Style",
@@ -187,13 +198,13 @@ export function createSalesBookManifest(): ChikoActionManifest {
       },
       {
         name: "prefillFromMemory",
-        description: "Pre-fill the Sales Book with the user's saved business profile (company name, address, phone, email, banking details, logo). Only call this after the user confirms they want to pre-fill.",
+        description: "Pre-fill branding from saved business profile. Ask user to confirm first.",
         parameters: { type: "object", properties: {} },
         category: "Branding",
       },
       {
         name: "addCustomBlock",
-        description: "Add a custom block to the form. Types: qr-code (QR code for URLs/payment links), text (custom text/tagline), divider (horizontal line), spacer (empty space), image (custom image), signature-box (additional signature line)",
+        description: "Add a custom block (qr-code, text, divider, spacer, image, signature-box) to the form.",
         parameters: {
           type: "object",
           properties: {
@@ -247,6 +258,13 @@ export function createSalesBookManifest(): ChikoActionManifest {
           required: ["fromIndex", "toIndex"],
         },
         category: "Customization",
+      },
+      {
+        name: "exportPrint",
+        description:
+          "Open the browser print dialog for the current sales book form. This triggers the same print flow as the Print button in the UI.",
+        parameters: { type: "object", properties: {} },
+        category: "Export",
       },
     ],
 
@@ -350,6 +368,16 @@ export function createSalesBookManifest(): ChikoActionManifest {
             store.reorderCustomBlocks(params.fromIndex as number, params.toIndex as number);
             return { success: true, message: "Blocks reordered" };
 
+          case "exportPrint": {
+            const handler = options?.onPrintRef?.current;
+            if (!handler) {
+              return { success: false, message: "Export not ready yet — please wait a moment and try again." };
+            }
+            handler();
+            const { form: f } = useSalesBookEditor.getState();
+            return { success: true, message: `Print dialog opened for ${f.documentType}.` };
+          }
+
           default:
             return { success: false, message: `Unknown action: ${actionName}` };
         }
@@ -358,6 +386,12 @@ export function createSalesBookManifest(): ChikoActionManifest {
       }
     },
   };
+
+  return withActivityLogging(
+    baseManifest,
+    () => useSalesBookEditor.getState().form,
+    (snapshot) => useSalesBookEditor.getState().setForm(snapshot as SalesBookFormData),
+  );
 }
 
 /** Helper — reads current state from the store (non-hook, uses getState) */

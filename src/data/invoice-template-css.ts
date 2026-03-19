@@ -1,13 +1,10 @@
 // =============================================================================
-// Invoice Template CSS — Scoped styles for 10 invoice templates
+// Invoice Template CSS -- Scoped styles for 10 invoice templates
 // Uses [data-invoice-template="..."] attribute scoping to prevent conflicts
 // =============================================================================
 
 export const INV_CSS_MODERN_CLEAN = `
 [data-invoice-template="modern-clean"] {
-  --inv-accent: #1e40af;
-  --inv-accent-light: rgba(30, 64, 175, 0.08);
-  --inv-accent-mid: rgba(30, 64, 175, 0.2);
   --inv-text-dark: #111827;
   --inv-text-medium: #4b5563;
   --inv-text-light: #9ca3af;
@@ -234,8 +231,6 @@ export const INV_CSS_MODERN_CLEAN = `
 
 export const INV_CSS_CLASSIC_PROFESSIONAL = `
 [data-invoice-template="classic-professional"] {
-  --inv-accent: #0f172a;
-  --inv-accent-light: rgba(15, 23, 42, 0.06);
   --inv-text-dark: #1e293b;
   --inv-text-medium: #475569;
   --inv-text-light: #94a3b8;
@@ -446,8 +441,6 @@ export const INV_CSS_CLASSIC_PROFESSIONAL = `
 
 export const INV_CSS_MINIMAL_WHITE = `
 [data-invoice-template="minimal-white"] {
-  --inv-accent: #475569;
-  --inv-accent-light: rgba(71, 85, 105, 0.06);
   --inv-text-dark: #1e293b;
   --inv-text-medium: #64748b;
   --inv-text-light: #94a3b8;
@@ -645,8 +638,6 @@ export const INV_CSS_MINIMAL_WHITE = `
 
 export const INV_CSS_BOLD_CORPORATE = `
 [data-invoice-template="bold-corporate"] {
-  --inv-accent: #4338ca;
-  --inv-accent-light: rgba(67, 56, 202, 0.08);
   --inv-text-dark: #1e1b4b;
   --inv-text-medium: #4338ca;
   --inv-text-body: #475569;
@@ -856,8 +847,6 @@ export const INV_CSS_BOLD_CORPORATE = `
 
 export const INV_CSS_ELEGANT_LINE = `
 [data-invoice-template="elegant-line"] {
-  --inv-accent: #b45309;
-  --inv-accent-light: rgba(180, 83, 9, 0.06);
   --inv-text-dark: #292524;
   --inv-text-medium: #57534e;
   --inv-text-light: #a8a29e;
@@ -1061,8 +1050,6 @@ export const INV_CSS_ELEGANT_LINE = `
 
 export const INV_CSS_TECH_STARTUP = `
 [data-invoice-template="tech-startup"] {
-  --inv-accent: #059669;
-  --inv-accent-light: rgba(5, 150, 105, 0.08);
   --inv-text-dark: #111827;
   --inv-text-medium: #4b5563;
   --inv-text-light: #9ca3af;
@@ -1278,9 +1265,6 @@ export const INV_CSS_TECH_STARTUP = `
 
 export const INV_CSS_CREATIVE_STUDIO = `
 [data-invoice-template="creative-studio"] {
-  --inv-accent: #7c3aed;
-  --inv-accent-light: rgba(124, 58, 237, 0.08);
-  --inv-accent-mid: rgba(124, 58, 237, 0.15);
   --inv-text-dark: #1e1b4b;
   --inv-text-medium: #6b7280;
   --inv-text-light: #9ca3af;
@@ -1494,8 +1478,6 @@ export const INV_CSS_CREATIVE_STUDIO = `
 
 export const INV_CSS_EXECUTIVE_PREMIUM = `
 [data-invoice-template="executive-premium"] {
-  --inv-accent: #b45309;
-  --inv-accent-light: rgba(180, 83, 9, 0.06);
   --inv-text-dark: #1c1917;
   --inv-text-medium: #57534e;
   --inv-text-light: #a8a29e;
@@ -1704,8 +1686,6 @@ export const INV_CSS_EXECUTIVE_PREMIUM = `
 
 export const INV_CSS_FREELANCER_SIMPLE = `
 [data-invoice-template="freelancer-simple"] {
-  --inv-accent: #0e7490;
-  --inv-accent-light: rgba(14, 116, 144, 0.08);
   --inv-text-dark: #111827;
   --inv-text-medium: #4b5563;
   --inv-text-light: #9ca3af;
@@ -1892,8 +1872,6 @@ export const INV_CSS_FREELANCER_SIMPLE = `
 
 export const INV_CSS_INTERNATIONAL = `
 [data-invoice-template="international"] {
-  --inv-accent: #0f766e;
-  --inv-accent-light: rgba(15, 118, 110, 0.08);
   --inv-text-dark: #134e4a;
   --inv-text-medium: #4b5563;
   --inv-text-light: #9ca3af;

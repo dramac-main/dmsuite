@@ -1,33 +1,107 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Session 90 — Chiko Layer 4 Business Memory System Built ✅
+**Phase:** Session 101 — Activity Log + Color Persistence ✅
 
-### Session 90: Chiko Layer 4 Business Memory System Build
+### Session 101: Activity Log System + Color Persistence Fix
 
-**Context:** Layer 4 spec was written in Session 89. This session implemented the full Business Memory System — persistent business profile store, cross-tool field mapping, global Chiko manifest, API route enhancement, and client-side registration. Zero tsc errors on first pass.
+**Context:** User requested (1) an activity log system so Chiko can revert to previous states, and (2) a fix for accent colors being lost when switching templates.
 
-**Completed Work:**
+### Changes Made
 
-1. **Created `src/stores/business-memory.ts`** (~280 lines):
-   - `BusinessProfile` interface with 30 canonical fields across 5 groups (company, banking, social, design, team)
-   - `BusinessMemoryState` with all mutations and helpers
-   - Zustand persist middleware (key: `dmsuite-business-memory`), partializes only `profile` + `hasProfile`
-   - `updateProfile(patch)` auto-generates `profileId` via `crypto.randomUUID()` on first save
-   - `importFromFields()` maps Layer 2 detected fields to canonical names via `DETECTED_FIELD_MAP`
-   - `getProfileSummary()` returns "CompanyName — email — phone"
-   - `getBusinessProfile()` synchronous snapshot reader export
+#### 1. Activity Log Store (`src/stores/activity-log.ts`) — NEW
+- `ActivityEntry` type: id, timestamp, toolId, action, description, snapshot (JSON string), source (user/chiko)
+- `useActivityLog` Zustand store (non-persisted, session-only): logActivity, getLog, getEntry, getSnapshot, clearLog
+- 50-entry cap per tool to prevent memory bloat
+- `actionSource()` helper with `_chikoMode` flag for source tracking
+- `withActivityLogging()` HOF wrapper for manifests:
+  - Auto-logs every executed Chiko action with before-snapshot
+  - Adds `getActivityLog` and `revertToState` actions to any manifest
+  - `revertToState` restores a snapshot and logs the revert itself
+  - Read-only actions (`readCurrentState`, `getActivityLog`) are not logged
 
-2. **Created `src/lib/chiko/field-mapper.ts`** (~210 lines):
-   - 6 mapper functions: Sales Book branding (19 fields), Invoice business info (7), Invoice payment (5), Business Card details (11), Resume basics (7), Detected fields → profile (9)
-   - `filterPopulated()` helper excludes empty strings from all outputs
-   - `describeProfileForAI()` multi-line summary with masked bankAccountNumber + taxId (****last4)
-   - `getPopulatedFieldCount()` counts non-empty non-metadata fields
+#### 2. Color Persistence — Invoice Store (`src/stores/invoice-editor.ts`)
+- Added module-level `_accentLocked` boolean flag
+- `setAccentColor()` sets `_accentLocked = true` — once user/Chiko explicitly customizes color, it persists
+- `setTemplate()` only syncs accent if `!_accentLocked` — font pairing still syncs
+- `updateMetadata()` respects lock: explicit accentColor in patch sets lock, template-switch only auto-syncs if unlocked
+- `setInvoice()` and `resetInvoice()` reset lock (fresh data = start over)
+- Exported `isInvoiceAccentLocked()` and `setInvoiceAccentLock()` for testing
 
-3. **Created `src/lib/chiko/manifests/business-memory.ts`** (~260 lines):
-   - toolId: "business-memory", toolName: "Business Memory"
-   - 8 actions: saveProfile, saveBanking, saveLogo, readProfile, clearProfile, prefillCurrentTool, addTeamMember, removeTeamMember
-   - `getState()` returns summary (never raw data): hasProfile, profileName, populatedFieldCount, company fields, hasLogo, hasBanking, teamMemberCount, designPreferences
+#### 3. Color Persistence — Sales Book Store (`src/stores/sales-book-editor.ts`)
+- Same `_accentLocked` pattern as invoice
+- `updateStyle({ accentColor })` sets lock; template-switch in updateStyle respects lock
+- `setForm()` and `resetForm()` reset lock
+- Exported helpers: `isSalesBookAccentLocked()`, `setSalesBookAccentLock()`
+
+#### 4. Resume Manifest — No Color Fix Needed
+- Resume `changeTemplate()` already preserves `primaryColor` (never touches it)
+
+#### 5. All Three Manifests Wrapped with Activity Logging
+- `createResumeManifest()` → `withActivityLogging(base, getSnapshot, restoreSnapshot)`
+- `createInvoiceManifest()` → same pattern
+- `createSalesBookManifest()` → same pattern
+- Each passes tool-specific getFullSnapshot and restoreSnapshot callbacks
+
+#### 6. Chiko System Prompt Updated (`src/app/api/chiko/route.ts`)
+- Added "Color persistence" rule in Design Rules
+- Added "Activity Log & Revert" section: instructs Chiko to use getActivityLog → revertToState
+
+#### 7. Barrel Export Updated (`src/stores/index.ts`)
+- Added: useActivityLog, withActivityLogging, ActivityEntry
+
+**Build Status: ✅ Zero TypeScript errors**
+
+### Previous Session 100 Part 5e: Chiko Cost Optimization (Complete)
+
+#### 4. Conversation History Window (`src/components/Chiko/ChikoAssistant.tsx`)
+- Reduced from `.slice(-20)` to `.slice(-10)` messages
+- Savings: **~200-500 tokens per request** (depends on conversation length)
+
+### Total Token Savings
+| Section | Before | After | Saved |
+|---------|--------|-------|-------|
+| System prompt base | ~3,500 | ~500 | ~3,000 |
+| Tool registry (edit queries) | ~800 | 0 | ~800 |
+| Tool Control / Design rules | ~600 | ~150 | ~450 |
+| Manifest descriptions | ~1,500 | ~1,000 | ~500 |
+| History (avg) | ~1,500 | ~750 | ~750 |
+| **Total per request** | **~7,900** | **~2,400** | **~5,500 (70%)** |
+
+**Estimated cost per simple edit: ~$0.04 (down from $0.15 = ~73% reduction)**
+
+**Build Status: ✅ Zero TypeScript errors**
+
+### Previous Session 94: Navigation + File Upload Fixes (Complete)
+- **Workflow Store:** Zustand persist, tracks ActiveWorkflow + history (10 max), persists to localStorage `dmsuite-chiko-workflows`
+- **Workflow Manifest:** 8 global actions — AI can navigate, start/advance/pause/resume/cancel workflows, check status, skip steps
+- **Auto-Continue:** useEffect watches workflow state, sends follow-up messages when steps complete (800ms delay, 20 cycle max)
+- **Navigate-Wait-Execute:** navigateToTool → router.push → wait for manifest registration → auto-continue sends step prompt to AI
+- **AI as Planner:** No hardcoded templates — AI dynamically creates workflow plans via `startWorkflow` action based on natural language requests
+- **Export Actions:** Sales Book has `exportPrint`, Invoice has `exportDocument` (6 formats), Resume has `exportDocument` (6 formats)
+
+**All 5 Chiko Layers Complete:**
+1. ✅ Layer 1 — Action System (manifest registry, stream parsing, destructive confirmations)
+2. ✅ Layer 2 — File Processing (PDF/DOCX/XLSX/image extraction, upload endpoint, drag-and-drop)
+3. ✅ Layer 3 — Custom Blocks (QR, text, divider, spacer, image, signature-box + DnD sidebar)
+4. ✅ Layer 4 — Business Memory (30-field profile store, cross-tool pre-fill, privacy masking)
+5. ✅ Layer 5 — Full Agent Workflows (cross-tool orchestration, navigate-wait-execute, auto-continue, export actions)
+
+### Next Steps
+- **Test Chiko end-to-end:** Verify continuation loop works in browser — user asks Chiko to change something → readCurrentState → continuation → actual changes applied
+- **Remaining business tools:** Cover Letter Writer, Proposal & Pitch Deck, Certificate Designer, Contract Creator
+- Each new tool needs: workspace component, store, manifest, Chiko integration
+9. **Slash commands** — `/workflow status|pause|resume|cancel|history` with `/wf` aliases
+10. **Workflow progress UI** — Persistent banner, step cards, auto-continue styling
+
+**Files Specified:**
+- 2 new files: `chiko-workflows.ts`, `workflow-engine.ts`
+- 8 modified files: barrel export, 3 manifests (export actions), route.ts, ChikoAssistant.tsx, SalesBookDesignerWorkspace.tsx, InvoiceDesignerWorkspace.tsx
+
+**Next Steps:**
+- Layer 5 build (external builder)
+- This completes the 5-layer Chiko architecture
+- After Layer 5 is built: remaining business tools (Cover Letter, Proposal, Certificate, Contract)
    - `prefillCurrentTool` iterates registry.manifests to find active tool, maps profile fields via field-mapper, calls tool's update actions
 
 4. **Modified `src/lib/chiko/manifests/index.ts`** — Added barrel export for `createBusinessMemoryManifest`

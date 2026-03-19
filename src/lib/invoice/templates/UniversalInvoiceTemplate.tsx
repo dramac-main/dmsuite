@@ -21,6 +21,7 @@ import {
 } from "@/lib/invoice/schema";
 import { INVOICE_TEMPLATE_CSS } from "@/data/invoice-template-css";
 import { getInvoiceTemplate } from "./template-defs";
+import { CustomBlocksRegion } from "@/lib/sales-book/CustomBlockRenderer";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -61,9 +62,10 @@ function InvoiceTable({ invoice }: { invoice: InvoiceData }) {
   const items = invoice.lineItems;
   const hasDiscount = items.some((i) => i.discountValue > 0);
   const hasItemTax = items.some((i) => i.taxRate > 0);
+  const tableStyle = invoice.metadata.tableStyle || "striped";
 
   return (
-    <table className="inv-table">
+    <table className="inv-table" data-table-style={tableStyle}>
       <thead>
         <tr>
           <th style={{ width: "5%" }}>#</th>
@@ -385,6 +387,8 @@ function InvoiceBody({ invoice }: { invoice: InvoiceData }) {
   const cur = invoice.currency;
   const { grandTotal } = calcInvoiceTotals(invoice);
   const dtConfig = getDocumentTypeConfig(invoice.documentType ?? "invoice");
+  const accent = invoice.metadata.accentColor;
+  const blocks = invoice.customBlocks ?? [];
 
   return (
     <div className="inv-body">
@@ -440,17 +444,29 @@ function InvoiceBody({ invoice }: { invoice: InvoiceData }) {
         </div>
       </div>
 
+      {/* Custom blocks — after header */}
+      <CustomBlocksRegion blocks={blocks} position="after-header" accentColor={accent} density={1} />
+
       {/* Line items table */}
       <InvoiceTable invoice={invoice} />
 
       {/* Totals */}
       <InvoiceTotals invoice={invoice} />
 
+      {/* Custom blocks — after items */}
+      <CustomBlocksRegion blocks={blocks} position="after-items" accentColor={accent} density={1} />
+
       {/* Footer sections */}
       <InvoiceFooter invoice={invoice} />
 
+      {/* Custom blocks — before signature */}
+      <CustomBlocksRegion blocks={blocks} position="before-signature" accentColor={accent} density={1} />
+
       {/* Signature */}
       <InvoiceSignature invoice={invoice} />
+
+      {/* Custom blocks — after footer */}
+      <CustomBlocksRegion blocks={blocks} position="after-footer" accentColor={accent} density={1} />
     </div>
   );
 }
@@ -630,6 +646,35 @@ const TEMPLATE_RENDERERS: Record<string, (invoice: InvoiceData) => React.ReactNo
 // Public API — Factory (mirrors resume createProTemplateComponent)
 // ---------------------------------------------------------------------------
 
+/** Shared CSS overrides for table-style and header-style data attributes */
+const SHARED_STYLE_OVERRIDES = `
+/* ── Table style overrides via data-table-style ── */
+[data-table-style="bordered"] .inv-table { border: 1px solid var(--inv-border, #e5e7eb); }
+[data-table-style="bordered"] .inv-table thead th { border: 1px solid var(--inv-border, #e5e7eb); }
+[data-table-style="bordered"] .inv-table tbody td { border: 1px solid var(--inv-border, #e5e7eb); }
+[data-table-style="bordered"] .inv-table tbody tr:nth-child(even) { background: transparent; }
+
+[data-table-style="clean"] .inv-table tbody tr:nth-child(even) { background: transparent; }
+[data-table-style="clean"] .inv-table tbody td { border-bottom: none; }
+[data-table-style="clean"] .inv-table thead th { border-bottom: 2px solid var(--inv-accent); background: transparent; color: var(--inv-text-dark, #111827); }
+
+[data-table-style="minimal"] .inv-table tbody tr:nth-child(even) { background: transparent; }
+[data-table-style="minimal"] .inv-table tbody td { border-bottom: none; padding-top: 6px; padding-bottom: 6px; }
+[data-table-style="minimal"] .inv-table thead th { background: transparent; color: var(--inv-text-light, #9ca3af); border-bottom: 1px solid var(--inv-border, #e5e7eb); font-weight: 500; }
+
+/* ── Header style overrides via data-header-style ── */
+[data-header-style="compact"] .inv-header { padding: 20px 44px 16px; }
+[data-header-style="compact"] .inv-company-name { font-size: 18px; }
+[data-header-style="compact"] .inv-invoice-title { font-size: 22px; }
+
+[data-header-style="minimal"] .inv-header { background: transparent !important; color: var(--inv-text-dark, #111827) !important; padding: 24px 44px 16px; border-bottom: 2px solid var(--inv-accent); }
+[data-header-style="minimal"] .inv-header .inv-company-name { color: var(--inv-text-dark, #111827); }
+[data-header-style="minimal"] .inv-header .inv-company-details { color: var(--inv-text-medium, #4b5563); opacity: 1; }
+[data-header-style="minimal"] .inv-header .inv-invoice-title { color: var(--inv-accent); font-size: 24px; }
+[data-header-style="minimal"] .inv-header .inv-invoice-number { color: var(--inv-text-medium, #4b5563); opacity: 1; }
+[data-header-style="minimal"] .inv-header .inv-status-badge { background: var(--inv-accent-light); color: var(--inv-accent); }
+`;
+
 export function createInvoiceTemplateComponent(
   templateId: string,
 ): React.FC<InvoiceTemplateProps> {
@@ -641,12 +686,14 @@ export function createInvoiceTemplateComponent(
 
     return (
       <>
-        <style dangerouslySetInnerHTML={{ __html: css }} />
+        <style dangerouslySetInnerHTML={{ __html: css + SHARED_STYLE_OVERRIDES }} />
         {tplDef?.googleFontUrl && (
           <link rel="stylesheet" href={tplDef.googleFontUrl} />
         )}
         <div
           data-invoice-template={templateId}
+          data-header-style={invoice.metadata.headerStyle || "full"}
+          data-table-style={invoice.metadata.tableStyle || "striped"}
           style={{
             ...cssVars,
             position: "relative",

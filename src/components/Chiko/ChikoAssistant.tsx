@@ -14,8 +14,9 @@ import { cn } from "@/lib/utils";
 import { useChikoStore } from "@/stores/chiko";
 import { useChikoActionRegistry } from "@/stores/chiko-actions";
 import { useBusinessMemory } from "@/stores/business-memory";
+import { useChikoWorkflows } from "@/stores/chiko-workflows";
 import { describeProfileForAI } from "@/lib/chiko/field-mapper";
-import { createBusinessMemoryManifest } from "@/lib/chiko/manifests";
+import { createBusinessMemoryManifest, createWorkflowManifest } from "@/lib/chiko/manifests";
 import { useTheme } from "@/components/ThemeProvider";
 import { Chiko3DAvatar } from "./Chiko3DAvatar";
 import type { ChikoExpression } from "./Chiko3DAvatar";
@@ -369,8 +370,14 @@ export function ChikoAssistant() {
   const [chikoExpression, setChikoExpression] = useState<ChikoExpression>("idle");
   const [pendingAction, setPendingAction] = useState<{ action: string; params: Record<string, unknown> } | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [autoContinueCount, setAutoContinueCount] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const routerRef = useRef(router);
+  routerRef.current = router;
+
+  /** Stashed intent after navigateToTool — triggers follow-up when target manifest registers */
+  const pendingNavigationRef = useRef<{ targetToolId: string; userIntent: string } | null>(null);
 
   // ── Abort in-flight stream when panel closes ─────────────
   useEffect(() => {
@@ -384,7 +391,8 @@ export function ChikoAssistant() {
   useEffect(() => {
     const registry = useChikoActionRegistry.getState();
     registry.register(createBusinessMemoryManifest());
-    // intentionally no cleanup — business memory is always available
+    registry.register(createWorkflowManifest(routerRef));
+    // intentionally no cleanup — these global manifests are always available
   }, []);
 
   // ── Detect virtual keyboard (mobile) ─────────────────────
@@ -443,6 +451,95 @@ export function ChikoAssistant() {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
   }, [isOpen]);
+
+  // ── Workflow auto-continue logic ──────────────────────────
+  const MAX_AUTO_CONTINUE = 20;
+  const workflowActive = useChikoWorkflows((s) => s.activeWorkflow);
+  const workflowAdvance = useChikoWorkflows((s) => s.advanceStep);
+
+  useEffect(() => {
+    if (!workflowActive || workflowActive.status !== "running") return;
+    if (isGenerating) return;
+    if (autoContinueCount >= MAX_AUTO_CONTINUE) {
+      addMessage({
+        role: "assistant",
+        content: "⚠️ Hit the auto-continue limit (20 cycles). Pausing workflow — type **/workflow resume** to continue.",
+      });
+      useChikoWorkflows.getState().pauseWorkflow();
+      return;
+    }
+
+    const currentStep = workflowActive.steps[workflowActive.currentStepIndex];
+    if (!currentStep) return;
+
+    // If current step target tool is different from the current page, wait for navigation
+    if (currentStep.toolId) {
+      const registry = useChikoActionRegistry.getState();
+      const manifest = registry.manifests.get(currentStep.toolId);
+      if (!manifest) {
+        // Manifest not registered yet — waiting for navigation to complete
+        return;
+      }
+    }
+
+    // All actions on current step executed → advance to next step
+    const allActionsExecuted = currentStep.actions.length > 0 && currentStep.actions.every((a) => a.executed);
+    if (allActionsExecuted) {
+      workflowAdvance();
+      setAutoContinueCount((c) => c + 1);
+      // Send prompt for the next step after a brief delay
+      const nextIndex = workflowActive.currentStepIndex + 1;
+      if (nextIndex < workflowActive.steps.length) {
+        const nextStep = workflowActive.steps[nextIndex];
+        setTimeout(() => {
+          sendMessage(
+            `[Auto-continue] Execute workflow step ${nextIndex + 1}: ${nextStep.label}${nextStep.toolId ? ` (on ${nextStep.toolId})` : ""}`
+          );
+        }, 800);
+      }
+      return;
+    }
+
+    // Step has unexecuted actions and manifest is ready — prompt execution
+    if (currentStep.status === "pending") {
+      setAutoContinueCount((c) => c + 1);
+      sendMessage(
+        `[Auto-continue] Execute workflow step ${workflowActive.currentStepIndex + 1}: ${currentStep.label}${currentStep.toolId ? ` (on ${currentStep.toolId})` : ""}`
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    workflowActive?.status,
+    workflowActive?.currentStepIndex,
+    workflowActive?.steps,
+    isGenerating,
+    autoContinueCount,
+  ]);
+
+  // ── Post-navigation continuation ─────────────────────────
+  // After navigateToTool, wait for the target tool's manifest to register,
+  // then auto-send a follow-up so Chiko continues working on the user's intent.
+  const registeredManifests = useChikoActionRegistry((s) => s.manifests);
+
+  useEffect(() => {
+    const pending = pendingNavigationRef.current;
+    if (!pending || isGenerating) return;
+
+    const manifest = registeredManifests.get(pending.targetToolId);
+    if (!manifest) return; // Not registered yet — keep waiting
+
+    // Manifest just registered — clear the pending ref and send follow-up
+    const { userIntent, targetToolId } = pending;
+    pendingNavigationRef.current = null;
+
+    const toolName = manifest.toolName || targetToolId;
+    setTimeout(() => {
+      sendMessage(
+        `[Continue after navigation to ${toolName}] The user originally asked: "${userIntent}". I'm now on the ${toolName} workspace. Please proceed with the user's request using the available tool actions.`
+      );
+    }, 600);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registeredManifests, isGenerating]);
 
   // ── Track Chiko's expression based on state ──────────────
   useEffect(() => {
@@ -589,6 +686,7 @@ export function ChikoAssistant() {
           if (tool) {
             addMessage({ role: "user", content: text });
             addMessage({ role: "assistant", content: `Let's create a ${what}! 🎨 Taking you to **${tool.name}**...` });
+            pendingNavigationRef.current = { targetToolId: tool.id, userIntent: text };
             setTimeout(() => router.push(getToolPath(tool)), 500);
             return true;
           }
@@ -597,6 +695,7 @@ export function ChikoAssistant() {
         if (found) {
           addMessage({ role: "user", content: text });
           addMessage({ role: "assistant", content: `I think **${found.name}** is perfect for that! 🚀 Let me take you there...` });
+          pendingNavigationRef.current = { targetToolId: found.id, userIntent: text };
           setTimeout(() => router.push(getToolPath(found)), 500);
           return true;
         }
@@ -639,9 +738,76 @@ export function ChikoAssistant() {
         return true;
       }
 
+      // /workflow or /wf — workflow management commands
+      if (/^\/(workflow|wf)\b/.test(lower)) {
+        const sub = lower.replace(/^\/(workflow|wf)\s*/, "").trim();
+        const wfStore = useChikoWorkflows.getState();
+        addMessage({ role: "user", content: text });
+
+        if (sub === "status" || sub === "") {
+          const wf = wfStore.activeWorkflow;
+          if (!wf) {
+            addMessage({ role: "assistant", content: "No workflow is currently active." });
+          } else {
+            const completed = wf.steps.filter((s) => s.status === "completed").length;
+            const lines = wf.steps.map(
+              (s, i) => `${i + 1}. ${s.status === "completed" ? "✅" : s.status === "skipped" ? "⏭️" : s.status === "failed" ? "❌" : s.status === "in-progress" || s.status === "navigating" ? "🔄" : "⬜"} ${s.label} (${s.toolId})`
+            );
+            addMessage({
+              role: "assistant",
+              content: `**${wf.name}** — ${wf.status}\nStep ${wf.currentStepIndex + 1} of ${wf.steps.length} (${completed} completed)\n\n${lines.join("\n")}`,
+            });
+          }
+          return true;
+        }
+
+        if (sub === "pause") {
+          const msg = wfStore.pauseWorkflow();
+          addMessage({ role: "assistant", content: msg });
+          return true;
+        }
+
+        if (sub === "resume") {
+          const result = wfStore.resumeWorkflow();
+          addMessage({ role: "assistant", content: result.message });
+          if (result.success) setAutoContinueCount(0);
+          return true;
+        }
+
+        if (sub === "cancel") {
+          const wf = wfStore.activeWorkflow;
+          if (!wf) {
+            addMessage({ role: "assistant", content: "No active workflow to cancel." });
+          } else {
+            const msg = wfStore.cancelWorkflow();
+            addMessage({ role: "assistant", content: msg });
+          }
+          return true;
+        }
+
+        if (sub === "history") {
+          const history = wfStore.workflowHistory;
+          if (history.length === 0) {
+            addMessage({ role: "assistant", content: "No workflow history yet." });
+          } else {
+            const lines = history.map(
+              (h, i) => `${i + 1}. **${h.name}** — ${h.status} (${h.completedSteps}/${h.stepCount} steps, ${h.skippedSteps} skipped, ${h.failedSteps} failed)`
+            );
+            addMessage({ role: "assistant", content: `## Workflow History\n\n${lines.join("\n")}` });
+          }
+          return true;
+        }
+
+        addMessage({
+          role: "assistant",
+          content: "**Workflow commands:**\n- **/workflow status** — Current status\n- **/workflow pause** — Pause workflow\n- **/workflow resume** — Resume workflow\n- **/workflow cancel** — Cancel workflow\n- **/workflow history** — Past workflows\n\n*Tip:* Use **/wf** as a shortcut!",
+        });
+        return true;
+      }
+
       return false;
     },
-    [addMessage, router, toggleTheme]
+    [addMessage, router, toggleTheme, setAutoContinueCount]
   );
 
   /* ── Execute a Chiko action from the stream ───────────── */
@@ -793,7 +959,8 @@ export function ChikoAssistant() {
   /* ── Send message ──────────────────────────────────────── */
   const sendMessage = useCallback(
     async (content?: string) => {
-      const text = (content || inputDraft).trim();
+      const hasReadyAttachments = attachments.some((a) => a.status === "ready");
+      const text = (content || inputDraft).trim() || (hasReadyAttachments ? `I've uploaded a file: ${attachments.find((a) => a.status === "ready")?.fileName}` : "");
       if (!text || isGenerating) return;
 
       setInputDraft("");
@@ -815,13 +982,21 @@ export function ChikoAssistant() {
         if (tool) {
           addMessage({ role: "user", content: text });
           addMessage({ role: "assistant", content: `On it! Taking you to **${tool.name}**! 🚀` });
+          // Stash the user's intent so Chiko continues after landing on the tool
+          pendingNavigationRef.current = {
+            targetToolId: tool.id,
+            userIntent: text,
+          };
           setTimeout(() => router.push(getToolPath(tool)), 500);
           return;
         }
       }
 
       // Regular message — send to API
-      addMessage({ role: "user", content: text });
+      const fileSnap = attachments
+        .filter((a) => a.status === "ready")
+        .map((a) => ({ fileName: a.fileName, mimeType: a.mimeType, thumbnail: a.thumbnail }));
+      addMessage({ role: "user", content: text, ...(fileSnap.length > 0 ? { files: fileSnap } : {}) });
       addMessage({ role: "assistant", content: "" });
       setIsGenerating(true);
 
@@ -834,7 +1009,7 @@ export function ChikoAssistant() {
         // Limit to last 20 messages for API to reduce payload/token usage
         const recentMessages = messages
           .filter((m) => m.role !== "system")
-          .slice(-20)
+          .slice(-10)
           .map((m) => ({ role: m.role, content: m.content }));
 
         const apiMessages = [
@@ -882,6 +1057,10 @@ export function ChikoAssistant() {
           ? describeProfileForAI(memoryState.profile)
           : "";
 
+        // Build workflow context for system prompt injection
+        const workflowSummary = useChikoWorkflows.getState().getProgressSummary();
+        const workflowContext = workflowSummary !== "No workflow is currently active." ? workflowSummary : "";
+
         const response = await fetch("/api/chiko", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -891,6 +1070,7 @@ export function ChikoAssistant() {
             ...(hasTools ? { actions: actionDescriptors, toolState } : {}),
             ...(fileContext ? { fileContext } : {}),
             ...(profileSummary ? { businessProfile: profileSummary } : {}),
+            ...(workflowContext ? { workflowContext } : {}),
           }),
           signal: controller.signal,
         });
@@ -910,105 +1090,301 @@ export function ChikoAssistant() {
         const reader = response.body?.getReader();
         if (!reader) throw new Error("No response body");
 
-        const decoder = new TextDecoder();
-        const executedActions: { action: string; params: Record<string, unknown>; success: boolean }[] = [];
-        let textBuffer = "";
+        // ── Shared type for action tracking ──
+        type ActionRecord = {
+          action: string;
+          params: Record<string, unknown>;
+          success: boolean;
+          message: string;
+          newState?: Record<string, unknown>;
+          toolUseId?: string;
+        };
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          textBuffer += decoder.decode(value, { stream: true });
+        // ── Helper: process a Chiko streaming response ──
+        // Returns executed actions, raw assistant text, stop_reason, and suggested replies
+        const processChikoStream = async (
+          streamReader: ReadableStreamDefaultReader<Uint8Array>,
+        ): Promise<{
+          executedActions: ActionRecord[];
+          rawAssistantText: string;
+          stopReason: string;
+          suggestedReplies: string[];
+        }> => {
+          const dec = new TextDecoder();
+          const actions: ActionRecord[] = [];
+          let buf = "";
+          let rawText = "";
+          let stop = "";
+          let replies: string[] = [];
 
-          // Process buffer for action events vs text
-          const parts = textBuffer.split("__CHIKO_ACTION__:");
-          // First part is always text
-          if (parts[0]) {
-            appendToLastAssistantMessage(parts[0]);
+          while (true) {
+            const { done, value } = await streamReader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+
+            // ── Strip __CHIKO_STOP__ markers before any other parsing ──
+            const stopMarker = "__CHIKO_STOP__:";
+            const stopIdx = buf.indexOf(stopMarker);
+            if (stopIdx !== -1) {
+              const afterMarker = buf.slice(stopIdx + stopMarker.length);
+              const nlIdx = afterMarker.indexOf("\n");
+              if (nlIdx !== -1) {
+                try {
+                  const stopData = JSON.parse(afterMarker.slice(0, nlIdx));
+                  stop = stopData.stop_reason || "";
+                } catch { /* ignore parse error */ }
+                // Remove the stop marker + its line from the buffer
+                buf = buf.slice(0, stopIdx) + afterMarker.slice(nlIdx + 1);
+              } else {
+                // Incomplete stop marker — trim buffer before it and wait for more data
+                const textBefore = buf.slice(0, stopIdx);
+                if (textBefore) {
+                  // Process what we have before the marker
+                  buf = textBefore;
+                  // Fall through to normal processing below, then restore the incomplete marker
+                  // Actually, just process textBefore and keep the incomplete part
+                  appendToLastAssistantMessage(textBefore);
+                  rawText += textBefore;
+                  buf = buf.slice(stopIdx); // keep from stopIdx onwards
+                }
+                continue;
+              }
+            }
+
+            // ── Process buffer for action events vs text ──
+            const parts = buf.split("__CHIKO_ACTION__:");
+
+            // First part is always text
+            if (parts[0]) {
+              appendToLastAssistantMessage(parts[0]);
+              rawText += parts[0];
+            }
+
+            // Process any action events
+            for (let i = 1; i < parts.length; i++) {
+              const newlineIdx = parts[i].indexOf("\n");
+              if (newlineIdx === -1) {
+                // Incomplete action event — keep in buffer
+                const remaining = parts.slice(i).join("__CHIKO_ACTION__:");
+                buf = "__CHIKO_ACTION__:" + remaining;
+                break;
+              }
+              const jsonStr = parts[i].slice(0, newlineIdx);
+              const trailing = parts[i].slice(newlineIdx + 1);
+
+              try {
+                const actionEvent = JSON.parse(jsonStr) as {
+                  __chiko_action__: boolean;
+                  action: string;
+                  params: Record<string, unknown>;
+                  toolUseId?: string;
+                };
+
+                const sep = actionEvent.action.indexOf("__");
+                if (sep !== -1) {
+                  const toolIdRaw = actionEvent.action.slice(0, sep);
+                  const actionName = actionEvent.action.slice(sep + 2);
+                  const toolId = toolIdRaw.replace(/_/g, "-");
+                  const currentRegistry = useChikoActionRegistry.getState();
+                  const manifest = currentRegistry.manifests.get(toolId);
+                  const descriptor = manifest?.actions.find((a) => a.name === actionName);
+
+                  if (descriptor?.destructive) {
+                    setPendingAction({ action: actionEvent.action, params: actionEvent.params });
+                    appendToLastAssistantMessage(
+                      `\n\n⚠️ **This action is destructive** (${descriptor.description}). Please confirm or cancel below.`
+                    );
+                  } else {
+                    const result = executeChikoAction(actionEvent.action, actionEvent.params);
+                    actions.push({
+                      action: actionEvent.action,
+                      params: actionEvent.params,
+                      success: result.success,
+                      message: result.message,
+                      newState: result.newState,
+                      toolUseId: actionEvent.toolUseId,
+                    });
+
+                    if (actionName === "navigateToTool" && result.success && actionEvent.params.toolId) {
+                      const userMsg = messages[messages.length - 1]?.content || "";
+                      pendingNavigationRef.current = {
+                        targetToolId: actionEvent.params.toolId as string,
+                        userIntent: userMsg,
+                      };
+                    }
+                    if (result.success) {
+                      appendToLastAssistantMessage(`\n✅ ${result.message}`);
+                    } else {
+                      appendToLastAssistantMessage(`\n❌ ${result.message}`);
+                    }
+                  }
+                } else {
+                  console.warn("[Chiko] Invalid action format (missing __):", actionEvent.action);
+                }
+              } catch (parseErr) {
+                console.warn("[Chiko] Failed to parse action JSON:", jsonStr, parseErr);
+              }
+
+              if (trailing) {
+                appendToLastAssistantMessage(trailing);
+                rawText += trailing;
+              }
+              if (i === parts.length - 1) {
+                buf = "";
+              }
+            }
+
+            if (parts.length === 1) {
+              buf = "";
+            }
           }
 
-          // Process any action events (all parts after the first are action JSON + trailing text)
-          for (let i = 1; i < parts.length; i++) {
-            const newlineIdx = parts[i].indexOf("\n");
-            if (newlineIdx === -1) {
-              // Incomplete action event — reconstruct remaining buffer including any subsequent parts
-              const remaining = parts.slice(i).join("__CHIKO_ACTION__:");
-              textBuffer = "__CHIKO_ACTION__:" + remaining;
+          // ── Post-stream: extract __QUICK_REPLIES__ from the accumulated text ──
+          const qrMarker = "__QUICK_REPLIES__:";
+          const qrIdx = rawText.lastIndexOf(qrMarker);
+          if (qrIdx !== -1) {
+            const qrPayload = rawText.slice(qrIdx + qrMarker.length).trim();
+            try {
+              const parsed = JSON.parse(qrPayload);
+              if (Array.isArray(parsed)) {
+                replies = parsed.filter((r): r is string => typeof r === "string").slice(0, 4);
+              }
+            } catch { /* ignore parse error */ }
+            // Strip the marker from the displayed message
+            const textBefore = rawText.slice(0, qrIdx).trimEnd();
+            rawText = textBefore;
+            // Also strip from the visible message in the store
+            const store = useChikoStore.getState();
+            const msgs = store.messages;
+            const lastMsg = msgs[msgs.length - 1];
+            if (lastMsg?.role === "assistant") {
+              const visibleContent = lastMsg.content;
+              const visibleQrIdx = visibleContent.lastIndexOf(qrMarker);
+              if (visibleQrIdx !== -1) {
+                useChikoStore.setState({
+                  messages: msgs.map((m, idx) =>
+                    idx === msgs.length - 1
+                      ? { ...m, content: visibleContent.slice(0, visibleQrIdx).trimEnd() }
+                      : m
+                  ),
+                });
+              }
+            }
+          }
+
+          return { executedActions: actions, rawAssistantText: rawText, stopReason: stop, suggestedReplies: replies };
+        };
+
+        // ── Process the initial stream ──
+        let { executedActions, rawAssistantText, stopReason, suggestedReplies } = await processChikoStream(reader);
+
+        // ── Auto-continuation loop ──
+        // When Claude's stop_reason is "tool_use", it expects tool results back.
+        // Send a follow-up request with the results so it can continue.
+        const MAX_CONTINUATIONS = 3;
+        let continuationCount = 0;
+        let currentApiMessages = apiMessages;
+
+        while (
+          stopReason === "tool_use" &&
+          executedActions.length > 0 &&
+          continuationCount < MAX_CONTINUATIONS
+        ) {
+          continuationCount++;
+
+          // Build tool results summary for Claude
+          const toolResultsStr = executedActions
+            .map((a) => {
+              const statusIcon = a.success ? "✅" : "❌";
+              const dataStr = a.newState
+                ? `\nReturned data:\n${JSON.stringify(a.newState, null, 2)}`
+                : "";
+              return `${a.action}: ${statusIcon} ${a.message}${dataStr}`;
+            })
+            .join("\n\n");
+
+          // Build continuation messages: original conversation + assistant's text + tool results
+          currentApiMessages = [
+            ...currentApiMessages,
+            { role: "assistant", content: rawAssistantText.trim() || "I'll check the current state." },
+            {
+              role: "user",
+              content: `[Tool execution results]\n${toolResultsStr}\n[/Tool execution results]\n\nPlease continue with the changes based on these results. Do NOT call readCurrentState again — you already have the data above.`,
+            },
+          ];
+
+          // Re-read fresh tool state (mutations may have changed it)
+          const freshRegistry = useChikoActionRegistry.getState();
+          const freshDescriptors = freshRegistry.getActionDescriptorsForAI();
+          const freshHasTools = freshDescriptors.length > 0;
+          let freshToolState: Record<string, unknown> | undefined;
+          if (freshHasTools) {
+            const st: Record<string, unknown> = {};
+            for (const [tid] of freshRegistry.manifests) {
+              const ts = freshRegistry.readState(tid);
+              if (ts) st[tid] = ts;
+            }
+            freshToolState = st;
+          }
+
+          // Make continuation request
+          const contResponse = await fetch("/api/chiko", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              messages: currentApiMessages,
+              context,
+              ...(freshHasTools ? { actions: freshDescriptors, toolState: freshToolState } : {}),
+              ...(profileSummary ? { businessProfile: profileSummary } : {}),
+            }),
+            signal: controller.signal,
+          });
+
+          if (!contResponse.ok) {
+            appendToLastAssistantMessage("\n\n⚠️ I had trouble continuing — please try again.");
+            break;
+          }
+
+          const contContentType = contResponse.headers.get("content-type") || "";
+          if (contContentType.includes("application/json")) {
+            const contData = await contResponse.json();
+            if (contData.fallback) {
+              appendToLastAssistantMessage(`\n\n${contData.content}`);
               break;
             }
-            const jsonStr = parts[i].slice(0, newlineIdx);
-            const trailing = parts[i].slice(newlineIdx + 1);
-
-            try {
-              const actionEvent = JSON.parse(jsonStr) as {
-                __chiko_action__: boolean;
-                action: string;
-                params: Record<string, unknown>;
-              };
-
-              // Check if action is destructive before executing
-              const sep = actionEvent.action.indexOf("__");
-              if (sep !== -1) {
-                const toolIdRaw = actionEvent.action.slice(0, sep);
-                const actionName = actionEvent.action.slice(sep + 2);
-                const toolId = toolIdRaw.replace(/_/g, "-");
-                const manifest = registry.manifests.get(toolId);
-                const descriptor = manifest?.actions.find((a) => a.name === actionName);
-
-                if (descriptor?.destructive) {
-                  // Queue destructive action for confirmation
-                  setPendingAction({ action: actionEvent.action, params: actionEvent.params });
-                  appendToLastAssistantMessage(
-                    `\n\n⚠️ **This action is destructive** (${descriptor.description}). Please confirm or cancel below.`
-                  );
-                } else {
-                  // Execute immediately
-                  const result = executeChikoAction(actionEvent.action, actionEvent.params);
-                  executedActions.push({
-                    action: actionEvent.action,
-                    params: actionEvent.params,
-                    success: result.success,
-                  });
-                  if (result.success) {
-                    appendToLastAssistantMessage(`\n✅ ${result.message}`);
-                  } else {
-                    appendToLastAssistantMessage(`\n❌ ${result.message}`);
-                  }
-                }
-              } else {
-                console.warn("[Chiko] Invalid action format (missing __):", actionEvent.action);
-              }
-            } catch (parseErr) {
-              console.warn("[Chiko] Failed to parse action JSON:", jsonStr, parseErr);
-            }
-
-            // Append any trailing text after the action event
-            if (trailing) {
-              appendToLastAssistantMessage(trailing);
-            }
-
-            // Clear buffer since we've processed this part
-            if (i === parts.length - 1) {
-              textBuffer = "";
-            }
           }
 
-          // If only one part (no action events), clear the buffer
-          if (parts.length === 1) {
-            textBuffer = "";
+          const contReader = contResponse.body?.getReader();
+          if (!contReader) break;
+
+          // Small visual separator before continuation
+          appendToLastAssistantMessage("\n\n");
+
+          // Process the continuation stream (appends to the same assistant message)
+          const contResult = await processChikoStream(contReader);
+          executedActions = [...executedActions, ...contResult.executedActions];
+          rawAssistantText = contResult.rawAssistantText;
+          stopReason = contResult.stopReason;
+          // Use the latest quick replies (continuation overrides initial)
+          if (contResult.suggestedReplies.length > 0) {
+            suggestedReplies = contResult.suggestedReplies;
           }
         }
 
-        // Store executed actions on the message
-        if (executedActions.length > 0) {
+        // Store executed actions + suggested replies on the message
+        if (executedActions.length > 0 || suggestedReplies.length > 0) {
           const store = useChikoStore.getState();
           const msgs = store.messages;
           const lastMsg = msgs[msgs.length - 1];
           if (lastMsg?.role === "assistant") {
-            // Update the last assistant message with executedActions
             useChikoStore.setState({
               messages: msgs.map((m, idx) =>
                 idx === msgs.length - 1
-                  ? { ...m, executedActions }
+                  ? {
+                      ...m,
+                      ...(executedActions.length > 0 ? { executedActions } : {}),
+                      ...(suggestedReplies.length > 0 ? { suggestedReplies } : {}),
+                    }
                   : m
               ),
             });
@@ -1059,19 +1435,6 @@ export function ChikoAssistant() {
     },
     [sendMessage]
   );
-
-  /* ── Auto-send when file becomes ready with no user text ── */
-  const prevReadyCountRef = useRef(0);
-  useEffect(() => {
-    const readyCount = attachments.filter((a) => a.status === "ready").length;
-    if (readyCount > prevReadyCountRef.current && !inputDraft.trim() && !isGenerating) {
-      const lastReady = attachments.find((a) => a.status === "ready");
-      if (lastReady) {
-        sendMessage(`I've uploaded ${lastReady.fileName}`);
-      }
-    }
-    prevReadyCountRef.current = readyCount;
-  }, [attachments, inputDraft, isGenerating, sendMessage]);
 
   const suggestions = useMemo(
     () => getContextSuggestions(context.pageType, context.currentToolId, context.currentCategoryId),
@@ -1159,14 +1522,18 @@ export function ChikoAssistant() {
                   </span>
                   {isGenerating && (
                     <motion.div
-                      className="h-1.5 w-1.5 rounded-full bg-secondary-400"
-                      animate={{ opacity: [0.3, 1, 0.3] }}
-                      transition={{ duration: 1, repeat: Infinity }}
+                      className="h-1.5 w-1.5 rounded-full bg-primary-400"
+                      animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
+                      transition={{ duration: 1.2, repeat: Infinity }}
                     />
                   )}
                 </div>
                 <p className="truncate text-xs text-gray-400">
-                  {isGenerating ? "Thinking..." : "Your personal creative companion"}
+                  {isGenerating
+                    ? attachments.some((a) => a.status === "ready")
+                      ? "Analyzing your file…"
+                      : "Thinking…"
+                    : "Your personal creative companion"}
                 </p>
               </div>
 
@@ -1201,6 +1568,83 @@ export function ChikoAssistant() {
               </div>
             </div>
 
+            {/* ── Workflow Progress Banner ─────────────── */}
+            {workflowActive && (
+              <div className="shrink-0 border-b border-primary-500/20 bg-primary-500/5 px-4 py-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-xs font-bold text-primary-400">
+                        {workflowActive.name}
+                      </span>
+                      <span className={cn(
+                        "rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+                        workflowActive.status === "running" && "bg-primary-500/20 text-primary-400",
+                        workflowActive.status === "paused" && "bg-amber-500/20 text-amber-400",
+                        (workflowActive.status === "awaiting-navigation" || workflowActive.status === "awaiting-confirmation") && "bg-secondary-500/20 text-secondary-400",
+                      )}>
+                        {workflowActive.status === "awaiting-navigation" ? "Navigating..." : workflowActive.status}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 truncate text-[11px] text-gray-400">
+                      Step {workflowActive.currentStepIndex + 1}/{workflowActive.steps.length}: {workflowActive.steps[workflowActive.currentStepIndex]?.label ?? "Done"}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {workflowActive.status === "running" ? (
+                      <button
+                        onClick={() => {
+                          useChikoWorkflows.getState().pauseWorkflow();
+                          addMessage({ role: "assistant", content: "⏸️ Workflow paused. Type **/workflow resume** to continue." });
+                        }}
+                        className="rounded-md px-2 py-1 text-[11px] font-medium text-amber-400 transition-colors hover:bg-amber-500/10"
+                      >
+                        Pause
+                      </button>
+                    ) : workflowActive.status === "paused" ? (
+                      <button
+                        onClick={() => {
+                          useChikoWorkflows.getState().resumeWorkflow();
+                          setAutoContinueCount(0);
+                          addMessage({ role: "assistant", content: "▶️ Workflow resumed!" });
+                        }}
+                        className="rounded-md px-2 py-1 text-[11px] font-medium text-primary-400 transition-colors hover:bg-primary-500/10"
+                      >
+                        Resume
+                      </button>
+                    ) : null}
+                    <button
+                      onClick={() => {
+                        if (confirm("Cancel the active workflow? Changes to tools are preserved.")) {
+                          const msg = useChikoWorkflows.getState().cancelWorkflow();
+                          addMessage({ role: "assistant", content: msg });
+                        }
+                      }}
+                      className="rounded-md px-2 py-1 text-[11px] font-medium text-red-400 transition-colors hover:bg-red-500/10"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+                {/* Progress bar */}
+                <div className="mt-1.5 flex gap-0.5">
+                  {workflowActive.steps.map((step, i) => (
+                    <div
+                      key={step.id}
+                      className={cn(
+                        "h-1 flex-1 rounded-full transition-colors",
+                        step.status === "completed" && "bg-primary-500",
+                        step.status === "skipped" && "bg-gray-500",
+                        step.status === "failed" && "bg-red-500",
+                        (step.status === "in-progress" || step.status === "navigating") && "animate-pulse bg-primary-400",
+                        step.status === "pending" && "bg-gray-700",
+                      )}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* ── Messages ────────────────────────────── */}
             <div className="flex-1 overflow-y-auto overscroll-contain scroll-smooth px-3 py-3 sm:px-4 [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-700 [&::-webkit-scrollbar]:w-1.5" role="log" aria-live="polite" aria-label="Chat messages">
               {messages.map((msg) => (
@@ -1228,24 +1672,84 @@ export function ChikoAssistant() {
                     {msg.role === "assistant" && msg.content ? (
                       renderMessageContent(msg.content)
                     ) : msg.role === "user" ? (
-                      <p className="text-[13px] leading-relaxed sm:text-sm">{msg.content}</p>
+                      <>
+                        {/* Inline file chips for attachments sent with this message */}
+                        {msg.files && msg.files.length > 0 && (
+                          <div className="mb-1.5 flex flex-wrap gap-1.5">
+                            {msg.files.map((f, fi) => (
+                              <div key={fi} className="flex items-center gap-1.5 rounded-lg border border-primary-500/30 bg-primary-500/10 px-2 py-1 text-[11px]">
+                                {f.thumbnail ? (
+                                  <img src={f.thumbnail} alt="" className="h-5 w-5 rounded object-cover" />
+                                ) : (
+                                  <span className="text-[11px]">{getFileIcon(f.mimeType)}</span>
+                                )}
+                                <span className="max-w-28 truncate text-primary-200">{f.fileName}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <p className="text-[13px] leading-relaxed sm:text-sm">{msg.content}</p>
+                      </>
                     ) : null}
 
                     {msg.role === "assistant" && !msg.content && isGenerating && (
-                      <div className="flex items-center gap-1.5 py-1">
-                        {[0, 1, 2].map((i) => (
-                          <motion.div
-                            key={i}
-                            className="h-1.5 w-1.5 rounded-full bg-primary-500"
-                            animate={{ opacity: [0.3, 1, 0.3], y: [0, -3, 0] }}
-                            transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15 }}
-                          />
-                        ))}
+                      <div className="flex items-center gap-2 py-1">
+                        <div className="flex items-center gap-1">
+                          {[0, 1, 2].map((i) => (
+                            <motion.div
+                              key={i}
+                              className="h-1.5 w-1.5 rounded-full bg-primary-500"
+                              animate={{ opacity: [0.3, 1, 0.3], y: [0, -3, 0] }}
+                              transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15 }}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-[11px] text-gray-500">Chiko is thinking…</span>
                       </div>
                     )}
                   </div>
                 </div>
               ))}
+
+              {/* ── Quick-Reply Buttons from Chiko ───── */}
+              <AnimatePresence>
+                {!isGenerating &&
+                  messages.length > 0 &&
+                  messages[messages.length - 1].role === "assistant" &&
+                  (messages[messages.length - 1].suggestedReplies?.length ?? 0) > 0 && (
+                    <motion.div
+                      key="quick-replies"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.2 }}
+                      className="mb-2 ml-8 flex flex-wrap gap-1.5"
+                    >
+                      {messages[messages.length - 1].suggestedReplies!.map(
+                        (reply, i) => (
+                          <motion.button
+                            key={reply}
+                            initial={{ opacity: 0, scale: 0.92 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: i * 0.05, duration: 0.15 }}
+                            onClick={() => sendMessage(reply)}
+                            disabled={isGenerating}
+                            className={cn(
+                              "rounded-full border border-primary-500/30 bg-primary-500/10 px-3 py-1.5",
+                              "text-xs text-primary-300 transition-all",
+                              "hover:border-primary-500/50 hover:bg-primary-500/20 hover:text-primary-200",
+                              "active:scale-95 active:bg-primary-500/25",
+                              "disabled:pointer-events-none disabled:opacity-40"
+                            )}
+                          >
+                            {reply}
+                          </motion.button>
+                        )
+                      )}
+                    </motion.div>
+                  )}
+              </AnimatePresence>
+
               <div ref={messagesEndRef} />
             </div>
 

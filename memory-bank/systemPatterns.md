@@ -54,6 +54,30 @@
 - Global design settings via Zustand `useAdvancedSettingsStore` — shared across all tools
 - Sidebar open/close state in `useSidebarStore`
 
+### 3a. Activity Log + Revert System
+```
+ActivityLog Store (activity-log.ts) — non-persisted (session only)
+  ├── log: Record<toolId, ActivityEntry[]>  — per-tool history (50 max)
+  ├── logActivity(toolId, action, desc, snapshot, source)
+  ├── getLog(toolId, limit) / getEntry(toolId, entryId)
+  ├── getSnapshot(toolId, entryId) — parse JSON snapshot
+  └── clearLog(toolId)
+
+withActivityLogging(manifest, getFullSnapshot, restoreSnapshot) → wrapped manifest
+  ├── Auto-logs every Chiko action with before-snapshot
+  ├── Adds getActivityLog action (read history)
+  ├── Adds revertToState action (restore snapshot by entry ID)
+  ├── _chikoMode flag tracks source (user vs chiko)
+  └── Read-only actions (readCurrentState) are not logged
+
+Color Persistence Pattern:
+  ├── Module-level _accentLocked boolean per store
+  ├── setAccentColor() / updateStyle/Metadata(accentColor) → locks
+  ├── setTemplate() / updateStyle(template) → only syncs accent if !locked
+  ├── reset / setData → unlocks (fresh start)
+  └── Resume already correct (changeTemplate never touches primaryColor)
+```
+
 ### 3b. Global Advanced Settings Architecture
 ```
 Zustand Store (advanced-settings.ts) — persisted in localStorage

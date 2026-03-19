@@ -15,6 +15,8 @@ import {
   DOCUMENT_TYPE_CONFIGS,
   type SalesDocumentType,
 } from "@/lib/invoice/schema";
+import { useChikoActions } from "@/hooks/useChikoActions";
+import { createInvoiceManifest } from "@/lib/chiko/manifests";
 import InvoiceEditorSectionsPanel from "./editor/InvoiceEditorSectionsPanel";
 import InvoiceEditorPreviewPanel from "./editor/InvoiceEditorPreviewPanel";
 import InvoiceEditorDesignPanel from "./editor/InvoiceEditorDesignPanel";
@@ -236,6 +238,11 @@ export default function StepEditor() {
     },
     [invoice]
   );
+
+  // Register Chiko invoice manifest with export ref
+  const exportRef = useRef<((format: string) => Promise<void>) | null>(null);
+  exportRef.current = handleExport as (format: string) => Promise<void>;
+  useChikoActions(() => createInvoiceManifest({ onExportRef: exportRef }));
 
   return (
     <div className="flex flex-col h-full bg-gray-950">

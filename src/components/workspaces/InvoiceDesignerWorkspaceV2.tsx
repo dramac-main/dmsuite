@@ -14,6 +14,8 @@ import {
   type InvoiceWizardStep,
 } from "@/stores/invoice-wizard";
 import { useInvoiceEditor } from "@/stores/invoice-editor";
+import { useChikoActions } from "@/hooks/useChikoActions";
+import { createInvoiceManifest } from "@/lib/chiko/manifests/invoice";
 import type { SalesDocumentType } from "@/lib/invoice/schema";
 import InvoiceWizardStepIndicator from "./invoice-designer/InvoiceWizardStepIndicator";
 import StepDocumentType from "./invoice-designer/StepDocumentType";
@@ -81,6 +83,9 @@ export default function InvoiceDesignerWorkspaceV2({ initialDocumentType }: Prop
   const reset = useInvoiceWizard((s) => s.reset);
   const goToStep = useInvoiceWizard((s) => s.goToStep);
   const setDocumentType = useInvoiceEditor((s) => s.setDocumentType);
+
+  // Register Chiko action manifest for this tool
+  useChikoActions(createInvoiceManifest);
 
   // If opened from a specific tool (e.g. quote-estimate), pre-select that type and skip step 0
   useEffect(() => {

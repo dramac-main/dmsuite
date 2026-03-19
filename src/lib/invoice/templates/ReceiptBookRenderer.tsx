@@ -72,7 +72,7 @@ function ReceiptSlip({ invoice, slipIndex, isBlank = false }: ReceiptSlipProps) 
       {/* Receipt Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
         <div>
-          <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--inv-accent, #1e40af)", fontFamily: "var(--inv-heading-font, 'Inter', sans-serif)" }}>
+          <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--inv-accent)", fontFamily: "var(--inv-heading-font, 'Inter', sans-serif)" }}>
             {invoice.businessInfo.name || "Company Name"}
           </div>
           <div style={{ fontSize: "9px", color: "#666", marginTop: "2px" }}>
@@ -81,7 +81,7 @@ function ReceiptSlip({ invoice, slipIndex, isBlank = false }: ReceiptSlipProps) 
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: "14px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px", color: "var(--inv-accent, #1e40af)" }}>
+          <div style={{ fontSize: "14px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px", color: "var(--inv-accent)" }}>
             {config.title}
           </div>
           <div style={{ fontSize: "10px", color: "#666", marginTop: "2px" }}>

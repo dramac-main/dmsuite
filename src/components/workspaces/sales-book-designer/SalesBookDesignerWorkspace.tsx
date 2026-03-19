@@ -6,9 +6,10 @@
 
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSalesBookEditor, useSalesBookUndo } from "@/stores/sales-book-editor";
+import { printHTML } from "@/lib/print";
 import { useChikoActions } from "@/hooks/useChikoActions";
 import { createSalesBookManifest } from "@/lib/chiko/manifests/sales-book";
 import {
@@ -117,8 +118,11 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
   const updatePrint = useSalesBookEditor((s) => s.updatePrint);
   const { undo, redo, canUndo, canRedo } = useSalesBookUndo();
 
+  // Print handler ref for Chiko manifest
+  const printRef = useRef<(() => void) | null>(null);
+
   // Register Chiko action manifest for this tool
-  useChikoActions(createSalesBookManifest);
+  useChikoActions(() => createSalesBookManifest({ onPrintRef: printRef }));
 
   // Accordion state — only one section open at a time for clean UX
   const [openSection, setOpenSection] = useState<string | null>("document-type");
@@ -163,9 +167,7 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
   const handlePrint = useCallback(() => {
     const printEl = document.getElementById("sb-print-area");
     if (!printEl) return;
-    const win = window.open("", "_blank");
-    if (!win) return;
-    win.document.write(`<!DOCTYPE html><html><head>
+    const html = `<!DOCTYPE html><html><head>
       <title>${config.title} - Sales Book</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -173,14 +175,10 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
         body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         [data-sales-book-page] { page-break-after: always; }
         [data-sales-book-page]:last-child { page-break-after: auto; }
-      </style></head><body>${printEl.innerHTML}</body></html>`);
-    win.document.close();
-    win.focus();
-    setTimeout(() => {
-      win.print();
-      win.close();
-    }, 500);
+      </style></head><body>${printEl.innerHTML}</body></html>`;
+    printHTML(html);
   }, [config.title, form.printConfig.pageSize]);
+  printRef.current = handlePrint;
 
   const handleStartOver = useCallback(() => {
     if (confirm("Start a new form? All changes will be lost.")) {

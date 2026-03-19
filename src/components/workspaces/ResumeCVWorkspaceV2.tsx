@@ -9,8 +9,6 @@
 import { useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useResumeCVWizard, type WizardStep } from "@/stores/resume-cv-wizard";
-import { useChikoActions } from "@/hooks/useChikoActions";
-import { createResumeManifest } from "@/lib/chiko/manifests/resume";
 import WizardStepIndicator from "./resume-cv/WizardStepIndicator";
 import StepPersonal from "./resume-cv/StepPersonal";
 import StepTargetRole from "./resume-cv/StepTargetRole";
@@ -78,9 +76,6 @@ function StepContent({ step }: { step: WizardStep }) {
 
 export default function ResumeCVWorkspace() {
   const { currentStep, stepDirection, resetWizard } = useResumeCVWizard();
-
-  // Register Chiko action manifest for resume tool
-  useChikoActions(createResumeManifest);
 
   const handleStartOver = useCallback(() => {
     if (

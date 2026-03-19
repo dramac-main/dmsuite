@@ -10,12 +10,21 @@ import { useSalesBookWizard } from "@/stores/sales-book-wizard";
 import { useSalesBookEditor } from "@/stores/sales-book-editor";
 import {
   SALES_BOOK_TEMPLATES,
+  TEMPLATE_CATEGORIES,
   ACCENT_COLORS,
   FONT_PAIRINGS,
   FIELD_STYLES,
   FIELD_STYLE_LABELS,
   BORDER_STYLES,
 } from "@/lib/sales-book/schema";
+import type { TemplateCategory } from "@/lib/sales-book/schema";
+
+const CATEGORY_LABELS: Record<TemplateCategory, string> = {
+  professional: "Professional",
+  commerce: "Commerce",
+  minimal: "Minimal",
+  classic: "Classic",
+};
 
 // =============================================================================
 
@@ -53,24 +62,35 @@ export default function SBStepStyle() {
         {/* Template */}
         <div>
           <h3 className="text-xs font-medium text-gray-400 mb-3">Template</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {SALES_BOOK_TEMPLATES.map((tpl) => (
-              <button
-                key={tpl.id}
-                onClick={() => updateStyle({ template: tpl.id, accentColor: tpl.accent, fontPairing: tpl.font })}
-                className={`rounded-lg border p-3 text-left transition-all ${
-                  style.template === tpl.id
-                    ? "border-primary-500 bg-primary-500/10 ring-1 ring-primary-500/30"
-                    : "border-gray-700 bg-gray-800 hover:border-gray-600"
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: tpl.accent }} />
-                  <span className="text-xs font-medium text-gray-200 truncate">{tpl.name}</span>
+          <div className="space-y-4">
+            {TEMPLATE_CATEGORIES.map((cat) => {
+              const catTemplates = SALES_BOOK_TEMPLATES.filter((t) => t.category === cat);
+              if (catTemplates.length === 0) return null;
+              return (
+                <div key={cat}>
+                  <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">{CATEGORY_LABELS[cat]}</div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {catTemplates.map((tpl) => (
+                      <button
+                        key={tpl.id}
+                        onClick={() => updateStyle({ template: tpl.id, accentColor: tpl.accent, fontPairing: tpl.font })}
+                        className={`rounded-lg border p-3 text-left transition-all ${
+                          style.template === tpl.id
+                            ? "border-primary-500 bg-primary-500/10 ring-1 ring-primary-500/30"
+                            : "border-gray-700 bg-gray-800 hover:border-gray-600"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: tpl.accent }} />
+                          <span className="text-xs font-medium text-gray-200 truncate">{tpl.name}</span>
+                        </div>
+                        <p className="text-[10px] text-gray-500 line-clamp-1">{tpl.description}</p>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <p className="text-[10px] text-gray-500 line-clamp-1">{tpl.description}</p>
-              </button>
-            ))}
+              );
+            })}
           </div>
         </div>
 
