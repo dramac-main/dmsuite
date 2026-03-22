@@ -1,53 +1,34 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Session 107 — Authentication, Payments & Credit System — COMPLETE ✅
+**Phase:** Session 108 — Infrastructure Setup & Production Deployment
 
-### Session 107: Full Auth + Payments + Credits Infrastructure
+### Session 108: MCP Setup + Database + Vercel Deploy
 
-#### 1. Supabase Authentication — COMPLETE ✅
-- Installed `@supabase/supabase-js` + `@supabase/ssr`
-- Created client utilities: `src/lib/supabase/client.ts` (browser), `server.ts` (API routes), `middleware.ts` (session refresh + route protection)
-- Created `src/lib/supabase/auth.ts` — `getAuthUser()` helper with dev-mode mock user
-- Created root middleware `src/middleware.ts` — protects all routes except `/auth/*`, webhooks, static assets
-- Created `src/hooks/useUser.ts` — client-side auth state hook with dev-mode passthrough
-- Database migration: `supabase/migrations/001_initial_schema.sql` — profiles, credit_transactions, payments tables + RLS + triggers
+#### 1. MCP Servers Connected — COMPLETE ✅
+- `.vscode/mcp.json` — Supabase, Context7, Vercel (all 3 connected)
+- Fixed fnm PATH issue: uses absolute paths to node.exe + npx-cli.js
+- Vercel MCP needs VERCEL_API_KEY as CLI arg (not env var)
 
-#### 2. Auth Pages (5 pages) — COMPLETE ✅
-- `src/app/auth/layout.tsx` — Centered layout, no sidebar, DMSuite branding
-- `src/app/auth/login/page.tsx` — Email/password, respects `?next=` redirect
-- `src/app/auth/signup/page.tsx` — Name, email, phone (+260), password + email verification
-- `src/app/auth/reset-password/page.tsx` — Password reset request
-- `src/app/auth/callback/route.ts` — Supabase auth callback (email verify, recovery, OAuth)
-- `src/app/auth/verify/page.tsx` — Email verification + password recovery form
+#### 2. Database Migration — COMPLETE ✅
+- Ran `001_initial_schema.sql` on live Supabase (id: mbcehmofahrnscfpndkz)
+- Tables: profiles (9 cols), credit_transactions (9 cols), payments (11 cols)
+- RLS enabled + policies + triggers + indexes all verified
 
-#### 3. Credit-Based Monetization — COMPLETE ✅
-- `src/lib/supabase/credits.ts` — checkCredits, deductCredits, addCredits, refundCredits with dev-mode guards
-- Credit costs defined: chat=1, chiko=1, file-parsing=1, image-analysis=2, resume-revision=3, sales-book=3, invoice=3, resume-gen=5, business-card=5, logo=5
-- 50 free credits on signup (DB trigger)
-- ALL 7 AI API routes now have auth + credit checks:
-  - `api/chat/route.ts` ✅
-  - `api/chiko/route.ts` ✅
-  - `api/analyze-image/route.ts` ✅
-  - `api/chat/design/route.ts` ✅
-  - `api/chat/resume/parse/route.ts` ✅
-  - `api/chat/resume/revise/route.ts` ✅
-  - `api/chat/resume/generate/route.ts` ✅
+#### 3. Environment Variables — COMPLETE ✅
+- **Local (.env.local):** ANTHROPIC_API_KEY, Supabase URL/keys
+- **Vercel (all environments):** ANTHROPIC_API_KEY, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+- Stock image API keys lost during `vercel link` overwrite — need re-adding
 
-#### 4. Mobile Money Payments (Flutterwave) — COMPLETE ✅
-- `src/app/api/payments/initiate/route.ts` — Initiates Flutterwave mobile money charge (Airtel Money + MTN MoMo, Zambia)
-- `src/app/api/payments/webhook/route.ts` — Flutterwave webhook handler with signature verification + double-verification
-- `src/app/api/payments/status/route.ts` — Payment status polling endpoint
-- Credit packs: Starter (100/K25), Popular (500/K100), Pro (1500/K250), Agency (5000/K700)
+#### 4. Vercel Deployment — COMPLETE ✅
+- Build fix: wrapped useSearchParams in Suspense boundary (login + verify pages)
+- Commit: `c13b02c` — deployed successfully, all pages return 200
+- Production URL: https://dmsuite-iota.vercel.app
 
-#### 5. Dashboard Integration — COMPLETE ✅
-- `src/components/dashboard/UserMenu.tsx` — Avatar dropdown with profile, credits, sign out
-- `src/components/dashboard/CreditBalance.tsx` — Credit display in TopBar, red when ≤10
-- `src/components/dashboard/CreditPurchaseModal.tsx` — Full purchase flow (select-pack → phone → processing → success/fail)
-- TopBar.tsx updated with UserMenu + CreditBalance
-
-#### 6. Dev-Mode Guards — COMPLETE ✅
-- All Supabase utilities return mock/passthrough data when env vars not configured
+#### 5. Supabase Auth URL Config — PENDING (user action required)
+- Dashboard: https://supabase.com/dashboard/project/mbcehmofahrnscfpndkz/auth/url-configuration
+- Site URL: https://dmsuite-iota.vercel.app
+- Redirect URLs: dmsuite-iota.vercel.app/**, *-drake-machikos-projects.vercel.app/**, localhost:3000/**
 - `useUser` returns dev profile (9999 credits, "pro" plan) without Supabase
 - Middleware passes through all requests in dev mode
 - Credit checks return `allowed: true` in dev mode

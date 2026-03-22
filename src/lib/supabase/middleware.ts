@@ -38,6 +38,7 @@ export async function updateSession(request: NextRequest) {
   // Define public routes that don't require authentication
   const publicPaths = ["/auth/login", "/auth/signup", "/auth/reset-password", "/auth/callback", "/auth/verify"];
   const isPublicPath = publicPaths.some((path) => request.nextUrl.pathname.startsWith(path));
+  const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
   const isApiWebhook = request.nextUrl.pathname.startsWith("/api/payments/webhook");
   const isStaticAsset =
     request.nextUrl.pathname.startsWith("/_next") ||
@@ -49,8 +50,9 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/sw.js") ||
     request.nextUrl.pathname.startsWith("/chiko");
 
-  // Allow public routes, webhooks, and static assets through
-  if (isPublicPath || isApiWebhook || isStaticAsset) {
+  // Allow public routes, webhooks, API routes, and static assets through
+  // API routes handle their own auth via getAuthUser()
+  if (isPublicPath || isApiRoute || isApiWebhook || isStaticAsset) {
     return supabaseResponse;
   }
 

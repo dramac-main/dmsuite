@@ -40,5 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# temp files
+tsc-*.txt
+configure-auth.js
+
 .vercel
 .env*.local
