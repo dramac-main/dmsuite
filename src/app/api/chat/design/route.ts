@@ -4,11 +4,21 @@
 // =============================================================================
 
 import { NextRequest } from "next/server";
+import { getAuthUser } from "@/lib/supabase/auth";
+import { checkCredits, deductCredits, refundCredits } from "@/lib/supabase/credits";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
 
 export async function POST(request: NextRequest) {
+  // ── Auth + Credits ──
+  const user = await getAuthUser();
+  if (!user) return new Response("Unauthorized", { status: 401 });
+  const creditCheck = await checkCredits(user.id, "business-card-design");
+  if (!creditCheck.allowed) {
+    return new Response(JSON.stringify({ error: "Insufficient credits", needed: creditCheck.cost, balance: creditCheck.balance }), { status: 402, headers: { "Content-Type": "application/json" } });
+  }
+
   try {
     const { systemPrompt, userMessage } = await request.json();
 
@@ -23,6 +33,11 @@ export async function POST(request: NextRequest) {
         "ANTHROPIC_API_KEY is not configured. Add it to your .env.local file.",
         { status: 500 }
       );
+    }
+
+    const deduction = await deductCredits(user.id, "business-card-design", "Business card design generation");
+    if (!deduction.success) {
+      return new Response("Failed to deduct credits", { status: 402 });
     }
 
     // Non-streaming call — 24576 tokens allows full front+back card generation
@@ -79,6 +94,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Design API error:", error);
+    await refundCredits(user.id, creditCheck.cost, "Refund: design generation failed");
     return new Response(
       `Internal server error: ${error instanceof Error ? error.message : "Unknown"}`,
       { status: 500 }

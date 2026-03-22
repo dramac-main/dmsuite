@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAuthUser } from "@/lib/supabase/auth";
+import { checkCredits, deductCredits, refundCredits } from "@/lib/supabase/credits";
 
 /* ── Environment ──────────────────────────────────────────── */
 
@@ -48,6 +50,14 @@ export interface ImageAnalysis {
 /* ── POST handler ─────────────────────────────────────────── */
 
 export async function POST(request: NextRequest) {
+  // ── Auth + Credits ──
+  const user = await getAuthUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const creditCheck = await checkCredits(user.id, "image-analysis");
+  if (!creditCheck.allowed) {
+    return NextResponse.json({ error: "Insufficient credits", needed: creditCheck.cost, balance: creditCheck.balance }, { status: 402 });
+  }
+
   if (!ANTHROPIC_API_KEY) {
     return NextResponse.json(
       { error: "ANTHROPIC_API_KEY not configured" },
@@ -56,6 +66,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const deduction = await deductCredits(user.id, "image-analysis", "Image analysis");
+    if (!deduction.success) {
+      return NextResponse.json({ error: "Failed to deduct credits" }, { status: 402 });
+    }
+
     const { imageUrl } = await request.json();
 
     if (!imageUrl || typeof imageUrl !== "string") {
@@ -214,6 +229,7 @@ RULES:
     });
   } catch (error) {
     console.error("Image analysis error:", error);
+    await refundCredits(user.id, creditCheck.cost, "Refund: image analysis failed");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

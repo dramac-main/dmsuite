@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import { getAuthUser } from "@/lib/supabase/auth";
+import { checkCredits, deductCredits, refundCredits } from "@/lib/supabase/credits";
 
 /* ── Environment ──────────────────────────────────────────── */
 
@@ -31,6 +33,20 @@ Guidelines:
 
 export async function POST(request: NextRequest) {
   try {
+    // Auth & credit check
+    const user = await getAuthUser();
+    if (!user) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+
+    const creditCheck = await checkCredits(user.id, "chat-message");
+    if (!creditCheck.allowed) {
+      return new Response(
+        JSON.stringify({ error: "Insufficient credits", balance: creditCheck.balance, cost: creditCheck.cost }),
+        { status: 402, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     const { messages, provider: requestedProvider } = await request.json();
 
     if (!messages || !Array.isArray(messages)) {
@@ -39,14 +55,31 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Deduct credits before making AI call
+    const deduction = await deductCredits(user.id, "chat-message", "AI Chat message");
+    if (!deduction.success) {
+      return new Response(
+        JSON.stringify({ error: deduction.error || "Credit deduction failed" }),
+        { status: 402, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     // Determine which provider to use
     const provider = resolveProvider(requestedProvider);
 
+    let response: Response;
     if (provider === "openai") {
-      return streamOpenAI(messages);
+      response = await streamOpenAI(messages);
     } else {
-      return streamClaude(messages);
+      response = await streamClaude(messages);
     }
+
+    // If the AI call itself failed, refund the credit
+    if (!response.ok) {
+      await refundCredits(user.id, 1, "Refund: AI Chat message failed");
+    }
+
+    return response;
   } catch (error) {
     console.error("Chat API error:", error);
     return new Response("Internal server error", { status: 500 });

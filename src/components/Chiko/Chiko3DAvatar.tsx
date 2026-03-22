@@ -246,8 +246,9 @@ export function Chiko3DAvatar({
             rx="28"
             ry="5"
             fill="url(#chiko3d-shadow)"
-            animate={animated ? { rx: [28, 24, 28], opacity: [0.5, 0.3, 0.5] } : undefined}
+            animate={animated ? { scaleX: [1, 0.86, 1], opacity: [0.5, 0.3, 0.5] } : undefined}
             transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+            style={{ transformOrigin: "70px 132px" }}
           />
 
           {/* ═══ BODY ═══ */}
@@ -446,8 +447,9 @@ export function Chiko3DAvatar({
                 r="8"
                 fill={EYE_GLOW}
                 opacity="0.15"
-                animate={animated ? { opacity: [0.1, 0.25, 0.1], r: [8, 9, 8] } : undefined}
+                animate={animated ? { opacity: [0.1, 0.25, 0.1], scale: [1, 1.125, 1] } : undefined}
                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                style={{ transformOrigin: "58px 44px" }}
               />
               {/* Main eye */}
               <circle cx="58" cy="44" r="5.5" fill="url(#chiko3d-eye-glow)" />
@@ -469,8 +471,9 @@ export function Chiko3DAvatar({
                 r="8"
                 fill={EYE_GLOW}
                 opacity="0.15"
-                animate={animated ? { opacity: [0.1, 0.25, 0.1], r: [8, 9, 8] } : undefined}
+                animate={animated ? { opacity: [0.1, 0.25, 0.1], scale: [1, 1.125, 1] } : undefined}
                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
+                style={{ transformOrigin: "82px 44px" }}
               />
               <circle cx="82" cy="44" r="5.5" fill="url(#chiko3d-eye-glow)" />
               <circle cx="82" cy="44" r="2.5" fill="#ffffff" opacity="0.7" />
@@ -572,16 +575,18 @@ export function Chiko3DAvatar({
                 fill="none"
                 stroke={ACCENT_CYAN}
                 strokeWidth="1"
-                animate={{ r: [8, 12, 8], opacity: [0, 0.25, 0] }}
+                animate={{ scale: [1, 1.5, 1], opacity: [0, 0.25, 0] }}
                 transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }}
+                style={{ transformOrigin: "40px 46px" }}
               />
               <motion.circle
                 cx="100" cy="46" r="8"
                 fill="none"
                 stroke={ACCENT_CYAN}
                 strokeWidth="1"
-                animate={{ r: [8, 12, 8], opacity: [0, 0.25, 0] }}
+                animate={{ scale: [1, 1.5, 1], opacity: [0, 0.25, 0] }}
                 transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut", delay: 0.4 }}
+                style={{ transformOrigin: "100px 46px" }}
               />
             </>
           )}

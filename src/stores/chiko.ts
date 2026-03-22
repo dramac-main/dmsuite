@@ -81,6 +81,8 @@ interface ChikoState {
   isMinimized: boolean;
   /** Currently attached files (pending upload or ready) */
   attachments: ChikoFileAttachment[];
+  /** Last uploaded file context — persists after attachments are cleared so Chiko remembers it */
+  lastFileContext: Record<string, unknown> | null;
 
   /* ── Actions ──────────────────────────────────────────── */
   open: () => void;
@@ -105,6 +107,8 @@ interface ChikoState {
   removeAttachment: (id: string) => void;
   /** Remove all attachments */
   clearAttachments: () => void;
+  /** Store file context from the most recent upload */
+  setLastFileContext: (ctx: Record<string, unknown> | null) => void;
 }
 
 function generateId(): string {
@@ -123,6 +127,7 @@ export const useChikoStore = create<ChikoState>()(
       hasNotification: false,
       isMinimized: false,
       attachments: [],
+      lastFileContext: null,
 
       open: () => set({ isOpen: true, isMinimized: false, hasNotification: false }),
       close: () => set({ isOpen: false, isMinimized: false }),
@@ -172,7 +177,7 @@ export const useChikoStore = create<ChikoState>()(
       setHasGreeted: (v) => set({ hasGreeted: v }),
       setHasNotification: (v) => set({ hasNotification: v }),
 
-      clearMessages: () => set({ messages: [], hasGreeted: false }),
+      clearMessages: () => set({ messages: [], hasGreeted: false, lastFileContext: null }),
       clearAll: () =>
         set({
           isOpen: false,
@@ -183,6 +188,7 @@ export const useChikoStore = create<ChikoState>()(
           hasNotification: false,
           isMinimized: false,
           attachments: [],
+          lastFileContext: null,
         }),
 
       addAttachment: (file) => {
@@ -216,6 +222,7 @@ export const useChikoStore = create<ChikoState>()(
         })),
 
       clearAttachments: () => set({ attachments: [] }),
+      setLastFileContext: (ctx) => set({ lastFileContext: ctx }),
     }),
     {
       name: "dmsuite-chiko",
@@ -223,6 +230,7 @@ export const useChikoStore = create<ChikoState>()(
         messages: state.messages.slice(-50), // Keep last 50 messages
         hasGreeted: state.hasGreeted,
         context: state.context,
+        lastFileContext: state.lastFileContext,
       }),
     }
   )

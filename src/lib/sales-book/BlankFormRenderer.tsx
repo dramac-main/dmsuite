@@ -303,7 +303,7 @@ function FooterBar({ tpl, density, branding, bleedL, bleedR, bleedB }: { tpl: Sa
   // line footer
   return (
     <div style={{ borderTop: `1px solid ${tpl.accent}30`, paddingTop: `${Math.round(4 * density)}px`, marginTop: "auto", fontSize: `${fontSize}px`, color: "#9ca3af", textAlign: "center" }}>
-      {contactParts.length > 0 ? contactParts.join(" Â· ") : " "}
+      {contactParts.length > 0 ? contactParts.join(" \u00b7 ") : " "}
     </div>
   );
 }
@@ -620,7 +620,7 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
               {tpl.contactIcons && <ContactIconRow branding={form.companyBranding} accent="rgba(255,255,255,0.5)" density={1} />}
               {!tpl.contactIcons && (form.companyBranding.phone || form.companyBranding.email) && (
                 <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.7)", marginTop: "1px" }}>
-                  {[form.companyBranding.phone, form.companyBranding.email].filter(Boolean).join(" Â· ")}
+                  {[form.companyBranding.phone, form.companyBranding.email].filter(Boolean).join(" \u00b7 ")}
                 </div>
               )}
             </div>
@@ -893,7 +893,7 @@ function BrandingBlock({ ctx, color, contactColor }: { ctx: LayoutCtx; color: st
         <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: contactColor, marginTop: "3px", whiteSpace: "pre-line", lineHeight: 1.4 }}>{b.address}</div>
       )}
       {(b.phone || b.email) && !tpl.contactIcons && (
-        <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: contactColor, marginTop: "2px" }}>{[b.phone, b.email].filter(Boolean).join(" Â· ")}</div>
+        <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: contactColor, marginTop: "2px" }}>{[b.phone, b.email].filter(Boolean).join(" \u00b7 ")}</div>
       )}
       {b.website && !tpl.contactIcons && (
         <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: contactColor, marginTop: "1px", opacity: 0.8 }}>{b.website}</div>
@@ -1070,7 +1070,7 @@ function LayoutCentered({ ctx }: { ctx: LayoutCtx }) {
           <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: "#6b7280", marginTop: "3px" }}>{b.address}</div>
         )}
         {(b.phone || b.email || b.website) && (
-          <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: "#9ca3af", marginTop: "2px" }}>{[b.phone, b.email, b.website].filter(Boolean).join(" Â· ")}</div>
+          <div style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: "#9ca3af", marginTop: "2px" }}>{[b.phone, b.email, b.website].filter(Boolean).join(" \u00b7 ")}</div>
         )}
         {b.taxId && (
           <div style={{ fontSize: `${clampFont(Math.round(9 * density))}px`, color: "#9ca3af", marginTop: "1px" }}>{layout.columnLabels?.["field_tpinLabel"] || "TPIN"}: {b.taxId}</div>
@@ -1226,7 +1226,7 @@ function LayoutCompactHeader({ ctx }: { ctx: LayoutCtx }) {
             <div style={{ fontSize: `${clampFont(Math.round(9 * density))}px`, color: "#6b7280", marginTop: "2px", whiteSpace: "pre-line", lineHeight: 1.3 }}>{b.address}</div>
           )}
           {(b.phone || b.email) && (
-            <div style={{ fontSize: `${clampFont(Math.round(9 * density))}px`, color: "#9ca3af", marginTop: "1px" }}>{[b.phone, b.email].filter(Boolean).join(" Â· ")}</div>
+            <div style={{ fontSize: `${clampFont(Math.round(9 * density))}px`, color: "#9ca3af", marginTop: "1px" }}>{[b.phone, b.email].filter(Boolean).join(" \u00b7 ")}</div>
           )}
         </div>
 

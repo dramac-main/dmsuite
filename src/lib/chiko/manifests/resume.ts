@@ -87,6 +87,42 @@ export function createResumeManifest(options?: ResumeManifestOptions): ChikoActi
         category: "Design",
       },
       {
+        name: "updateBasics",
+        description:
+          "Update the resume's personal details (name, headline, contact info). Only include fields you want to change.",
+        parameters: {
+          type: "object",
+          properties: {
+            name: { type: "string", description: "Full name" },
+            headline: { type: "string", description: "Professional headline (e.g. 'Senior Software Engineer')" },
+            email: { type: "string", description: "Email address" },
+            phone: { type: "string", description: "Phone number" },
+            location: { type: "string", description: "City/location" },
+            website: { type: "string", description: "Personal website URL" },
+            linkedin: { type: "string", description: "LinkedIn profile URL" },
+          },
+        },
+        category: "Content",
+      },
+      {
+        name: "updateStyling",
+        description:
+          "Batch update the resume's design: template, accent color, and font pairing in one call. Only include fields you want to change. Use this for holistic design decisions.",
+        parameters: {
+          type: "object",
+          properties: {
+            templateId: {
+              type: "string",
+              description: "Template ID (e.g. modern-minimalist, corporate-executive)",
+            },
+            accentColor: { type: "string", description: "Hex color (e.g. #1e40af)" },
+            fontPairing: { type: "string", description: "Font pairing ID (e.g. playfair-source)" },
+            fontScale: { type: "string", enum: ["compact", "standard", "spacious"] },
+          },
+        },
+        category: "Design",
+      },
+      {
         name: "addSectionItem",
         description:
           "Add a new item to a resume section. sectionKey can be: experience, education, skills, certifications, languages, volunteer, projects, awards, references",
@@ -264,6 +300,29 @@ export function createResumeManifest(options?: ResumeManifestOptions): ChikoActi
           case "setFontScale":
             store.setFontScale(params.scale as "compact" | "standard" | "spacious");
             return { success: true, message: `Font scale set to ${params.scale}` };
+
+          case "updateBasics": {
+            const fields: string[] = [];
+            store.updateResume((draft) => {
+              if (params.name !== undefined) { draft.basics.name = params.name as string; fields.push("name"); }
+              if (params.headline !== undefined) { draft.basics.headline = params.headline as string; fields.push("headline"); }
+              if (params.email !== undefined) { draft.basics.email = params.email as string; fields.push("email"); }
+              if (params.phone !== undefined) { draft.basics.phone = params.phone as string; fields.push("phone"); }
+              if (params.location !== undefined) { draft.basics.location = params.location as string; fields.push("location"); }
+              if (params.website !== undefined) { draft.basics.website = { url: params.website as string, label: "Website" }; fields.push("website"); }
+              if (params.linkedin !== undefined) { draft.basics.linkedin = params.linkedin as string; fields.push("linkedin"); }
+            });
+            return { success: true, message: `Updated basics: ${fields.join(", ")}` };
+          }
+
+          case "updateStyling": {
+            const changes: string[] = [];
+            if (params.templateId) { store.changeTemplate(params.templateId as TemplateId); changes.push(`template → ${params.templateId}`); }
+            if (params.accentColor) { store.setAccentColor(params.accentColor as string); changes.push(`color → ${params.accentColor}`); }
+            if (params.fontPairing) { store.setFontPairing(params.fontPairing as string); changes.push(`fonts → ${params.fontPairing}`); }
+            if (params.fontScale) { store.setFontScale(params.fontScale as "compact" | "standard" | "spacious"); changes.push(`scale → ${params.fontScale}`); }
+            return { success: true, message: `Styling updated: ${changes.join(", ")}` };
+          }
 
           case "addSectionItem":
             store.addSectionItem(

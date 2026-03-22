@@ -1,113 +1,70 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Session 102 — Logo Color Matching Fix ✅
+**Phase:** Session 107 — Authentication, Payments & Credit System — COMPLETE ✅
 
-### Session 102: Fix Chiko Logo Color Matching
+### Session 107: Full Auth + Payments + Credits Infrastructure
 
-**Context:** User reported that when asking Chiko to "match colors from my logo", Chiko applied wrong teal/green colors instead of the blue from the DRAMAC logo. Root cause: Chiko could never actually see or analyze the logo image.
+#### 1. Supabase Authentication — COMPLETE ✅
+- Installed `@supabase/supabase-js` + `@supabase/ssr`
+- Created client utilities: `src/lib/supabase/client.ts` (browser), `server.ts` (API routes), `middleware.ts` (session refresh + route protection)
+- Created `src/lib/supabase/auth.ts` — `getAuthUser()` helper with dev-mode mock user
+- Created root middleware `src/middleware.ts` — protects all routes except `/auth/*`, webhooks, static assets
+- Created `src/hooks/useUser.ts` — client-side auth state hook with dev-mode passthrough
+- Database migration: `supabase/migrations/001_initial_schema.sql` — profiles, credit_transactions, payments tables + RLS + triggers
 
-### Root Cause (3 compounding issues)
-1. **State bloat**: `getState()` in invoice/sales-book manifests included raw `logoUrl` data URI (100KB+ base64) in toolState JSON
-2. **Truncation**: API route truncated toolState at 4000 chars, corrupting the base64 mid-stream
-3. **No vision**: `streamClaude()` sent all messages as plain text — no multimodal/image blocks despite Claude supporting vision
+#### 2. Auth Pages (5 pages) — COMPLETE ✅
+- `src/app/auth/layout.tsx` — Centered layout, no sidebar, DMSuite branding
+- `src/app/auth/login/page.tsx` — Email/password, respects `?next=` redirect
+- `src/app/auth/signup/page.tsx` — Name, email, phone (+260), password + email verification
+- `src/app/auth/reset-password/page.tsx` — Password reset request
+- `src/app/auth/callback/route.ts` — Supabase auth callback (email verify, recovery, OAuth)
+- `src/app/auth/verify/page.tsx` — Email verification + password recovery form
 
-### Changes Made
+#### 3. Credit-Based Monetization — COMPLETE ✅
+- `src/lib/supabase/credits.ts` — checkCredits, deductCredits, addCredits, refundCredits with dev-mode guards
+- Credit costs defined: chat=1, chiko=1, file-parsing=1, image-analysis=2, resume-revision=3, sales-book=3, invoice=3, resume-gen=5, business-card=5, logo=5
+- 50 free credits on signup (DB trigger)
+- ALL 7 AI API routes now have auth + credit checks:
+  - `api/chat/route.ts` ✅
+  - `api/chiko/route.ts` ✅
+  - `api/analyze-image/route.ts` ✅
+  - `api/chat/design/route.ts` ✅
+  - `api/chat/resume/parse/route.ts` ✅
+  - `api/chat/resume/revise/route.ts` ✅
+  - `api/chat/resume/generate/route.ts` ✅
 
-#### 1. Color Extractor Utility (`src/lib/color-extractor.ts`) — NEW
-- Canvas-based dominant color extraction from image data URIs
-- `extractDominantColors(dataUri, count)` — async, samples at 64x64, buckets by RGB
-- Filters: skips transparent/white/black pixels, deduplicates similar colors (min distance 30)
-- Caching system: `extractDominantColorsCached()`, `getCachedLogoColors()`, `primeColorCache()`
+#### 4. Mobile Money Payments (Flutterwave) — COMPLETE ✅
+- `src/app/api/payments/initiate/route.ts` — Initiates Flutterwave mobile money charge (Airtel Money + MTN MoMo, Zambia)
+- `src/app/api/payments/webhook/route.ts` — Flutterwave webhook handler with signature verification + double-verification
+- `src/app/api/payments/status/route.ts` — Payment status polling endpoint
+- Credit packs: Starter (100/K25), Popular (500/K100), Pro (1500/K250), Agency (5000/K700)
 
-#### 2. Invoice Manifest — Strip logoUrl from getState()
-- Destructures `{ logoUrl, ...bizWithoutLogo }` from businessInfo
-- Sends `hasLogo: !!logoUrl` instead of massive data URI
+#### 5. Dashboard Integration — COMPLETE ✅
+- `src/components/dashboard/UserMenu.tsx` — Avatar dropdown with profile, credits, sign out
+- `src/components/dashboard/CreditBalance.tsx` — Credit display in TopBar, red when ≤10
+- `src/components/dashboard/CreditPurchaseModal.tsx` — Full purchase flow (select-pack → phone → processing → success/fail)
+- TopBar.tsx updated with UserMenu + CreditBalance
 
-#### 3. Sales Book Manifest — Strip logoUrl + watermarkImage
-- Strips `logoUrl` from companyBranding → `hasLogo: !!logoUrl`
-- Strips `watermarkImage` from style → `hasWatermarkImage: !!watermarkImage`
+#### 6. Dev-Mode Guards — COMPLETE ✅
+- All Supabase utilities return mock/passthrough data when env vars not configured
+- `useUser` returns dev profile (9999 credits, "pro" plan) without Supabase
+- Middleware passes through all requests in dev mode
+- Credit checks return `allowed: true` in dev mode
+- Auth helper returns mock user in dev mode
 
-#### 4. ChikoAssistant — Logo extraction + vision pipeline
-- Imports `useInvoiceEditor` and `useSalesBookEditor` stores directly
-- `getActiveToolLogoUri(currentToolId)` — reads logo data URI from the active tool's store
-- In `sendMessage()`: extracts dominant colors via Canvas, prepares base64 for Claude vision
-- Sends `logoImage` (base64 + mediaType) and `logoColors` (hex array) to API
+**Build Status: ✅ Zero TypeScript errors — Zero React Compiler warnings**
 
-#### 5. API Route — Vision + color matching support
-- Accepts `logoImage` and `logoColors` in request body
-- `streamClaude()` now accepts optional `logoImage` parameter
-- Last user message becomes multimodal when logo image present: `[{type:"image",...}, {type:"text",...}]`
-- Logo colors injected into system prompt as exact hex values
-- System prompt updated with explicit "Logo color matching" rule
-- Tool state truncation increased from 4000→8000 chars (logos stripped, so states are smaller now)
-
-### Previous Session
-
-#### Session 101: Activity Log + Color Persistence — COMPLETE ✅
-- Activity log store, withActivityLogging wrapper, color persistence for invoice/sales-book
-- `createResumeManifest()` → `withActivityLogging(base, getSnapshot, restoreSnapshot)`
-- `createInvoiceManifest()` → same pattern
-- `createSalesBookManifest()` → same pattern
-- Each passes tool-specific getFullSnapshot and restoreSnapshot callbacks
-
-#### 6. Chiko System Prompt Updated (`src/app/api/chiko/route.ts`)
-- Added "Color persistence" rule in Design Rules
-- Added "Activity Log & Revert" section: instructs Chiko to use getActivityLog → revertToState
-
-#### 7. Barrel Export Updated (`src/stores/index.ts`)
-- Added: useActivityLog, withActivityLogging, ActivityEntry
-
-**Build Status: ✅ Zero TypeScript errors**
-
-### Previous Session 100 Part 5e: Chiko Cost Optimization (Complete)
-
-#### 4. Conversation History Window (`src/components/Chiko/ChikoAssistant.tsx`)
-- Reduced from `.slice(-20)` to `.slice(-10)` messages
-- Savings: **~200-500 tokens per request** (depends on conversation length)
-
-### Total Token Savings
-| Section | Before | After | Saved |
-|---------|--------|-------|-------|
-| System prompt base | ~3,500 | ~500 | ~3,000 |
-| Tool registry (edit queries) | ~800 | 0 | ~800 |
-| Tool Control / Design rules | ~600 | ~150 | ~450 |
-| Manifest descriptions | ~1,500 | ~1,000 | ~500 |
-| History (avg) | ~1,500 | ~750 | ~750 |
-| **Total per request** | **~7,900** | **~2,400** | **~5,500 (70%)** |
-
-**Estimated cost per simple edit: ~$0.04 (down from $0.15 = ~73% reduction)**
-
-**Build Status: ✅ Zero TypeScript errors**
-
-### Previous Session 94: Navigation + File Upload Fixes (Complete)
-- **Workflow Store:** Zustand persist, tracks ActiveWorkflow + history (10 max), persists to localStorage `dmsuite-chiko-workflows`
-- **Workflow Manifest:** 8 global actions — AI can navigate, start/advance/pause/resume/cancel workflows, check status, skip steps
-- **Auto-Continue:** useEffect watches workflow state, sends follow-up messages when steps complete (800ms delay, 20 cycle max)
-- **Navigate-Wait-Execute:** navigateToTool → router.push → wait for manifest registration → auto-continue sends step prompt to AI
-- **AI as Planner:** No hardcoded templates — AI dynamically creates workflow plans via `startWorkflow` action based on natural language requests
-- **Export Actions:** Sales Book has `exportPrint`, Invoice has `exportDocument` (6 formats), Resume has `exportDocument` (6 formats)
-
-**All 5 Chiko Layers Complete:**
-1. ✅ Layer 1 — Action System (manifest registry, stream parsing, destructive confirmations)
-2. ✅ Layer 2 — File Processing (PDF/DOCX/XLSX/image extraction, upload endpoint, drag-and-drop)
-3. ✅ Layer 3 — Custom Blocks (QR, text, divider, spacer, image, signature-box + DnD sidebar)
-4. ✅ Layer 4 — Business Memory (30-field profile store, cross-tool pre-fill, privacy masking)
-5. ✅ Layer 5 — Full Agent Workflows (cross-tool orchestration, navigate-wait-execute, auto-continue, export actions)
+### Implementation Plan Document
+- `PHASES/PRODUCTION-AUTH-PAYMENTS-PLAN.md` — Comprehensive 12-section blueprint covering auth architecture, DB schema, credit system, payment flow, security checklist, migration strategy
 
 ### Next Steps
-- **Test Chiko end-to-end:** Verify continuation loop works in browser — user asks Chiko to change something → readCurrentState → continuation → actual changes applied
-- **Remaining business tools:** Cover Letter Writer, Proposal & Pitch Deck, Certificate Designer, Contract Creator
-- Each new tool needs: workspace component, store, manifest, Chiko integration
-9. **Slash commands** — `/workflow status|pause|resume|cancel|history` with `/wf` aliases
-10. **Workflow progress UI** — Persistent banner, step cards, auto-continue styling
-
-**Files Specified:**
-- 2 new files: `chiko-workflows.ts`, `workflow-engine.ts`
-- 8 modified files: barrel export, 3 manifests (export actions), route.ts, ChikoAssistant.tsx, SalesBookDesignerWorkspace.tsx, InvoiceDesignerWorkspace.tsx
-
-**Next Steps:**
-- Layer 5 build (external builder)
+- **Set up Supabase project** — Create project at supabase.com, run migration SQL, configure env vars
+- **Set up Flutterwave account** — Get API keys, configure webhook URL, test with sandbox
+- **Vercel deployment** — Connect repo, set env vars, deploy
+- **Test full auth flow** — Sign up → email verify → login → use credits → buy more
+- **Add credit checks to non-AI routes** — chiko/upload (file processing, low cost)
+- **Remaining business tools** — Cover Letter Writer, Proposal & Pitch Deck, Certificate Designer, Contract Creator
 - This completes the 5-layer Chiko architecture
 - After Layer 5 is built: remaining business tools (Cover Letter, Proposal, Certificate, Contract)
    - `prefillCurrentTool` iterates registry.manifests to find active tool, maps profile fields via field-mapper, calls tool's update actions

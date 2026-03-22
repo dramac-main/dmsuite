@@ -911,6 +911,24 @@ export function IconFitView(props: IconProps) {
   );
 }
 
+export function IconFileMinus(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" />
+      <line x1="9" y1="15" x2="15" y2="15" />
+    </svg>
+  );
+}
+
+export function IconFileClock(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h4" /><polyline points="14 2 14 8 20 8" />
+      <circle cx="16" cy="16" r="4" /><path d="M16 14v2l1.5 1.5" />
+    </svg>
+  );
+}
+
 // ── Icon Map ────────────────────────────────────────────────
 
 export const iconMap: Record<string, React.FC<IconProps>> = {
@@ -938,6 +956,7 @@ export const iconMap: Record<string, React.FC<IconProps>> = {
   headphones: IconHeadphones, globe: IconGlobe, star: IconStar,
   newspaper: IconNewspaper, filter: IconFilter, magnet: IconMagnet,
   split: IconSplit, clipboard: IconClipboard, minimize: IconMinimize,
+  "file-minus": IconFileMinus, "file-clock": IconFileClock,
   download: IconDownload, refresh: IconRefresh, arrowRight: IconArrowRight, externalLink: IconExternalLink,
   truck: IconTruck, send: IconSend, plus: IconPlus, trash: IconTrash,
   loader: IconLoader, copy: IconCopy, check: IconCheck, heart: IconHeart,
@@ -948,3 +967,20 @@ export const iconMap: Record<string, React.FC<IconProps>> = {
   arrowUp: IconArrowUp, arrowDown: IconArrowDown, gripVertical: IconGripVertical,
   guides: IconGuides, bleedSafe: IconBleedSafe, fitView: IconFitView,
 };
+
+// ── Fallback Icon ───────────────────────────────────────────
+
+/** Generic placeholder icon shown when a key is missing from iconMap */
+export function FallbackIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <rect x="3" y="3" width="18" height="18" rx="3" />
+      <path d="M12 8v4m0 4h.01" />
+    </svg>
+  );
+}
+
+/** Safe iconMap lookup — always returns a component, never undefined */
+export function getIcon(key: string): React.FC<IconProps> {
+  return iconMap[key] ?? FallbackIcon;
+}

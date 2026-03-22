@@ -5,6 +5,8 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
+import { getAuthUser } from "@/lib/supabase/auth";
+import { checkCredits, deductCredits, refundCredits } from "@/lib/supabase/credits";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
@@ -31,6 +33,14 @@ async function fetchWithRetry(
 }
 
 export async function POST(request: NextRequest) {
+  // ── Auth + Credits ──
+  const user = await getAuthUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const creditCheck = await checkCredits(user.id, "resume-revision");
+  if (!creditCheck.allowed) {
+    return NextResponse.json({ error: "Insufficient credits", needed: creditCheck.cost, balance: creditCheck.balance }, { status: 402 });
+  }
+
   try {
     const { systemPrompt, userMessage } = (await request.json()) as {
       systemPrompt: string;
@@ -49,6 +59,11 @@ export async function POST(request: NextRequest) {
         { error: "ANTHROPIC_API_KEY not configured" },
         { status: 500 }
       );
+    }
+
+    const deduction = await deductCredits(user.id, "resume-revision", "Resume revision");
+    if (!deduction.success) {
+      return NextResponse.json({ error: "Failed to deduct credits" }, { status: 402 });
     }
 
     // Try primary model, then fallback
@@ -106,6 +121,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ text: textBlock.text });
   } catch (err) {
     console.error("Resume revision API error:", err);
+    await refundCredits(user.id, creditCheck.cost, "Refund: resume revision failed");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { type Tool, statusConfig } from "@/data/tools";
-import { iconMap, IconArrowRight } from "@/components/icons";
+import { getIcon, IconArrowRight } from "@/components/icons";
 import { groupHoverBg10 } from "@/lib/colors";
 
 interface ToolCardProps {
@@ -12,7 +12,7 @@ interface ToolCardProps {
 }
 
 export default function ToolCard({ tool, categoryId, accentColor }: ToolCardProps) {
-  const Icon = iconMap[tool.icon];
+  const Icon = getIcon(tool.icon);
   const badge = statusConfig[tool.status];
   const isReady = tool.status === "ready";
   const hoverBg = groupHoverBg10[accentColor || "primary-500"] || groupHoverBg10["primary-500"];
@@ -39,15 +39,13 @@ export default function ToolCard({ tool, categoryId, accentColor }: ToolCardProp
             }
           `}
         >
-          {Icon && (
-            <Icon
-              className={`size-5 transition-colors ${
-                isReady
-                  ? "text-gray-600 dark:text-gray-400 group-hover:text-primary-500"
-                  : "text-gray-400 dark:text-gray-600"
-              }`}
-            />
-          )}
+          <Icon
+            className={`size-5 transition-colors ${
+              isReady
+                ? "text-gray-600 dark:text-gray-400 group-hover:text-primary-500"
+                : "text-gray-400 dark:text-gray-600"
+            }`}
+          />
         </div>
 
         {/* Status badge */}

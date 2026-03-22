@@ -8,7 +8,7 @@ import TopBar from "@/components/dashboard/TopBar";
 import { toolCategories } from "@/data/tools";
 import { bgOpacity10 } from "@/lib/colors";
 import {
-  iconMap,
+  getIcon,
   IconArrowRight,
   IconChevronLeft,
   IconSparkles,
@@ -74,8 +74,8 @@ export default function WorkspaceShell({ children }: WorkspaceShellProps) {
     );
   }
 
-  const ToolIcon = iconMap[tool.icon];
-  const CategoryIcon = iconMap[category.icon];
+  const ToolIcon = getIcon(tool.icon);
+  const CategoryIcon = getIcon(category.icon);
   const iconBg = bgOpacity10[category.colorClass] || "bg-gray-500/10";
 
   return (
@@ -108,7 +108,7 @@ export default function WorkspaceShell({ children }: WorkspaceShellProps) {
               href={`/dashboard#${category.id}`}
               className="text-gray-400 hover:text-primary-500 transition-colors flex items-center gap-1.5"
             >
-              {CategoryIcon && <CategoryIcon className="size-3.5" />}
+              <CategoryIcon className="size-3.5" />
               {category.name}
             </Link>
             <IconArrowRight className="size-3 text-gray-400" aria-hidden />
@@ -123,11 +123,9 @@ export default function WorkspaceShell({ children }: WorkspaceShellProps) {
               <div
                 className={`size-14 sm:size-16 rounded-2xl ${iconBg} flex items-center justify-center shrink-0`}
               >
-                {ToolIcon && (
-                  <ToolIcon
-                    className={`size-7 sm:size-8 ${category.textColorClass}`}
-                  />
-                )}
+                <ToolIcon
+                  className={`size-7 sm:size-8 ${category.textColorClass}`}
+                />
               </div>
 
               <div className="flex-1 min-w-0">

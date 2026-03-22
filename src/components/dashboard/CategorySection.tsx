@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { type ToolCategory } from "@/data/tools";
-import { iconMap, IconChevronDown } from "@/components/icons";
+import { getIcon, IconChevronDown } from "@/components/icons";
 import { bgOpacity10 } from "@/lib/colors";
 import ToolCard from "./ToolCard";
 
@@ -16,7 +16,7 @@ export default function CategorySection({
   defaultExpanded = true,
 }: CategorySectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const Icon = iconMap[category.icon];
+  const Icon = getIcon(category.icon);
   const iconBg = bgOpacity10[category.colorClass] || "bg-gray-500/10";
 
   const readyCount = category.tools.filter((t) => t.status === "ready").length;
@@ -33,7 +33,7 @@ export default function CategorySection({
         <div
           className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${iconBg}`}
         >
-          {Icon && <Icon className={`size-5 ${category.textColorClass}`} />}
+          <Icon className={`size-5 ${category.textColorClass}`} />
         </div>
 
         {/* Title + description */}

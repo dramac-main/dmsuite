@@ -1,10 +1,11 @@
 // =============================================================================
 // DMSuite — DOCX Extractor
-// Extracts text, headings, tables, and embedded images from DOCX buffers
-// using mammoth.
+// Extracts text, headings, tables, embedded images, fonts, and colors
+// from DOCX buffers using mammoth + JSZip for raw XML styling data.
 // =============================================================================
 
 import mammoth from "mammoth";
+import JSZip from "jszip";
 import {
   detectBusinessFields,
   buildFieldsSummary,
@@ -111,6 +112,129 @@ function parseHtmlBlocks(html: string): TextBlock[] {
 }
 
 /**
+ * Extract font families and colors from DOCX raw XML using JSZip.
+ * Parses word/document.xml for <w:rFonts> and <w:color>,
+ * and word/theme/theme1.xml for theme accent colors.
+ */
+async function extractDocxStyling(
+  buffer: Buffer
+): Promise<{ fonts: string[]; colors: string[] }> {
+  const fontSet = new Set<string>();
+  const colorCounts = new Map<string, number>();
+
+  try {
+    const zip = await JSZip.loadAsync(buffer);
+
+    // ── Extract fonts and run colors from document.xml ──
+    const docXml = await zip.file("word/document.xml")?.async("text");
+    if (docXml) {
+      // Font names from <w:rFonts w:ascii="FontName" w:hAnsi="FontName" w:cs="FontName">
+      const fontMatches = docXml.match(/w:(?:ascii|hAnsi|eastAsia|cs)="([^"]+)"/g);
+      if (fontMatches) {
+        for (const m of fontMatches) {
+          const name = m.match(/"([^"]+)"/)?.[1];
+          if (name && name.length > 1 && !/^(?:Symbol|Wingdings|Courier)/i.test(name)) {
+            fontSet.add(name);
+          }
+        }
+      }
+
+      // Colors from <w:color w:val="RRGGBB"> (6 hex chars, not "auto")
+      const colorMatches = docXml.match(/w:color w:val="([0-9A-Fa-f]{6})"/g);
+      if (colorMatches) {
+        for (const m of colorMatches) {
+          const hex = m.match(/"([0-9A-Fa-f]{6})"/)?.[1];
+          if (hex) {
+            const normalized = `#${hex.toLowerCase()}`;
+            if (!isNeutralDocxColor(normalized)) {
+              colorCounts.set(normalized, (colorCounts.get(normalized) || 0) + 1);
+            }
+          }
+        }
+      }
+
+      // Highlight/shading colors from <w:shd w:fill="RRGGBB">
+      const shdMatches = docXml.match(/w:fill="([0-9A-Fa-f]{6})"/g);
+      if (shdMatches) {
+        for (const m of shdMatches) {
+          const hex = m.match(/"([0-9A-Fa-f]{6})"/)?.[1];
+          if (hex) {
+            const normalized = `#${hex.toLowerCase()}`;
+            if (!isNeutralDocxColor(normalized)) {
+              colorCounts.set(normalized, (colorCounts.get(normalized) || 0) + 1);
+            }
+          }
+        }
+      }
+    }
+
+    // ── Extract fonts from styles.xml ──
+    const stylesXml = await zip.file("word/styles.xml")?.async("text");
+    if (stylesXml) {
+      const styleFonts = stylesXml.match(/w:(?:ascii|hAnsi|eastAsia|cs)="([^"]+)"/g);
+      if (styleFonts) {
+        for (const m of styleFonts) {
+          const name = m.match(/"([^"]+)"/)?.[1];
+          if (name && name.length > 1 && !/^(?:Symbol|Wingdings|Courier)/i.test(name)) {
+            fontSet.add(name);
+          }
+        }
+      }
+    }
+
+    // ── Extract theme accent colors from theme1.xml ──
+    const themeXml = await zip.file("word/theme/theme1.xml")?.async("text");
+    if (themeXml) {
+      // Theme accent colors: <a:accent1> → <a:srgbClr val="RRGGBB"/>
+      const accentMatches = themeXml.match(/<a:accent\d>\s*<a:srgbClr val="([0-9A-Fa-f]{6})"/g);
+      if (accentMatches) {
+        for (const m of accentMatches) {
+          const hex = m.match(/val="([0-9A-Fa-f]{6})"/)?.[1];
+          if (hex) {
+            const normalized = `#${hex.toLowerCase()}`;
+            if (!isNeutralDocxColor(normalized)) {
+              // Theme accents are high-importance — boost count
+              colorCounts.set(normalized, (colorCounts.get(normalized) || 0) + 10);
+            }
+          }
+        }
+      }
+
+      // Theme font names from <a:majorFont> and <a:minorFont>
+      const themeFonts = themeXml.match(/<a:(?:latin|ea|cs) typeface="([^"]+)"/g);
+      if (themeFonts) {
+        for (const m of themeFonts) {
+          const name = m.match(/typeface="([^"]+)"/)?.[1];
+          if (name && name.length > 1 && !name.startsWith("+")) {
+            fontSet.add(name);
+          }
+        }
+      }
+    }
+  } catch { /* styling extraction is best-effort */ }
+
+  // Sort colors by frequency and take top 8
+  const sortedColors = [...colorCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([hex]) => hex);
+
+  return {
+    fonts: [...fontSet],
+    colors: sortedColors,
+  };
+}
+
+/** Check if a DOCX hex color is near-white or near-black */
+function isNeutralDocxColor(hex: string): boolean {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return lum > 0.92 || lum < 0.08;
+}
+
+/**
  * Extract text, headings, tables, and embedded images from a DOCX buffer.
  */
 export async function extractDocx(
@@ -164,6 +288,9 @@ export async function extractDocx(
   const detectedFields = detectBusinessFields(text);
   const fieldsSummary = buildFieldsSummary(detectedFields);
 
+  // Extract fonts and colors from raw DOCX XML
+  const styling = await extractDocxStyling(buffer);
+
   const summaryParts = ["DOCX document"];
   if (headingCount > 0) summaryParts.push(`${headingCount} heading${headingCount !== 1 ? "s" : ""}`);
   if (tables.length > 0) summaryParts.push(`${tables.length} table${tables.length !== 1 ? "s" : ""}`);
@@ -182,5 +309,7 @@ export async function extractDocx(
     images: images.length > 0 ? images : undefined,
     summary: summaryParts.join(". "),
     detectedFields,
+    documentFonts: styling.fonts.length > 0 ? styling.fonts : undefined,
+    documentColors: styling.colors.length > 0 ? styling.colors : undefined,
   };
 }

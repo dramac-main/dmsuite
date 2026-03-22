@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toolCategories, type FlatTool } from "@/data/tools";
 import { usePreferencesStore } from "@/stores";
 import { useTheme } from "@/components/ThemeProvider";
-import { iconMap, IconSearch, IconX, IconArrowRight, IconClock, IconStar, IconSparkles } from "@/components/icons";
+import { getIcon, IconSearch, IconX, IconArrowRight, IconClock, IconStar, IconSparkles } from "@/components/icons";
 import { Kbd } from "@/components/ui";
 
 /* ── Command Palette ─────────────────────────────────────────
@@ -305,7 +305,7 @@ export function CommandPalette() {
                     </div>
                     {quickActions.map((action, i) => {
                       const idx = favoriteToolsList.length + recentToolsList.length + i;
-                      const ActionIcon = iconMap[action.icon];
+                      const ActionIcon = getIcon(action.icon);
                       return (
                         <button
                           key={action.id}
@@ -317,7 +317,7 @@ export function CommandPalette() {
                           onClick={() => executeItem({ type: "action", ...action })}
                           onMouseEnter={() => setSelectedIndex(idx)}
                         >
-                          {ActionIcon && <ActionIcon className="size-4 shrink-0" />}
+                          <ActionIcon className="size-4 shrink-0" />
                           <span className="text-sm font-medium">{action.label}</span>
                           {action.kbd && (
                             <kbd className="ml-auto px-1.5 py-0.5 rounded text-[10px] font-mono bg-gray-100 dark:bg-gray-800 text-gray-400 border border-gray-200 dark:border-gray-700">
@@ -409,7 +409,7 @@ interface ToolResultItemProps {
 }
 
 function ToolResultItem({ tool, selected, onSelect, onHover }: ToolResultItemProps) {
-  const ToolIcon = iconMap[tool.icon];
+  const ToolIcon = getIcon(tool.icon);
   return (
     <button
       className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
@@ -425,9 +425,7 @@ function ToolResultItem({ tool, selected, onSelect, onHover }: ToolResultItemPro
           selected ? "bg-primary-500/20" : "bg-gray-100 dark:bg-gray-800"
         }`}
       >
-        {ToolIcon && (
-          <ToolIcon className={`size-4 ${selected ? "text-primary-500" : tool.textColorClass}`} />
-        )}
+        <ToolIcon className={`size-4 ${selected ? "text-primary-500" : tool.textColorClass}`} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">

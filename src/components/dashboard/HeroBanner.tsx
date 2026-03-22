@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { searchTools, type FlatTool, totalToolCount } from "@/data/tools";
-import { iconMap, IconSearch, IconArrowRight, IconX, IconSparkles } from "@/components/icons";
+import { getIcon, IconSearch, IconArrowRight, IconX, IconSparkles } from "@/components/icons";
 
 export default function HeroBanner() {
   const [query, setQuery] = useState("");
@@ -144,7 +144,7 @@ export default function HeroBanner() {
                     {results.length} tool{results.length !== 1 ? "s" : ""} found
                   </p>
                   {visibleResults.map((tool, idx) => {
-                    const Icon = iconMap[tool.icon];
+                    const Icon = getIcon(tool.icon);
                     return (
                       <Link
                         key={tool.id}
@@ -157,7 +157,7 @@ export default function HeroBanner() {
                           ${idx === selectedIdx ? "bg-gray-100 dark:bg-gray-700" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}
                       >
                         <div className="size-9 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
-                          {Icon && <Icon className="size-4 text-gray-500 dark:text-gray-400" />}
+                          <Icon className="size-4 text-gray-500 dark:text-gray-400" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 dark:text-white truncate">

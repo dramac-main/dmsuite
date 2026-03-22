@@ -14,6 +14,7 @@ import {
   mapProfileToSalesBookBranding,
   mapProfileToInvoiceBusinessInfo,
   mapProfileToInvoicePaymentInfo,
+  mapProfileToResumeBasics,
 } from "@/lib/chiko/field-mapper";
 
 /** Build the Business Memory manifest. Registered globally from ChikoAssistant. */
@@ -251,10 +252,24 @@ export function createBusinessMemoryManifest(): ChikoActionManifest {
                 toolManifest.executeAction("updatePaymentInfo", payMapped as Record<string, unknown>);
                 count += Object.keys(payMapped).length;
               }
+            } else if (toolManifest.toolId === "resume-editor") {
+              const mapped = mapProfileToResumeBasics(profile);
+              if (Object.keys(mapped).length > 0) {
+                toolManifest.executeAction("updateBasics", mapped as Record<string, unknown>);
+                count = Object.keys(mapped).length;
+              }
+              // Also apply preferred styling if set
+              const styleParams: Record<string, unknown> = {};
+              if (profile.preferredAccentColor) styleParams.accentColor = profile.preferredAccentColor;
+              if (profile.preferredFontPairing) styleParams.fontPairing = profile.preferredFontPairing;
+              if (Object.keys(styleParams).length > 0) {
+                toolManifest.executeAction("updateStyling", styleParams);
+                count += Object.keys(styleParams).length;
+              }
             } else {
               return {
                 success: false,
-                message: `Pre-fill is not yet supported for ${toolManifest.toolName}. Currently works with Sales Book and Invoice.`,
+                message: `Pre-fill is not yet supported for ${toolManifest.toolName}. Currently works with Sales Book, Invoice, and Resume.`,
               };
             }
 

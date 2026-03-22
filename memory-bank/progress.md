@@ -1,10 +1,68 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 99/197 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Business Card Wizard COMPLETE ✅ — Resume & CV Builder V2 COMPLETE ✅ (all 15 steps) — Resume Editor UX Overhauled ✅ — Editor Panel Layout Fixed ✅ — Editor UX Restructured (Session 56) ✅ — Fonts Fixed ✅ — Auto-Pagination Engine ✅ — Export System Rewritten ✅ — Undo Fixed ✅ — Editor UX Polished (Session 58) ✅ — 20 Pro Resume Templates (Session 59) ✅ — Template CSS Injection (Session 60) ✅ — Template JSX/CSS Alignment (Session 61-62) ✅ — Smart Page-Breaks V8 + Full Section Coverage (Session 63-65) ✅ — Skills Rendering + Page-Break Overlap Fix (Session 66) ✅ — AI Resume Parsing Fix (Session 67) ✅ — Chiko AI Personal Assistant (Session 68) ✅ — Chiko Enhancement: Onboarding + Auto-Launcher + Mobile (Session 69) ✅ — Chiko 3D Character: Life-Like Robot Avatar (Session 70) ✅ — Design System Centralized ✅ — Hover-to-Expand Sidebar ✅ — Sales Book Blank Form Designer ✅ (Sessions 76-77) — Complete rebuild, finalized, orphaned V2 deleted — Sales Book Split-Screen UX Overhaul ✅ (Session 78) — Sales Book Document-Type-Specific Renderers ✅ (Session 79) — Receipt line-based layout, type-specific fields — Sales Book Print-Quality Rebuild + A5 Support 🔄 (Session 80) — Renderer v3, A5 page format, A4/A5 routing — Activity Log + Color Persistence ✅ (Session 101) — Logo Color Matching Fix ✅ (Session 102)
+## Overall Status: 99/197 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Business Card Wizard COMPLETE ✅ — Resume & CV Builder V2 COMPLETE ✅ (all 15 steps) — Resume Editor UX Overhauled ✅ — Editor Panel Layout Fixed ✅ — Editor UX Restructured (Session 56) ✅ — Fonts Fixed ✅ — Auto-Pagination Engine ✅ — Export System Rewritten ✅ — Undo Fixed ✅ — Editor UX Polished (Session 58) ✅ — 20 Pro Resume Templates (Session 59) ✅ — Template CSS Injection (Session 60) ✅ — Template JSX/CSS Alignment (Session 61-62) ✅ — Smart Page-Breaks V8 + Full Section Coverage (Session 63-65) ✅ — Skills Rendering + Page-Break Overlap Fix (Session 66) ✅ — AI Resume Parsing Fix (Session 67) ✅ — Chiko AI Personal Assistant (Session 68) ✅ — Chiko Enhancement: Onboarding + Auto-Launcher + Mobile (Session 69) ✅ — Chiko 3D Character: Life-Like Robot Avatar (Session 70) ✅ — Design System Centralized ✅ — Hover-to-Expand Sidebar ✅ — Sales Book Blank Form Designer ✅ (Sessions 76-77) — Complete rebuild, finalized, orphaned V2 deleted — Sales Book Split-Screen UX Overhaul ✅ (Session 78) — Sales Book Document-Type-Specific Renderers ✅ (Session 79) — Receipt line-based layout, type-specific fields — Sales Book Print-Quality Rebuild + A5 Support 🔄 (Session 80) — Renderer v3, A5 page format, A4/A5 routing — Activity Log + Color Persistence ✅ (Session 101) — Logo Color Matching Fix ✅ (Session 102) — File Context Persistence Fix ✅ (Session 103) — Chiko Brand Intelligence Upgrade ✅ (Session 104) — Document Font/Color Extraction ✅ (Session 105) — Workflow Rewrite + Separator Fix ✅ (Session 106) — Auth + Payments + Credits ✅ (Session 107)
 
 ---
 
-## Current Work: Logo Color Matching Fix — COMPLETE ✅
+## Current Work: Auth + Payments + Credits — COMPLETE ✅
+
+### Session 107 — Full Authentication, Payments & Credit System
+- [x] **Supabase auth infrastructure** — Browser client, server client, middleware, auth helper, useUser hook
+- [x] **Database schema** — profiles (with 50 free credits), credit_transactions, payments tables + RLS + triggers
+- [x] **5 auth pages** — Login, signup (+260 phone), reset-password, callback, verify (email + recovery)
+- [x] **Root middleware** — Route protection, session refresh, dev-mode passthrough
+- [x] **Credit system** — checkCredits, deductCredits, addCredits, refundCredits with 10 operation types
+- [x] **All 7 AI routes protected** — chat, chiko, analyze-image, design, resume/parse, resume/revise, resume/generate
+- [x] **Mobile money payments** — Flutterwave integration (Airtel Money + MTN MoMo, Zambia), 4 credit packs (K25-K700)
+- [x] **Dashboard components** — UserMenu, CreditBalance, CreditPurchaseModal wired into TopBar
+- [x] **Dev-mode guards** — All Supabase code returns mock data when env vars not set
+- [x] **Implementation plan** — `PHASES/PRODUCTION-AUTH-PAYMENTS-PLAN.md` (12-section comprehensive blueprint)
+- [x] Zero TypeScript errors — Zero React Compiler warnings
+
+### Previous: Workflow Fix + Icon Fallback + Font/Color Extraction — COMPLETE ✅
+
+### Session 105 Part 2 — Document Font & Color Extraction
+- [x] **Root cause diagnosed** — Extractors only returned plain text. AI had zero font/color data, was guessing brand styling.
+- [x] **PDF font extraction** — pdfjs-dist `getTextContent()` → styles.fontFamily + cleanFontName() helper (strips subset prefix, suffixes)
+- [x] **PDF color extraction** — pdfjs-dist `getOperatorList()` → RGB/CMYK ops → hex conversion → neutral filter → top 8 by frequency
+- [x] **DOCX font extraction** — JSZip XML parsing: document.xml `<w:rFonts>`, styles.xml, theme1.xml `<a:latin typeface>`
+- [x] **DOCX color extraction** — JSZip XML: `<w:color>`, `<w:shd w:fill>`, theme accent colors (boosted x10), neutral filtered
+- [x] **Pipeline wired** — ExtractedFileData.documentFonts/documentColors → fileContext → route.ts AI prompt
+- [x] **AI instructions rewritten** — Font→pairing mapping table, "use FIRST color as accent", "never override with guesses"
+- [x] Zero TypeScript errors — clean build confirmed
+
+### Session 105 Part 1 — Workflow Auto-Continue + Permanent Icon Fallback
+- [x] **Workflow auto-continue fixed** — 3 compounding bugs: markActionExecuted never synced, status check wrong, workflowContext missing in continuation
+- [x] **Icon fallback system** — Added FallbackIcon + getIcon() helper. Updated all 10 broken components to use getIcon() instead of raw iconMap[key]
+- [x] **Token usage audited** — Already optimized from Session 100 (~70% reduction). Current budget: 2,300–5,700 tokens per request ($0.01–$0.02)
+- [x] Zero TypeScript errors — clean build confirmed
+
+### Previous: Chiko Brand Intelligence Upgrade — COMPLETE ✅
+
+### Session 104 — Deep Brand Understanding for ALL Tools
+- [x] **Root cause found** — Full document text was NEVER sent to the AI (only summary + regex fields). AI was blind to brand content.
+- [x] **Field detector enriched** — Added 5 new brand intelligence fields: brandColors, industry (20 categories), tagline, services, companyDescription
+- [x] **Full text now sent** — `ed.text` (capped at 4000 chars) included in fileContext so AI can read the entire document
+- [x] **Brand-aware AI instructions** — 7-point protocol: read full doc, identify brand identity, make holistic design decisions
+- [x] **Tool-agnostic prompt** — File handling instructions now cover Sales Book, Invoice, Resume, and any design tool (not just sales-book biased)
+- [x] **Resume manifest upgraded** — Added `updateBasics` (7 fields) + `updateStyling` (batch template+color+font+scale) actions and executeAction cases
+- [x] **Business Memory prefillCurrentTool** — Now supports resume-editor via `mapProfileToResumeBasics()` + applies style preferences
+- [x] **All prefillFromMemory upgraded** — Sales Book, Invoice, and Resume now apply preferredAccentColor + preferredFontPairing during prefill
+- [x] **Regex compat fix** — Replaced `s` (dotAll) flag with `[\s\S]` for ES2017 target
+- [x] Zero TypeScript errors — clean build confirmed
+
+### Previous: File Context Persistence Fix — COMPLETE ✅
+
+### Session 103 — Fix Chiko File Upload Context Persistence
+- [x] **Reverted bad text embedding** — Removed raw JSON/text dump from user chat messages
+- [x] **Persistent file context** — Added `lastFileContext` to Chiko Zustand store, persisted across messages and page refresh
+- [x] **File context wiring** — Fresh uploads save to store; follow-up messages read from store as fallback
+- [x] **Continuation requests fixed** — Auto-continuation fetch now includes `fileContext` (was missing before)
+- [x] **File action instructions updated** — Chiko acts immediately when user asks to use file data (no redundant confirmation)
+- [x] **Chiko manifest audit** — Confirmed 11 tools have Chiko editing, quotation tool IS wired correctly
+- [x] Zero TypeScript errors — clean build confirmed
+
+### Previous: Logo Color Matching Fix — COMPLETE ✅
 
 ### Session 102 — Fix Chiko Logo Color Matching
 - [x] **Root cause diagnosed** — 3 compounding issues: state bloat, 4000-char truncation, no vision support

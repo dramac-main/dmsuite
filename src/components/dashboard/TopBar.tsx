@@ -4,6 +4,8 @@ import ThemeSwitch from "@/components/ThemeSwitch";
 import { IconBell, IconMenu, IconSparkles } from "@/components/icons";
 import { interactive, typography, recipes, layout } from "@/lib/design-system";
 import { cn } from "@/lib/utils";
+import UserMenu from "./UserMenu";
+import CreditBalance from "./CreditBalance";
 
 interface TopBarProps {
   onMenuClick?: () => void;
@@ -36,6 +38,7 @@ export default function TopBar({ onMenuClick, title = "Dashboard" }: TopBarProps
 
       {/* Right: Utility icons */}
       <div className="flex items-center gap-2">
+        <CreditBalance />
         <ThemeSwitch />
 
         <button
@@ -47,10 +50,8 @@ export default function TopBar({ onMenuClick, title = "Dashboard" }: TopBarProps
           <span className={recipes.notifDot} />
         </button>
 
-        {/* User avatar */}
-        <div className={recipes.avatar}>
-          DM
-        </div>
+        {/* User menu (avatar + dropdown) */}
+        <UserMenu />
       </div>
     </header>
   );

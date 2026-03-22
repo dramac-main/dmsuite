@@ -36,6 +36,10 @@ export interface ExtractedFileData {
   detectedFields?: DetectedBusinessFields;
   /** Thumbnail preview for images (small base64 data URI) */
   thumbnail?: string;
+  /** Font families detected in the document (from PDF rendering data or DOCX XML) */
+  documentFonts?: string[];
+  /** Hex colors detected in the document styling (from PDF operators or DOCX theme/runs) */
+  documentColors?: string[];
 }
 
 export interface TextBlock {

@@ -1,13 +1,13 @@
 "use client";
 
 import { hubStats } from "@/data/tools";
-import { iconMap } from "@/components/icons";
+import { getIcon } from "@/components/icons";
 
 export default function StatsBar() {
   return (
     <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
       {hubStats.map((stat) => {
-        const Icon = iconMap[stat.icon];
+        const Icon = getIcon(stat.icon);
         return (
           <div
             key={stat.label}
@@ -20,10 +20,8 @@ export default function StatsBar() {
             <div className="size-10 rounded-lg bg-gray-100 dark:bg-gray-800
               flex items-center justify-center mb-3
               group-hover:bg-primary-500/10 transition-colors">
-              {Icon && (
-                <Icon className="size-5 text-gray-500 dark:text-gray-400
+              <Icon className="size-5 text-gray-500 dark:text-gray-400
                   group-hover:text-primary-500 transition-colors" />
-              )}
             </div>
 
             {/* Value */}

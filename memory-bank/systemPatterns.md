@@ -28,6 +28,8 @@
 
 ### 2. Icon Systems
 - **UI Icons** (React/SVG): `src/components/icons.tsx` — 75+ inline SVG components, `iconMap` registry for dashboard/UI use
+  - **Safe lookup**: Always use `getIcon(key)` helper (returns `FallbackIcon` when key is missing) — NEVER use raw `iconMap[key]` in rendering
+  - **FallbackIcon**: Generic rounded rect with info indicator, renders instead of blank space
 - **Canvas Icon Library** (Asset Bank): `src/lib/icon-library.ts` — 115 professional vector icons for canvas rendering
   - 8 categories: social-media, contact, business, creative, technology, lifestyle, arrows-ui, commerce
   - API: `drawIcon(ctx, iconId, x, y, size, color, strokeWidth?)`
@@ -395,3 +397,28 @@ Each category has 3 color classes:
 | `QuickAccess.tsx` | Horizontal scroll strip of featured tools |
 | `CategorySection.tsx` | Collapsible category header + responsive tool grid |
 | `ToolCard.tsx` | Individual tool card with status, description, hover effects |
+
+### 11. Document Font & Color Extraction Architecture (Session 105)
+```
+Upload Pipeline (src/lib/chiko/extractors/)
+  ├── index.ts — ExtractedFileData { text, headings, tables, images, documentFonts?, documentColors?, ... }
+  ├── pdf-extractor.ts — extractPdf(buffer)
+  │     ├── getText() → plain text (unchanged)
+  │     ├── load() → PDFDocumentProxy (pdfjs-dist)
+  │     │     ├── getTextContent() → styles[fontName].fontFamily → cleanFontName()
+  │     │     └── getOperatorList() → fnArray (OPS codes) → RGB/CMYK → hex → filterNeutrals
+  │     └── Returns: { text, pageCount, documentFonts, documentColors }
+  └── docx-extractor.ts — extractDocx(buffer)
+        ├── mammoth.convertToHtml() → text (unchanged)
+        ├── JSZip → raw XML parsing:
+        │     ├── word/document.xml → <w:rFonts> fonts, <w:color>/<w:shd> colors
+        │     ├── word/styles.xml → font families
+        │     └── word/theme/theme1.xml → <a:latin> fonts, accent colors (boosted x10)
+        └── Returns: { text, headings, tables, images, documentFonts, documentColors }
+
+Data Flow:
+  ChikoAssistant.tsx (fileContext) → route.ts (AI prompt injection)
+    ├── "Document Fonts" section → explicit font→pairing mapping table (16 entries)
+    ├── "Document Colors" section → FIRST color = accent, exact hex values
+    └── Rule: "never override extracted styling with guesses"
+```

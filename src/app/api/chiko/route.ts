@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import { getAuthUser } from "@/lib/supabase/auth";
+import { checkCredits, deductCredits, refundCredits } from "@/lib/supabase/credits";
 
 /* ── Chiko — DMSuite's Personal AI Assistant API ─────────────
    Dedicated streaming endpoint for Chiko with full platform
@@ -29,6 +31,7 @@ Warm, witty, confident. Casual ("Hey!", "Great question!"). Concise — no walls
 - Markdown formatting. Under 200 words unless complex.
 - When suggesting tools, include path.
 - Numbered lists for steps.
+- **File-first rule:** When the user's message has an attached file, ALWAYS read and reference the extracted data BEFORE responding. Never ask for information that's already in the file. Use the data directly.
 
 ## Quick-Reply Buttons
 End responses with clickable buttons when there's a clear next action:
@@ -48,10 +51,10 @@ const TOOL_REGISTRY = `
 **Utilities (19):** ai-chat✅, file-converter✅, batch-processor✅, pdf-tools✅, qr-code✅, +14🔜
 Nav: /tools/{category}/{tool-id} | Dashboard: /dashboard | Cmd+K search`;
 
-/** Check if user message is about navigation, tools, or search */
+/** Check if user message is specifically asking about navigation or tool discovery */
 function needsToolRegistry(messages: { role: string; content: string }[]): boolean {
   const lastMsg = messages[messages.length - 1]?.content?.toLowerCase() || "";
-  const navWords = /\b(tool|navigate|go to|open|find|search|browse|category|where|which tool|help me find|what tools|show me|available|recommend|suggest a tool|\/navigate|\/go|\/open|\/tools|\/search|\/category|\/create|\/details|\/help|dashboard)\b/i;
+  const navWords = /\b(navigate|go to|open tool|find.*tool|search.*tool|browse tools|which tool|help me find|what tools|show me tools|available tools|recommend.*tool|suggest.*tool|\/navigate|\/go|\/open|\/tools|\/search|\/category|\/help)\b/i;
   return navWords.test(lastMsg);
 }
 
@@ -79,9 +82,12 @@ export async function POST(request: NextRequest) {
         fileName: string;
         extractionType: string;
         summary: string;
+        text?: string;
         detectedFields?: Record<string, string>;
         tables?: { title?: string; headers?: string[]; rowCount: number }[];
         images?: { name: string; width: number; height: number; mimeType: string }[];
+        documentFonts?: string[];
+        documentColors?: string[];
       };
       businessProfile?: string;
       workflowContext?: string;
@@ -108,6 +114,31 @@ export async function POST(request: NextRequest) {
       if (msg.role !== "user" && msg.role !== "assistant") {
         return new Response("Invalid message role", { status: 400 });
       }
+    }
+
+    // ── Auth & credit check ───────────────────────────────
+    const user = await getAuthUser();
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const creditCheck = await checkCredits(user.id, "chiko-message");
+    if (!creditCheck.allowed) {
+      return new Response(
+        JSON.stringify({ error: "Insufficient credits", balance: creditCheck.balance, cost: creditCheck.cost }),
+        { status: 402, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const deduction = await deductCredits(user.id, "chiko-message", "Chiko AI message");
+    if (!deduction.success) {
+      return new Response(
+        JSON.stringify({ error: deduction.error || "Credit deduction failed" }),
+        { status: 402, headers: { "Content-Type": "application/json" } }
+      );
     }
 
     // Build context-aware system message
@@ -150,6 +181,11 @@ File: ${fileContext.fileName} (${fileContext.extractionType}, ${fileContext.summ
         systemPrompt += `\n\nDetected Business Fields:\n${JSON.stringify(fileContext.detectedFields, null, 2)}`;
       }
 
+      // Include full document text so the AI can deeply understand the content
+      if (fileContext.text && fileContext.text.length > 0) {
+        systemPrompt += `\n\n### Full Document Text\n\`\`\`\n${fileContext.text}\n\`\`\``;
+      }
+
       if (fileContext.tables && fileContext.tables.length > 0) {
         systemPrompt += `\n\nTables Found: ${fileContext.tables.length}`;
         for (const t of fileContext.tables) {
@@ -164,20 +200,39 @@ File: ${fileContext.fileName} (${fileContext.extractionType}, ${fileContext.summ
         }
       }
 
-      systemPrompt += `\n\nInstructions:
-- Present the extracted information clearly to the user
-- Offer to use the data to populate the current tool's fields
-- Always confirm with the user before making changes based on extracted data
-- For images: offer to set as company logo if on a branding-enabled tool
-- For tables: explain what data you found and how you'd map it to the tool
-- If no tool actions are available, suggest which tool the user should navigate to
-- When you want to set a logo or image from the uploaded file, use the placeholder "__ATTACHED_IMAGE_0__" as the value. The client will replace this with the actual image data.`;
+      // ── Inject document styling data (fonts & colors extracted from the file) ──
+      if (fileContext.documentFonts && fileContext.documentFonts.length > 0) {
+        systemPrompt += `\n\n### Document Fonts (extracted from file rendering data)\nThe following font families are used IN THE ACTUAL DOCUMENT: ${fileContext.documentFonts.join(", ")}\nThese are the REAL fonts the document was designed with. Match your font pairing to these — pick the closest available pairing.`;
+      }
+
+      if (fileContext.documentColors && fileContext.documentColors.length > 0) {
+        systemPrompt += `\n\n### Document Colors (extracted from file rendering data)\nThe following colors are used IN THE ACTUAL DOCUMENT (sorted by prominence): ${fileContext.documentColors.join(", ")}\nThe FIRST color is the most prominent brand color. Use it as the accent color. These are EXACT hex values from the document — do NOT guess different colors.`;
+      }
+
+      systemPrompt += `\n\n### CRITICAL: Brand-Aware File Handling
+You have the FULL document content above. You MUST:
+
+1. **Read & understand the ENTIRE document** — company description, services, industry, brand personality, colors, tagline — BEFORE responding.
+2. **Use ALL extracted data directly** — do NOT ask for information that is already in the file. Fill in company name, phone, email, address, etc. from the detected fields.
+3. **Identify the brand identity using EXTRACTED styling data:**
+   - **FONTS:** If "Document Fonts" are provided above, match them to the closest available font pairing. Do NOT invent fonts — use the fonts FROM the document. Map: Montserrat→montserrat-opensans, Poppins→poppins-inter, Playfair→playfair-source, Raleway→raleway-lato, Inter→inter-inter, Open Sans→montserrat-opensans, Roboto→inter-inter, Lato→raleway-lato, Source Sans→playfair-source, DM Sans→dmserif-dmsans, IBM Plex→ibmplex-ibmplex, Space Grotesk→spacegrotesk-inter, Crimson→crimsonpro-worksans, Bitter→bitter-inter, Cormorant→cormorant-proza, JetBrains→jetbrains-inter.
+   - **COLORS:** If "Document Colors" are provided above, use the FIRST (most prominent) color as the accent color. These are EXACT hex values — use them directly. Do NOT substitute with a different color unless the user asks.
+   - If no document fonts/colors are extracted, THEN fall back to industry-appropriate choices.
+   - Industry/sector: Use the detected industry to choose appropriate design tone (corporate, creative, medical, tech, etc.).
+   - Company personality: Infer from the description and services — formal vs. casual, traditional vs. innovative, luxury vs. accessible.
+4. **Make HOLISTIC design decisions** — don't just fill text fields. Adapt to whichever tool is currently open:
+   - **Sales Book / Invoice / Quotation tools:** Call updateBranding/updateBusinessInfo with business fields from the file, AND updateStyle/updateStyling with template, accentColor, fontPairing chosen to match the brand. Combine actions in one response.
+   - **Resume / CV Builder:** Call updateBasics with personal details from the file (name, email, phone, headline, location, website), AND updateStyling with template, accentColor, fontPairing that match the person's industry/profession.
+   - **Any design tool:** When style/design actions are available (setAccentColor, setFontPairing, changeTemplate, etc.), choose values that match the brand from the file. Don't use generic defaults.
+5. **For images in the file:** set as company logo using "__ATTACHED_IMAGE_0__" placeholder.
+6. **Only ask clarifying questions for info that is genuinely NOT in the file.**
+7. If no tool actions are available yet (e.g. on dashboard), navigate to the right tool first.`;
     }
 
     // ── Inject active workflow context when present ──
     const hasWorkflow = typeof workflowContext === "string" && workflowContext.trim() !== "";
     if (hasWorkflow) {
-      systemPrompt += `\n\n## Active Workflow\n${workflowContext}\n\n### Workflow Behavioral Rules\n- You are executing a multi-step workflow. Focus ONLY on the current step.\n- After completing each step's actions, emit ALL required actions, then briefly confirm what you did.\n- Do NOT ask the user for confirmation between workflow steps — keep moving.\n- If a step fails, report the error concisely and suggest skipping or retrying.\n- Keep responses SHORT during workflows — one or two sentences max per step.\n- The orchestrator will automatically advance you to the next step.`;
+      systemPrompt += `\n\n## Active Workflow\n${workflowContext}\n\n### Workflow Behavioral Rules\n- You are executing a multi-step workflow. Focus ONLY on the current step.\n- After completing each step's actions, emit ALL required tool actions, then call advanceWorkflow to move to the next step.\n- IMPORTANT: Always call advanceWorkflow after you finish a step's work. Do not rely on the orchestrator to detect completion.\n- Do NOT ask the user for confirmation between workflow steps — keep moving.\n- If a step fails, report the error concisely and suggest skipping or retrying.\n- Keep responses SHORT during workflows — one or two sentences max per step.`;
     }
 
     // ── Add action system context when tools are registered ──
@@ -197,10 +252,14 @@ Never fabricate state — read it from the provided context below.
 The current tool state is provided in the "Current Tool State" section below. You already have this data — **you do NOT need to call readCurrentState** before making changes. Use readCurrentState ONLY if you suspect the state has changed since the conversation started (e.g. the user says they manually edited something). In most cases, just look at the state below and proceed directly with the changes.
 
 ### Design Rules
-- Be opinionated: combine template + color + font in one cohesive call. Explain choices briefly.
-- Match fonts to profession: serif=law/finance, sans-serif=tech, display=creative.
+- **Brand-first design:** When file context provides document fonts and/or document colors, ALWAYS use them. These are the EXACT styling from the uploaded document — never override with guesses.
+- **Font matching:** If document fonts are extracted (e.g. "Montserrat", "Roboto"), pick the font pairing that includes that font. Never invent a different font when the document's actual font is available.
+- **Color matching:** If document colors are extracted (e.g. "#1a5276"), use the first/most prominent color as the accent color. Never substitute with a different color.
+- Be opinionated: combine template + color + font in one cohesive call. Explain WHY you chose each element based on the brand.
+- When a file is attached, call BOTH updateBranding (business fields) AND updateStyle (template, accentColor, fontPairing) in the SAME response. Don't just fill fields — design the entire document to match the brand.
+- Match fonts to industry: serif=law/finance/luxury, sans-serif=tech/modern/agency, display=creative/fashion.
 - Font pairings: inter-inter, poppins-inter, playfair-source, montserrat-opensans, raleway-lato, dmserif-dmsans, bitter-inter, ibmplex-ibmplex, jetbrains-inter, cormorant-proza, spacegrotesk-inter, crimsonpro-worksans.
-- Accent colors: blue(#1e40af)=corporate, teal(#0f766e)=modern, purple(#7c3aed)=creative, emerald(#059669)=fresh.
+- Accent colors: use brand colors from the document first. Otherwise: blue(#1e40af)=corporate, teal(#0f766e)=modern, purple(#7c3aed)=creative, emerald(#059669)=fresh, rose(#e11d48)=fashion/beauty, amber(#d97706)=food/hospitality, slate(#475569)=legal/finance.
 - Brand consistency: ALL elements must use the same accent color family. Never mix unrelated colors. Match new additions to the existing template tone.
 - Color persistence: user-chosen accent colors persist across template switches. Changing template changes layout/fonts but NOT the user's colors.
 - **Logo color matching**: When the user asks to match their logo colors, the "Logo Colors" section (if present) contains the EXACT hex values extracted from the image. Use the most prominent brand color as the accent. You can also see the logo image directly attached to the last message for visual reference. NEVER guess colors — always use the provided hex values.

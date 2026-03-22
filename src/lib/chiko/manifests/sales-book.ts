@@ -339,11 +339,23 @@ export function createSalesBookManifest(options?: SalesBookManifestOptions): Chi
               return { success: false, message: "No business profile saved yet." };
             }
             const mapped = mapProfileToSalesBookBranding(memory.profile);
-            if (Object.keys(mapped).length === 0) {
+            let count = 0;
+            if (Object.keys(mapped).length > 0) {
+              store.updateBranding(mapped as Parameters<typeof store.updateBranding>[0]);
+              count = Object.keys(mapped).length;
+            }
+            // Also apply preferred styling if set
+            const profile = memory.profile;
+            if (profile.preferredAccentColor || profile.preferredFontPairing) {
+              const styleUpdate: Record<string, unknown> = {};
+              if (profile.preferredAccentColor) { styleUpdate.accentColor = profile.preferredAccentColor; count++; }
+              if (profile.preferredFontPairing) { styleUpdate.fontPairing = profile.preferredFontPairing; count++; }
+              store.updateStyle(styleUpdate as Parameters<typeof store.updateStyle>[0]);
+            }
+            if (count === 0) {
               return { success: false, message: "Business profile has no fields to pre-fill." };
             }
-            store.updateBranding(mapped as Parameters<typeof store.updateBranding>[0]);
-            return { success: true, message: `Pre-filled branding with ${Object.keys(mapped).length} fields from Business Memory.` };
+            return { success: true, message: `Pre-filled branding + styling with ${count} fields from Business Memory.` };
           }
 
           case "addCustomBlock": {

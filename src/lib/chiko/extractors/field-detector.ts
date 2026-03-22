@@ -14,6 +14,12 @@ export interface DetectedBusinessFields {
   bankName?: string;
   bankAccount?: string;
   bankBranch?: string;
+  // Brand intelligence fields
+  tagline?: string;
+  industry?: string;
+  services?: string;
+  brandColors?: string;
+  companyDescription?: string;
   [key: string]: string | undefined;
 }
 
@@ -150,6 +156,118 @@ export function detectBusinessFields(text: string): DetectedBusinessFields {
     }
   }
 
+  // ── Brand Colors ─────────────────────────────────────────
+  // Detect hex color codes and named brand colors in context
+  const hexColors = text.match(/#[0-9A-Fa-f]{6}\b/g);
+  if (hexColors && hexColors.length > 0) {
+    // Deduplicate
+    const unique = [...new Set(hexColors.map(c => c.toLowerCase()))];
+    fields.brandColors = unique.slice(0, 6).join(", ");
+  }
+  if (!fields.brandColors) {
+    // Look for named colors near "brand", "color", "colour", "palette" keywords
+    const colorContextMatch = text.match(
+      /(?:brand|primary|corporate|company|our)\s*(?:colou?rs?|palette)[:\s]*([^\n.]{3,80})/i
+    );
+    if (colorContextMatch?.[1]) {
+      fields.brandColors = colorContextMatch[1].trim();
+    }
+  }
+
+  // ── Tagline / Slogan ────────────────────────────────────
+  const taglinePatterns = [
+    /(?:tagline|slogan|motto)[:\s]*[""]?([^"""\n]{5,120})[""]?/i,
+    /[""\u201c]([^"""\u201d\n]{5,80})[""\u201d]\s*$/m,
+  ];
+  for (const pattern of taglinePatterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      const tl = match[1].trim();
+      if (tl.length >= 5 && tl.length < 120) {
+        fields.tagline = tl;
+        break;
+      }
+    }
+  }
+
+  // ── Industry / Sector ───────────────────────────────────
+  const industryPatterns = [
+    /(?:industry|sector|field)[:\s]+([^\n.]{3,80})/i,
+    /(?:we are|we're|is)\s+(?:a|an)\s+(?:leading|premier|trusted|established|innovative)?\s*([^\n.]{5,80}?)(?:\s+(?:company|firm|agency|business|provider|specialist|consultancy))/i,
+  ];
+  for (const pattern of industryPatterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      fields.industry = match[1].trim();
+      break;
+    }
+  }
+  // Keyword-based industry detection as fallback
+  if (!fields.industry) {
+    const industryKeywords: [RegExp, string][] = [
+      [/\b(?:marketing|advertising|digital marketing|branding|creative agency)\b/i, "Marketing & Advertising"],
+      [/\b(?:software|technology|tech|IT services|SaaS|cloud|app development)\b/i, "Technology & IT"],
+      [/\b(?:construction|building|architecture|engineering|civil)\b/i, "Construction & Engineering"],
+      [/\b(?:real estate|property|realty|housing)\b/i, "Real Estate"],
+      [/\b(?:healthcare|medical|hospital|clinic|pharmaceutical|health)\b/i, "Healthcare"],
+      [/\b(?:education|school|university|training|learning|academy)\b/i, "Education"],
+      [/\b(?:finance|banking|insurance|accounting|investment|financial)\b/i, "Finance & Banking"],
+      [/\b(?:retail|e-commerce|ecommerce|shop|store|merchandise)\b/i, "Retail & E-Commerce"],
+      [/\b(?:hospitality|hotel|restaurant|tourism|travel|catering)\b/i, "Hospitality & Tourism"],
+      [/\b(?:manufacturing|factory|production|industrial)\b/i, "Manufacturing"],
+      [/\b(?:legal|law firm|attorney|advocate|solicitor)\b/i, "Legal Services"],
+      [/\b(?:logistics|transport|shipping|freight|supply chain)\b/i, "Logistics & Transport"],
+      [/\b(?:agriculture|farming|agri|livestock|crop)\b/i, "Agriculture"],
+      [/\b(?:media|entertainment|film|music|broadcast|publishing)\b/i, "Media & Entertainment"],
+      [/\b(?:consulting|consultancy|advisory|management consulting)\b/i, "Consulting"],
+      [/\b(?:mining|mineral|resources|extraction)\b/i, "Mining & Resources"],
+      [/\b(?:energy|power|solar|renewable|oil|gas|petroleum)\b/i, "Energy"],
+      [/\b(?:telecommunications|telecom|mobile|network)\b/i, "Telecommunications"],
+      [/\b(?:fashion|apparel|clothing|textile|design house)\b/i, "Fashion & Apparel"],
+      [/\b(?:food|beverage|catering|bakery|restaurant)\b/i, "Food & Beverage"],
+    ];
+    // Count matches for each industry, pick the one with most hits
+    let bestIndustry = "";
+    let bestCount = 0;
+    for (const [pattern, label] of industryKeywords) {
+      const matches = text.match(new RegExp(pattern.source, "gi"));
+      const count = matches ? matches.length : 0;
+      if (count > bestCount) {
+        bestCount = count;
+        bestIndustry = label;
+      }
+    }
+    if (bestCount >= 2) {
+      fields.industry = bestIndustry;
+    }
+  }
+
+  // ── Services Offered ────────────────────────────────────
+  const servicesPatterns = [
+    /(?:(?:our\s+)?services|what we (?:do|offer)|we (?:provide|offer|specialize))[:\s]*([^\n]{10,200})/i,
+    /(?:services\s*(?:include|offered|provided))[:\s]*([^\n]{10,200})/i,
+  ];
+  for (const pattern of servicesPatterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      fields.services = match[1].trim().slice(0, 200);
+      break;
+    }
+  }
+
+  // ── Company Description / About ─────────────────────────
+  const aboutPatterns = [
+    /(?:about\s+(?:us|the company|our company)|who\s+we\s+are|company\s+(?:overview|profile|description))[:\s]*\n?([\s\S]{20,500}?)(?:\n\n|\n[A-Z])/i,
+    /(?:about\s+(?:us|the company))[:\s]*\n?([\s\S]{20,300})/i,
+  ];
+  for (const pattern of aboutPatterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      fields.companyDescription = match[1].trim().replace(/\s+/g, " ").slice(0, 300);
+      break;
+    }
+  }
+
   return fields;
 }
 
@@ -159,6 +277,7 @@ export function detectBusinessFields(text: string): DetectedBusinessFields {
 export function buildFieldsSummary(fields: DetectedBusinessFields): string {
   const parts: string[] = [];
   if (fields.companyName) parts.push(`Company: ${fields.companyName}`);
+  if (fields.industry) parts.push(`Industry: ${fields.industry}`);
   if (fields.address) parts.push(`Address: ${fields.address}`);
   if (fields.phone) parts.push(`Phone: ${fields.phone}`);
   if (fields.email) parts.push(`Email: ${fields.email}`);
@@ -167,5 +286,7 @@ export function buildFieldsSummary(fields: DetectedBusinessFields): string {
   if (fields.bankName) parts.push(`Bank: ${fields.bankName}`);
   if (fields.bankAccount) parts.push(`Account: ${fields.bankAccount}`);
   if (fields.bankBranch) parts.push(`Branch: ${fields.bankBranch}`);
+  if (fields.brandColors) parts.push(`Brand Colors: ${fields.brandColors}`);
+  if (fields.tagline) parts.push(`Tagline: ${fields.tagline}`);
   return parts.length > 0 ? `Detected: ${parts.join(", ")}` : "";
 }

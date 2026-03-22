@@ -6,6 +6,8 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
+import { getAuthUser } from "@/lib/supabase/auth";
+import { checkCredits, deductCredits, refundCredits } from "@/lib/supabase/credits";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
@@ -33,6 +35,14 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 // ---------------------------------------------------------------------------
 
 export async function POST(request: NextRequest) {
+  // ── Auth + Credits ──
+  const user = await getAuthUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const creditCheck = await checkCredits(user.id, "file-parsing");
+  if (!creditCheck.allowed) {
+    return NextResponse.json({ error: "Insufficient credits", needed: creditCheck.cost, balance: creditCheck.balance }, { status: 402 });
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
@@ -110,6 +120,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const deduction = await deductCredits(user.id, "file-parsing", "Resume file parsing");
+    if (!deduction.success) {
+      return NextResponse.json({ error: "Failed to deduct credits" }, { status: 402 });
+    }
+
     const parsed = await parseWithClaude(extractedText, imageBase64, imageMimeType);
 
     return NextResponse.json({
@@ -119,6 +134,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Resume parse API error:", error);
+    await refundCredits(user.id, creditCheck.cost, "Refund: resume parse failed");
     return NextResponse.json(
       { error: `Failed to parse file: ${error instanceof Error ? error.message : "Unknown error"}` },
       { status: 500 }

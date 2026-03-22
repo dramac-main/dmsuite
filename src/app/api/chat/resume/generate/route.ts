@@ -11,6 +11,8 @@ import {
   buildFallbackResume,
   type ResumeGenerationInput,
 } from "@/lib/resume/ai-resume-generator";
+import { getAuthUser } from "@/lib/supabase/auth";
+import { checkCredits, deductCredits, refundCredits } from "@/lib/supabase/credits";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
@@ -37,6 +39,14 @@ async function fetchWithRetry(
 }
 
 export async function POST(request: NextRequest) {
+  // ── Auth + Credits ──
+  const user = await getAuthUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const creditCheck = await checkCredits(user.id, "resume-generation");
+  if (!creditCheck.allowed) {
+    return NextResponse.json({ error: "Insufficient credits", needed: creditCheck.cost, balance: creditCheck.balance }, { status: 402 });
+  }
+
   try {
     let payload: ResumeGenerationInput;
     try {
@@ -54,6 +64,11 @@ export async function POST(request: NextRequest) {
         { error: "Name and email are required" },
         { status: 400 }
       );
+    }
+
+    const deduction = await deductCredits(user.id, "resume-generation", "Resume generation");
+    if (!deduction.success) {
+      return NextResponse.json({ error: "Failed to deduct credits" }, { status: 402 });
     }
 
     // If no API key, use fallback
@@ -136,6 +151,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error("Resume generation API error:", error);
+    await refundCredits(user.id, creditCheck.cost, "Refund: resume generation failed");
     return NextResponse.json(
       { error: `Internal server error: ${error instanceof Error ? error.message : "Unknown"}` },
       { status: 500 }

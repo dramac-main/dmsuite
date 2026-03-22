@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, type PanInfo } from "framer-motion";
 import { suiteNavGroups } from "@/data/tools";
-import { iconMap, IconSearch, IconChevronLeft, IconSparkles } from "@/components/icons";
+import { getIcon, IconSearch, IconChevronLeft, IconSparkles } from "@/components/icons";
 import { useSidebarStore } from "@/stores/sidebar";
 import {
   sidebar as sidebarConfig,
@@ -217,7 +217,7 @@ export default function Sidebar() {
               )}
               <ul className="space-y-0.5">
                 {group.items.map((item) => {
-                  const Icon = iconMap[item.icon];
+                  const Icon = getIcon(item.icon);
                   const isActive =
                     item.active ||
                     pathname === item.href ||
@@ -233,7 +233,7 @@ export default function Sidebar() {
                           isActive ? surfaces.activeItem : interactive.navItem
                         )}
                       >
-                        {Icon && <Icon className="size-5 shrink-0" />}
+                        <Icon className="size-5 shrink-0" />
                         {!isCollapsed && (
                           <span className="text-sm truncate">{item.label}</span>
                         )}

@@ -1,0 +1,54 @@
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "supabase-access-token",
+      "description": "Supabase Personal Access Token (get from: supabase.com/dashboard/account/tokens)",
+      "password": true
+    },
+    {
+      "type": "promptString",
+      "id": "vercel-token",
+      "description": "Vercel Access Token (get from: vercel.com/account/tokens)",
+      "password": true
+    }
+  ],
+  "servers": {
+    "supabase": {
+      "command": "C:\\Users\\Drake\\.fnm\\node-versions\\v22.22.1\\installation\\node.exe",
+      "args": [
+        "C:\\Users\\Drake\\.fnm\\node-versions\\v22.22.1\\installation\\node_modules\\npm\\bin\\npx-cli.js",
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--access-token",
+        "${input:supabase-access-token}"
+      ],
+      "env": {
+        "PATH": "C:\\Users\\Drake\\.fnm\\node-versions\\v22.22.1\\installation;${env:PATH}"
+      }
+    },
+    "context7": {
+      "command": "C:\\Users\\Drake\\.fnm\\node-versions\\v22.22.1\\installation\\node.exe",
+      "args": [
+        "C:\\Users\\Drake\\.fnm\\node-versions\\v22.22.1\\installation\\node_modules\\npm\\bin\\npx-cli.js",
+        "-y",
+        "@upstash/context7-mcp@latest"
+      ],
+      "env": {
+        "PATH": "C:\\Users\\Drake\\.fnm\\node-versions\\v22.22.1\\installation;${env:PATH}"
+      }
+    },
+    "vercel": {
+      "command": "C:\\Users\\Drake\\.fnm\\node-versions\\v22.22.1\\installation\\node.exe",
+      "args": [
+        "C:\\Users\\Drake\\.fnm\\node-versions\\v22.22.1\\installation\\node_modules\\npm\\bin\\npx-cli.js",
+        "-y",
+        "vercel-mcp@latest",
+        "VERCEL_API_KEY=${input:vercel-token}"
+      ],
+      "env": {
+        "PATH": "C:\\Users\\Drake\\.fnm\\node-versions\\v22.22.1\\installation;${env:PATH}"
+      }
+    }
+  }
+}

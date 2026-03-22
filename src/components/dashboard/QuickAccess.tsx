@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { featuredToolIds, getAllToolsFlat, type FlatTool } from "@/data/tools";
-import { iconMap, IconArrowRight, IconStar } from "@/components/icons";
+import { getIcon, IconArrowRight, IconStar } from "@/components/icons";
 
 const featuredTools: FlatTool[] = getAllToolsFlat().filter((t) =>
   featuredToolIds.includes(t.id)
@@ -25,7 +25,7 @@ export default function QuickAccess() {
       {/* Horizontal scrollable cards */}
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-thin">
         {featuredTools.map((tool) => {
-          const Icon = iconMap[tool.icon];
+          const Icon = getIcon(tool.icon);
           return (
             <Link
               key={tool.id}
@@ -40,10 +40,8 @@ export default function QuickAccess() {
                 <div className="size-9 rounded-lg bg-gray-100 dark:bg-gray-800
                   flex items-center justify-center shrink-0
                   group-hover:bg-primary-500/10 transition-colors">
-                  {Icon && (
-                    <Icon className="size-4 text-gray-500 dark:text-gray-400
+                  <Icon className="size-4 text-gray-500 dark:text-gray-400
                       group-hover:text-primary-500 transition-colors" />
-                  )}
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">

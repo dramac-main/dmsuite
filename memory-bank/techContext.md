@@ -105,12 +105,47 @@ Semantic:   success (#22c55e), error (#ef4444), warning (#f59e0b), info (#3b82f6
 - `next` 16.1.6
 - `react` 19.2.3
 - `react-dom` 19.2.3
+- `@supabase/supabase-js` + `@supabase/ssr` — Auth + DB
 - `framer-motion` ^12.34.0
 - `zustand` ^5.0.11
 - `clsx` + `tailwind-merge` (cn utility)
 - `class-variance-authority` ^0.7.1
 
 Dev dependencies: TypeScript types, ESLint, PostCSS, Tailwind.
+
+## Auth / Payments / Credits Infrastructure
+| Component | Location | Notes |
+|-----------|----------|-------|
+| Supabase browser client | `src/lib/supabase/client.ts` | `createBrowserClient` + `isSupabaseConfigured()` |
+| Supabase server client | `src/lib/supabase/server.ts` | Cookie-based session via `next/headers` |
+| Middleware helpers | `src/lib/supabase/middleware.ts` | Session refresh + route protection |
+| Auth helper | `src/lib/supabase/auth.ts` | `getAuthUser()` — dev-mode mock user |
+| Credit system | `src/lib/supabase/credits.ts` | check/deduct/add/refund + 10 operation costs |
+| useUser hook | `src/hooks/useUser.ts` | Client auth state + dev-mode passthrough |
+| Root middleware | `src/middleware.ts` | Protects all routes except `/auth/*`, webhooks |
+| DB migration | `supabase/migrations/001_initial_schema.sql` | profiles + credit_transactions + payments + RLS |
+| Auth pages | `src/app/auth/` | login, signup, reset-password, callback, verify |
+| Payment routes | `src/app/api/payments/` | initiate, webhook, status (Flutterwave) |
+| Dashboard auth UI | `src/components/dashboard/` | UserMenu, CreditBalance, CreditPurchaseModal |
+
+### Environment Variables Required (Production)
+```
+NEXT_PUBLIC_SUPABASE_URL=       # Supabase project URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=  # Supabase anon/public key
+SUPABASE_SERVICE_ROLE_KEY=      # Supabase service role (server-only)
+FLUTTERWAVE_SECRET_KEY=         # Flutterwave secret key
+FLUTTERWAVE_WEBHOOK_SECRET=     # Flutterwave webhook hash
+NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY= # Flutterwave public key
+ANTHROPIC_API_KEY=              # Claude AI
+```
+
+### Dev-Mode Behavior
+When Supabase env vars are not set:
+- Middleware passes all requests through
+- `getAuthUser()` returns mock user `{id: "dev-user"}`
+- Credit checks always return `{allowed: true, balance: 9999}`
+- `useUser()` returns dev profile with 9999 credits, "pro" plan
+- All AI routes work without auth in development
 
 ## Known Technical Gotchas
 1. **ThemeProvider** uses lazy initializer (`getInitialTheme()`) to avoid hydration mismatch — do NOT use `useEffect` for initial state
@@ -123,7 +158,10 @@ Dev dependencies: TypeScript types, ESLint, PostCSS, Tailwind.
 4. **Dev server port 6006** — configured in package.json, not default 3000
 
 ## APIs (Active & Planned)
-- **Anthropic Claude** — Text/creative intelligence (API route built, streaming, key required in `.env.local`)
+- **Anthropic Claude** — Text/creative intelligence (streaming, 7 AI routes with auth + credits)
+- **Supabase** — Auth (JWT via HTTP-only cookies), PostgreSQL (profiles, credits, payments), RLS
+- **Flutterwave** — Mobile money payments (Airtel Money + MTN MoMo, Zambia, STK push)
+- **Unsplash / Pexels / Pixabay** — Stock image search (api/images route, no credits)
 - **LumaAI** — Video generation (planned)
 - **Stable Diffusion / FLUX** — Image generation (planned)
 - **ElevenLabs** — Voice/audio generation (planned)

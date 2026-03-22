@@ -394,6 +394,8 @@ export function ChikoAssistant() {
     updateAttachment,
     removeAttachment,
     clearAttachments,
+    lastFileContext,
+    setLastFileContext,
   } = useChikoStore();
 
   const [slashResults, setSlashResults] = useState<{ label: string; path: string }[]>([]);
@@ -409,6 +411,9 @@ export function ChikoAssistant() {
 
   /** Stashed intent after navigateToTool — triggers follow-up when target manifest registers */
   const pendingNavigationRef = useRef<{ targetToolId: string; userIntent: string } | null>(null);
+
+  /** Tracks which workflow step was last prompted to prevent infinite re-prompting */
+  const lastPromptedStepRef = useRef<string | null>(null);
 
   // ── Abort in-flight stream when panel closes ─────────────
   useEffect(() => {
@@ -486,21 +491,29 @@ export function ChikoAssistant() {
   // ── Workflow auto-continue logic ──────────────────────────
   const MAX_AUTO_CONTINUE = 20;
   const workflowActive = useChikoWorkflows((s) => s.activeWorkflow);
-  const workflowAdvance = useChikoWorkflows((s) => s.advanceStep);
+
+  // Stable primitive: total executed action count (avoids unstable array reference in deps)
+  const wfExecutedCount = useChikoWorkflows((s) => {
+    const wf = s.activeWorkflow;
+    if (!wf) return 0;
+    return wf.steps.reduce((sum, step) => sum + step.actions.filter((a) => a.executed).length, 0);
+  });
 
   useEffect(() => {
-    if (!workflowActive || workflowActive.status !== "running") return;
+    // Always read FRESH state inside the effect to avoid stale closures
+    const wf = useChikoWorkflows.getState().activeWorkflow;
+    if (!wf || wf.status !== "running") return;
     if (isGenerating) return;
     if (autoContinueCount >= MAX_AUTO_CONTINUE) {
       addMessage({
         role: "assistant",
-        content: "⚠️ Hit the auto-continue limit (20 cycles). Pausing workflow — type **/workflow resume** to continue.",
+        content: "\u26a0\ufe0f Hit the auto-continue limit (20 cycles). Pausing workflow \u2014 type **/workflow resume** to continue.",
       });
       useChikoWorkflows.getState().pauseWorkflow();
       return;
     }
 
-    const currentStep = workflowActive.steps[workflowActive.currentStepIndex];
+    const currentStep = wf.steps[wf.currentStepIndex];
     if (!currentStep) return;
 
     // If current step target tool is different from the current page, wait for navigation
@@ -513,36 +526,46 @@ export function ChikoAssistant() {
       }
     }
 
-    // All actions on current step executed → advance to next step
-    const allActionsExecuted = currentStep.actions.length > 0 && currentStep.actions.every((a) => a.executed);
+    // All tracked actions on current step executed → advance to next step
+    const allActionsExecuted =
+      currentStep.actions.length > 0 && currentStep.actions.every((a) => a.executed);
     if (allActionsExecuted) {
-      workflowAdvance();
+      // Advance via fresh store call (not stale closure)
+      const result = useChikoWorkflows.getState().advanceStep();
+      lastPromptedStepRef.current = null; // Reset so next step can be prompted
       setAutoContinueCount((c) => c + 1);
-      // Send prompt for the next step after a brief delay
-      const nextIndex = workflowActive.currentStepIndex + 1;
-      if (nextIndex < workflowActive.steps.length) {
-        const nextStep = workflowActive.steps[nextIndex];
+
+      if (!result.done && result.nextStep) {
+        // Read fresh state for correct step index
+        const freshWf = useChikoWorkflows.getState().activeWorkflow;
+        const nextIndex = freshWf ? freshWf.currentStepIndex : -1;
+        const nextLabel = result.nextStep.label;
+        const nextToolId = result.nextStep.toolId;
         setTimeout(() => {
           sendMessage(
-            `[Auto-continue] Execute workflow step ${nextIndex + 1}: ${nextStep.label}${nextStep.toolId ? ` (on ${nextStep.toolId})` : ""}`
+            `[Auto-continue] Execute workflow step ${nextIndex + 1}: ${nextLabel}${nextToolId ? ` (on ${nextToolId})` : ""}`
           );
         }, 800);
       }
       return;
     }
 
-    // Step has unexecuted actions and manifest is ready — prompt execution
-    if (currentStep.status === "pending") {
+    // Prompt step execution — but ONLY ONCE per step to prevent infinite re-prompting
+    const stepKey = `${wf.id}-${wf.currentStepIndex}`;
+    if (lastPromptedStepRef.current === stepKey) return;
+
+    if (currentStep.status === "pending" || currentStep.status === "navigating") {
+      lastPromptedStepRef.current = stepKey;
       setAutoContinueCount((c) => c + 1);
       sendMessage(
-        `[Auto-continue] Execute workflow step ${workflowActive.currentStepIndex + 1}: ${currentStep.label}${currentStep.toolId ? ` (on ${currentStep.toolId})` : ""}`
+        `[Auto-continue] Execute workflow step ${wf.currentStepIndex + 1}: ${currentStep.label}${currentStep.toolId ? ` (on ${currentStep.toolId})` : ""}`
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     workflowActive?.status,
     workflowActive?.currentStepIndex,
-    workflowActive?.steps,
+    wfExecutedCount,
     isGenerating,
     autoContinueCount,
   ]);
@@ -1027,6 +1050,7 @@ export function ChikoAssistant() {
       const fileSnap = attachments
         .filter((a) => a.status === "ready")
         .map((a) => ({ fileName: a.fileName, mimeType: a.mimeType, thumbnail: a.thumbnail }));
+
       addMessage({ role: "user", content: text, ...(fileSnap.length > 0 ? { files: fileSnap } : {}) });
       addMessage({ role: "assistant", content: "" });
       setIsGenerating(true);
@@ -1064,22 +1088,34 @@ export function ChikoAssistant() {
           toolState = state;
         }
 
-        // Build fileContext from ready attachments
+        // Build fileContext from ready attachments, or use persisted context
         const readyAttachments = attachments.filter((a) => a.status === "ready" && a.extractedData);
         let fileContext: Record<string, unknown> | undefined;
         if (readyAttachments.length > 0) {
           const att = readyAttachments[0]; // First ready attachment
           const ed = att.extractedData!;
+          // Include the full document text (capped at 4000 chars for token limits)
+          // This is CRITICAL — without it, the AI only sees summary + detectedFields
+          // and cannot understand the brand, services, or document content
+          const documentText = ed.text ? ed.text.slice(0, 4000) : undefined;
           fileContext = {
             fileName: att.fileName,
             extractionType: ed.extractionType,
             summary: ed.summary,
+            ...(documentText ? { text: documentText } : {}),
             ...(ed.detectedFields ? { detectedFields: ed.detectedFields } : {}),
             ...(ed.tables && ed.tables.length > 0 ? { tables: ed.tables } : {}),
             ...(ed.images && ed.images.length > 0
               ? { images: ed.images.map((img) => ({ name: img.name, mimeType: img.mimeType })) }
               : {}),
+            ...(ed.documentFonts && ed.documentFonts.length > 0 ? { documentFonts: ed.documentFonts } : {}),
+            ...(ed.documentColors && ed.documentColors.length > 0 ? { documentColors: ed.documentColors } : {}),
           };
+          // Persist so Chiko remembers the file across follow-up messages
+          setLastFileContext(fileContext);
+        } else if (lastFileContext) {
+          // No fresh attachment — use persisted file context from previous upload
+          fileContext = lastFileContext as Record<string, unknown>;
         }
 
         // Build business profile summary for system prompt injection
@@ -1259,6 +1295,21 @@ export function ChikoAssistant() {
                       toolUseId: actionEvent.toolUseId,
                     });
 
+                    // Sync executed action to workflow store so auto-continue can detect step completion
+                    if (result.success) {
+                      const wfState = useChikoWorkflows.getState();
+                      const wf = wfState.activeWorkflow;
+                      if (wf && wf.status === "running") {
+                        const step = wf.steps[wf.currentStepIndex];
+                        if (step) {
+                          const aIdx = step.actions.findIndex((a) => !a.executed && a.actionName === actionName);
+                          if (aIdx !== -1) {
+                            wfState.markActionExecuted(wf.currentStepIndex, aIdx, result.message || "done");
+                          }
+                        }
+                      }
+                    }
+
                     if (actionName === "navigateToTool" && result.success && actionEvent.params.toolId) {
                       const userMsg = messages[messages.length - 1]?.content || "";
                       pendingNavigationRef.current = {
@@ -1389,7 +1440,9 @@ export function ChikoAssistant() {
               messages: currentApiMessages,
               context,
               ...(freshHasTools ? { actions: freshDescriptors, toolState: freshToolState } : {}),
+              ...(fileContext ? { fileContext } : {}),
               ...(profileSummary ? { businessProfile: profileSummary } : {}),
+              ...(workflowContext ? { workflowContext } : {}),
             }),
             signal: controller.signal,
           });
@@ -1468,6 +1521,7 @@ export function ChikoAssistant() {
       messages,
       context,
       attachments,
+      lastFileContext,
       router,
       handleLocalCommand,
       setInputDraft,
@@ -1477,6 +1531,7 @@ export function ChikoAssistant() {
       setIsGenerating,
       executeChikoAction,
       clearAttachments,
+      setLastFileContext,
     ]
   );
 

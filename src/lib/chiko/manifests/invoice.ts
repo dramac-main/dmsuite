@@ -621,6 +621,14 @@ export function createInvoiceManifest(options?: InvoiceManifestOptions): ChikoAc
               store.updatePaymentInfo(payMapped as Parameters<typeof store.updatePaymentInfo>[0]);
               count += Object.keys(payMapped).length;
             }
+            // Also apply preferred styling if set
+            const profile = memory.profile;
+            const styleParams: Record<string, unknown> = {};
+            if (profile.preferredAccentColor) { styleParams.accentColor = profile.preferredAccentColor; count++; }
+            if (profile.preferredFontPairing) { styleParams.fontPairing = profile.preferredFontPairing; count++; }
+            if (Object.keys(styleParams).length > 0) {
+              store.updateMetadata(styleParams as Parameters<typeof store.updateMetadata>[0]);
+            }
             if (count === 0) {
               return { success: false, message: "Business profile has no fields to pre-fill." };
             }
