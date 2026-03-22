@@ -4,6 +4,7 @@ import Link from "next/link";
 import { type Tool, statusConfig } from "@/data/tools";
 import { getIcon, IconArrowRight } from "@/components/icons";
 import { groupHoverBg10 } from "@/lib/colors";
+import { getToolCreditCost } from "@/data/credit-costs";
 
 interface ToolCardProps {
   tool: Tool;
@@ -16,6 +17,7 @@ export default function ToolCard({ tool, categoryId, accentColor }: ToolCardProp
   const badge = statusConfig[tool.status];
   const isReady = tool.status === "ready";
   const hoverBg = groupHoverBg10[accentColor || "primary-500"] || groupHoverBg10["primary-500"];
+  const creditCost = getToolCreditCost(tool.id);
 
   const cardClasses = `
     group relative flex flex-col rounded-xl border p-4
@@ -28,7 +30,7 @@ export default function ToolCard({ tool, categoryId, accentColor }: ToolCardProp
 
   const cardContent = (
     <>
-      {/* Top row: Icon + Badge */}
+      {/* Top row: Icon + Badges */}
       <div className="flex items-start justify-between mb-3">
         <div
           className={`
@@ -48,13 +50,21 @@ export default function ToolCard({ tool, categoryId, accentColor }: ToolCardProp
           />
         </div>
 
-        {/* Status badge */}
-        <span
-          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[0.625rem] font-semibold ${badge.bgClass} ${badge.textClass}`}
-        >
-          <span className={`size-1.5 rounded-full ${badge.dotClass}`} />
-          {badge.label}
-        </span>
+        <div className="flex items-center gap-1.5">
+          {/* Credit cost badge */}
+          {isReady && creditCost > 0 && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.6rem] font-semibold bg-primary-500/10 text-primary-500">
+              {creditCost} cr
+            </span>
+          )}
+          {/* Status badge */}
+          <span
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[0.625rem] font-semibold ${badge.bgClass} ${badge.textClass}`}
+          >
+            <span className={`size-1.5 rounded-full ${badge.dotClass}`} />
+            {badge.label}
+          </span>
+        </div>
       </div>
 
       {/* Tool name */}

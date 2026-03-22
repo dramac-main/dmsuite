@@ -62,6 +62,7 @@ function needsToolRegistry(messages: { role: string; content: string }[]): boole
 
 export async function POST(request: NextRequest) {
   let authedUserId: string | null = null;
+  let deductedCost = 0;
   try {
     let body: Record<string, unknown>;
     try {
@@ -135,8 +136,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    deductedCost = creditCheck.cost;
     const deduction = await deductCredits(user.id, "chiko-message", "Chiko AI message");
     if (!deduction.success) {
+      deductedCost = 0;
       return new Response(
         JSON.stringify({ error: deduction.error || "Credit deduction failed" }),
         { status: 402, headers: { "Content-Type": "application/json" } }
@@ -300,8 +303,8 @@ Users may say "undo that", "go back", "revert the colors", etc. — use the log 
     return streamClaude(messages, systemPrompt, hasActions ? actions : undefined, hasWorkflow, validLogoImage);
   } catch (error) {
     console.error("Chiko API error:", error);
-    if (authedUserId) {
-      await refundCredits(authedUserId, 1, "Refund: Chiko AI error");
+    if (authedUserId && deductedCost > 0) {
+      await refundCredits(authedUserId, deductedCost, "Refund: Chiko AI error");
     }
     return new Response("Internal server error", { status: 500 });
   }

@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { CREDIT_PACKS } from "@/data/credit-costs";
 
 /* ── Credit Pack Definitions ───────────────────────────────── */
 
-const PACKS: Record<string, { credits: number; priceZMW: number }> = {
-  starter: { credits: 100, priceZMW: 25 },
-  popular: { credits: 500, priceZMW: 100 },
-  pro: { credits: 1500, priceZMW: 250 },
-  agency: { credits: 5000, priceZMW: 700 },
-};
+const PACKS: Record<string, { credits: number; priceZMW: number }> = Object.fromEntries(
+  CREDIT_PACKS.map((p) => [p.id, { credits: p.credits, priceZMW: p.priceZMW }])
+);
 
 /* ── POST /api/payments/initiate ───────────────────────────── */
 

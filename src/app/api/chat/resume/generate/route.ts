@@ -71,11 +71,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to deduct credits" }, { status: 402 });
     }
 
-    // If no API key, use fallback
+    // If no API key, refund and use fallback (no AI value delivered)
     if (!ANTHROPIC_API_KEY) {
-      console.warn("ANTHROPIC_API_KEY not configured — using fallback resume generation");
+      console.warn("ANTHROPIC_API_KEY not configured — refunding and using fallback");
+      await refundCredits(user.id, creditCheck.cost, "Refund: resume generation — no API key configured");
       const resume = buildFallbackResume(payload);
-      return NextResponse.json({ resume });
+      return NextResponse.json({ resume, fallback: true });
     }
 
     // Build prompts
@@ -116,10 +117,11 @@ export async function POST(request: NextRequest) {
       const errorText = anthropicResponse ? await anthropicResponse.text() : "no response";
       console.error("Anthropic resume API error:", anthropicResponse?.status, errorText);
 
-      // Fallback on API error
+      // Refund and fallback on API error (no AI value delivered)
+      await refundCredits(user.id, creditCheck.cost, "Refund: resume generation API failed");
       console.warn("Falling back to local resume generation");
       const resume = buildFallbackResume(payload);
-      return NextResponse.json({ resume });
+      return NextResponse.json({ resume, fallback: true });
     }
 
     const result = await anthropicResponse.json();
@@ -131,9 +133,10 @@ export async function POST(request: NextRequest) {
     const text = textBlocks?.map((b: { text: string }) => b.text).join("") || "";
 
     if (!text) {
-      console.warn("Empty AI response — using fallback");
+      console.warn("Empty AI response — refunding and using fallback");
+      await refundCredits(user.id, creditCheck.cost, "Refund: resume generation — empty AI response");
       const resume = buildFallbackResume(payload);
-      return NextResponse.json({ resume });
+      return NextResponse.json({ resume, fallback: true });
     }
 
     // Detect truncation
@@ -145,9 +148,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ resume });
     } catch (parseError) {
       console.error("Failed to parse AI resume response:", parseError);
+      await refundCredits(user.id, creditCheck.cost, "Refund: resume generation — parse failed");
       console.warn("Falling back to local resume generation");
       const resume = buildFallbackResume(payload);
-      return NextResponse.json({ resume });
+      return NextResponse.json({ resume, fallback: true });
     }
   } catch (error) {
     console.error("Resume generation API error:", error);

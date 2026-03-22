@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getAuthUser } from "@/lib/supabase/auth";
-import { checkCredits, deductCredits, refundCredits } from "@/lib/supabase/credits";
+import { checkCredits, deductCredits, refundCredits, getCreditCost } from "@/lib/supabase/credits";
 
 /* ── Environment ──────────────────────────────────────────── */
 
@@ -75,13 +75,13 @@ export async function POST(request: NextRequest) {
 
     // If the AI call itself failed, refund the credit
     if (!response.ok) {
-      await refundCredits(user.id, 1, "Refund: AI Chat message failed");
+      await refundCredits(user.id, creditCheck.cost, "Refund: AI Chat message failed");
     }
 
     return response;
   } catch (error) {
     console.error("Chat API error:", error);
-    await refundCredits(user.id, 1, "Refund: AI Chat error");
+    await refundCredits(user.id, getCreditCost("chat-message"), "Refund: AI Chat error");
     return new Response("Internal server error", { status: 500 });
   }
 }

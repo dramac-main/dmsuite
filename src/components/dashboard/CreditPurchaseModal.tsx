@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useUser } from "@/hooks/useUser";
 import { cn } from "@/lib/utils";
+import { CREDIT_PACKS as PACKS_DATA } from "@/data/credit-costs";
 
 /* ── Credit Packs ──────────────────────────────────────────── */
 
@@ -15,12 +16,7 @@ interface CreditPack {
   popular?: boolean;
 }
 
-const CREDIT_PACKS: CreditPack[] = [
-  { id: "starter", name: "Starter", credits: 100, priceZMW: 25, perCredit: "K0.25" },
-  { id: "popular", name: "Popular", credits: 500, priceZMW: 100, perCredit: "K0.20", popular: true },
-  { id: "pro", name: "Pro", credits: 1500, priceZMW: 250, perCredit: "K0.17" },
-  { id: "agency", name: "Agency", credits: 5000, priceZMW: 700, perCredit: "K0.14" },
-];
+const CREDIT_PACKS: CreditPack[] = PACKS_DATA as unknown as CreditPack[];
 
 type PaymentProvider = "airtel_money" | "mtn_momo";
 type PaymentStep = "select-pack" | "enter-phone" | "processing" | "success" | "failed";

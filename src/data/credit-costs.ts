@@ -1,0 +1,176 @@
+/**
+ * Credit costs per AI operation — shared between client & server.
+ *
+ * Priced for profitability at ≥60 % gross margin against Anthropic API costs
+ * even on the cheapest Agency pack (~$0.009 USD / credit).
+ *
+ * Tier guide (ascending by compute):
+ *   Free    (0)      — no AI, pure utility
+ *   Micro   (3-5)    — lightweight / text-only / parsing
+ *   Standard(8-15)   — chat generation / moderate output
+ *   Heavy   (20-35)  — large output / vision / multi-pass
+ *   Premium (40-75)  — video / audio / multi-model pipeline
+ */
+export const CREDIT_COSTS: Record<string, number> = {
+  /* ── Free tier ─────────────────────────────────────────── */
+  "image-search":            0,   // stock image search (no AI)
+  "file-upload":             0,   // file upload to Chiko (no AI)
+
+  /* ── Micro / Standard tier ─────────────────────────────── */
+  "chat-message":            5,   // general AI chat (~$0.017 API)
+  "chiko-message":           8,   // Chiko AI assistant (~$0.029 API)
+  "file-parsing":            5,   // resume/doc parsing (~$0.026 API)
+  "image-analysis":          5,   // image composition analysis (~$0.020 API)
+
+  /* ── Heavy tier ────────────────────────────────────────── */
+  "resume-revision":        10,   // resume section revision (~$0.035 API)
+  "resume-generation":      15,   // full resume generation (~$0.051 API)
+  "sales-book-fill":        10,   // sales book AI fill (~$0.040 API)
+  "invoice-fill":           10,   // invoice AI fill (~$0.035 API)
+  "business-card-design":   35,   // full front+back card design (~$0.126 API)
+  "logo-generation":        20,   // logo AI generation (~$0.080 API)
+
+  /* ── Premium tier (future) ─────────────────────────────── */
+  "video-generation":       50,   // AI video generation
+  "audio-generation":       25,   // TTS / voice cloning
+  "social-media-design":    15,   // social post design
+  "flyer-design":           25,   // flyer / poster design
+  "brochure-design":        30,   // brochure design
+  "presentation-design":    35,   // slide deck generation
+  "email-campaign":         10,   // email copy generation
+  "seo-content":            10,   // SEO blog / article
+  "landing-page-copy":      15,   // landing page generation
+};
+
+/** Get credit cost for an operation. Returns 5 as default for unknown ops. */
+export function getCreditCostClient(operation: string): number {
+  return CREDIT_COSTS[operation] ?? 5;
+}
+
+/** Credit pack definitions (Zambian Kwacha) */
+export const CREDIT_PACKS = [
+  { id: "starter",  name: "Starter",  credits: 100,  priceZMW: 49,   perCredit: "K0.49" },
+  { id: "popular",  name: "Popular",  credits: 500,  priceZMW: 199,  perCredit: "K0.40", popular: true },
+  { id: "pro",      name: "Pro",      credits: 1_500, priceZMW: 499,  perCredit: "K0.33" },
+  { id: "agency",   name: "Agency",   credits: 5_000, priceZMW: 1_299, perCredit: "K0.26" },
+] as const;
+
+/**
+ * Maps tool IDs → credit operation keys.
+ * Tools not listed here either cost 0 (utility) or use the category default.
+ */
+export const TOOL_CREDIT_MAP: Record<string, string> = {
+  /* ── Design Studio ──────────────────────────────────── */
+  "logo-reveal":           "logo-generation",
+  "brand-identity":        "logo-generation",
+  "business-card":         "business-card-design",
+  "social-media-post":     "social-media-design",
+  "poster":                "flyer-design",
+  "flyer":                 "flyer-design",
+  "brochure":              "brochure-design",
+  "banner-ad":             "social-media-design",
+  "infographic":           "flyer-design",
+  "packaging-design":      "flyer-design",
+  "icon-illustration":     "logo-generation",
+  "mockup-generator":      "social-media-design",
+  "sticker-designer":      "social-media-design",
+  "tshirt-merch":          "social-media-design",
+  "signage":               "flyer-design",
+  "greeting-card":         "social-media-design",
+  "invitation-designer":   "social-media-design",
+  "calendar-designer":     "social-media-design",
+
+  /* ── Document & Print Studio ────────────────────────── */
+  "resume-cv":             "resume-generation",
+  "cover-letter":          "resume-revision",
+  "sales-book-a5":         "sales-book-fill",
+  "invoice-designer":      "invoice-fill",
+  "proforma-invoice":      "invoice-fill",
+  "quote-estimate":        "invoice-fill",
+  "receipt-designer":      "invoice-fill",
+  "credit-note":           "invoice-fill",
+  "delivery-note":         "invoice-fill",
+  "purchase-order":        "invoice-fill",
+  "statement-of-account":  "invoice-fill",
+  "proposal-generator":    "sales-book-fill",
+  "certificate":           "invoice-fill",
+  "diploma-designer":      "invoice-fill",
+  "letterhead":            "business-card-design",
+  "envelope":              "business-card-design",
+  "id-badge":              "business-card-design",
+  "menu-designer":         "sales-book-fill",
+  "ticket-designer":       "invoice-fill",
+  "event-program":         "sales-book-fill",
+  "newsletter-print":      "sales-book-fill",
+  "company-profile":       "sales-book-fill",
+  "media-kit":             "sales-book-fill",
+  "price-list":            "invoice-fill",
+  "line-sheet":            "invoice-fill",
+  "product-catalog":       "brochure-design",
+  "lookbook":              "brochure-design",
+  "report-generator":      "sales-book-fill",
+  "business-plan":         "sales-book-fill",
+  "contract-template":     "sales-book-fill",
+  "employee-handbook":     "sales-book-fill",
+  "training-manual":       "sales-book-fill",
+  "user-guide":            "sales-book-fill",
+  "job-description":       "resume-revision",
+  "gift-voucher":          "invoice-fill",
+  "real-estate-listing":   "sales-book-fill",
+  "white-paper":           "sales-book-fill",
+  "case-study":            "sales-book-fill",
+  "portfolio-builder":     "brochure-design",
+
+  /* ── Video & Motion Studio ──────────────────────────── */
+  "text-to-video":         "video-generation",
+  "thumbnail-generator":   "social-media-design",
+  "subtitle-caption":      "audio-generation",
+  "gif-converter":         "chat-message",
+  "video-compressor":      "chat-message",
+  "motion-graphics":       "video-generation",
+
+  /* ── Audio & Voice Studio ───────────────────────────── */
+  "voice-cloning":         "audio-generation",
+  "audio-transcription":   "audio-generation",
+  "music-generator":       "audio-generation",
+  "podcast-editor":        "audio-generation",
+
+  /* ── Content Creation ───────────────────────────────── */
+  "social-caption":        "chat-message",
+  "email-campaign":        "email-campaign",
+  "seo-optimizer":         "seo-content",
+  "landing-page-copy":     "landing-page-copy",
+  "product-description":   "chat-message",
+  "video-script":          "chat-message",
+  "content-calendar":      "chat-message",
+  "ebook-creator":         "sales-book-fill",
+  "email-sequence":        "email-campaign",
+
+  /* ── Marketing & Sales ──────────────────────────────── */
+  "sales-funnel":          "sales-book-fill",
+  "lead-magnet":           "sales-book-fill",
+  "analytics-dashboard":   "chat-message",
+
+  /* ── Web & UI Design ────────────────────────────────── */
+  "wireframe-generator":   "social-media-design",
+  "ui-component-designer": "social-media-design",
+  "email-template":        "email-campaign",
+
+  /* ── Utilities (mostly free / low-cost) ─────────────── */
+  "ai-image-generator":    "logo-generation",
+  "image-enhancer":        "image-analysis",
+  "background-remover":    "image-analysis",
+  "color-palette":         "chat-message",
+  "photo-retoucher":       "image-analysis",
+  "presentation":          "presentation-design",
+};
+
+/**
+ * Get the credit cost for a tool by its tool ID.
+ * Returns the cost from the mapping, or 5 (default standard tier) if not mapped.
+ */
+export function getToolCreditCost(toolId: string): number {
+  const operation = TOOL_CREDIT_MAP[toolId];
+  if (!operation) return 5; // default for unmapped tools
+  return CREDIT_COSTS[operation] ?? 5;
+}

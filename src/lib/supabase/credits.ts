@@ -1,4 +1,7 @@
 import { createClient as createServerClient } from "./server";
+import { CREDIT_COSTS } from "@/data/credit-costs";
+
+export { CREDIT_COSTS };
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -13,26 +16,12 @@ function isConfigured(): boolean {
   return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 }
 
-/** Known credit costs per AI operation */
-const CREDIT_COSTS: Record<string, number> = {
-  "chat-message": 1,
-  "chiko-message": 1,
-  "resume-revision": 3,
-  "resume-generation": 5,
-  "business-card-design": 5,
-  "sales-book-fill": 3,
-  "invoice-fill": 3,
-  "image-analysis": 2,
-  "logo-generation": 5,
-  "file-parsing": 1,
-};
-
 /**
  * Get the credit cost for a given operation.
- * Returns 1 as default for unknown operations.
+ * Returns 5 as safe default for unknown operations.
  */
 export function getCreditCost(operation: string): number {
-  return CREDIT_COSTS[operation] ?? 1;
+  return CREDIT_COSTS[operation] ?? 5;
 }
 
 /**
