@@ -1,0 +1,2 @@
+﻿src/lib/chiko/extractors/field-detector.ts(260,145): error TS1501: This regular expression flag is only available when targeting 'es2018' or later.
+src/lib/chiko/extractors/field-detector.ts(261,58): error TS1501: This regular expression flag is only available when targeting 'es2018' or later.
