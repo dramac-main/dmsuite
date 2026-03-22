@@ -114,15 +114,22 @@ export async function deductCredits(
 
   const newBalance = profile.credits - cost;
 
-  // Update balance
-  const { error: updateError } = await supabase
+  // Update balance (optimistic concurrency: only update if credits haven't changed)
+  const { data: updated, error: updateError } = await supabase
     .from("profiles")
     .update({ credits: newBalance, updated_at: new Date().toISOString() })
     .eq("id", userId)
-    .eq("credits", profile.credits); // Optimistic concurrency check
+    .eq("credits", profile.credits) // Optimistic concurrency check
+    .select("id")
+    .maybeSingle();
 
   if (updateError) {
     return { success: false, newBalance: null, error: "Update failed — try again" };
+  }
+
+  // If no rows matched, another request changed the balance (race condition)
+  if (!updated) {
+    return { success: false, newBalance: null, error: "Concurrent update — try again" };
   }
 
   // Log the transaction

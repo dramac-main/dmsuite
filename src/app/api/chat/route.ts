@@ -32,13 +32,12 @@ Guidelines:
 - When asked to generate SVG logos, output clean valid SVG code directly.`;
 
 export async function POST(request: NextRequest) {
-  try {
-    // Auth & credit check
-    const user = await getAuthUser();
-    if (!user) {
-      return new Response("Unauthorized", { status: 401 });
-    }
+  const user = await getAuthUser();
+  if (!user) {
+    return new Response("Unauthorized", { status: 401 });
+  }
 
+  try {
     const creditCheck = await checkCredits(user.id, "chat-message");
     if (!creditCheck.allowed) {
       return new Response(
@@ -82,6 +81,7 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error("Chat API error:", error);
+    await refundCredits(user.id, 1, "Refund: AI Chat error");
     return new Response("Internal server error", { status: 500 });
   }
 }

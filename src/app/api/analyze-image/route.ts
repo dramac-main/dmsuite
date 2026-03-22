@@ -80,19 +80,65 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch the image and convert to base64 for Claude Vision
+    // Validate URL to prevent SSRF
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(imageUrl);
+    } catch {
+      return NextResponse.json({ error: "Invalid image URL" }, { status: 400 });
+    }
+
+    if (!["https:", "http:"].includes(parsedUrl.protocol)) {
+      await refundCredits(user.id, creditCheck.cost, "Refund: invalid URL protocol");
+      return NextResponse.json({ error: "Invalid URL protocol" }, { status: 400 });
+    }
+
+    // Block internal/private network access
+    const hostname = parsedUrl.hostname.toLowerCase();
+    if (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "0.0.0.0" ||
+      hostname.startsWith("10.") ||
+      hostname.startsWith("172.") ||
+      hostname.startsWith("192.168.") ||
+      hostname.endsWith(".internal") ||
+      hostname === "[::1]"
+    ) {
+      await refundCredits(user.id, creditCheck.cost, "Refund: blocked URL");
+      return NextResponse.json({ error: "Invalid image URL" }, { status: 400 });
+    }
+
+    // Fetch the image with timeout and size limit
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     const imageResponse = await fetch(imageUrl, {
       headers: { "User-Agent": "DMSuite/1.0" },
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
     if (!imageResponse.ok) {
+      await refundCredits(user.id, creditCheck.cost, "Refund: image fetch failed");
       return NextResponse.json(
         { error: "Failed to fetch image" },
         { status: 400 }
       );
     }
 
+    // Limit image size to 20MB
+    const contentLength = parseInt(imageResponse.headers.get("content-length") || "0");
+    if (contentLength > 20 * 1024 * 1024) {
+      await refundCredits(user.id, creditCheck.cost, "Refund: image too large");
+      return NextResponse.json({ error: "Image too large (max 20MB)" }, { status: 400 });
+    }
+
     const imageBuffer = await imageResponse.arrayBuffer();
+    if (imageBuffer.byteLength > 20 * 1024 * 1024) {
+      await refundCredits(user.id, creditCheck.cost, "Refund: image too large");
+      return NextResponse.json({ error: "Image too large (max 20MB)" }, { status: 400 });
+    }
     const base64Image = Buffer.from(imageBuffer).toString("base64");
     const contentType = imageResponse.headers.get("content-type") || "image/jpeg";
     const mediaType = contentType.startsWith("image/")
@@ -175,9 +221,10 @@ RULES:
     if (!analysisResponse.ok) {
       const errorText = await analysisResponse.text();
       console.error("Claude Vision API error:", analysisResponse.status, errorText);
+      await refundCredits(user.id, creditCheck.cost, "Refund: image analysis API error");
       return NextResponse.json(
         { error: "Image analysis failed" },
-        { status: 500 }
+        { status: 502 }
       );
     }
 

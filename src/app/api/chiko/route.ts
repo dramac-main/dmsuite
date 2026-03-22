@@ -61,6 +61,7 @@ function needsToolRegistry(messages: { role: string; content: string }[]): boole
 /* ── POST handler ────────────────────────────────────────── */
 
 export async function POST(request: NextRequest) {
+  let authedUserId: string | null = null;
   try {
     let body: Record<string, unknown>;
     try {
@@ -124,6 +125,7 @@ export async function POST(request: NextRequest) {
         headers: { "Content-Type": "application/json" },
       });
     }
+    authedUserId = user.id;
 
     const creditCheck = await checkCredits(user.id, "chiko-message");
     if (!creditCheck.allowed) {
@@ -298,6 +300,9 @@ Users may say "undo that", "go back", "revert the colors", etc. — use the log 
     return streamClaude(messages, systemPrompt, hasActions ? actions : undefined, hasWorkflow, validLogoImage);
   } catch (error) {
     console.error("Chiko API error:", error);
+    if (authedUserId) {
+      await refundCredits(authedUserId, 1, "Refund: Chiko AI error");
+    }
     return new Response("Internal server error", { status: 500 });
   }
 }

@@ -1,9 +1,9 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Session 108 — Infrastructure Setup & Production Deployment
+**Phase:** Session 108 — Infrastructure Setup & Production Deployment — COMPLETE ✅
 
-### Session 108: MCP Setup + Database + Vercel Deploy
+### Session 108: MCP Setup + Database + Vercel Deploy + Middleware Fix
 
 #### 1. MCP Servers Connected — COMPLETE ✅
 - `.vscode/mcp.json` — Supabase, Context7, Vercel (all 3 connected)
@@ -14,6 +14,7 @@
 - Ran `001_initial_schema.sql` on live Supabase (id: mbcehmofahrnscfpndkz)
 - Tables: profiles (9 cols), credit_transactions (9 cols), payments (11 cols)
 - RLS enabled + policies + triggers + indexes all verified
+- Test user created: drakemacchiko@gmail.com (50 credits, free plan)
 
 #### 3. Environment Variables — COMPLETE ✅
 - **Local (.env.local):** ANTHROPIC_API_KEY, Supabase URL/keys
@@ -22,82 +23,51 @@
 
 #### 4. Vercel Deployment — COMPLETE ✅
 - Build fix: wrapped useSearchParams in Suspense boundary (login + verify pages)
-- Commit: `c13b02c` — deployed successfully, all pages return 200
-- Production URL: https://dmsuite-iota.vercel.app
+- Middleware fix: API routes now pass through middleware (handle own auth)
+- 3 successful deploys: c13b02c (Suspense), 2143274 (middleware + cleanup)
+- Production URL: https://dmsuite-iota.vercel.app — All pages return 200
 
-#### 5. Supabase Auth URL Config — PENDING (user action required)
+#### 5. Middleware Bug Fix — COMPLETE ✅
+- **Bug:** API routes (POST /api/chat etc.) returned 405 because middleware redirected unauthenticated requests to /auth/login
+- **Fix:** Added `isApiRoute = pathname.startsWith("/api/")` to middleware passthrough
+- API routes handle their own auth via `getAuthUser()` → returns 401 for unauthenticated
+- Commit `2143274` deployed and verified: API returns 401 (not 405)
+
+#### 6. Repo Cleanup — COMPLETE ✅
+- Removed 8 tsc-*.txt temp files from git tracking
+- Added temp file patterns to .gitignore (tsc-*.txt, configure-auth.js)
+
+#### 7. Supabase Auth URL Config — NEEDS USER ACTION ⚠️
+- **Required:** Set SITE_URL and redirect URLs in Supabase dashboard
 - Dashboard: https://supabase.com/dashboard/project/mbcehmofahrnscfpndkz/auth/url-configuration
-- Site URL: https://dmsuite-iota.vercel.app
-- Redirect URLs: dmsuite-iota.vercel.app/**, *-drake-machikos-projects.vercel.app/**, localhost:3000/**
-- `useUser` returns dev profile (9999 credits, "pro" plan) without Supabase
-- Middleware passes through all requests in dev mode
-- Credit checks return `allowed: true` in dev mode
-- Auth helper returns mock user in dev mode
+- **Site URL:** `https://dmsuite-iota.vercel.app`
+- **Redirect URLs to add:**
+  - `https://dmsuite-iota.vercel.app/**`
+  - `https://*-drake-machikos-projects.vercel.app/**`
+  - `http://localhost:3000/**`
+- Without this, email confirmation/reset links will redirect to localhost:3000 (default)
+- Alternative: Run `configure-auth.js` with a Supabase PAT (script ready in project root)
 
-**Build Status: ✅ Zero TypeScript errors — Zero React Compiler warnings**
+### Infrastructure Reference
+- **Supabase Project:** dmsuite (id: mbcehmofahrnscfpndkz, region: eu-west-1)
+- **Supabase Org:** Dramac Marketing Agency (id: kxsatgtkuajawlvndntv)
+- **Vercel Project:** dmsuite (id: prj_FbmETalHp5CKGrh70DoGUt9FUFUz)
+- **Vercel User:** dramac-main (team: drake-machikos-projects)
+- **GitHub Repo:** dramac-main/dmsuite (id: 1159566441)
+- **Production URL:** https://dmsuite-iota.vercel.app
 
-### Implementation Plan Document
-- `PHASES/PRODUCTION-AUTH-PAYMENTS-PLAN.md` — Comprehensive 12-section blueprint covering auth architecture, DB schema, credit system, payment flow, security checklist, migration strategy
+### Dev-Mode Guards (when Supabase env vars not set)
+- `useUser` returns dev profile (9999 credits, "pro" plan)
+- Middleware passes through all requests
+- Credit checks return `allowed: true`
+- Auth helper returns mock user
 
 ### Next Steps
-- **Set up Supabase project** — Create project at supabase.com, run migration SQL, configure env vars
+- **Configure Supabase auth URLs** (user action — dashboard or PAT script)
+- **Re-add stock image API keys to Vercel** — UNSPLASH_ACCESS_KEY, PEXELS_API_KEY, PIXABAY_API_KEY, SHUTTERSTOCK_TOKEN
 - **Set up Flutterwave account** — Get API keys, configure webhook URL, test with sandbox
-- **Vercel deployment** — Connect repo, set env vars, deploy
-- **Test full auth flow** — Sign up → email verify → login → use credits → buy more
-- **Add credit checks to non-AI routes** — chiko/upload (file processing, low cost)
+- **Test full auth flow E2E** — Sign up → email verify → login → use credits → buy more
 - **Remaining business tools** — Cover Letter Writer, Proposal & Pitch Deck, Certificate Designer, Contract Creator
-- This completes the 5-layer Chiko architecture
-- After Layer 5 is built: remaining business tools (Cover Letter, Proposal, Certificate, Contract)
-   - `prefillCurrentTool` iterates registry.manifests to find active tool, maps profile fields via field-mapper, calls tool's update actions
-
-4. **Modified `src/lib/chiko/manifests/index.ts`** — Added barrel export for `createBusinessMemoryManifest`
-
-5. **Modified `src/lib/chiko/manifests/sales-book.ts`** — Added `prefillFromMemory` action + executeAction case (reads memory, maps 19 fields, calls `updateBranding`)
-
-6. **Modified `src/lib/chiko/manifests/invoice.ts`** — Added `prefillFromMemory` action + executeAction case (reads memory, maps business info + payment info, calls both update methods)
-
-7. **Modified `src/app/api/chiko/route.ts`** — Added `businessProfile` to request body, injects profile summary + 7 memory management instructions into system prompt
-
-8. **Modified `src/components/Chiko/ChikoAssistant.tsx`** — Imports, global manifest registration via useEffect (no cleanup), `businessProfile` summary in fetch payload via `describeProfileForAI()`
-
-**Build Status: ✅ Zero TypeScript errors on first pass (tsc --noEmit)**
-
-**Key Technical Decisions:**
-- No immer/temporal — simple key-value store doesn't need it
-- Privacy: `maskValue()` shows only `****last4` for bank account and tax ID in AI context
-- Global manifest: useEffect with no cleanup (always available, unlike tool manifests)
-- businessProfile sent as text summary string, never raw data or logo URIs
-- All mappers use `filterPopulated()` to exclude empty strings from output
-
-**Next Steps:**
-- Layer 5 (Full Agent Workflows) spec
-- Invoice renderer custom blocks integration (deferred from Layer 3)
-- Remaining business tools: Cover Letter Writer, Proposal & Pitch Deck, Certificate Designer, Contract Creator
-   - **Basic (always visible):** Bank name, Account holder, Account number, Branch
-   - **Advanced (behind toggle):** Branch code, Sort/routing code, SWIFT/BIC, IBAN, Reference, Custom field pair
-   - Toggle label: "More banking fields"
-
-4. **Form Layout Restructured** (SBSectionFormLayout):
-   - **Header Fields — Basic:** Date, Due Date, Recipient, Sender, P.O. Number
-   - **Header Fields — Advanced:** Custom Field 1/2 toggles + label inputs
-   - **Totals & Footer — Basic:** Subtotal, Total, Tax/VAT, Discount, Amount in Words, Signatures, Payment Info
-   - **Totals & Footer — Advanced:** Notes Area, Terms toggle + textarea, Custom Footer Text
-
-5. **Build Status: ✅ Zero TypeScript errors**
-
-**Completed Work (Session 83):**
-
-1. **Currency Position Fix** — Totals section completely rewritten:
-   - Changed from `display: "inline-block", textAlign: "right"` (currency at end)
-   - To `display: "inline-flex"` with currency `<span>` FIRST + flexible blank space
-   - All 4 totals rows fixed: subtotal, discount, tax/VAT, total
-   - Receipt amount box updated to use `getCurrencyLabel()`
-
-2. **Currency Display Options** — Symbol vs Code toggle:
-   - Schema: Added `currencyCode` (default "ZMW") and `currencyDisplay` ("symbol"|"code")
-   - `getCurrencyLabel()` helper respects display preference
-   - UI: Symbol/Code toggle buttons in SBSectionFormLayout
-   - Currency picker now shows ALL 16 currencies in 4-column grid
    - Each selection sets both `currencySymbol` and `currencyCode`
 
 3. **Banking Fields Expanded** — 3 → 11 fields:

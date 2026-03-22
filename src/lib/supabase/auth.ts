@@ -6,8 +6,12 @@ import { createClient } from "./server";
  * In dev mode (no Supabase configured), returns a mock user to avoid blocking AI routes.
  */
 export async function getAuthUser() {
-  // Dev mode: if Supabase isn't configured, return a mock user
+  // Dev mode: if Supabase isn't configured, return a mock user (NEVER in production)
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("CRITICAL: Supabase not configured in production!");
+      return null;
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return { id: "dev-user", email: "dev@dmsuite.app", user_metadata: { full_name: "Dev User" } } as any;
   }

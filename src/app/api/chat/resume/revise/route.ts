@@ -100,8 +100,9 @@ export async function POST(request: NextRequest) {
     if (!anthropicResponse || !anthropicResponse.ok) {
       const errText = anthropicResponse ? await anthropicResponse.text() : "no response";
       console.error("Anthropic API error:", errText);
+      await refundCredits(user.id, creditCheck.cost, "Refund: resume revision API error");
       return NextResponse.json(
-        { error: `Anthropic API error: ${anthropicResponse?.status}` },
+        { error: "AI service error — please try again" },
         { status: 502 }
       );
     }

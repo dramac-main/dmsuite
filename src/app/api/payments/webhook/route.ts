@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { addCredits } from "@/lib/supabase/credits";
+import { timingSafeEqual } from "crypto";
 
 /* ── POST /api/payments/webhook ────────────────────────────── */
 
@@ -11,11 +12,21 @@ import { addCredits } from "@/lib/supabase/credits";
  */
 export async function POST(request: Request) {
   try {
-    // 1. Verify webhook signature
+    // 1. Verify webhook signature (timing-safe to prevent brute-force)
     const secretHash = process.env.FLUTTERWAVE_SECRET_HASH;
     const signature = request.headers.get("verif-hash");
 
-    if (!secretHash || signature !== secretHash) {
+    if (!secretHash || !signature) {
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+
+    try {
+      const hashBuf = Buffer.from(secretHash, "utf8");
+      const sigBuf = Buffer.from(signature, "utf8");
+      if (hashBuf.length !== sigBuf.length || !timingSafeEqual(hashBuf, sigBuf)) {
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      }
+    } catch {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
@@ -94,13 +105,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Amount mismatch" }, { status: 400 });
     }
 
-    // 5. Update payment as successful
-    await supabase
+    // 5. Atomically update payment status (only if still pending, prevents double-processing race)
+    const { data: updatedPayment, error: updateError } = await supabase
       .from("payments")
       .update({ status: "successful", flw_tx_id: String(txId) })
-      .eq("id", payment.id);
+      .eq("id", payment.id)
+      .eq("status", "pending") // Atomic: only updates if still pending
+      .select("id")
+      .maybeSingle();
 
-    // 6. Add credits to user's account
+    if (updateError || !updatedPayment) {
+      // Already processed by a concurrent webhook, or update failed
+      return NextResponse.json({ status: "already processed" });
+    }
+
+    // 6. Add credits to user's account (only runs if update succeeded)
     await addCredits(
       payment.user_id,
       payment.credits_purchased,

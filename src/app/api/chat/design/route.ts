@@ -63,10 +63,8 @@ export async function POST(request: NextRequest) {
     if (!anthropicResponse.ok) {
       const errorText = await anthropicResponse.text();
       console.error("Anthropic design API error:", anthropicResponse.status, errorText);
-      return new Response(
-        `Anthropic API error: ${anthropicResponse.status} — ${errorText}`,
-        { status: anthropicResponse.status }
-      );
+      await refundCredits(user.id, creditCheck.cost, "Refund: design generation failed");
+      return new Response("AI service error — please try again", { status: 502 });
     }
 
     const result = await anthropicResponse.json();
