@@ -27,7 +27,9 @@ d:\dramac-ai-suite\
 │   │   ├── globals.css            # Tailwind v4 theme tokens
 │   │   ├── layout.tsx             # Root layout (fonts, ThemeProvider, SEO)
 │   │   ├── page.tsx               # Redirect → /dashboard
-│   │   ├── api/chat/route.ts      # Streaming Claude API proxy
+│   │   ├── api/chat/route.ts      # Streaming Claude API proxy (5 credits)
+│   │   ├── api/chiko/route.ts     # Chiko AI assistant (8 credits)
+│   │   ├── api/chat/resume/       # Resume AI routes (10-15 credits)
 │   │   ├── dashboard/page.tsx     # Hub dashboard
 │   │   └── tools/[categoryId]/[toolId]/page.tsx  # Tool workspace router
 │   ├── components/
@@ -66,6 +68,7 @@ d:\dramac-ai-suite\
 │   │   └── editor/                # vNext editor infrastructure
 │   └── data/
 │       ├── config/colors.ts        # JS color config
+│       ├── credit-costs.ts         # Credit pricing: costs, packs, tool mapping
 │       └── tools.ts                # 250+ tools, 8 categories, enhanced types
 ├── package.json
 ├── tsconfig.json

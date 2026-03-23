@@ -97,6 +97,8 @@ export { extractPdf } from "./pdf-extractor";
 export { extractDocx } from "./docx-extractor";
 export { extractXlsx } from "./xlsx-extractor";
 export { extractImage } from "./image-extractor";
+export { extractWebsite, validateUrl } from "./website-extractor";
+export type { ExtractedWebsiteData, WebsiteSection, WebsiteContact } from "./website-extractor";
 export { detectBusinessFields, buildFieldsSummary } from "./field-detector";
 export type { DetectedBusinessFields } from "./field-detector";
 

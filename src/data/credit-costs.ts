@@ -107,6 +107,7 @@ export const CREDIT_COSTS: Record<string, number> = {
   /* ── Micro tier ────────────────────────────────────────── */
   "chat-message":            5,
   "image-analysis":          5,
+  "website-scan":            5,
 
   /* ── Standard tier ─────────────────────────────────────── */
   "chiko-message":           8,

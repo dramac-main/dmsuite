@@ -54,6 +54,35 @@ const ALLOWED_TYPES = [
 ];
 const ACCEPT_STRING = ALLOWED_TYPES.join(",");
 
+/* ── Website scan helpers ──────────────────────────────── */
+/** Detect if user message implies Chiko should fetch info from a URL */
+const WEBSITE_SCAN_INTENT = /\b(?:scan|check|get|scrape|fetch|read|pull|extract|look\s*(?:at|up)|visit|analyze|use|grab)\b.*\b(?:website|site|web\s*page|url|link|page|details?|info(?:rmation)?|data|content)\b|\b(?:website|site|web\s*page|url|link|page|details?|info(?:rmation)?)\b.*\b(?:scan|check|get|scrape|fetch|read|pull|extract|look|visit|analyze|use|grab|from)\b|(?:from|off|on|at)\s+(?:my|our|the|this|their)?\s*(?:website|site|page)?\s*(?:https?:\/\/|[a-z0-9-]+\.(?:com|org|net|io|co|app|dev|zm|za))|(?:get|grab|pull|use|fetch)\s+(?:the\s+)?(?:details?|info(?:rmation)?|data|content)\s+(?:from|off|on|at)|(?:details?|info(?:rmation)?)\s+from/i;
+
+/** Extract the first plausible URL from a message */
+function extractUrlFromMessage(text: string): string | null {
+  // Match explicit URLs (with protocol)
+  const explicitUrl = text.match(/https?:\/\/[^\s<>"'`,;)}\]]+/i);
+  if (explicitUrl) return explicitUrl[0];
+
+  // Match domain patterns like example.com, my-site.co.zm, dramacagency.com
+  const domainPattern = text.match(/\b([a-zA-Z0-9][-a-zA-Z0-9]*\.(?:com|org|net|io|co|co\.\w{2,3}|app|dev|me|info|biz|store|shop|online|site|tech|agency|studio|design|zm|za|ke|ug|tz|ng|uk|us|ca|au|in|de|fr)(?:\/[^\s<>"'`,;)}\]]*)?)\b/i);
+  if (domainPattern) return domainPattern[1];
+
+  return null;
+}
+
+/** Check if a user message is a website scan request */
+function isWebsiteScanRequest(text: string): boolean {
+  const url = extractUrlFromMessage(text);
+  if (!url) return false;
+  // If an explicit intent phrase is present, always scan
+  if (WEBSITE_SCAN_INTENT.test(text)) return true;
+  // If a bare domain/URL appears alongside action verbs like "create", "make", "build",
+  // "design", "prepare", or "check/scan/look at" — the user wants Chiko to use the site
+  if (/\b(?:create|make|build|design|prepare|generate|draft|write|fill|populate|use|check|scan|look|visit|analyze)\b/i.test(text)) return true;
+  return false;
+}
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
@@ -396,9 +425,12 @@ export function ChikoAssistant() {
     clearAttachments,
     lastFileContext,
     setLastFileContext,
+    lastWebsiteContext,
+    setLastWebsiteContext,
   } = useChikoStore();
 
   const [slashResults, setSlashResults] = useState<{ label: string; path: string }[]>([]);
+  const [websiteScanning, setWebsiteScanning] = useState(false);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [chikoExpression, setChikoExpression] = useState<ChikoExpression>("idle");
   const [pendingAction, setPendingAction] = useState<{ action: string; params: Record<string, unknown> } | null>(null);
@@ -597,7 +629,7 @@ export function ChikoAssistant() {
 
   // ── Track Chiko's expression based on state ──────────────
   useEffect(() => {
-    if (isGenerating) {
+    if (isGenerating || websiteScanning) {
       setChikoExpression("thinking");
     } else if (messages.length === 0) {
       setChikoExpression("greeting");
@@ -611,7 +643,7 @@ export function ChikoAssistant() {
       }
       setChikoExpression("listening");
     }
-  }, [isGenerating, messages]);
+  }, [isGenerating, websiteScanning, messages]);
 
   // ── Slash command autocomplete ───────────────────────────
   useEffect(() => {
@@ -1065,6 +1097,69 @@ export function ChikoAssistant() {
         .map((a) => ({ fileName: a.fileName, mimeType: a.mimeType, thumbnail: a.thumbnail }));
 
       addMessage({ role: "user", content: text, ...(fileSnap.length > 0 ? { files: fileSnap } : {}) });
+
+      // ── Website scan detection ──
+      // If the user mentions a URL and asks to get details/scan, fetch the website first
+      let freshWebsiteContext: Record<string, unknown> | undefined;
+      if (isWebsiteScanRequest(text)) {
+        const detectedUrl = extractUrlFromMessage(text);
+        if (detectedUrl) {
+          addMessage({ role: "assistant", content: "🌐 Scanning website… Hold tight, I'm reading the site now." });
+          setWebsiteScanning(true);
+          try {
+            const fullUrl = detectedUrl.startsWith("http") ? detectedUrl : `https://${detectedUrl}`;
+            const scanRes = await fetch("/api/chiko/scan-website", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ url: fullUrl }),
+            });
+            if (scanRes.status === 401) {
+              updateLastAssistantMessage("You need to be signed in for me to scan websites. Please log in and try again.");
+              setWebsiteScanning(false);
+              return;
+            }
+            if (scanRes.status === 402) {
+              const { handleCreditError } = await import("@/lib/credit-error");
+              updateLastAssistantMessage(handleCreditError());
+              setWebsiteScanning(false);
+              return;
+            }
+            if (!scanRes.ok) {
+              const errData = await scanRes.json().catch(() => ({}));
+              updateLastAssistantMessage(`⚠️ I couldn't scan that website: ${(errData as Record<string, string>).error || "unknown error"}. You can paste the info manually and I'll still help!`);
+              setWebsiteScanning(false);
+              return;
+            }
+            const scanData = await scanRes.json();
+            if (scanData.success && scanData.data) {
+              freshWebsiteContext = scanData.data as Record<string, unknown>;
+              setLastWebsiteContext(freshWebsiteContext);
+              // Replace the "Scanning…" message with a summary
+              const d = scanData.data;
+              const summaryParts: string[] = [`✅ **Website scanned successfully!**`];
+              if (d.title) summaryParts.push(`**${d.title}**`);
+              if (d.description) summaryParts.push(d.description);
+              if (d.contact?.emails?.length) summaryParts.push(`📧 ${d.contact.emails.join(", ")}`);
+              if (d.contact?.phones?.length) summaryParts.push(`📞 ${d.contact.phones.join(", ")}`);
+              if (d.socialLinks && Object.keys(d.socialLinks).length > 0)
+                summaryParts.push(`🔗 Social: ${Object.keys(d.socialLinks).join(", ")}`);
+              summaryParts.push("\nNow let me use this info to help you…");
+              updateLastAssistantMessage(summaryParts.join("\n"));
+            } else {
+              updateLastAssistantMessage("⚠️ The scan returned no usable data. Try pasting the details manually.");
+              setWebsiteScanning(false);
+              return;
+            }
+          } catch (err) {
+            updateLastAssistantMessage("⚠️ Something went wrong while scanning the website. Please try again.");
+            setWebsiteScanning(false);
+            return;
+          } finally {
+            setWebsiteScanning(false);
+          }
+        }
+      }
+
       addMessage({ role: "assistant", content: "" });
       setIsGenerating(true);
 
@@ -1131,6 +1226,9 @@ export function ChikoAssistant() {
           fileContext = lastFileContext as Record<string, unknown>;
         }
 
+        // Build websiteContext from fresh scan or persisted context
+        const websiteContext = freshWebsiteContext || (lastWebsiteContext as Record<string, unknown> | null) || undefined;
+
         // Build business profile summary for system prompt injection
         const memoryState = useBusinessMemory.getState();
         const profileSummary = memoryState.hasProfile
@@ -1170,6 +1268,7 @@ export function ChikoAssistant() {
             context,
             ...(hasTools ? { actions: actionDescriptors, toolState } : {}),
             ...(fileContext ? { fileContext } : {}),
+            ...(websiteContext ? { websiteContext } : {}),
             ...(profileSummary ? { businessProfile: profileSummary } : {}),
             ...(workflowContext ? { workflowContext } : {}),
             ...(logoImage ? { logoImage } : {}),
@@ -1468,6 +1567,7 @@ export function ChikoAssistant() {
               context,
               ...(freshHasTools ? { actions: freshDescriptors, toolState: freshToolState } : {}),
               ...(fileContext ? { fileContext } : {}),
+              ...(websiteContext ? { websiteContext } : {}),
               ...(profileSummary ? { businessProfile: profileSummary } : {}),
               ...(workflowContext ? { workflowContext } : {}),
             }),
@@ -1656,7 +1756,7 @@ export function ChikoAssistant() {
                   <span className="hidden rounded-full bg-secondary-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-secondary-400 sm:inline-flex">
                     AI Assistant
                   </span>
-                  {isGenerating && (
+                  {(isGenerating || websiteScanning) && (
                     <motion.div
                       className="h-1.5 w-1.5 rounded-full bg-primary-400"
                       animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
@@ -1665,11 +1765,13 @@ export function ChikoAssistant() {
                   )}
                 </div>
                 <p className="truncate text-xs text-gray-400">
-                  {isGenerating
-                    ? attachments.some((a) => a.status === "ready")
-                      ? "Analyzing your file…"
-                      : "Thinking…"
-                    : "Your personal creative companion"}
+                  {websiteScanning
+                    ? "Scanning website…"
+                    : isGenerating
+                      ? attachments.some((a) => a.status === "ready")
+                        ? "Analyzing your file…"
+                        : "Thinking…"
+                      : "Your personal creative companion"}
                 </p>
               </div>
 
@@ -2079,7 +2181,7 @@ export function ChikoAssistant() {
                 />
                 <button
                   onClick={() => sendMessage()}
-                  disabled={(!inputDraft.trim() && !attachments.some((a) => a.status === "ready")) || isGenerating}
+                  disabled={(!inputDraft.trim() && !attachments.some((a) => a.status === "ready")) || isGenerating || websiteScanning}
                   className={cn(
                     "mb-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all",
                     "bg-primary-500 text-gray-950",

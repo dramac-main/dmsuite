@@ -26,6 +26,7 @@ Warm, witty, confident. Casual ("Hey!", "Great question!"). Concise — no walls
 2. **Tool Control** — When actions are available, call functions directly instead of describing manual steps.
 3. **Creative Help** — Brainstorm, write copy, suggest approaches.
 4. **Workflow** — Multi-tool project guidance.
+5. **Website Scanning** — You CAN fetch and read live websites! When a user provides a URL or domain name (e.g. "dramacagency.com"), the system automatically scans it BEFORE your response and injects the extracted data into your context. You will see the data under "## Scanned Website Data". NEVER say you cannot browse or access websites — the platform handles this for you. If website data appears in your context, USE it immediately. If the user mentions a website but no scan data appears, ask them to share the URL again with a phrase like "get the details from [url]".
 
 ## Response Rules
 - Markdown formatting. Under 200 words unless complex.
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
     } catch {
       return new Response("Invalid JSON in request body", { status: 400 });
     }
-    const { messages, context, actions, toolState, fileContext, businessProfile, workflowContext, logoImage, logoColors } = body as {
+    const { messages, context, actions, toolState, fileContext, websiteContext, businessProfile, workflowContext, logoImage, logoColors } = body as {
       messages: { role: string; content: string }[];
       context?: {
         currentPath?: string;
@@ -90,6 +91,18 @@ export async function POST(request: NextRequest) {
         images?: { name: string; width: number; height: number; mimeType: string }[];
         documentFonts?: string[];
         documentColors?: string[];
+      };
+      websiteContext?: {
+        url: string;
+        title: string;
+        description: string;
+        text?: string;
+        detectedFields?: Record<string, string>;
+        contact?: { emails: string[]; phones: string[]; addresses: string[] };
+        socialLinks?: Record<string, string>;
+        brandColors?: string[];
+        sections?: { heading: string; content: string }[];
+        summary: string;
       };
       businessProfile?: string;
       workflowContext?: string;
@@ -232,6 +245,57 @@ You have the FULL document content above. You MUST:
 5. **For images in the file:** set as company logo using "__ATTACHED_IMAGE_0__" placeholder.
 6. **Only ask clarifying questions for info that is genuinely NOT in the file.**
 7. If no tool actions are available yet (e.g. on dashboard), navigate to the right tool first.`;
+    }
+
+    // ── Inject website scan context when available ──
+    if (websiteContext && typeof websiteContext === "object") {
+      systemPrompt += `\n\n## Scanned Website Data
+The user's website has been scanned. Here are the extracted details:
+
+**URL:** ${websiteContext.url}
+**Title:** ${websiteContext.title || "N/A"}
+**Description:** ${websiteContext.description || "N/A"}
+**Summary:** ${websiteContext.summary}`;
+
+      if (websiteContext.detectedFields && Object.keys(websiteContext.detectedFields).length > 0) {
+        systemPrompt += `\n\n### Detected Business Fields\n${JSON.stringify(websiteContext.detectedFields, null, 2)}`;
+      }
+
+      if (websiteContext.contact) {
+        const c = websiteContext.contact;
+        if (c.emails?.length > 0) systemPrompt += `\n\n**Emails:** ${c.emails.join(", ")}`;
+        if (c.phones?.length > 0) systemPrompt += `\n**Phones:** ${c.phones.join(", ")}`;
+        if (c.addresses?.length > 0) systemPrompt += `\n**Addresses:** ${c.addresses.join("; ")}`;
+      }
+
+      if (websiteContext.socialLinks && Object.keys(websiteContext.socialLinks).length > 0) {
+        systemPrompt += `\n\n### Social Links\n${Object.entries(websiteContext.socialLinks).map(([k, v]) => `- ${k}: ${v}`).join("\n")}`;
+      }
+
+      if (websiteContext.brandColors && websiteContext.brandColors.length > 0) {
+        systemPrompt += `\n\n### Brand Colors (from website)\nThe following colors are used on the website (most prominent first): ${websiteContext.brandColors.join(", ")}\nUse the FIRST color as the accent color for any designs. These are real brand colors extracted from the website — use them directly.`;
+      }
+
+      if (websiteContext.sections && websiteContext.sections.length > 0) {
+        systemPrompt += `\n\n### Website Sections`;
+        for (const sec of websiteContext.sections.slice(0, 10)) {
+          systemPrompt += `\n**${sec.heading}:** ${sec.content.slice(0, 200)}`;
+        }
+      }
+
+      if (websiteContext.text && websiteContext.text.length > 0) {
+        systemPrompt += `\n\n### Full Website Text\n\`\`\`\n${websiteContext.text.slice(0, 4000)}\n\`\`\``;
+      }
+
+      systemPrompt += `\n\n### CRITICAL: Website-Aware Design Rules
+You have the FULL website data above. You MUST:
+1. **Use ALL extracted data directly** — company name, emails, phones, addresses, social links from the website. Do NOT ask for info that's already extracted.
+2. **Use the brand colors** — if brand colors were extracted, use the FIRST (most prominent) as the accent color. These are the ACTUAL colors from their website.
+3. **Match the brand identity** — use the website description, sections, and title to understand the business and choose appropriate templates, fonts, and design tone.
+4. **Include social links** where relevant (business cards, invoices, letterheads).
+5. **Pre-fill everything possible** — company name, tagline (from description), contact details, website URL, all from the scan data.
+6. **Offer to save to Business Memory** — after filling in, suggest saving these details for future use.
+7. If no tool actions are available (e.g. on dashboard), ask what the user wants to create and navigate there.`;
     }
 
     // ── Inject active workflow context when present ──

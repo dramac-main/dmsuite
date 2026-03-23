@@ -1,12 +1,58 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 99/197 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Business Card Wizard COMPLETE ✅ — Resume & CV Builder V2 COMPLETE ✅ (all 15 steps) — Resume Editor UX Overhauled ✅ — Editor Panel Layout Fixed ✅ — Editor UX Restructured (Session 56) ✅ — Fonts Fixed ✅ — Auto-Pagination Engine ✅ — Export System Rewritten ✅ — Undo Fixed ✅ — Editor UX Polished (Session 58) ✅ — 20 Pro Resume Templates (Session 59) ✅ — Template CSS Injection (Session 60) ✅ — Template JSX/CSS Alignment (Session 61-62) ✅ — Smart Page-Breaks V8 + Full Section Coverage (Session 63-65) ✅ — Skills Rendering + Page-Break Overlap Fix (Session 66) ✅ — AI Resume Parsing Fix (Session 67) ✅ — Chiko AI Personal Assistant (Session 68) ✅ — Chiko Enhancement: Onboarding + Auto-Launcher + Mobile (Session 69) ✅ — Chiko 3D Character: Life-Like Robot Avatar (Session 70) ✅ — Design System Centralized ✅ — Hover-to-Expand Sidebar ✅ — Sales Book Blank Form Designer ✅ (Sessions 76-77) — Complete rebuild, finalized, orphaned V2 deleted — Sales Book Split-Screen UX Overhaul ✅ (Session 78) — Sales Book Document-Type-Specific Renderers ✅ (Session 79) — Receipt line-based layout, type-specific fields — Sales Book Print-Quality Rebuild + A5 Support 🔄 (Session 80) — Renderer v3, A5 page format, A4/A5 routing — Activity Log + Color Persistence ✅ (Session 101) — Logo Color Matching Fix ✅ (Session 102) — File Context Persistence Fix ✅ (Session 103) — Chiko Brand Intelligence Upgrade ✅ (Session 104) — Document Font/Color Extraction ✅ (Session 105) — Workflow Rewrite + Separator Fix ✅ (Session 106) — Auth + Payments + Credits ✅ (Session 107) — Infrastructure + Deploy + Middleware Fix ✅ (Session 108)
+## Overall Status: 99/197 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — Chiko Website Scanning ✅
 
 ---
 
-## Current Work: Infrastructure Deployed — Production LIVE ✅
+## Current Work: Airtel Money Integration — SPEC COMPLETE, BLOCKED ON SANDBOX CREDS
 
-### Session 108 — MCP Setup + Database + Vercel Deploy + Middleware Fix
+### Session 112 — Chiko Website Scanning Feature
+- [x] **Deep platform scan** — Read all memory bank files + all 5 Chiko layer specs + all implementation files
+- [x] **Chiko architecture analysis** — Full 5-layer agent system understood end-to-end
+- [x] **Website extractor** — `src/lib/chiko/extractors/website-extractor.ts` (~500 lines, SSRF-protected, HTML scraping, contact/social/color extraction)
+- [x] **Scan API route** — `src/app/api/chiko/scan-website/route.ts` (auth + credits + error handling)
+- [x] **Credit cost** — `website-scan: 5` added to credit-costs.ts
+- [x] **Extractors barrel** — website-extractor exports added to index.ts
+- [x] **Chiko API integration** — `websiteContext` body param + 60-line system prompt injection with 7-point design rules
+- [x] **Chiko store** — `lastWebsiteContext` state/setter/persistence/clear
+- [x] **ChikoAssistant.tsx** — Full client integration (URL detection, scan flow in sendMessage, API payload, continuation payload, UI indicators)
+- [x] **TypeScript build** — Zero errors confirmed
+
+### Session 111 — Profile Fix + Airtel Money Deep Research + API Docs Download
+- [x] **Profile loading loop fix** — Complete useUser.tsx rewrite (commit `1ae6f2c`, pushed)
+- [x] **100 credits added** — Test user now has 105 credits
+- [x] **Airtel Money research** — Created `PHASES/AIRTEL-MONEY-ZAMBIA-INTEGRATION.md`
+- [x] **Official API docs downloaded** — `airtel-zambia-full-api-docs (3).json` (705KB, 13 sections)
+  - Downloaded from Angular SPA at developers.airtel.co.zm via XHR interceptor
+  - All 13 sections: Collection, Disbursement, Cash-In/Out, KYC, Account, Remittance, TopUp, ATM, Authorization, Encryption, Error Codes
+- [x] **Integration spec updated with real API data** — Key corrections from official docs:
+  - Base URLs: `.airtel.co.zm` (NOT `.airtel.africa` which is deprecated by 2026-03-15)
+  - Token expiry: **180 seconds** (NOT 1 hour!)
+  - Collection endpoint: `/merchant/v1/payments/` (v1, NOT v2)
+  - Message signing **MANDATORY for Zambia** (AES-256-CBC + RSA)
+  - Callback HMAC authentication available (HmacSHA256 + Base64)
+  - RSA Encryption Keys API: `GET /v1/rsa/encryption-keys`
+  - Transaction Enquiry: wait 3+ minutes before polling
+  - Complete error code catalog (ROUTER*, ESB*, DP008*, HTTP)
+  - Transaction statuses: TS, TF, TA, TIP, **TE** (Expired — was missing)
+- [ ] **BLOCKED:** Need user to register at developers.airtel.co.zm and get sandbox credentials
+
+### Session 110 — PDF Fix + Credits + Auth + Account + Context Provider + Token Economics
+- [x] **PDF parsing fix** — unpdf@1.4.0 (commit `3beee48`)
+- [x] **Real-time credits + auth gates + persistence** — (commit `fc7c8da`)
+- [x] **Account system** — Profile, password, credit history, deletion (commit `165c578`)
+- [x] **Context Provider** — useUser hook → UserProvider context (commit `156e33f`)
+- [x] **Token-aligned credit system** — (commit `447b11d`):
+  - MODEL_PRICING (7 models), computeApiCost(), computeTokenCredits()
+  - CREDIT_VALUE_USD = $0.0093, all costs recalibrated at 100% margin
+  - DB migration 003: token tracking columns on credit_transactions (LIVE)
+  - deductCredits() with TokenUsage, logTokenUsage() for streaming
+  - 6 non-streaming routes: deduct AFTER success with token data
+  - 2 streaming routes: capture tokens from SSE events
+  - Centralized 402 handling: openCreditPurchase() global event
+  - 6 client components updated with purchase modal on credit error
+
+### Previous: Session 108 — MCP Setup + Database + Vercel Deploy + Middleware Fix
 - [x] **MCP Servers** — Supabase, Context7, Vercel all connected in `.vscode/mcp.json`
 - [x] **Database migration** — profiles, credit_transactions, payments tables + RLS + triggers on live Supabase
 - [x] **Test user** — drakemacchiko@gmail.com created with 50 credits (profile auto-creation trigger verified)
@@ -15,8 +61,6 @@
 - [x] **Middleware fix** — API routes now pass through middleware (was causing 405 on POST requests)
 - [x] **Repo cleanup** — Removed 8 tsc-*.txt temp files, added patterns to .gitignore
 - [x] **3 successful deploys** — All pages return 200, API returns 401 for unauthenticated requests
-- [ ] **Supabase auth URL config** — Needs user action (dashboard or PAT script) for email confirmation/reset links
-- [ ] **Stock image API keys** — Lost during vercel link overwrite, need re-adding to Vercel
 
 ### Previous: Workflow Fix + Icon Fallback + Font/Color Extraction — COMPLETE ✅
 

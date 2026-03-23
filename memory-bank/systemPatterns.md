@@ -50,6 +50,32 @@
 - Asset banks have ZERO dependencies on other modules (no circular imports)
 - All workspaces and AI engines consume asset banks via simple imports
 
+### 2c. Credit Pricing Architecture
+```
+src/data/credit-costs.ts — Single Source of Truth (client-safe)
+  ├── CREDIT_COSTS: Record<string, number>  — operation → credits mapping
+  ├── CREDIT_PACKS: { name, credits, priceZMW, priceLabel }[]  — 4 packs
+  ├── TOOL_CREDIT_MAP: Record<string, string>  — 95+ toolId → operation key
+  ├── getCreditCostClient(operation) — safe lookup with fallback
+  └── getToolCreditCost(toolId) — toolId → cost via TOOL_CREDIT_MAP → CREDIT_COSTS
+
+src/lib/supabase/credits.ts — Server-side credit operations
+  ├── Imports CREDIT_COSTS from credit-costs.ts (re-exports)
+  ├── getCreditCost(operation) — server-side lookup
+  ├── checkCredits(userId, operation) — balance check
+  ├── deductCredits(userId, amount, operation, desc) — DB deduction
+  ├── addCredits(userId, amount, desc) — purchase/bonus
+  └── refundCredits(userId, amount, operation, desc) — failure refund
+
+Pricing Model:
+  ├── 3x markup over API costs → ≥60% gross margin
+  ├── Pack tiers: Starter K49/100cr, Popular K199/500cr, Pro K499/1500cr, Agency K1299/5000cr
+  ├── Credit value range: K0.49/cr (Starter) → K0.26/cr (Agency)
+  └── Default signup: 50 credits (enough for ~10 chats or 1 business card)
+
+Key Rule: Refund ACTUAL cost on failure, never hardcode amounts
+```
+
 ### 3. Client Component Strategy
 - All interactive components use `"use client"` directive
 - Local config state per workspace via `useState<XxxConfig>()` — workspace-specific settings

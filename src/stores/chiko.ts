@@ -83,6 +83,8 @@ interface ChikoState {
   attachments: ChikoFileAttachment[];
   /** Last uploaded file context — persists after attachments are cleared so Chiko remembers it */
   lastFileContext: Record<string, unknown> | null;
+  /** Last scanned website context — persists across messages so Chiko remembers it */
+  lastWebsiteContext: Record<string, unknown> | null;
 
   /* ── Actions ──────────────────────────────────────────── */
   open: () => void;
@@ -109,6 +111,8 @@ interface ChikoState {
   clearAttachments: () => void;
   /** Store file context from the most recent upload */
   setLastFileContext: (ctx: Record<string, unknown> | null) => void;
+  /** Store website context from the most recent website scan */
+  setLastWebsiteContext: (ctx: Record<string, unknown> | null) => void;
 }
 
 function generateId(): string {
@@ -128,6 +132,7 @@ export const useChikoStore = create<ChikoState>()(
       isMinimized: false,
       attachments: [],
       lastFileContext: null,
+      lastWebsiteContext: null,
 
       open: () => set({ isOpen: true, isMinimized: false, hasNotification: false }),
       close: () => set({ isOpen: false, isMinimized: false }),
@@ -177,7 +182,7 @@ export const useChikoStore = create<ChikoState>()(
       setHasGreeted: (v) => set({ hasGreeted: v }),
       setHasNotification: (v) => set({ hasNotification: v }),
 
-      clearMessages: () => set({ messages: [], hasGreeted: false, lastFileContext: null }),
+      clearMessages: () => set({ messages: [], hasGreeted: false, lastFileContext: null, lastWebsiteContext: null }),
       clearAll: () =>
         set({
           isOpen: false,
@@ -189,6 +194,7 @@ export const useChikoStore = create<ChikoState>()(
           isMinimized: false,
           attachments: [],
           lastFileContext: null,
+          lastWebsiteContext: null,
         }),
 
       addAttachment: (file) => {
@@ -223,6 +229,7 @@ export const useChikoStore = create<ChikoState>()(
 
       clearAttachments: () => set({ attachments: [] }),
       setLastFileContext: (ctx) => set({ lastFileContext: ctx }),
+      setLastWebsiteContext: (ctx) => set({ lastWebsiteContext: ctx }),
     }),
     {
       name: "dmsuite-chiko",
@@ -231,6 +238,7 @@ export const useChikoStore = create<ChikoState>()(
         hasGreeted: state.hasGreeted,
         context: state.context,
         lastFileContext: state.lastFileContext,
+        lastWebsiteContext: state.lastWebsiteContext,
       }),
     }
   )

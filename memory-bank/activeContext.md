@@ -1,60 +1,163 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Session 108 — Infrastructure Setup & Production Deployment — COMPLETE ✅
+**Phase:** Session 112 — Chiko Website Scanning Feature — COMPLETE ✅
 
-### Session 108: MCP Setup + Database + Vercel Deploy + Middleware Fix
+### Session 112: Chiko Website Scanning — Scrape & Extract Business Data from URLs
 
-#### 1. MCP Servers Connected — COMPLETE ✅
-- `.vscode/mcp.json` — Supabase, Context7, Vercel (all 3 connected)
-- Fixed fnm PATH issue: uses absolute paths to node.exe + npx-cli.js
-- Vercel MCP needs VERCEL_API_KEY as CLI arg (not env var)
+#### Feature: Website Scanning for Chiko AI Assistant — COMPLETE ✅
+Gave Chiko the ability to scan any website URL when a user says "Get the details from my website" (or similar). Chiko fetches the page, extracts structured business data, and uses it to auto-fill design tools (quotations, invoices, sales books, etc.).
 
-#### 2. Database Migration — COMPLETE ✅
-- Ran `001_initial_schema.sql` on live Supabase (id: mbcehmofahrnscfpndkz)
-- Tables: profiles (9 cols), credit_transactions (9 cols), payments (11 cols)
-- RLS enabled + policies + triggers + indexes all verified
-- Test user created: drakemacchiko@gmail.com (50 credits, free plan)
+#### Bug Fix: Scan Not Triggering — COMPLETE ✅
+- **Root cause:** Intent regex required words like "website/site" in the message, but users say "get the details from dramacagency.com" (no "website" word). Also, the system prompt didn't tell Claude it CAN scan, so Claude defaulted to "I can't browse websites."
+- **Fix 1:** Broadened `isWebsiteScanRequest()` — now also triggers when a URL appears alongside task verbs like "create", "make", "build", "check", "scan", "design" etc.
+- **Fix 2:** Added `5. **Website Scanning**` to the `## Capabilities` section of `CHIKO_SYSTEM_PROMPT` — tells Claude the platform auto-scans URLs and it should NEVER say it can't browse websites.
+- **Fix 3:** Added fallback instruction — if no scan data appears, Claude asks user to share URL again.
 
-#### 3. Environment Variables — COMPLETE ✅
-- **Local (.env.local):** ANTHROPIC_API_KEY, Supabase URL/keys
-- **Vercel (all environments):** ANTHROPIC_API_KEY, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
-- Stock image API keys lost during `vercel link` overwrite — need re-adding
+**New Files Created:**
+- `src/lib/chiko/extractors/website-extractor.ts` (~500 lines) — Server-side HTML scraper
+  - SSRF protection (blocks localhost, private IPs, AWS metadata, .local/.internal domains)
+  - Extracts: title, description, OG image, favicon, visible text (6000 char cap)
+  - Structured sections (h1-h3 with content), contact info (emails, phones, addresses via regex)
+  - Social links (7 platforms), brand colors (meta theme-color, CSS vars, inline styles)
+  - Business field detection via field-detector integration
+  - No external dependencies — uses built-in Node.js fetch + regex HTML parsing
+- `src/app/api/chiko/scan-website/route.ts` (~100 lines) — POST endpoint
+  - Auth-gated via `getAuthUser()`, credit-metered at 5 credits (Micro tier)
+  - Validates URL server-side, refunds credits on extraction failure
 
-#### 4. Vercel Deployment — COMPLETE ✅
-- Build fix: wrapped useSearchParams in Suspense boundary (login + verify pages)
-- Middleware fix: API routes now pass through middleware (handle own auth)
-- 3 successful deploys: c13b02c (Suspense), 2143274 (middleware + cleanup)
-- Production URL: https://dmsuite-iota.vercel.app — All pages return 200
+**Files Modified:**
+- `src/lib/chiko/extractors/index.ts` — Added website extractor + type exports
+- `src/data/credit-costs.ts` — Added `"website-scan": 5` (Micro tier)
+- `src/app/api/chiko/route.ts` — Added `websiteContext` body param + comprehensive system prompt injection (~60 lines) with 7-point "Website-Aware Design Rules"
+- `src/stores/chiko.ts` — Added `lastWebsiteContext` state + setter + persistence + clear-on-reset
+- `src/components/Chiko/ChikoAssistant.tsx` — Full client-side integration:
+  - URL detection helpers: `WEBSITE_SCAN_INTENT` regex, `extractUrlFromMessage()`, `isWebsiteScanRequest()`
+  - Inline website scan in `sendMessage()` flow — detects scan intent, calls API, shows progress, stores result
+  - `websiteContext` passed to both main API payload and auto-continuation payload
+  - UI: header shows "Scanning website…", pulsing indicator, Chiko expression set to "thinking", send button disabled during scan
+  - Scan summary displayed in chat (title, description, emails, phones, social links)
 
-#### 5. Middleware Bug Fix — COMPLETE ✅
-- **Bug:** API routes (POST /api/chat etc.) returned 405 because middleware redirected unauthenticated requests to /auth/login
-- **Fix:** Added `isApiRoute = pathname.startsWith("/api/")` to middleware passthrough
-- API routes handle their own auth via `getAuthUser()` → returns 401 for unauthenticated
-- Commit `2143274` deployed and verified: API returns 401 (not 405)
+**How it works (user flow):**
+1. User types: "Get the details from my website https://example.com" or "Scan mysite.co.zm and make a quotation"
+2. Chiko detects URL + scan intent → calls `/api/chiko/scan-website`
+3. Server fetches URL, extracts data, returns structured `ExtractedWebsiteData`
+4. Client shows scan summary in chat, stores context via `setLastWebsiteContext()`
+5. Chiko API receives `websiteContext` in next request → system prompt includes all extracted data
+6. AI uses website data to auto-fill business fields, brand colors, contact info in any design tool
+7. `lastWebsiteContext` persists in Zustand store — Chiko remembers the website across follow-up messages
 
-#### 6. Repo Cleanup — COMPLETE ✅
-- Removed 8 tsc-*.txt temp files from git tracking
-- Added temp file patterns to .gitignore (tsc-*.txt, configure-auth.js)
+---
 
-#### 7. Supabase Auth URL Config — NEEDS USER ACTION ⚠️
-- **Required:** Set SITE_URL and redirect URLs in Supabase dashboard
-- Dashboard: https://supabase.com/dashboard/project/mbcehmofahrnscfpndkz/auth/url-configuration
-- **Site URL:** `https://dmsuite-iota.vercel.app`
-- **Redirect URLs to add:**
-  - `https://dmsuite-iota.vercel.app/**`
-  - `https://*-drake-machikos-projects.vercel.app/**`
-  - `http://localhost:3000/**`
-- Without this, email confirmation/reset links will redirect to localhost:3000 (default)
-- Alternative: Run `configure-auth.js` with a Supabase PAT (script ready in project root)
+### Previous Session: Session 110 — Token-Aligned Credit System — COMPLETE ✅
 
-### Infrastructure Reference
-- **Supabase Project:** dmsuite (id: mbcehmofahrnscfpndkz, region: eu-west-1)
+#### 1. PDF Parsing Fix — COMPLETE ✅ (commit `3beee48`)
+- Replaced pdfjs-dist with unpdf@1.4.0 (serverless-safe, zero external deps)
+
+#### 2. Real-Time Credits + Auth Gates + State Persistence — COMPLETE ✅ (commit `fc7c8da`)
+- Supabase Realtime on profiles table, auth-aware ClientShell, persist middleware on editor stores
+
+#### 3. Comprehensive Account System — COMPLETE ✅ (commit `165c578`)
+- Profile editing, password change, credit history, account deletion with type-to-confirm
+
+#### 4. useUser Context Provider — COMPLETE ✅ (commit `156e33f`)
+- Converted standalone hook to React Context Provider — single auth listener, single Realtime channel
+
+#### 5. Token-Aligned Credit System — COMPLETE ✅ (commit `447b11d`)
+**Core pricing engine:**
+- `MODEL_PRICING` constants for 7 AI models (Sonnet, Haiku, GPT-4o, etc.) with per-token USD costs
+- `CREDIT_VALUE_USD = $0.0093` (Agency pack floor — worst-case margin calculation)
+- `computeApiCost(inputTokens, outputTokens, model)` — actual USD cost of an API call
+- `computeTokenCredits(inputTokens, outputTokens, model)` — analytics function for what it SHOULD cost
+- All CREDIT_COSTS recalibrated with detailed token-to-credit math comments (100% margin target)
+- Business card design: 35→25, file parsing: 5→8 credits based on actual token math
+
+**Database (LIVE on Supabase):**
+- Migration `003_token_tracking.sql` — added to `credit_transactions`:
+  - `input_tokens` (int), `output_tokens` (int), `model` (text)
+  - `api_cost_usd` (numeric 10,6), `credit_value_usd` (numeric 10,6)
+  - Analytics index: `idx_credit_transactions_type_created`
+
+**Server-side credit system (`credits.ts`):**
+- `deductCredits()` accepts optional `TokenUsage { inputTokens, outputTokens, model }` 
+- Computes and logs `api_cost_usd` and `credit_value_usd` per transaction
+- `logTokenUsage()` — updates most recent transaction (for streaming routes)
+- `TokenUsage` type exported for all routes
+
+**Non-streaming routes (6) — deduct AFTER success:**
+- resume/generate, resume/revise, design, analyze-image: restructured to deduct AFTER successful AI response
+- Token data extracted from `result.usage.input_tokens` / `result.usage.output_tokens`
+- Eliminates all refund paths — no charge on failure = better UX + simpler code
+- resume/parse: deduct-before + logTokenUsage after (nested callClaude function)
+- chiko/upload: no tokens (local extractors only)
+
+**Streaming routes (2) — capture from SSE:**
+- chat/route.ts, chiko/route.ts: capture `input_tokens` from `message_start` event, `output_tokens` from `message_delta` event
+- Call `logTokenUsage()` in the `finally` block after stream completes
+
+**Graceful mid-work credit handling:**
+- `openCreditPurchase()` — dispatches global event to open purchase modal from anywhere
+- `CreditBalance` component listens for `dmsuite:open-credit-purchase` events
+- `handleCreditError()` / `checkCreditError()` utilities in `src/lib/credit-error.ts`
+- 402 handling added to: AIChatWorkspace, ChikoAssistant (chat + upload), StepGeneration (2 instances), StepEditor, StepUpload
+- All editors use Zustand persist — work is auto-saved to localStorage on 402
+
+### Key Files Modified/Created (Session 110)
+- `src/lib/pdf-extractor.ts` — Rewritten with unpdf
+- `src/app/api/chat/resume/parse/route.ts` — Updated for unpdf
+- `src/hooks/useUser.ts` — Realtime subscription + signOut store cleanup (11 localStorage keys)
+- `src/stores/preferences.ts` — Added clearAll()
+- `src/components/dashboard/UserMenu.tsx` — Account Settings link
+- `src/app/account/page.tsx` — NEW: Full account settings page (Profile, Password, Credits, Danger Zone)
+- `src/app/api/account/delete/route.ts` — NEW: Auth-protected account deletion endpoint
+- `src/stores/sales-book-editor.ts` — Persist middleware
+- `src/stores/invoice-editor.ts` — Persist middleware
+- `src/stores/resume-editor.ts` — Persist middleware
+
+### All Persisted Zustand Stores (must be cleared on signOut)
+| Store | localStorage Key | Clear Function |
+|---|---|---|
+| chat.ts | dmsuite-chat | clearAll() |
+| chiko.ts | dmsuite-chiko | clearAll() |
+| chiko-workflows.ts | dmsuite-chiko-workflows | — |
+| preferences.ts | dmsuite-preferences | clearAll() |
+| advanced-settings.ts | dmsuite-advanced | resetAll() |
+| business-memory.ts | dmsuite-business-memory | clearProfile() |
+| sales-book-editor.ts | dmsuite-sales-book | resetForm() |
+| invoice-editor.ts | dmsuite-invoice | resetInvoice() |
+| resume-editor.ts | dmsuite-resume | resetResume() |
+| revision-history.ts | dmsuite-revision-history | — |
+| sidebar.ts | dmsuite-sidebar | — |
 - **Supabase Org:** Dramac Marketing Agency (id: kxsatgtkuajawlvndntv)
 - **Vercel Project:** dmsuite (id: prj_FbmETalHp5CKGrh70DoGUt9FUFUz)
 - **Vercel User:** dramac-main (team: drake-machikos-projects)
 - **GitHub Repo:** dramac-main/dmsuite (id: 1159566441)
 - **Production URL:** https://dmsuite-iota.vercel.app
+- **Latest commit:** `1ae6f2c` (profile loading fix) — pushed to origin/main
+- **Previous commits:** `447b11d` (token system), `156e33f` (Context Provider), `165c578` (account), `fc7c8da` (realtime), `3beee48` (unpdf)
+
+#### 6. Profile Loading Loop Fix — COMPLETE ✅ (commit `1ae6f2c`)
+- Root cause: no error handling in bootstrap() + unstable useCallback deps + TOKEN_REFRESHED events
+- Fix: try/finally in bootstrap, all helpers scoped inside useEffect, depends only on [configured], module-level supabase singleton, ignore TOKEN_REFRESHED events
+
+#### 7. Airtel Money Zambia Research — COMPLETE ✅
+- Full integration spec documented in `PHASES/AIRTEL-MONEY-ZAMBIA-INTEGRATION.md`
+- **Official API docs downloaded**: `airtel-zambia-full-api-docs (3).json` (705KB, 13 sections)
+- Direct API integration (no gateway needed) — USSD Push collection
+- Endpoints: auth/oauth2/token, merchant/v1/payments/, standard/v1/payments/{id}
+- **Base URLs (Zambia-specific)**: openapi.airtel.co.zm (prod) / openapiuat.airtel.co.zm (sandbox)
+- **Token expiry: 180 seconds (3 minutes!)** — NOT 1 hour
+- **Message signing MANDATORY for Zambia** — AES-256-CBC encrypt payload + RSA encrypt key:IV
+- **Callback HMAC authentication** — HmacSHA256 with Base64, private key from portal
+- **Encryption Keys API**: GET /v1/rsa/encryption-keys — fetches RSA public key
+- Decision: Direct Airtel API (not MoneyUnify/FundKit/Flutterwave) — zero middleman fees
+- **BLOCKED ON:** User needs to register at developers.airtel.co.zm and get sandbox credentials
+
+### API Cost Reference
+- **Claude Sonnet 4:** $3/1M input tokens, $15/1M output tokens (primary model)
+- **Claude Haiku 4:** $0.80/1M input, $4/1M output (fallback model for resume routes)
+- **ZMW/USD:** ~28 ZMW per $1 USD
+- **Credit value at cheapest pack:** K0.49/credit (Starter) → K0.26/credit (Agency)
 
 ### Dev-Mode Guards (when Supabase env vars not set)
 - `useUser` returns dev profile (9999 credits, "pro" plan)
@@ -62,12 +165,18 @@
 - Credit checks return `allowed: true`
 - Auth helper returns mock user
 
-### Next Steps
-- **Configure Supabase auth URLs** (user action — dashboard or PAT script)
-- **Re-add stock image API keys to Vercel** — UNSPLASH_ACCESS_KEY, PEXELS_API_KEY, PIXABAY_API_KEY, SHUTTERSTOCK_TOKEN
-- **Set up Flutterwave account** — Get API keys, configure webhook URL, test with sandbox
-- **Test full auth flow E2E** — Sign up → email verify → login → use credits → buy more
-- **Remaining business tools** — Cover Letter Writer, Proposal & Pitch Deck, Certificate Designer, Contract Creator
+### Next Steps (Priority Order)
+1. **User action: Register at developers.airtel.co.zm** — Create account, create app, subscribe to Collection API (Product 7), get sandbox creds, enable callback auth, set callback URL
+2. **Build Airtel Money integration** — Once sandbox creds available:
+   - `src/lib/airtel/client.ts` (token caching 180s, message signing)
+   - `src/lib/airtel/encryption.ts` (AES/RSA signing + HMAC verification)
+   - 3 API routes: initiate, webhook, status
+   - Supabase migration: payment_orders table
+   - UI: CreditPurchaseModal update
+3. **Test full auth flow E2E** — Sign up → email verify → login → use credits → buy credits → test tools
+4. **Re-add stock image API keys to Vercel** — UNSPLASH_ACCESS_KEY, PEXELS_API_KEY, PIXABAY_API_KEY, SHUTTERSTOCK_TOKEN
+5. **Remaining business tools** — Cover Letter Writer, Proposal & Pitch Deck, Certificate Designer, Contract Creator
+6. **MTN Mobile Money** — After Airtel integration is live
    - Each selection sets both `currencySymbol` and `currencyCode`
 
 3. **Banking Fields Expanded** — 3 → 11 fields:
