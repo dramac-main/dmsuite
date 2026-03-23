@@ -1620,7 +1620,6 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
       {form.customBlocks && form.customBlocks.length > 0 && (
         <div data-sb-section="blocks" style={{ cursor: "pointer" }}>
           <CustomBlocksRegion blocks={form.customBlocks} position="after-header" accentColor={accent} density={density} />
-      )}
         </div>
       )}
 
@@ -1762,7 +1761,6 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
       {form.customBlocks && form.customBlocks.length > 0 && (
         <div data-sb-section="blocks" style={{ cursor: "pointer" }}>
           <CustomBlocksRegion blocks={form.customBlocks} position="after-items" accentColor={accent} density={density} />
-      )}
         </div>
       )}
 
@@ -1838,7 +1836,6 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
       {form.customBlocks && form.customBlocks.length > 0 && (
         <div data-sb-section="blocks" style={{ cursor: "pointer" }}>
           <CustomBlocksRegion blocks={form.customBlocks} position="before-signature" accentColor={accent} density={density} />
-      )}
         </div>
       )}
 
@@ -1897,7 +1894,6 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
       {form.customBlocks && form.customBlocks.length > 0 && (
         <div data-sb-section="blocks" style={{ cursor: "pointer" }}>
           <CustomBlocksRegion blocks={form.customBlocks} position="after-footer" accentColor={accent} density={density} />
-      )}
         </div>
       )}
 
