@@ -21,6 +21,8 @@ interface PreferencesState {
   toggleDescriptions: () => void;
   /** Toggle a category expansion */
   toggleCategory: (categoryId: string) => void;
+  /** Clear all preferences (used on sign out) */
+  clearAll: () => void;
 }
 
 export const usePreferencesStore = create<PreferencesState>()(
@@ -53,6 +55,14 @@ export const usePreferencesStore = create<PreferencesState>()(
             ? s.expandedCategories.filter((id) => id !== categoryId)
             : [...s.expandedCategories, categoryId],
         })),
+
+      clearAll: () =>
+        set({
+          recentTools: [],
+          favoriteTools: [],
+          showDescriptions: true,
+          expandedCategories: [],
+        }),
     }),
     { name: "dmsuite-preferences" }
   )

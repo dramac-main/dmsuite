@@ -137,6 +137,24 @@ export function useUser(): UseUserReturn {
   }, [supabase, fetchProfile, configured]);
 
   const signOut = useCallback(async () => {
+    // Clear all persisted localStorage stores (privacy: remove previous user data)
+    const storeKeys = [
+      "dmsuite-chat",
+      "dmsuite-chiko",
+      "dmsuite-chiko-workflows",
+      "dmsuite-preferences",
+      "dmsuite-sales-book",
+      "dmsuite-invoice",
+      "dmsuite-resume",
+      "dmsuite-sidebar",
+      "dmsuite-advanced",
+      "dmsuite-business-memory",
+      "dmsuite-revision-history",
+    ];
+    storeKeys.forEach((key) => {
+      try { localStorage.removeItem(key); } catch { /* SSR safety */ }
+    });
+
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
