@@ -382,6 +382,19 @@ export function convertSalesBookType(
   const config = DOCUMENT_TYPE_CONFIGS[targetType];
   const defaultCols = DEFAULT_COLUMNS[targetType] ?? DEFAULT_COLUMNS.invoice;
 
+  // Strip type-dependent label overrides so the new type's defaults are used.
+  // Preserve user customizations for fields that are type-agnostic (column headers, etc.)
+  const prevLabels = form.formLayout.columnLabels ?? {};
+  const typeDependentKeys = [
+    "doc_title", "field_recipient", "field_sender", "field_date",
+    "field_dueDate", "field_poNumber", "field_amountWords",
+    "sig_left", "sig_right",
+  ];
+  const cleanedLabels: Record<string, string> = {};
+  for (const [k, v] of Object.entries(prevLabels)) {
+    if (!typeDependentKeys.includes(k)) cleanedLabels[k] = v;
+  }
+
   return {
     ...form,
     customBlocks: form.customBlocks,
@@ -393,10 +406,14 @@ export function convertSalesBookType(
     formLayout: {
       ...form.formLayout,
       columns: [...defaultCols],
+      columnLabels: cleanedLabels,
       showDueDate: config.hasDueDate,
       showPoNumber: targetType === "purchase-order",
       showTax: targetType !== "delivery-note",
       showPaymentInfo: config.showPaymentInfo,
+      // Reset terms to the target type's defaults
+      termsText: config.defaultTerms,
+      showTerms: false,
     },
     printConfig: {
       ...form.printConfig,

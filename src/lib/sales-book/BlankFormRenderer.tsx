@@ -1,4 +1,4 @@
-﻿// =============================================================================
+// =============================================================================
 // DMSuite â€” Blank Form Renderer (v4 â€” 20-Template Visual Overhaul)
 // Renders blank sales book forms (invoices, receipts, quotations, etc.)
 // for physical printing. All fields are empty slots designed to be
@@ -601,7 +601,7 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
             display: "flex", justifyContent: "space-between", alignItems: "flex-start",
           }}>
             {/* Left: logo + company */}
-            <div style={{ flex: "0 0 auto", maxWidth: "38%" }}>
+            <div data-sb-section="branding" style={{ flex: "0 0 auto", maxWidth: "38%", cursor: "pointer" }}>
               {form.companyBranding.logoUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={form.companyBranding.logoUrl} alt="" style={{ height: "34px", marginBottom: "3px", objectFit: "contain", display: "block" }} />
@@ -626,14 +626,14 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
             </div>
 
             {/* Center: Receipt title */}
-            <div style={{ textAlign: "center", flex: "0 0 auto" }}>
+            <div data-sb-section="document-type" style={{ textAlign: "center", flex: "0 0 auto", cursor: "pointer" }}>
               <div style={{ fontSize: `${titleSize}px`, fontWeight: 900, textTransform: "uppercase", letterSpacing: "3px", fontFamily: `'${fonts.heading}', sans-serif`, color: contrastText(accent) }}>
                 {layout.columnLabels?.["doc_title"] || config.title}
               </div>
             </div>
 
             {/* Right: serial + date */}
-            <div style={{ textAlign: "right", flex: "0 0 auto" }}>
+            <div data-sb-section="print" style={{ textAlign: "right", flex: "0 0 auto", cursor: "pointer" }}>
               {serial.showSerial && (
                 <div style={{ display: "inline-flex", alignItems: "center", backgroundColor: "#ffffff", borderRadius: "3px", padding: "2px 6px", gap: "3px" }}>
                   <span style={{ fontSize: "11px", fontWeight: 700, color: "#374151" }}>{config.numberLabel}</span>
@@ -651,7 +651,7 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
         ) : (
           /* Non-band header: company | title | serial/date with bottom border */
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: `${pad}px ${pad}px 0`, marginBottom: "4px", paddingBottom: "10px", ...getHeaderDividerStyle(tpl, 1) }}>
-            <div style={{ flex: "0 0 auto", maxWidth: "38%" }}>
+            <div data-sb-section="branding" style={{ flex: "0 0 auto", maxWidth: "38%", cursor: "pointer" }}>
               {form.companyBranding.logoUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={form.companyBranding.logoUrl} alt="" style={{ height: "34px", marginBottom: "3px", objectFit: "contain", display: "block" }} />
@@ -675,13 +675,13 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
               )}
             </div>
 
-            <div style={{ textAlign: "center", flex: "0 0 auto" }}>
+            <div data-sb-section="document-type" style={{ textAlign: "center", flex: "0 0 auto", cursor: "pointer" }}>
               <div style={{ fontSize: `${titleSize}px`, fontWeight: 900, textTransform: "uppercase", letterSpacing: "3px", fontFamily: `'${fonts.heading}', sans-serif`, color: accent }}>
                 {layout.columnLabels?.["doc_title"] || config.title}
               </div>
             </div>
 
-            <div style={{ textAlign: "right", flex: "0 0 auto" }}>
+            <div data-sb-section="print" style={{ textAlign: "right", flex: "0 0 auto", cursor: "pointer" }}>
               {serial.showSerial && (
                 <div style={{ display: "inline-flex", alignItems: "center", padding: "2px 6px", gap: "3px" }}>
                   <span style={{ fontSize: "11px", fontWeight: 700, color: accent }}>{config.numberLabel}</span>
@@ -706,7 +706,7 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
         )}
 
         {/* BODY â€” two-column: fields left, amount right */}
-        <div style={{ flex: 1, display: "flex", gap: "18px", padding: tpl.headerBand ? `12px ${pad}px 0` : `8px ${pad}px 0`, minHeight: 0 }}>
+        <div data-sb-section="layout" style={{ flex: 1, display: "flex", gap: "18px", padding: tpl.headerBand ? `12px ${pad}px 0` : `8px ${pad}px 0`, minHeight: 0, cursor: "pointer" }}>
           {/* Left column: form fields */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
             {layout.showRecipient && (
@@ -767,7 +767,7 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
 
         {/* SIGNATURES */}
         {layout.showSignature && (
-          <div style={{ display: "flex", justifyContent: "space-between", padding: `0 ${pad}px`, paddingTop: "10px", marginTop: "auto" }}>
+          <div data-sb-section="layout" style={{ display: "flex", justifyContent: "space-between", padding: `0 ${pad}px`, paddingTop: "10px", marginTop: "auto", cursor: "pointer" }}>
             <div>
               <div style={{ width: "150px", borderBottom: `1.5px solid ${accent}50`, height: "24px" }}>&nbsp;</div>
               <div style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent, marginTop: "3px" }}>{layout.columnLabels?.["sig_left"] || "Cashier / Received By"}</div>
@@ -793,7 +793,7 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
 
         {/* Brand logos */}
         {form.brandLogos.enabled && form.brandLogos.logos.length > 0 && form.brandLogos.position === "bottom" && (
-          <div style={{ display: "flex", gap: "10px", justifyContent: "center", alignItems: "center", paddingTop: "5px", borderTop: "1px solid #e5e7eb", margin: `5px ${pad}px 0` }}>
+          <div data-sb-section="logos" style={{ display: "flex", gap: "10px", justifyContent: "center", alignItems: "center", paddingTop: "5px", borderTop: "1px solid #e5e7eb", margin: `5px ${pad}px 0`, cursor: "pointer" }}>
             {form.brandLogos.logos.map((logo, i) => (
               // eslint-disable-next-line @next/next/no-img-element
               <img key={i} src={logo.url} alt={logo.name} style={{ height: "18px", objectFit: "contain", opacity: 0.7 }} />
@@ -814,7 +814,7 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
 
       {/* RIGHT SIDEBAR â€” colored strip with vertical text */}
       {tpl.receiptSidebar && (
-        <div style={{ width: `${sidebarW}px`, backgroundColor: sidebarColor, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <div data-sb-section="style" style={{ width: `${sidebarW}px`, backgroundColor: sidebarColor, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer" }}>
           <div style={{ writingMode: "vertical-rl", textOrientation: "mixed", transform: "rotate(180deg)", color: contrastText(sidebarColor), fontSize: "18px", fontWeight: 900, letterSpacing: "5px", textTransform: "uppercase" }}>
             {layout.columnLabels?.["doc_title"] || config.title}
           </div>
@@ -875,7 +875,7 @@ function BrandingBlock({ ctx, color, contactColor }: { ctx: LayoutCtx; color: st
   const { form, tpl, density, headingSize, fonts, fieldStyle } = ctx;
   const b = form.companyBranding;
   return (
-    <>
+    <div data-sb-section="branding" style={{ cursor: "pointer" }}>
       {b.logoUrl && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={b.logoUrl} alt="" style={{ height: `${Math.round(40 * density)}px`, marginBottom: "5px", objectFit: "contain", display: "inline-block" }} />
@@ -902,7 +902,7 @@ function BrandingBlock({ ctx, color, contactColor }: { ctx: LayoutCtx; color: st
       {b.taxId && (
         <div style={{ fontSize: `${clampFont(Math.round(9 * density))}px`, color: contactColor, marginTop: "1px", opacity: 0.8 }}>{ctx.form.formLayout.columnLabels?.["field_tpinLabel"] || "TPIN"}: {b.taxId}</div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -929,7 +929,7 @@ function DocTitleBlock({ ctx, color, align }: { ctx: LayoutCtx; color: string; a
   );
 
   return (
-    <div style={{ textAlign: align }}>
+    <div data-sb-section="document-type" style={{ textAlign: align, cursor: "pointer" }}>
       <div style={{ fontSize: `${clampFont(Math.round(28 * density), 18)}px`, fontWeight: 900, textTransform: "uppercase", letterSpacing: "3px", fontFamily: `'${fonts.heading}', sans-serif`, color }}>
         {docTitle}
       </div>
@@ -1619,7 +1619,7 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
       )}
 
       {/* ITEM TABLE + TOTALS (connected) */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", marginBottom: `${Math.round(6 * density)}px`, minHeight: 0 }}>
+      <div data-sb-section="layout" style={{ flex: 1, display: "flex", flexDirection: "column", marginBottom: `${Math.round(6 * density)}px`, minHeight: 0, cursor: "pointer" }}>
         {/* Table header */}
         <div
           style={{
@@ -1832,7 +1832,7 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
 
       {/* SIGNATURE */}
       {layout.showSignature && (
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "auto", paddingTop: `${Math.round(14 * density)}px` }}>
+        <div data-sb-section="layout" style={{ display: "flex", justifyContent: "space-between", marginTop: "auto", paddingTop: `${Math.round(14 * density)}px`, cursor: "pointer" }}>
           {docType === "delivery-note" ? (
             <>
               <div>
@@ -1871,7 +1871,7 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
 
       {/* BRAND LOGOS */}
       {form.brandLogos.enabled && form.brandLogos.logos.length > 0 && form.brandLogos.position === "bottom" && (
-        <div style={{ display: "flex", gap: `${Math.round(10 * density)}px`, justifyContent: "center", alignItems: "center", paddingTop: `${Math.round(8 * density)}px`, borderTop: "1px solid #e5e7eb", marginTop: `${Math.round(6 * density)}px` }}>
+        <div data-sb-section="logos" style={{ display: "flex", gap: `${Math.round(10 * density)}px`, justifyContent: "center", alignItems: "center", paddingTop: `${Math.round(8 * density)}px`, borderTop: "1px solid #e5e7eb", marginTop: `${Math.round(6 * density)}px`, cursor: "pointer" }}>
           {form.brandLogos.logos.map((logo, i) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img key={i} src={logo.url} alt={logo.name} style={{ height: `${Math.round(20 * density)}px`, objectFit: "contain", opacity: 0.7 }} />

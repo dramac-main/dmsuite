@@ -156,6 +156,17 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
     setOpenSection((prev) => (prev === key ? null : key));
   }, []);
 
+  // Click-to-edit: clicking an element with data-sb-section opens that sidebar section
+  const handlePreviewClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = (e.target as HTMLElement).closest<HTMLElement>("[data-sb-section]");
+    if (!target) return;
+    const section = target.dataset.sbSection;
+    if (!section) return;
+    setOpenSection(section);
+    // On mobile, also switch to the editor tab
+    setMobileTab("editor");
+  }, []);
+
   const handleConvert = useCallback(
     (type: SalesDocumentType) => {
       convertToType(type);
@@ -387,12 +398,19 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
 
       {/* Preview canvas */}
       <div
-        className="flex-1 overflow-auto"
+        className="flex-1 overflow-auto sb-preview-canvas"
+        onClick={handlePreviewClick}
         style={{
           backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0)",
           backgroundSize: "20px 20px",
         }}
       >
+        {/* Hover highlight for clickable preview areas — hidden during print */}
+        <style>{`
+          .sb-preview-canvas [data-sb-section] { transition: outline 0.15s ease, box-shadow 0.15s ease; outline: 2px solid transparent; border-radius: 2px; }
+          .sb-preview-canvas [data-sb-section]:hover { outline: 2px solid rgba(132,204,22,0.5); box-shadow: 0 0 0 4px rgba(132,204,22,0.08); }
+          @media print { .sb-preview-canvas [data-sb-section] { outline: none !important; box-shadow: none !important; cursor: default !important; } }
+        `}</style>
         <div
           className="flex flex-col items-center py-6 px-4"
           style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
