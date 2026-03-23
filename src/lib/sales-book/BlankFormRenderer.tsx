@@ -700,7 +700,7 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
 
         {/* Custom blocks â€” after-header */}
         {form.customBlocks && form.customBlocks.length > 0 && (
-          <div style={{ padding: `0 ${pad}px` }}>
+          <div data-sb-section="blocks" style={{ cursor: "pointer", padding: `0 ${pad}px` }}>
             <CustomBlocksRegion blocks={form.customBlocks} position="after-header" accentColor={accent} density={1} />
           </div>
         )}
@@ -753,14 +753,14 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
 
         {/* Custom blocks â€” after-items */}
         {form.customBlocks && form.customBlocks.length > 0 && (
-          <div style={{ padding: `0 ${pad}px` }}>
+          <div data-sb-section="blocks" style={{ cursor: "pointer", padding: `0 ${pad}px` }}>
             <CustomBlocksRegion blocks={form.customBlocks} position="after-items" accentColor={accent} density={1} />
           </div>
         )}
 
         {/* Custom blocks â€” before-signature */}
         {form.customBlocks && form.customBlocks.length > 0 && (
-          <div style={{ padding: `0 ${pad}px` }}>
+          <div data-sb-section="blocks" style={{ cursor: "pointer", padding: `0 ${pad}px` }}>
             <CustomBlocksRegion blocks={form.customBlocks} position="before-signature" accentColor={accent} density={1} />
           </div>
         )}
@@ -780,14 +780,14 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
         )}
 
         {layout.showTerms && layout.termsText && (
-          <div style={{ fontSize: "10px", color: "#9ca3af", marginTop: "5px", padding: `0 ${pad}px`, lineHeight: 1.35 }}>{layout.termsText}</div>
+          <div data-sb-section="layout" style={{ fontSize: "10px", color: "#9ca3af", marginTop: "5px", padding: `0 ${pad}px`, lineHeight: 1.35, cursor: "pointer" }}>{layout.termsText}</div>
         )}
         {layout.customFooterText && (
-          <div style={{ fontSize: "10px", color: "#6b7280", marginTop: "3px", padding: `0 ${pad}px`, lineHeight: 1.35 }}>{layout.customFooterText}</div>
+          <div data-sb-section="layout" style={{ fontSize: "10px", color: "#6b7280", marginTop: "3px", padding: `0 ${pad}px`, lineHeight: 1.35, cursor: "pointer" }}>{layout.customFooterText}</div>
         )}
 
         {/* Footer bar */}
-        <div style={{ padding: `0 ${tpl.footerStyle === "bar" ? 0 : pad}px` }}>
+        <div data-sb-section="style" style={{ padding: `0 ${tpl.footerStyle === "bar" ? 0 : pad}px`, cursor: "pointer" }}>
           <FooterBar tpl={tpl} density={1} branding={form.companyBranding} bleedL={padL} bleedR={padR} bleedB={padB} />
         </div>
 
@@ -803,7 +803,7 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
 
         {/* Custom blocks â€” after-footer */}
         {form.customBlocks && form.customBlocks.length > 0 && (
-          <div style={{ padding: `0 ${pad}px` }}>
+          <div data-sb-section="blocks" style={{ cursor: "pointer", padding: `0 ${pad}px` }}>
             <CustomBlocksRegion blocks={form.customBlocks} position="after-footer" accentColor={accent} density={1} />
           </div>
         )}
@@ -1538,7 +1538,8 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
       {/* Form Border */}
       {form.style.borderStyle !== "none" && (
         <div
-          style={{
+          data-sb-section="style"
+          style={{ cursor: "pointer",
             position: "absolute",
             inset: `${Math.round(6 * density)}px`,
             border: form.style.borderStyle === "double" ? `3px double ${accent}` : `1.5px solid ${accent}50`,
@@ -1563,6 +1564,7 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
         padV, padL, padR,
       }} />
 
+<div data-sb-section="layout" style={{ cursor: "pointer" }}>
       {/* TYPE-SPECIFIC FIELDS */}
       {docType === "quotation" && layout.showValidFor !== false && (
         <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginBottom: `${Math.round(8 * density)}px` }}>
@@ -1613,9 +1615,13 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
         </div>
       )}
 
+      </div>
       {/* Custom blocks â€” after-header */}
       {form.customBlocks && form.customBlocks.length > 0 && (
-        <CustomBlocksRegion blocks={form.customBlocks} position="after-header" accentColor={accent} density={density} />
+        <div data-sb-section="blocks" style={{ cursor: "pointer" }}>
+          <CustomBlocksRegion blocks={form.customBlocks} position="after-header" accentColor={accent} density={density} />
+      )}
+        </div>
       )}
 
       {/* ITEM TABLE + TOTALS (connected) */}
@@ -1754,12 +1760,15 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
       </div>
       {/* Custom blocks â€” after-items */}
       {form.customBlocks && form.customBlocks.length > 0 && (
-        <CustomBlocksRegion blocks={form.customBlocks} position="after-items" accentColor={accent} density={density} />
+        <div data-sb-section="blocks" style={{ cursor: "pointer" }}>
+          <CustomBlocksRegion blocks={form.customBlocks} position="after-items" accentColor={accent} density={density} />
+      )}
+        </div>
       )}
 
       {/* AMOUNT IN WORDS */}
       {layout.showAmountInWords && docType !== "delivery-note" && (
-        <div style={{ marginBottom: `${Math.round(10 * density)}px` }}>
+        <div data-sb-section="layout" style={{ cursor: "pointer", marginBottom: `${Math.round(10 * density)}px` }}>
           <span style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_amountWords"] || "Amount in Words"}</span>
           <div style={{ marginTop: "4px" }}><BlankField width="100%" height={`${Math.round(30 * density)}px`} fieldStyle={fieldStyle} /></div>
         </div>
@@ -1767,7 +1776,7 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
 
       {/* PAYMENT INFO â€” pre-printed when banking details are provided */}
       {layout.showPaymentInfo && (
-        <div style={{ marginBottom: `${Math.round(10 * density)}px` }}>
+        <div data-sb-section="layout" style={{ cursor: "pointer", marginBottom: `${Math.round(10 * density)}px` }}>
           <span style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["bank_sectionTitle"] || "Payment Details"}</span>
           {(form.companyBranding.bankName || form.companyBranding.bankAccount) ? (
             <div style={{ marginTop: "4px", fontSize: `${clampFont(Math.round(11 * density))}px`, color: "#374151", lineHeight: 1.6, padding: `${Math.round(6 * density)}px`, border: `1px solid ${accent}20`, borderRadius: "3px", backgroundColor: `${accent}05` }}>
@@ -1813,21 +1822,24 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
 
       {/* NOTES / TERMS */}
       {layout.showNotes && (
-        <div style={{ marginBottom: `${Math.round(8 * density)}px` }}>
+        <div data-sb-section="layout" style={{ cursor: "pointer", marginBottom: `${Math.round(8 * density)}px` }}>
           <span style={{ fontSize: `${labelSize}px`, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.notesLabel}</span>
           <div style={{ marginTop: "4px" }}><BlankField width="100%" height={`${Math.round(28 * density)}px`} fieldStyle={fieldStyle} /></div>
         </div>
       )}
       {layout.showTerms && layout.termsText && (
-        <div style={{ fontSize: `${clampFont(Math.round(9 * density))}px`, color: "#9ca3af", marginBottom: `${Math.round(6 * density)}px`, lineHeight: 1.4 }}>{layout.termsText}</div>
+        <div data-sb-section="layout" style={{ fontSize: `${clampFont(Math.round(9 * density))}px`, color: "#9ca3af", marginBottom: `${Math.round(6 * density)}px`, lineHeight: 1.4 }}>{layout.termsText}</div>
       )}
       {layout.customFooterText && (
-        <div style={{ fontSize: `${clampFont(Math.round(9 * density))}px`, color: "#6b7280", marginBottom: `${Math.round(6 * density)}px`, lineHeight: 1.4 }}>{layout.customFooterText}</div>
+        <div data-sb-section="layout" style={{ fontSize: `${clampFont(Math.round(9 * density))}px`, color: "#6b7280", marginBottom: `${Math.round(6 * density)}px`, lineHeight: 1.4 }}>{layout.customFooterText}</div>
       )}
 
       {/* Custom blocks â€” before-signature */}
       {form.customBlocks && form.customBlocks.length > 0 && (
-        <CustomBlocksRegion blocks={form.customBlocks} position="before-signature" accentColor={accent} density={density} />
+        <div data-sb-section="blocks" style={{ cursor: "pointer" }}>
+          <CustomBlocksRegion blocks={form.customBlocks} position="before-signature" accentColor={accent} density={density} />
+      )}
+        </div>
       )}
 
       {/* SIGNATURE */}
@@ -1867,7 +1879,9 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
       )}
 
       {/* FOOTER BAR */}
+      <div data-sb-section="style" style={{ cursor: "pointer" }}>
       <FooterBar tpl={tpl} density={density} branding={form.companyBranding} bleedL={padL} bleedR={padR} bleedB={padV} />
+      </div>
 
       {/* BRAND LOGOS */}
       {form.brandLogos.enabled && form.brandLogos.logos.length > 0 && form.brandLogos.position === "bottom" && (
@@ -1881,7 +1895,10 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
 
       {/* Custom blocks â€” after-footer */}
       {form.customBlocks && form.customBlocks.length > 0 && (
-        <CustomBlocksRegion blocks={form.customBlocks} position="after-footer" accentColor={accent} density={density} />
+        <div data-sb-section="blocks" style={{ cursor: "pointer" }}>
+          <CustomBlocksRegion blocks={form.customBlocks} position="after-footer" accentColor={accent} density={density} />
+      )}
+        </div>
       )}
 
       {/* CUT LINE */}

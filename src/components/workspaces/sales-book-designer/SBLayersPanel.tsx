@@ -2,6 +2,7 @@
 // DMSuite — Sales Book Layers Panel
 // Figma-style layer tree for the sales book preview.
 // Hover to highlight on canvas, click to open corresponding editor section.
+// Visibility toggles actually control form state.
 // =============================================================================
 
 "use client";
@@ -19,6 +20,7 @@ interface Layer {
   section: string;       // maps to data-sb-section value & accordion key
   icon: React.ReactNode;
   visible: boolean;       // derived from form state
+  toggleKey?: string;     // store field key for toggling visibility
   children?: Layer[];
 }
 
@@ -54,6 +56,7 @@ function useLayers(): Layer[] {
   const isReceipt = config.receiptLayout;
 
   const layers: Layer[] = [
+    // ── Company Branding ──
     {
       id: "branding",
       label: form.companyBranding.name || "Company Branding",
@@ -66,6 +69,8 @@ function useLayers(): Layer[] {
         { id: "branding-contact", label: "Contact Info", section: "branding", icon: <LayerIcon d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07" />, visible: !!(form.companyBranding.phone || form.companyBranding.email) },
       ],
     },
+
+    // ── Document Type / Title ──
     {
       id: "document-type",
       label: layout.columnLabels?.["doc_title"] || config.title,
@@ -73,6 +78,8 @@ function useLayers(): Layer[] {
       icon: <LayerIcon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" extra={<polyline points="14 2 14 8 20 8" />} />,
       visible: true,
     },
+
+    // ── Serial & Date ──
     {
       id: "print",
       label: "Serial & Date",
@@ -80,10 +87,12 @@ function useLayers(): Layer[] {
       icon: <LayerIcon d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />,
       visible: form.serialConfig.showSerial || layout.showDate,
       children: [
-        { id: "print-serial", label: `Serial (${form.serialConfig.prefix}...)`, section: "print", icon: <LayerIcon d="M4 7h16M4 12h16M4 17h7" />, visible: form.serialConfig.showSerial },
-        { id: "print-date", label: "Date Field", section: "print", icon: <LayerIcon d="M3 4h18v18H3z" extra={<><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></>} />, visible: layout.showDate },
+        { id: "print-serial", label: `Serial (${form.serialConfig.prefix}...)`, section: "print", icon: <LayerIcon d="M4 7h16M4 12h16M4 17h7" />, visible: form.serialConfig.showSerial, toggleKey: "serial:showSerial" },
+        { id: "print-date", label: "Date Field", section: "print", icon: <LayerIcon d="M3 4h18v18H3z" extra={<><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></>} />, visible: layout.showDate, toggleKey: "layout:showDate" },
       ],
     },
+
+    // ── Layout / Items ──
     {
       id: "layout",
       label: isReceipt ? "Receipt Fields" : "Items Table",
@@ -92,58 +101,164 @@ function useLayers(): Layer[] {
         ? <LayerIcon d="M3 3h18v18H3z" extra={<><line x1="7" y1="8" x2="17" y2="8" /><line x1="7" y1="12" x2="17" y2="12" /><line x1="7" y1="16" x2="13" y2="16" /></>} />
         : <LayerIcon d="M3 3h18v18H3z" extra={<><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="3" x2="9" y2="21" /></>} />,
       visible: true,
-      children: [
-        ...(isReceipt ? [
-          { id: "layout-recipient", label: "Received From", section: "layout", icon: <LayerIcon d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />, visible: layout.showRecipient },
-          { id: "layout-amount-words", label: "Amount in Words", section: "layout", icon: <LayerIcon d="M4 7h16M4 12h10" />, visible: layout.showAmountInWords },
-          { id: "layout-payment", label: "Payment Method", section: "layout", icon: <LayerIcon d="M3 3h18v4H3z" extra={<path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7" />} />, visible: true },
-        ] : [
-          { id: "layout-recipient", label: config.recipientLabel, section: "layout", icon: <LayerIcon d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />, visible: layout.showRecipient },
-          { id: "layout-table", label: `${layout.itemRowCount} Item Rows`, section: "layout", icon: <LayerIcon d="M3 3h18v18H3z" extra={<><line x1="3" y1="9" x2="21" y2="9" /><line x1="9" y1="3" x2="9" y2="21" /></>} />, visible: true },
-          { id: "layout-totals", label: "Totals", section: "layout", icon: <LayerIcon d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />, visible: layout.showTotal },
-        ]),
-      ],
-    },
-    {
-      id: "layout-signatures",
-      label: "Signatures",
-      section: "layout",
-      icon: <LayerIcon d="M2 17c1.5-2.5 4-4 7-4s5.5 1.5 7 4" extra={<path d="M17 13c1 0 2-.5 3-1.5s2-2 2-3.5c0-2-1-3-3-3s-3 1-3 3c0 1.5 1 2.5 2 3.5s2 1.5 3 1.5" />} />,
-      visible: layout.showSignature,
+      children: isReceipt
+        ? [
+            { id: "layout-recipient", label: "Received From", section: "layout", icon: <LayerIcon d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />, visible: layout.showRecipient, toggleKey: "layout:showRecipient" },
+            { id: "layout-amount-words", label: "Amount in Words", section: "layout", icon: <LayerIcon d="M4 7h16M4 12h10" />, visible: layout.showAmountInWords, toggleKey: "layout:showAmountInWords" },
+            { id: "layout-payment", label: "Payment Method", section: "layout", icon: <LayerIcon d="M3 3h18v4H3z" extra={<path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7" />} />, visible: true },
+          ]
+        : [
+            { id: "layout-recipient", label: config.recipientLabel, section: "layout", icon: <LayerIcon d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />, visible: layout.showRecipient, toggleKey: "layout:showRecipient" },
+            { id: "layout-table", label: `${layout.itemRowCount} Item Rows`, section: "layout", icon: <LayerIcon d="M3 3h18v18H3z" extra={<><line x1="3" y1="9" x2="21" y2="9" /><line x1="9" y1="3" x2="9" y2="21" /></>} />, visible: true },
+            { id: "layout-subtotal", label: "Subtotal", section: "layout", icon: <LayerIcon d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />, visible: layout.showSubtotal, toggleKey: "layout:showSubtotal" },
+            { id: "layout-discount", label: "Discount", section: "layout", icon: <LayerIcon d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />, visible: layout.showDiscount, toggleKey: "layout:showDiscount" },
+            { id: "layout-tax", label: "Tax / VAT", section: "layout", icon: <LayerIcon d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />, visible: layout.showTax, toggleKey: "layout:showTax" },
+            { id: "layout-totals", label: "Total", section: "layout", icon: <LayerIcon d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />, visible: layout.showTotal, toggleKey: "layout:showTotal" },
+          ],
     },
   ];
 
-  // Conditional layers
-  if (layout.showTerms && layout.termsText) {
+  // ── Amount in Words (table forms only, not delivery notes) ──
+  if (!isReceipt && docType !== "delivery-note") {
     layers.push({
-      id: "layout-terms",
-      label: "Terms & Conditions",
+      id: "layout-amount-words-form",
+      label: "Amount in Words",
       section: "layout",
-      icon: <LayerIcon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" extra={<><polyline points="14 2 14 8 20 8" /><line x1="8" y1="13" x2="16" y2="13" /><line x1="8" y1="17" x2="12" y2="17" /></>} />,
-      visible: true,
+      icon: <LayerIcon d="M4 7h16M4 12h10M4 17h12" />,
+      visible: layout.showAmountInWords,
+      toggleKey: "layout:showAmountInWords",
     });
   }
 
-  if (layout.showPaymentInfo) {
+  // ── Payment Info ──
+  layers.push({
+    id: "layout-payment-info",
+    label: "Payment Details",
+    section: "layout",
+    icon: <LayerIcon d="M3 3h18v4H3z" extra={<path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7" />} />,
+    visible: layout.showPaymentInfo,
+    toggleKey: "layout:showPaymentInfo",
+  });
+
+  // ── Signatures ──
+  layers.push({
+    id: "layout-signatures",
+    label: "Signatures",
+    section: "layout",
+    icon: <LayerIcon d="M2 17c1.5-2.5 4-4 7-4s5.5 1.5 7 4" extra={<path d="M17 13c1 0 2-.5 3-1.5s2-2 2-3.5c0-2-1-3-3-3s-3 1-3 3c0 1.5 1 2.5 2 3.5s2 1.5 3 1.5" />} />,
+    visible: layout.showSignature,
+    toggleKey: "layout:showSignature",
+  });
+
+  // ── Notes ──
+  layers.push({
+    id: "layout-notes",
+    label: "Notes",
+    section: "layout",
+    icon: <LayerIcon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" extra={<><polyline points="14 2 14 8 20 8" /><line x1="8" y1="13" x2="16" y2="13" /></>} />,
+    visible: layout.showNotes,
+    toggleKey: "layout:showNotes",
+  });
+
+  // ── Terms & Conditions ──
+  layers.push({
+    id: "layout-terms",
+    label: "Terms & Conditions",
+    section: "layout",
+    icon: <LayerIcon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" extra={<><polyline points="14 2 14 8 20 8" /><line x1="8" y1="13" x2="16" y2="13" /><line x1="8" y1="17" x2="12" y2="17" /></>} />,
+    visible: layout.showTerms,
+    toggleKey: "layout:showTerms",
+  });
+
+  // ── Type-Specific Fields ──
+  if (docType === "quotation") {
     layers.push({
-      id: "layout-payment-info",
-      label: "Payment Details",
-      section: "branding",
-      icon: <LayerIcon d="M3 3h18v4H3z" extra={<path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7" />} />,
-      visible: true,
+      id: "layout-type-validfor",
+      label: "Valid For (days)",
+      section: "layout",
+      icon: <LayerIcon d="M3 4h18v18H3z" extra={<line x1="3" y1="10" x2="21" y2="10" />} />,
+      visible: layout.showValidFor !== false,
+      toggleKey: "layout:showValidFor",
+    });
+  }
+  if (docType === "proforma-invoice") {
+    layers.push({
+      id: "layout-type-validuntil",
+      label: "Valid Until",
+      section: "layout",
+      icon: <LayerIcon d="M3 4h18v18H3z" extra={<line x1="3" y1="10" x2="21" y2="10" />} />,
+      visible: layout.showValidUntil !== false,
+      toggleKey: "layout:showValidUntil",
+    });
+  }
+  if (docType === "credit-note") {
+    layers.push({
+      id: "layout-type-originalinvoice",
+      label: "Original Invoice",
+      section: "layout",
+      icon: <LayerIcon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />,
+      visible: layout.showOriginalInvoice !== false,
+      toggleKey: "layout:showOriginalInvoice",
+    });
+    layers.push({
+      id: "layout-type-reasonforcredit",
+      label: "Reason for Credit",
+      section: "layout",
+      icon: <LayerIcon d="M4 7h16M4 12h10" />,
+      visible: layout.showReasonForCredit !== false,
+      toggleKey: "layout:showReasonForCredit",
+    });
+  }
+  if (docType === "purchase-order") {
+    layers.push({
+      id: "layout-type-shipto",
+      label: "Ship To",
+      section: "layout",
+      icon: <LayerIcon d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />,
+      visible: layout.showShipTo !== false,
+      toggleKey: "layout:showShipTo",
+    });
+    layers.push({
+      id: "layout-type-deliveryby",
+      label: "Delivery Required By",
+      section: "layout",
+      icon: <LayerIcon d="M3 4h18v18H3z" extra={<line x1="3" y1="10" x2="21" y2="10" />} />,
+      visible: layout.showDeliveryBy !== false,
+      toggleKey: "layout:showDeliveryBy",
+    });
+  }
+  if (docType === "delivery-note") {
+    layers.push({
+      id: "layout-type-vehicleno",
+      label: "Vehicle No.",
+      section: "layout",
+      icon: <LayerIcon d="M4 7h16M4 12h10" />,
+      visible: layout.showVehicleNo !== false,
+      toggleKey: "layout:showVehicleNo",
+    });
+    layers.push({
+      id: "layout-type-drivername",
+      label: "Driver Name",
+      section: "layout",
+      icon: <LayerIcon d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />,
+      visible: layout.showDriverName !== false,
+      toggleKey: "layout:showDriverName",
     });
   }
 
-  if (form.brandLogos.enabled && form.brandLogos.logos.length > 0) {
+  // ── Brand Logos ──
+  if (form.brandLogos.logos.length > 0) {
     layers.push({
       id: "logos",
       label: `Brand Logos (${form.brandLogos.logos.length})`,
       section: "logos",
       icon: <LayerIcon d="M3 3h18v18H3z" extra={<><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></>} />,
-      visible: true,
+      visible: form.brandLogos.enabled,
+      toggleKey: "brandLogos:enabled",
     });
   }
 
+  // ── Custom Blocks ──
   if (form.customBlocks && form.customBlocks.length > 0) {
     layers.push({
       id: "blocks",
@@ -154,7 +269,26 @@ function useLayers(): Layer[] {
     });
   }
 
-  // Style (always present)
+  // ── Footer Bar ──
+  layers.push({
+    id: "style-footer",
+    label: "Footer Bar",
+    section: "style",
+    icon: <LayerIcon d="M3 21h18M3 18h18" />,
+    visible: true,
+  });
+
+  // ── Form Border ──
+  layers.push({
+    id: "style-border",
+    label: "Form Border",
+    section: "style",
+    icon: <LayerIcon d="M3 3h18v18H3z" />,
+    visible: form.style.borderStyle !== "none",
+    toggleKey: "style:borderStyleToggle",
+  });
+
+  // ── Style & Template (always present) ──
   layers.push({
     id: "style",
     label: "Style & Template",
@@ -166,6 +300,36 @@ function useLayers(): Layer[] {
   return layers;
 }
 
+// ── Visibility toggle dispatcher ──
+
+function useToggleVisibility() {
+  const updateLayout = useSalesBookEditor((s) => s.updateLayout);
+  const updateSerial = useSalesBookEditor((s) => s.updateSerial);
+  const updateStyle = useSalesBookEditor((s) => s.updateStyle);
+  const updateBrandLogos = useSalesBookEditor((s) => s.updateBrandLogos);
+  const form = useSalesBookEditor((s) => s.form);
+
+  return useCallback((toggleKey: string) => {
+    const [store, field] = toggleKey.split(":");
+
+    if (store === "layout") {
+      const current = (form.formLayout as Record<string, unknown>)[field];
+      updateLayout({ [field]: current === false ? true : !current });
+    } else if (store === "serial") {
+      const current = (form.serialConfig as Record<string, unknown>)[field];
+      updateSerial({ [field]: !current });
+    } else if (store === "style") {
+      if (field === "borderStyleToggle") {
+        updateStyle({ borderStyle: form.style.borderStyle === "none" ? "solid" : "none" });
+      }
+    } else if (store === "brandLogos") {
+      if (field === "enabled") {
+        updateBrandLogos({ enabled: !form.brandLogos.enabled });
+      }
+    }
+  }, [form, updateLayout, updateSerial, updateStyle, updateBrandLogos]);
+}
+
 // ── Layer Row Component ──
 
 function LayerRow({
@@ -175,6 +339,7 @@ function LayerRow({
   onHover,
   onLeave,
   onClick,
+  onToggle,
 }: {
   layer: Layer;
   depth: number;
@@ -182,6 +347,7 @@ function LayerRow({
   onHover: (id: string, section: string) => void;
   onLeave: () => void;
   onClick: (section: string) => void;
+  onToggle: (toggleKey: string) => void;
 }) {
   const [expanded, setExpanded] = useState(true);
   const isHovered = hoveredLayer === layer.id;
@@ -222,10 +388,20 @@ function LayerRow({
           {layer.label}
         </span>
 
-        {/* Visibility indicator */}
-        <span className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          {layer.visible ? <Eye /> : <EyeOff />}
-        </span>
+        {/* Visibility toggle button */}
+        {layer.toggleKey ? (
+          <button
+            className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-700/50"
+            onClick={(e) => { e.stopPropagation(); onToggle(layer.toggleKey!); }}
+            title={layer.visible ? "Hide" : "Show"}
+          >
+            {layer.visible ? <Eye /> : <EyeOff />}
+          </button>
+        ) : (
+          <span className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            {layer.visible ? <Eye /> : <EyeOff />}
+          </span>
+        )}
       </div>
 
       {/* Children */}
@@ -238,6 +414,7 @@ function LayerRow({
           onHover={onHover}
           onLeave={onLeave}
           onClick={onClick}
+          onToggle={onToggle}
         />
       ))}
     </>
@@ -255,6 +432,7 @@ interface SBLayersPanelProps {
 
 export default function SBLayersPanel({ onOpenSection, onHoverSection, collapsed, onToggleCollapse }: SBLayersPanelProps) {
   const layers = useLayers();
+  const toggleVisibility = useToggleVisibility();
   const [hoveredLayer, setHoveredLayer] = useState<string | null>(null);
 
   const handleHover = useCallback((id: string, section: string) => {
@@ -288,19 +466,19 @@ export default function SBLayersPanel({ onOpenSection, onHoverSection, collapsed
   }
 
   return (
-    <div className="shrink-0 w-52 flex flex-col border-l border-gray-800/60 bg-gray-900/40">
+    <div className="shrink-0 w-52 flex flex-col border-l border-gray-800/60 bg-gray-900/40 overflow-hidden">
       {/* Header */}
-      <div className="shrink-0 flex items-center justify-between h-8 px-2.5 border-b border-gray-800/40">
+      <div className="flex items-center justify-between px-2.5 py-2 border-b border-gray-800/40">
         <div className="flex items-center gap-1.5">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500">
             <polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" />
           </svg>
-          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Layers</span>
+          <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Layers</span>
         </div>
         <button
           onClick={onToggleCollapse}
           className="p-0.5 rounded text-gray-600 hover:text-gray-300 hover:bg-gray-800 transition-colors"
-          title="Collapse panel"
+          title="Collapse"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
@@ -309,7 +487,7 @@ export default function SBLayersPanel({ onOpenSection, onHoverSection, collapsed
       </div>
 
       {/* Layer tree */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin py-1">
+      <div className="flex-1 overflow-y-auto py-1 scrollbar-thin">
         {layers.map((layer) => (
           <LayerRow
             key={layer.id}
@@ -319,8 +497,14 @@ export default function SBLayersPanel({ onOpenSection, onHoverSection, collapsed
             onHover={handleHover}
             onLeave={handleLeave}
             onClick={handleClick}
+            onToggle={toggleVisibility}
           />
         ))}
+      </div>
+
+      {/* Layer count footer */}
+      <div className="shrink-0 px-2.5 py-1.5 border-t border-gray-800/40 text-[9px] text-gray-600">
+        {layers.length} layers · {layers.reduce((n, l) => n + (l.children?.length ?? 0), 0)} sub-layers
       </div>
     </div>
   );

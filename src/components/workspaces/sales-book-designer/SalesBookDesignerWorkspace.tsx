@@ -39,6 +39,7 @@ function AccordionSection({
   onToggle,
   children,
   badge,
+  highlighted,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -46,9 +47,10 @@ function AccordionSection({
   onToggle: () => void;
   children: React.ReactNode;
   badge?: string;
+  highlighted?: boolean;
 }) {
   return (
-    <div className="border-b border-gray-800/60">
+    <div className={`border-b border-gray-800/60 transition-shadow duration-700 ${highlighted ? "sb-section-glow" : ""}`}>
       <button
         onClick={onToggle}
         className="flex items-center w-full px-4 py-3 text-left hover:bg-gray-800/30 transition-colors group"
@@ -141,6 +143,8 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
   // Layers panel
   const [layersCollapsed, setLayersCollapsed] = useState(false);
   const [hoveredSection, setHoveredSection] = useState<string | null>(null);
+  const [highlightedSection, setHighlightedSection] = useState<string | null>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Derived
   const forms = totalFormCount(form.serialConfig);
@@ -184,10 +188,14 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
     setMobileTab("editor");
   }, []);
 
-  // Layers panel → open sidebar section
+  // Layers panel → open sidebar section + glow animation
   const handleLayerOpenSection = useCallback((section: string) => {
     setOpenSection(section);
     setMobileTab("editor");
+    // Trigger glow and auto-clear after 1.5s
+    setHighlightedSection(section);
+    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+    highlightTimerRef.current = setTimeout(() => setHighlightedSection(null), 1500);
   }, []);
 
   const handleConvert = useCallback(
@@ -264,6 +272,7 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
           isOpen={openSection === "document-type"}
           onToggle={() => toggleSection("document-type")}
           badge={config.label}
+          highlighted={highlightedSection === "document-type"}
         >
           <SBSectionDocumentType />
         </AccordionSection>
@@ -274,6 +283,7 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
           isOpen={openSection === "branding"}
           onToggle={() => toggleSection("branding")}
           badge={form.companyBranding.name || undefined}
+          highlighted={highlightedSection === "branding"}
         >
           <SBSectionBranding />
         </AccordionSection>
@@ -284,6 +294,7 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
           isOpen={openSection === "layout"}
           onToggle={() => toggleSection("layout")}
           badge={`${form.formLayout.itemRowCount} rows`}
+          highlighted={highlightedSection === "layout"}
         >
           <SBSectionFormLayout />
         </AccordionSection>
@@ -294,6 +305,7 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
           isOpen={openSection === "print"}
           onToggle={() => toggleSection("print")}
           badge={`${form.printConfig.formsPerPage}/page`}
+          highlighted={highlightedSection === "print"}
         >
           <SBSectionPrintConfig />
         </AccordionSection>
@@ -303,6 +315,7 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
           icon={<SIcon d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.5-.75 1.5-1.5 0-.36-.12-.68-.37-.93-.24-.26-.37-.58-.37-.93 0-.75.6-1.35 1.35-1.35H16c3.31 0 6-2.69 6-6 0-5.52-4.48-9.8-10-9.8z" />}
           isOpen={openSection === "style"}
           onToggle={() => toggleSection("style")}
+          highlighted={highlightedSection === "style"}
         >
           <SBSectionStyle />
         </AccordionSection>
@@ -313,6 +326,7 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
           isOpen={openSection === "logos"}
           onToggle={() => toggleSection("logos")}
           badge={form.brandLogos.enabled ? `${form.brandLogos.logos.length} logos` : undefined}
+          highlighted={highlightedSection === "logos"}
         >
           <SBSectionBrandLogos />
         </AccordionSection>
@@ -323,6 +337,7 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
           isOpen={openSection === "blocks"}
           onToggle={() => toggleSection("blocks")}
           badge={form.customBlocks?.length > 0 ? `${form.customBlocks.length} blocks` : undefined}
+          highlighted={highlightedSection === "blocks"}
         >
           <SBSectionCustomBlocks />
         </AccordionSection>
@@ -434,6 +449,8 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
           .sb-preview-canvas [data-sb-section]:hover { outline: 2px solid rgba(132,204,22,0.5); box-shadow: 0 0 0 4px rgba(132,204,22,0.08); }
           .sb-preview-canvas [data-sb-section].sb-layer-highlight { outline: 2px solid rgba(132,204,22,0.7); box-shadow: 0 0 0 6px rgba(132,204,22,0.12); }
           @media print { .sb-preview-canvas [data-sb-section] { outline: none !important; box-shadow: none !important; cursor: default !important; } }
+          @keyframes sb-glow-pulse { 0% { box-shadow: 0 0 0 0 rgba(132,204,22,0.4); } 50% { box-shadow: 0 0 12px 4px rgba(132,204,22,0.25); } 100% { box-shadow: 0 0 0 0 rgba(132,204,22,0); } }
+          .sb-section-glow { animation: sb-glow-pulse 1.5s ease-out; }
         `}</style>
         <div
           className="flex flex-col items-center py-6 px-4"
