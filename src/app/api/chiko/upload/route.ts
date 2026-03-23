@@ -7,10 +7,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractFile, SUPPORTED_MIME_TYPES } from "@/lib/chiko/extractors";
 import type { FileUploadResponse } from "@/lib/chiko/extractors";
+import { getAuthUser } from "@/lib/supabase/auth";
+import { checkCredits, deductCredits, refundCredits } from "@/lib/supabase/credits";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export async function POST(request: NextRequest): Promise<NextResponse<FileUploadResponse>> {
+  // ── Auth check ──────────────────────────────────────────
+  const user = await getAuthUser();
+  if (!user) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  // ── Credit check ────────────────────────────────────────
+  const creditCheck = await checkCredits(user.id, "file-parsing");
+  if (!creditCheck.allowed) {
+    return NextResponse.json(
+      { success: false, error: "Insufficient credits" },
+      { status: 402 }
+    );
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get("file");
@@ -50,12 +67,20 @@ export async function POST(request: NextRequest): Promise<NextResponse<FileUploa
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    // ── Deduct credits ────────────────────────────────────
+    const deduction = await deductCredits(user.id, "file-parsing", `File parsing: ${file.name}`);
+    if (!deduction.success) {
+      return NextResponse.json({ success: false, error: "Failed to deduct credits" }, { status: 402 });
+    }
+
     // ── Extract structured data ───────────────────────────
     const data = await extractFile(buffer, file.name, mimeType);
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error("[Chiko Upload] Extraction error:", error);
+    // Refund credits on extraction failure
+    await refundCredits(user.id, creditCheck.cost, "Refund: file extraction failed");
     // Never expose internal paths or stack traces
     const message =
       error instanceof Error

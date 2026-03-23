@@ -13,7 +13,7 @@ import type { ExtractedFileData, TextBlock } from "./index";
 
 /**
  * Ensure DOM globals required by pdfjs-dist exist in Node.js.
- * Must be called before importing pdf-parse.
+ * Must be called before importing pdfjs-dist.
  */
 function ensureDomPolyfills() {
   if (typeof globalThis.DOMMatrix === "undefined") {
@@ -78,13 +78,11 @@ const OPS_SET_STROKE_CMYK = 60;
 async function getPdfjs() {
   if (pdfjsLib) return pdfjsLib;
   ensureDomPolyfills();
-  // Dynamic import of main entry — works with Turbopack bundling
-  const mod = await import("pdfjs-dist");
-  // Disable worker to avoid "Cannot find module pdf.worker.mjs" in Vercel serverless
-  if (mod.GlobalWorkerOptions) {
-    mod.GlobalWorkerOptions.workerSrc = "";
-  }
-  pdfjsLib = mod;
+  // Use legacy build which bundles the worker inline — no separate worker file needed.
+  // Dynamic string prevents Turbopack from resolving the subpath at build time.
+  // At runtime, Node.js resolves from node_modules (pdfjs-dist is in serverExternalPackages).
+  const legacyPath = "pdfjs-dist" + "/legacy/build/pdf.mjs";
+  pdfjsLib = await import(/* webpackIgnore: true */ legacyPath);
   return pdfjsLib;
 }
 

@@ -166,10 +166,10 @@ function ensurePdfPolyfills() {
 
 async function extractPdfText(buffer: Buffer): Promise<string> {
   ensurePdfPolyfills();
-  const pdfjsLib = await import("pdfjs-dist");
-  if (pdfjsLib.GlobalWorkerOptions) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "";
-  }
+  // Legacy build bundles the worker inline — no separate worker file needed.
+  // Dynamic string prevents Turbopack from resolving the subpath at build time.
+  const legacyPath = "pdfjs-dist" + "/legacy/build/pdf.mjs";
+  const pdfjsLib = await import(/* webpackIgnore: true */ legacyPath);
   const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
   let text = "";
   try {
