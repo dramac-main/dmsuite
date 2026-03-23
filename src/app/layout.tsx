@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { CommandPalette } from "@/components/CommandPalette";
 import ClientShell from "@/components/ClientShell";
+import { UserProvider } from "@/hooks/useUser";
 import "./globals.css";
 
 const inter = Inter({
@@ -109,9 +110,11 @@ export default function RootLayout({
           Skip to main content
         </a>
         <ThemeProvider>
-          <CommandPalette />
-          <ClientShell />
-          {children}
+          <UserProvider>
+            <CommandPalette />
+            <ClientShell />
+            {children}
+          </UserProvider>
         </ThemeProvider>
         {/* Service Worker registration */}
         <script
