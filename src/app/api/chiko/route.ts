@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getAuthUser } from "@/lib/supabase/auth";
-import { checkCredits, deductCredits, refundCredits } from "@/lib/supabase/credits";
+import { checkCredits, deductCredits, refundCredits, logTokenUsage } from "@/lib/supabase/credits";
 
 /* ── Chiko — DMSuite's Personal AI Assistant API ─────────────
    Dedicated streaming endpoint for Chiko with full platform
@@ -300,7 +300,7 @@ Users may say "undo that", "go back", "revert the colors", etc. — use the log 
     if (provider === "openai") {
       return streamOpenAI(messages, systemPrompt, hasActions ? actions : undefined, hasWorkflow);
     }
-    return streamClaude(messages, systemPrompt, hasActions ? actions : undefined, hasWorkflow, validLogoImage);
+    return streamClaude(messages, systemPrompt, hasActions ? actions : undefined, hasWorkflow, validLogoImage, authedUserId!);
   } catch (error) {
     console.error("Chiko API error:", error);
     if (authedUserId && deductedCost > 0) {
@@ -326,6 +326,7 @@ async function streamClaude(
   tools?: { name: string; description: string; input_schema: Record<string, unknown> }[],
   hasWorkflow?: boolean,
   logoImage?: { data: string; mediaType: string },
+  userId?: string,
 ) {
   if (!ANTHROPIC_API_KEY) {
     return new Response(
@@ -417,6 +418,8 @@ async function streamClaude(
       let currentToolUseId = "";
       let insideToolUse = false;
       let streamStopReason = "";
+      let inputTokens = 0;
+      let outputTokens = 0;
       try {
         while (true) {
           const { done, value } = await reader.read();
@@ -484,6 +487,13 @@ async function streamClaude(
                 if (event.type === "message_delta" && event.delta?.stop_reason) {
                   streamStopReason = event.delta.stop_reason;
                 }
+                // Capture token usage from stream events
+                if (event.type === "message_start" && event.message?.usage) {
+                  inputTokens = event.message.usage.input_tokens ?? 0;
+                }
+                if (event.type === "message_delta" && event.usage) {
+                  outputTokens = event.usage.output_tokens ?? 0;
+                }
               } catch {
                 // skip
               }
@@ -493,6 +503,14 @@ async function streamClaude(
       } catch (err) {
         console.error("Chiko stream error:", err);
       } finally {
+        // Log token usage after stream completes
+        if (userId && (inputTokens > 0 || outputTokens > 0)) {
+          logTokenUsage(userId, "chiko-message", {
+            inputTokens,
+            outputTokens,
+            model: ANTHROPIC_MODEL,
+          }).catch((e) => console.error("Failed to log Chiko token usage:", e));
+        }
         // Emit stop_reason so the client knows if Claude expects tool results
         if (streamStopReason) {
           try {

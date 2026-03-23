@@ -178,6 +178,10 @@ export default function StepEditor() {
           }),
         });
 
+        if (response.status === 402) {
+          const { handleCreditError } = await import("@/lib/credit-error");
+          throw new Error(handleCreditError());
+        }
         if (!response.ok) throw new Error("AI revision request failed");
 
         const text = await response.text();

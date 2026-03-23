@@ -450,6 +450,10 @@ export default function StepGeneration() {
     })
       .then(async (res) => {
         if (abortCtrl.signal.aborted) return;
+        if (res.status === 402) {
+          const { handleCreditError } = await import("@/lib/credit-error");
+          throw new Error(handleCreditError());
+        }
         if (!res.ok) throw new Error(`Generation failed (${res.status})`);
         const data = (await res.json()) as { resume: ResumeData };
         if (abortCtrl.signal.aborted) return;
@@ -522,6 +526,10 @@ export default function StepGeneration() {
     })
       .then(async (res) => {
         if (abortCtrl.signal.aborted) return;
+        if (res.status === 402) {
+          const { handleCreditError } = await import("@/lib/credit-error");
+          throw new Error(handleCreditError());
+        }
         if (!res.ok) throw new Error(`Generation failed (${res.status})`);
         const data = (await res.json()) as { resume: ResumeData };
         if (abortCtrl.signal.aborted) return;

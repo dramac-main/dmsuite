@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/supabase/auth";
 import { checkCredits, deductCredits, refundCredits } from "@/lib/supabase/credits";
+import type { TokenUsage } from "@/lib/supabase/credits";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
@@ -125,11 +126,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to deduct credits" }, { status: 402 });
     }
 
-    const parsed = await parseWithClaude(extractedText, imageBase64, imageMimeType);
+    const parseResult = await parseWithClaude(extractedText, imageBase64, imageMimeType);
+
+    // Log token usage after successful parse
+    if (parseResult.usage) {
+      const tokenUsage: TokenUsage = {
+        inputTokens: parseResult.usage.input_tokens ?? 0,
+        outputTokens: parseResult.usage.output_tokens ?? 0,
+        model: parseResult.model ?? ANTHROPIC_MODEL,
+      };
+      // Update the transaction we just created with token data
+      const { logTokenUsage } = await import("@/lib/supabase/credits");
+      await logTokenUsage(user.id, "file-parsing", tokenUsage);
+    }
 
     return NextResponse.json({
       success: true,
-      parsed,
+      parsed: parseResult.parsed,
       rawText: extractedText || null,
     });
   } catch (error) {
@@ -293,7 +306,7 @@ async function parseWithClaude(
   text: string,
   imageBase64: string | null,
   imageMimeType: string | null,
-): Promise<Record<string, unknown>> {
+): Promise<{ parsed: Record<string, unknown>; usage?: { input_tokens: number; output_tokens: number }; model?: string }> {
   // Build message content
   const content: Array<Record<string, unknown>> = [];
 
@@ -328,7 +341,7 @@ async function parseWithClaude(
     try {
       console.log(`[resume-parse] Trying model: ${model}`);
       const result = await callClaude(model, content);
-      return result;
+      return { ...result, model };
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
       console.warn(`[resume-parse] Model ${model} failed: ${lastError.message}`);
@@ -346,7 +359,7 @@ async function parseWithClaude(
 async function callClaude(
   model: string,
   content: Array<Record<string, unknown>>,
-): Promise<Record<string, unknown>> {
+): Promise<{ parsed: Record<string, unknown>; usage?: { input_tokens: number; output_tokens: number } }> {
   const body = JSON.stringify({
     model,
     max_tokens: 4096,
@@ -393,7 +406,7 @@ async function callClaude(
   if (lastBrace >= 0) jsonStr = jsonStr.slice(0, lastBrace + 1);
 
   try {
-    return JSON.parse(jsonStr);
+    return { parsed: JSON.parse(jsonStr), usage: result.usage };
   } catch {
     console.error("Failed to parse Claude response as JSON:", rawOutput.slice(0, 500));
     throw new Error("AI returned invalid data. Please try again.");

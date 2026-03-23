@@ -5,7 +5,8 @@
 
 import { NextRequest } from "next/server";
 import { getAuthUser } from "@/lib/supabase/auth";
-import { checkCredits, deductCredits, refundCredits } from "@/lib/supabase/credits";
+import { checkCredits, deductCredits } from "@/lib/supabase/credits";
+import type { TokenUsage } from "@/lib/supabase/credits";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
@@ -35,11 +36,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const deduction = await deductCredits(user.id, "business-card-design", "Business card design generation");
-    if (!deduction.success) {
-      return new Response("Failed to deduct credits", { status: 402 });
-    }
-
     // Non-streaming call — 24576 tokens allows full front+back card generation
     const anthropicResponse = await fetch(
       "https://api.anthropic.com/v1/messages",
@@ -63,7 +59,6 @@ export async function POST(request: NextRequest) {
     if (!anthropicResponse.ok) {
       const errorText = await anthropicResponse.text();
       console.error("Anthropic design API error:", anthropicResponse.status, errorText);
-      await refundCredits(user.id, creditCheck.cost, "Refund: design generation failed");
       return new Response("AI service error — please try again", { status: 502 });
     }
 
@@ -79,6 +74,17 @@ export async function POST(request: NextRequest) {
       return new Response("Empty response from AI", { status: 502 });
     }
 
+    // Deduct credits AFTER successful AI response with token tracking
+    const tokenUsage: TokenUsage | undefined = result.usage ? {
+      inputTokens: result.usage.input_tokens ?? 0,
+      outputTokens: result.usage.output_tokens ?? 0,
+      model: ANTHROPIC_MODEL,
+    } : undefined;
+    const deduction = await deductCredits(user.id, "business-card-design", "Business card design generation", undefined, tokenUsage);
+    if (!deduction.success) {
+      return new Response(JSON.stringify({ error: "Failed to deduct credits" }), { status: 402, headers: { "Content-Type": "application/json" } });
+    }
+
     // Detect if response was truncated due to max_tokens
     const wasTruncated = result.stop_reason === "max_tokens";
 
@@ -92,7 +98,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Design API error:", error);
-    await refundCredits(user.id, creditCheck.cost, "Refund: design generation failed");
     return new Response(
       `Internal server error: ${error instanceof Error ? error.message : "Unknown"}`,
       { status: 500 }

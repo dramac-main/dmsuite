@@ -941,8 +941,9 @@ export function ChikoAssistant() {
           return;
         }
         if (response.status === 402) {
+          const { handleCreditError } = await import("@/lib/credit-error");
           updateAttachment(id, { status: "error", error: "Insufficient credits", progress: 0 });
-          addMessage({ role: "assistant", content: "You\u2019ve run out of credits! Tap the **credits** badge to buy more." });
+          addMessage({ role: "assistant", content: handleCreditError() });
           return;
         }
 
@@ -1186,9 +1187,8 @@ export function ChikoAssistant() {
           return;
         }
         if (response.status === 402) {
-          updateLastAssistantMessage(
-            "You\u2019ve run out of credits! Tap the **credits** badge at the top to purchase more, then try again."
-          );
+          const { handleCreditError } = await import("@/lib/credit-error");
+          updateLastAssistantMessage(handleCreditError());
           setIsGenerating(false);
           return;
         }

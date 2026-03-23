@@ -345,7 +345,14 @@ export default function AIChatWorkspace() {
         signal: controller.signal,
       });
 
-      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      if (!response.ok) {
+        if (response.status === 402) {
+          const { handleCreditError } = await import("@/lib/credit-error");
+          addMessage({ role: "assistant", content: handleCreditError() });
+          return;
+        }
+        throw new Error(`API error: ${response.status}`);
+      }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();

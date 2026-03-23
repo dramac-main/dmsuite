@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getAuthUser } from "@/lib/supabase/auth";
-import { checkCredits, deductCredits, refundCredits, getCreditCost } from "@/lib/supabase/credits";
+import { checkCredits, deductCredits, refundCredits, getCreditCost, logTokenUsage } from "@/lib/supabase/credits";
 
 /* ── Environment ──────────────────────────────────────────── */
 
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     if (provider === "openai") {
       response = await streamOpenAI(messages);
     } else {
-      response = await streamClaude(messages);
+      response = await streamClaude(messages, user.id);
     }
 
     // If the AI call itself failed, refund the credit
@@ -98,7 +98,7 @@ function resolveProvider(requested?: string): Provider {
 
 /* ── Anthropic Claude streaming ──────────────────────────── */
 
-async function streamClaude(messages: { role: string; content: string }[]) {
+async function streamClaude(messages: { role: string; content: string }[], userId: string) {
   if (!ANTHROPIC_API_KEY) {
     return new Response(
       "ANTHROPIC_API_KEY is not configured. Add it to your .env.local file.",
@@ -147,6 +147,8 @@ async function streamClaude(messages: { role: string; content: string }[]) {
     async start(controller) {
       const decoder = new TextDecoder();
       let buffer = "";
+      let inputTokens = 0;
+      let outputTokens = 0;
 
       try {
         while (true) {
@@ -170,6 +172,13 @@ async function streamClaude(messages: { role: string; content: string }[]) {
                 ) {
                   controller.enqueue(encoder.encode(event.delta.text));
                 }
+                // Capture token usage from stream events
+                if (event.type === "message_start" && event.message?.usage) {
+                  inputTokens = event.message.usage.input_tokens ?? 0;
+                }
+                if (event.type === "message_delta" && event.usage) {
+                  outputTokens = event.usage.output_tokens ?? 0;
+                }
               } catch {
                 // Skip non-JSON lines
               }
@@ -179,6 +188,14 @@ async function streamClaude(messages: { role: string; content: string }[]) {
       } catch (error) {
         console.error("Claude stream error:", error);
       } finally {
+        // Log token usage after stream completes
+        if (inputTokens > 0 || outputTokens > 0) {
+          logTokenUsage(userId, "chat-message", {
+            inputTokens,
+            outputTokens,
+            model: ANTHROPIC_MODEL,
+          }).catch((e) => console.error("Failed to log token usage:", e));
+        }
         controller.close();
       }
     },

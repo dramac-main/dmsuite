@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/supabase/auth";
-import { checkCredits, deductCredits, refundCredits } from "@/lib/supabase/credits";
+import { checkCredits, deductCredits } from "@/lib/supabase/credits";
+import type { TokenUsage } from "@/lib/supabase/credits";
 
 /* ── Environment ──────────────────────────────────────────── */
 
@@ -66,11 +67,6 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const deduction = await deductCredits(user.id, "image-analysis", "Image analysis");
-    if (!deduction.success) {
-      return NextResponse.json({ error: "Failed to deduct credits" }, { status: 402 });
-    }
-
     const { imageUrl } = await request.json();
 
     if (!imageUrl || typeof imageUrl !== "string") {
@@ -89,7 +85,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (!["https:", "http:"].includes(parsedUrl.protocol)) {
-      await refundCredits(user.id, creditCheck.cost, "Refund: invalid URL protocol");
       return NextResponse.json({ error: "Invalid URL protocol" }, { status: 400 });
     }
 
@@ -105,7 +100,6 @@ export async function POST(request: NextRequest) {
       hostname.endsWith(".internal") ||
       hostname === "[::1]"
     ) {
-      await refundCredits(user.id, creditCheck.cost, "Refund: blocked URL");
       return NextResponse.json({ error: "Invalid image URL" }, { status: 400 });
     }
 
@@ -120,7 +114,6 @@ export async function POST(request: NextRequest) {
     clearTimeout(timeoutId);
 
     if (!imageResponse.ok) {
-      await refundCredits(user.id, creditCheck.cost, "Refund: image fetch failed");
       return NextResponse.json(
         { error: "Failed to fetch image" },
         { status: 400 }
@@ -130,13 +123,11 @@ export async function POST(request: NextRequest) {
     // Limit image size to 20MB
     const contentLength = parseInt(imageResponse.headers.get("content-length") || "0");
     if (contentLength > 20 * 1024 * 1024) {
-      await refundCredits(user.id, creditCheck.cost, "Refund: image too large");
       return NextResponse.json({ error: "Image too large (max 20MB)" }, { status: 400 });
     }
 
     const imageBuffer = await imageResponse.arrayBuffer();
     if (imageBuffer.byteLength > 20 * 1024 * 1024) {
-      await refundCredits(user.id, creditCheck.cost, "Refund: image too large");
       return NextResponse.json({ error: "Image too large (max 20MB)" }, { status: 400 });
     }
     const base64Image = Buffer.from(imageBuffer).toString("base64");
@@ -221,7 +212,6 @@ RULES:
     if (!analysisResponse.ok) {
       const errorText = await analysisResponse.text();
       console.error("Claude Vision API error:", analysisResponse.status, errorText);
-      await refundCredits(user.id, creditCheck.cost, "Refund: image analysis API error");
       return NextResponse.json(
         { error: "Image analysis failed" },
         { status: 502 }
@@ -269,6 +259,17 @@ RULES:
       suggestedAccentColor: analysis.suggestedAccentColor || "#8ae600",
     };
 
+    // Deduct credits AFTER successful AI response with token tracking
+    const tokenUsage: TokenUsage | undefined = result.usage ? {
+      inputTokens: result.usage.input_tokens ?? 0,
+      outputTokens: result.usage.output_tokens ?? 0,
+      model: ANTHROPIC_MODEL,
+    } : undefined;
+    const deduction = await deductCredits(user.id, "image-analysis", "Image analysis", undefined, tokenUsage);
+    if (!deduction.success) {
+      return NextResponse.json({ error: "Failed to deduct credits" }, { status: 402 });
+    }
+
     return NextResponse.json(analysis, {
       headers: {
         "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=7200",
@@ -276,7 +277,6 @@ RULES:
     });
   } catch (error) {
     console.error("Image analysis error:", error);
-    await refundCredits(user.id, creditCheck.cost, "Refund: image analysis failed");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

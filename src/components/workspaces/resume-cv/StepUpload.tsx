@@ -186,6 +186,10 @@ export default function StepUpload() {
         body: formData,
       });
 
+      if (res.status === 402) {
+        const { handleCreditError } = await import("@/lib/credit-error");
+        throw new Error(handleCreditError());
+      }
       if (!res.ok) {
         const data = await res.json().catch(() => null);
         throw new Error(data?.error || `Upload failed (${res.status})`);

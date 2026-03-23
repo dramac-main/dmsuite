@@ -6,7 +6,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/supabase/auth";
-import { checkCredits, deductCredits, refundCredits } from "@/lib/supabase/credits";
+import { checkCredits, deductCredits } from "@/lib/supabase/credits";
+import type { TokenUsage } from "@/lib/supabase/credits";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
@@ -61,17 +62,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const deduction = await deductCredits(user.id, "resume-revision", "Resume revision");
-    if (!deduction.success) {
-      return NextResponse.json({ error: "Failed to deduct credits" }, { status: 402 });
-    }
-
     // Try primary model, then fallback
     const modelsToTry = ANTHROPIC_MODEL !== FALLBACK_MODEL
       ? [ANTHROPIC_MODEL, FALLBACK_MODEL]
       : [ANTHROPIC_MODEL];
 
     let anthropicResponse: Response | null = null;
+    let usedModel = ANTHROPIC_MODEL;
 
     for (const model of modelsToTry) {
       console.log(`[resume-revise] Trying model: ${model}`);
@@ -93,14 +90,13 @@ export async function POST(request: NextRequest) {
           }),
         }
       );
-      if (anthropicResponse.ok) break;
+      if (anthropicResponse.ok) { usedModel = model; break; }
       console.warn(`[resume-revise] Model ${model} failed: ${anthropicResponse.status}`);
     }
 
     if (!anthropicResponse || !anthropicResponse.ok) {
       const errText = anthropicResponse ? await anthropicResponse.text() : "no response";
       console.error("Anthropic API error:", errText);
-      await refundCredits(user.id, creditCheck.cost, "Refund: resume revision API error");
       return NextResponse.json(
         { error: "AI service error — please try again" },
         { status: 502 }
@@ -119,10 +115,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Deduct credits AFTER successful AI response with token tracking
+    const tokenUsage: TokenUsage | undefined = anthropicData.usage ? {
+      inputTokens: anthropicData.usage.input_tokens ?? 0,
+      outputTokens: anthropicData.usage.output_tokens ?? 0,
+      model: usedModel,
+    } : undefined;
+    const deduction = await deductCredits(user.id, "resume-revision", "Resume revision", undefined, tokenUsage);
+    if (!deduction.success) {
+      return NextResponse.json({ error: "Failed to deduct credits" }, { status: 402 });
+    }
+
     return NextResponse.json({ text: textBlock.text });
   } catch (err) {
     console.error("Resume revision API error:", err);
-    await refundCredits(user.id, creditCheck.cost, "Refund: resume revision failed");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

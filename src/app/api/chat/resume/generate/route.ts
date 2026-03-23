@@ -12,7 +12,8 @@ import {
   type ResumeGenerationInput,
 } from "@/lib/resume/ai-resume-generator";
 import { getAuthUser } from "@/lib/supabase/auth";
-import { checkCredits, deductCredits, refundCredits } from "@/lib/supabase/credits";
+import { checkCredits, deductCredits } from "@/lib/supabase/credits";
+import type { TokenUsage } from "@/lib/supabase/credits";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
@@ -66,15 +67,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const deduction = await deductCredits(user.id, "resume-generation", "Resume generation");
-    if (!deduction.success) {
-      return NextResponse.json({ error: "Failed to deduct credits" }, { status: 402 });
-    }
-
-    // If no API key, refund and use fallback (no AI value delivered)
+    // If no API key, use fallback (no credits charged — no AI value)
     if (!ANTHROPIC_API_KEY) {
-      console.warn("ANTHROPIC_API_KEY not configured — refunding and using fallback");
-      await refundCredits(user.id, creditCheck.cost, "Refund: resume generation — no API key configured");
+      console.warn("ANTHROPIC_API_KEY not configured — using fallback");
       const resume = buildFallbackResume(payload);
       return NextResponse.json({ resume, fallback: true });
     }
@@ -88,6 +83,7 @@ export async function POST(request: NextRequest) {
       : [ANTHROPIC_MODEL];
 
     let anthropicResponse: Response | null = null;
+    let usedModel = ANTHROPIC_MODEL;
 
     for (const model of modelsToTry) {
       console.log(`[resume-generate] Trying model: ${model}`);
@@ -109,16 +105,14 @@ export async function POST(request: NextRequest) {
           }),
         }
       );
-      if (anthropicResponse.ok) break;
+      if (anthropicResponse.ok) { usedModel = model; break; }
       console.warn(`[resume-generate] Model ${model} failed: ${anthropicResponse.status}`);
     }
 
     if (!anthropicResponse || !anthropicResponse.ok) {
       const errorText = anthropicResponse ? await anthropicResponse.text() : "no response";
       console.error("Anthropic resume API error:", anthropicResponse?.status, errorText);
-
-      // Refund and fallback on API error (no AI value delivered)
-      await refundCredits(user.id, creditCheck.cost, "Refund: resume generation API failed");
+      // No credits charged on API failure — fallback is free
       console.warn("Falling back to local resume generation");
       const resume = buildFallbackResume(payload);
       return NextResponse.json({ resume, fallback: true });
@@ -133,8 +127,7 @@ export async function POST(request: NextRequest) {
     const text = textBlocks?.map((b: { text: string }) => b.text).join("") || "";
 
     if (!text) {
-      console.warn("Empty AI response — refunding and using fallback");
-      await refundCredits(user.id, creditCheck.cost, "Refund: resume generation — empty AI response");
+      console.warn("Empty AI response — using fallback (no credits charged)");
       const resume = buildFallbackResume(payload);
       return NextResponse.json({ resume, fallback: true });
     }
@@ -145,17 +138,28 @@ export async function POST(request: NextRequest) {
     // Parse and validate the response
     try {
       const resume = parseResumeResponse(text, wasTruncated);
+
+      // Deduct credits AFTER successful AI response with token tracking
+      const tokenUsage: TokenUsage | undefined = result.usage ? {
+        inputTokens: result.usage.input_tokens ?? 0,
+        outputTokens: result.usage.output_tokens ?? 0,
+        model: usedModel,
+      } : undefined;
+      const deduction = await deductCredits(user.id, "resume-generation", "Resume generation", undefined, tokenUsage);
+      if (!deduction.success) {
+        return NextResponse.json({ error: "Failed to deduct credits" }, { status: 402 });
+      }
+
       return NextResponse.json({ resume });
     } catch (parseError) {
       console.error("Failed to parse AI resume response:", parseError);
-      await refundCredits(user.id, creditCheck.cost, "Refund: resume generation — parse failed");
+      // No credits charged on parse failure — fallback is free
       console.warn("Falling back to local resume generation");
       const resume = buildFallbackResume(payload);
       return NextResponse.json({ resume, fallback: true });
     }
   } catch (error) {
     console.error("Resume generation API error:", error);
-    await refundCredits(user.id, creditCheck.cost, "Refund: resume generation failed");
     return NextResponse.json(
       { error: `Internal server error: ${error instanceof Error ? error.message : "Unknown"}` },
       { status: 500 }

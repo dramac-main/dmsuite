@@ -1,12 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@/hooks/useUser";
 import CreditPurchaseModal from "./CreditPurchaseModal";
+
+/** Dispatch this event from anywhere to open the purchase modal */
+export function openCreditPurchase() {
+  window.dispatchEvent(new CustomEvent("dmsuite:open-credit-purchase"));
+}
 
 export default function CreditBalance() {
   const { profile, loading } = useUser();
   const [showPurchase, setShowPurchase] = useState(false);
+
+  // Listen for global "open purchase" events from any component
+  useEffect(() => {
+    const handler = () => setShowPurchase(true);
+    window.addEventListener("dmsuite:open-credit-purchase", handler);
+    return () => window.removeEventListener("dmsuite:open-credit-purchase", handler);
+  }, []);
 
   if (loading) {
     return (
