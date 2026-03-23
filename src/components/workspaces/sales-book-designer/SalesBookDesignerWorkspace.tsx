@@ -28,6 +28,7 @@ import SBSectionPrintConfig from "./SBSectionPrintConfig";
 import SBSectionStyle from "./SBSectionStyle";
 import SBSectionBrandLogos from "./SBSectionBrandLogos";
 import SBSectionCustomBlocks from "./SBSectionCustomBlocks";
+import SBLayersPanel from "./SBLayersPanel";
 
 // ── Accordion Section Wrapper ──
 
@@ -120,6 +121,7 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
 
   // Print handler ref for Chiko manifest
   const printRef = useRef<(() => void) | null>(null);
+  const printAreaRef = useRef<HTMLDivElement>(null);
 
   // Register Chiko action manifest for this tool
   useChikoActions(() => createSalesBookManifest({ onPrintRef: printRef }));
@@ -135,6 +137,10 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
 
   // Convert dropdown
   const [showConvert, setShowConvert] = useState(false);
+
+  // Layers panel
+  const [layersCollapsed, setLayersCollapsed] = useState(false);
+  const [hoveredSection, setHoveredSection] = useState<string | null>(null);
 
   // Derived
   const forms = totalFormCount(form.serialConfig);
@@ -152,6 +158,17 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Highlight elements on canvas when hovering a layer
+  useEffect(() => {
+    const container = printAreaRef.current;
+    if (!container) return;
+    // Clear all highlights first
+    container.querySelectorAll(".sb-layer-highlight").forEach((el) => el.classList.remove("sb-layer-highlight"));
+    if (hoveredSection && /^[a-z-]+$/.test(hoveredSection)) {
+      container.querySelectorAll(`[data-sb-section="${hoveredSection}"]`).forEach((el) => el.classList.add("sb-layer-highlight"));
+    }
+  }, [hoveredSection]);
+
   const toggleSection = useCallback((key: string) => {
     setOpenSection((prev) => (prev === key ? null : key));
   }, []);
@@ -164,6 +181,12 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
     if (!section) return;
     setOpenSection(section);
     // On mobile, also switch to the editor tab
+    setMobileTab("editor");
+  }, []);
+
+  // Layers panel → open sidebar section
+  const handleLayerOpenSection = useCallback((section: string) => {
+    setOpenSection(section);
     setMobileTab("editor");
   }, []);
 
@@ -405,17 +428,18 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
           backgroundSize: "20px 20px",
         }}
       >
-        {/* Hover highlight for clickable preview areas — hidden during print */}
+        {/* Hover highlight for clickable preview areas + layer hover highlight — hidden during print */}
         <style>{`
           .sb-preview-canvas [data-sb-section] { transition: outline 0.15s ease, box-shadow 0.15s ease; outline: 2px solid transparent; border-radius: 2px; }
           .sb-preview-canvas [data-sb-section]:hover { outline: 2px solid rgba(132,204,22,0.5); box-shadow: 0 0 0 4px rgba(132,204,22,0.08); }
+          .sb-preview-canvas [data-sb-section].sb-layer-highlight { outline: 2px solid rgba(132,204,22,0.7); box-shadow: 0 0 0 6px rgba(132,204,22,0.12); }
           @media print { .sb-preview-canvas [data-sb-section] { outline: none !important; box-shadow: none !important; cursor: default !important; } }
         `}</style>
         <div
           className="flex flex-col items-center py-6 px-4"
           style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
         >
-          <div id="sb-print-area">
+          <div id="sb-print-area" ref={printAreaRef}>
             <BlankFormRenderer form={form} previewPageCount={previewPages} />
           </div>
           {pages > previewPages && (
@@ -459,13 +483,24 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
           {editorPanel}
         </div>
 
-        {/* Right preview panel */}
+        {/* Right: preview + layers */}
         <div
           className={`${
             mobileTab === "preview" ? "flex" : "hidden"
-          } lg:flex flex-1 flex-col overflow-hidden`}
+          } lg:flex flex-1 overflow-hidden`}
         >
-          {previewPanel}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {previewPanel}
+          </div>
+          {/* Layers panel — desktop only */}
+          <div className="hidden lg:flex">
+            <SBLayersPanel
+              onOpenSection={handleLayerOpenSection}
+              onHoverSection={setHoveredSection}
+              collapsed={layersCollapsed}
+              onToggleCollapse={() => setLayersCollapsed((p) => !p)}
+            />
+          </div>
         </div>
       </div>
     </div>
