@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { usePathname } from "next/navigation";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
 
 const MobileBottomNav = dynamic(() => import("@/components/MobileBottomNav"), {
@@ -30,9 +31,18 @@ const ChikoOnboarding = dynamic(
  * Client-side shell — wraps global shortcuts, mobile nav, install prompt,
  * shortcuts help modal, Chiko AI assistant, and onboarding tour.
  * Mounted once inside ThemeProvider in layout.tsx.
+ *
+ * Auth-aware: Chiko, mobile nav, install prompt, and shortcuts are hidden
+ * on auth pages (login, signup, verify, reset-password, callback).
  */
 export default function ClientShell() {
   useGlobalShortcuts();
+  const pathname = usePathname();
+
+  // Auth pages should not show Chiko, mobile nav, or shortcuts
+  const isAuthPage = pathname.startsWith("/auth/");
+
+  if (isAuthPage) return null;
 
   return (
     <>

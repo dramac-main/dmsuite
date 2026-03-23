@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 export interface UserProfile {
   id: string;
@@ -40,6 +41,7 @@ export function useUser(): UseUserReturn {
     configured ? null : DEV_PROFILE
   );
   const [loading, setLoading] = useState(configured);
+  const realtimeRef = useRef<RealtimeChannel | null>(null);
 
   const supabase = createClient();
 
@@ -59,6 +61,45 @@ export function useUser(): UseUserReturn {
   const refreshProfile = useCallback(async () => {
     if (user) await fetchProfile(user.id);
   }, [user, fetchProfile]);
+
+  // ── Realtime subscription for credit balance updates ──
+  useEffect(() => {
+    if (!configured || !user) {
+      // Clean up any existing channel when user logs out
+      if (realtimeRef.current) {
+        supabase.removeChannel(realtimeRef.current);
+        realtimeRef.current = null;
+      }
+      return;
+    }
+
+    // Subscribe to changes on this user's profile row
+    const channel = supabase
+      .channel(`profile:${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+          filter: `id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newRow = payload.new as UserProfile;
+          setProfile((prev) =>
+            prev ? { ...prev, ...newRow } : newRow
+          );
+        }
+      )
+      .subscribe();
+
+    realtimeRef.current = channel;
+
+    return () => {
+      supabase.removeChannel(channel);
+      realtimeRef.current = null;
+    };
+  }, [configured, user, supabase]);
 
   useEffect(() => {
     if (!configured) return;

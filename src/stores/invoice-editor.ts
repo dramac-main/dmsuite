@@ -6,6 +6,7 @@
 
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { persist } from "zustand/middleware";
 import { temporal } from "zundo";
 import equal from "fast-deep-equal";
 import type {
@@ -129,9 +130,10 @@ function createChargeId(): string {
 // ---------------------------------------------------------------------------
 
 export const useInvoiceEditor = create<InvoiceEditorState>()(
-  temporal(
-    immer((set) => ({
-      invoice: createDefaultInvoiceData(),
+  persist(
+    temporal(
+      immer((set) => ({
+        invoice: createDefaultInvoiceData(),
 
       // ── Document Type ──
       setDocumentType: (type) =>
@@ -411,6 +413,10 @@ export const useInvoiceEditor = create<InvoiceEditorState>()(
       equality: (a, b) => equal(a, b),
     },
   ),
+  {
+    name: "dmsuite-invoice",
+    partialize: (state) => ({ invoice: state.invoice }),
+  }),
 );
 
 /** Temporal store accessor for undo / redo */

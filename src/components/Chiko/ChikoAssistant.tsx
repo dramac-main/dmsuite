@@ -934,6 +934,18 @@ export function ChikoAssistant() {
           body: formData,
         });
 
+        // Handle auth/credit errors on upload
+        if (response.status === 401) {
+          updateAttachment(id, { status: "error", error: "Sign in required", progress: 0 });
+          addMessage({ role: "assistant", content: "You need to be signed in to upload files. Please log in and try again." });
+          return;
+        }
+        if (response.status === 402) {
+          updateAttachment(id, { status: "error", error: "Insufficient credits", progress: 0 });
+          addMessage({ role: "assistant", content: "You\u2019ve run out of credits! Tap the **credits** badge to buy more." });
+          return;
+        }
+
         updateAttachment(id, { status: "processing", progress: 85 });
 
         const result = await response.json() as { success: boolean; data?: ExtractedFileData; error?: string };
@@ -1165,6 +1177,21 @@ export function ChikoAssistant() {
           signal: controller.signal,
         });
 
+        // Handle auth and credit errors with user-friendly messages
+        if (response.status === 401) {
+          updateLastAssistantMessage(
+            "You need to be signed in to use me. Please log in and try again."
+          );
+          setIsGenerating(false);
+          return;
+        }
+        if (response.status === 402) {
+          updateLastAssistantMessage(
+            "You\u2019ve run out of credits! Tap the **credits** badge at the top to purchase more, then try again."
+          );
+          setIsGenerating(false);
+          return;
+        }
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const contentType = response.headers.get("content-type") || "";

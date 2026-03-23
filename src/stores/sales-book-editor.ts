@@ -5,6 +5,7 @@
 
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { persist } from "zustand/middleware";
 import { temporal } from "zundo";
 import equal from "fast-deep-equal";
 import type {
@@ -87,9 +88,10 @@ export interface SalesBookEditorState {
 // ---------------------------------------------------------------------------
 
 export const useSalesBookEditor = create<SalesBookEditorState>()(
-  temporal(
-    immer((set) => ({
-      form: createDefaultSalesBookForm(),
+  persist(
+    temporal(
+      immer((set) => ({
+        form: createDefaultSalesBookForm(),
 
       // ── Document Type ──
       setDocumentType: (type) =>
@@ -235,6 +237,10 @@ export const useSalesBookEditor = create<SalesBookEditorState>()(
       equality: (a, b) => equal(a, b),
     },
   ),
+  {
+    name: "dmsuite-sales-book",
+    partialize: (state) => ({ form: state.form }),
+  }),
 );
 
 // ---------------------------------------------------------------------------

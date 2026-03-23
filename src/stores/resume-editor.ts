@@ -7,6 +7,7 @@
 import { create, type StoreApi, useStore } from "zustand";
 import { temporal } from "zundo";
 import { immer } from "zustand/middleware/immer";
+import { persist } from "zustand/middleware";
 import type { WritableDraft } from "immer";
 import isDeepEqual from "fast-deep-equal";
 import type { ResumeData, TemplateId } from "@/lib/resume/schema";
@@ -100,10 +101,11 @@ type TemporalResumeEditorStore = StoreApi<ResumeEditorState> & {
 };
 
 export const useResumeEditor = create<ResumeEditorState>()(
-  temporal(
-    immer((set) => ({
-      // ---- Initial state ----
-      resume: createDefaultResumeData(),
+  persist(
+    temporal(
+      immer((set) => ({
+        // ---- Initial state ----
+        resume: createDefaultResumeData(),
       pendingRevision: null,
       isRevisionPending: false,
 
@@ -295,7 +297,11 @@ export const useResumeEditor = create<ResumeEditorState>()(
       equality: (a, b) => isDeepEqual(a, b),
       limit: 100,
     }
-  )
+  ),
+  {
+    name: "dmsuite-resume",
+    partialize: (state) => ({ resume: state.resume }),
+  }),
 );
 
 // ---------------------------------------------------------------------------
