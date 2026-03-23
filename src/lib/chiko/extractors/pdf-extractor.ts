@@ -1,7 +1,7 @@
 // =============================================================================
 // DMSuite — PDF Extractor
-// Extracts text, metadata, fonts, and colors from PDF buffers using pdf-parse v2
-// and pdfjs-dist directly for rich styling data.
+// Extracts text, metadata, fonts, and colors from PDF buffers using pdfjs-dist
+// directly (legacy build — no worker required, works in Vercel serverless).
 // Uses lazy loading with DOM polyfills to avoid server-side DOMMatrix crash.
 // =============================================================================
 
@@ -43,22 +43,23 @@ function ensureDomPolyfills() {
   }
 }
 
-// Cached reference to PDFParse class (lazy-loaded)
-let PDFParseClass: (new (opts: { data: Uint8Array }) => {
-  getText: () => Promise<{ text: string; total: number }>;
-  getInfo: () => Promise<{ info?: Record<string, unknown>; total: number }>;
-  load: () => Promise<PdfjsDocProxy>;
-  destroy: () => Promise<void>;
-}) | null = null;
+// Cached reference to pdfjs-dist library (lazy-loaded)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let pdfjsLib: any = null;
 
 // Minimal pdfjs-dist type stubs for what we need
 interface PdfjsDocProxy {
   numPages: number;
   getPage: (n: number) => Promise<PdfjsPageProxy>;
+  getMetadata: () => Promise<{
+    info?: Record<string, unknown>;
+    metadata?: unknown;
+  }>;
+  destroy: () => Promise<void>;
 }
 interface PdfjsPageProxy {
   getTextContent: () => Promise<{
-    items: Array<{ str?: string; fontName?: string }>;
+    items: Array<{ str?: string; fontName?: string; transform?: number[] }>;
     styles: Record<string, { fontFamily?: string }>;
   }>;
   getOperatorList: () => Promise<{
@@ -74,14 +75,17 @@ const OPS_SET_STROKE_RGB = 58;
 const OPS_SET_FILL_CMYK = 61;
 const OPS_SET_STROKE_CMYK = 60;
 
-async function getPDFParseClass() {
-  if (PDFParseClass) return PDFParseClass;
+async function getPdfjs() {
+  if (pdfjsLib) return pdfjsLib;
   ensureDomPolyfills();
-  // Dynamic import to avoid top-level evaluation crash
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const mod = require("pdf-parse");
-  PDFParseClass = mod.PDFParse;
-  return PDFParseClass!;
+  // Dynamic import of main entry — works with Turbopack bundling
+  const mod = await import("pdfjs-dist");
+  // Disable worker to avoid "Cannot find module pdf.worker.mjs" in Vercel serverless
+  if (mod.GlobalWorkerOptions) {
+    mod.GlobalWorkerOptions.workerSrc = "";
+  }
+  pdfjsLib = mod;
+  return pdfjsLib;
 }
 
 /** Convert CMYK (0–1) to hex */
@@ -205,37 +209,60 @@ export async function extractPdf(
   buffer: Buffer,
   fileName: string
 ): Promise<ExtractedFileData> {
-  const PDFParse = await getPDFParseClass();
-  const parser = new PDFParse({ data: new Uint8Array(buffer) });
+  const pdfjs = await getPdfjs();
+  const doc: PdfjsDocProxy = await pdfjs.getDocument({
+    data: new Uint8Array(buffer),
+    useSystemFonts: true,
+  }).promise;
 
   let text = "";
-  let pageCount = 0;
+  const pageCount = doc.numPages;
   const metadata: Record<string, string> = {};
   let documentFonts: string[] | undefined;
   let documentColors: string[] | undefined;
 
   try {
-    const textResult = await parser.getText();
-    text = textResult.text || "";
-    pageCount = textResult.total || 0;
+    // ── Extract text from all pages ──
+    for (let i = 1; i <= pageCount; i++) {
+      const page = await doc.getPage(i);
+      const content = await page.getTextContent();
+      const lines: string[] = [];
+      let lastY: number | null = null;
 
-    const infoResult = await parser.getInfo();
-    if (infoResult.info) {
-      const info = infoResult.info;
-      if (info.Title) metadata.title = String(info.Title);
-      if (info.Author) metadata.author = String(info.Author);
-      if (info.Creator) metadata.creator = String(info.Creator);
-      if (info.CreationDate) metadata.creationDate = String(info.CreationDate);
-      if (info.ModDate) metadata.modificationDate = String(info.ModDate);
+      for (const item of content.items) {
+        if (!item.str) continue;
+        const y = item.transform?.[5];
+        // Detect line breaks from Y-coordinate changes
+        if (lastY !== null && y !== undefined && Math.abs(y - lastY) > 2) {
+          lines.push("\n");
+        }
+        lines.push(item.str);
+        if (y !== undefined) lastY = y;
+      }
+      text += lines.join("") + "\n\n";
+      page.cleanup();
     }
+    text = text.trim();
 
-    // Extract fonts and colors from the PDF's rendering data
-    const doc = await parser.load();
+    // ── Extract metadata ──
+    try {
+      const meta = await doc.getMetadata();
+      if (meta.info) {
+        const info = meta.info;
+        if (info.Title) metadata.title = String(info.Title);
+        if (info.Author) metadata.author = String(info.Author);
+        if (info.Creator) metadata.creator = String(info.Creator);
+        if (info.CreationDate) metadata.creationDate = String(info.CreationDate);
+        if (info.ModDate) metadata.modificationDate = String(info.ModDate);
+      }
+    } catch { /* metadata extraction is best-effort */ }
+
+    // ── Extract fonts and colors from the PDF's rendering data ──
     const styling = await extractStyling(doc);
     if (styling.fonts.length > 0) documentFonts = styling.fonts;
     if (styling.colors.length > 0) documentColors = styling.colors;
   } finally {
-    await parser.destroy();
+    await doc.destroy();
   }
 
   // Build text blocks (split by double newlines for paragraphs)
