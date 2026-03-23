@@ -143,51 +143,13 @@ export async function POST(request: NextRequest) {
 }
 
 // ---------------------------------------------------------------------------
-// PDF text extraction (using pdfjs-dist legacy build — no worker needed)
+// PDF text extraction (using unpdf — serverless-safe, no workers needed)
 // ---------------------------------------------------------------------------
 
-function ensurePdfPolyfills() {
-  if (typeof globalThis.DOMMatrix === "undefined") {
-    globalThis.DOMMatrix = class DOMMatrix {
-      a: number; b: number; c: number; d: number; e: number; f: number;
-      constructor(init?: number[]) {
-        this.a = init?.[0] ?? 1; this.b = init?.[1] ?? 0;
-        this.c = init?.[2] ?? 0; this.d = init?.[3] ?? 1;
-        this.e = init?.[4] ?? 0; this.f = init?.[5] ?? 0;
-      }
-    } as unknown as typeof DOMMatrix;
-  }
-  if (typeof globalThis.Path2D === "undefined") {
-    globalThis.Path2D = class Path2D {
-      constructor(_d?: string | Path2D) { /* stub */ }
-    } as unknown as typeof Path2D;
-  }
-}
-
 async function extractPdfText(buffer: Buffer): Promise<string> {
-  ensurePdfPolyfills();
-  // Legacy build bundles the worker inline — no separate worker file needed.
-  // Dynamic string prevents Turbopack from resolving the subpath at build time.
-  const legacyPath = "pdfjs-dist" + "/legacy/build/pdf.mjs";
-  const pdfjsLib = await import(/* webpackIgnore: true */ legacyPath);
-  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
-  let text = "";
-  try {
-    for (let i = 1; i <= doc.numPages; i++) {
-      const page = await doc.getPage(i);
-      const content = await page.getTextContent();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const pageText = content.items
-        .filter((item: Record<string, unknown>) => typeof item.str === "string")
-        .map((item: Record<string, unknown>) => item.str)
-        .join(" ");
-      text += pageText + "\n";
-      page.cleanup();
-    }
-  } finally {
-    await doc.destroy();
-  }
-  return text.trim();
+  const { extractText } = await import("unpdf");
+  const { text } = await extractText(new Uint8Array(buffer));
+  return (text ?? []).join("\n").trim();
 }
 
 // ---------------------------------------------------------------------------

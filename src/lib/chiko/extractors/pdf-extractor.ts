@@ -1,8 +1,7 @@
 // =============================================================================
 // DMSuite — PDF Extractor
-// Extracts text, metadata, fonts, and colors from PDF buffers using pdfjs-dist
-// directly (legacy build — no worker required, works in Vercel serverless).
-// Uses lazy loading with DOM polyfills to avoid server-side DOMMatrix crash.
+// Extracts text, metadata, fonts, and colors from PDF buffers using unpdf
+// (self-contained serverless-safe PDF library — no workers, no polyfills needed).
 // =============================================================================
 
 import {
@@ -11,50 +10,10 @@ import {
 } from "./field-detector";
 import type { ExtractedFileData, TextBlock } from "./index";
 
-/**
- * Ensure DOM globals required by pdfjs-dist exist in Node.js.
- * Must be called before importing pdfjs-dist.
- */
-function ensureDomPolyfills() {
-  if (typeof globalThis.DOMMatrix === "undefined") {
-    // Lightweight 6-value affine matrix stub
-    globalThis.DOMMatrix = class DOMMatrix {
-      a: number; b: number; c: number; d: number; e: number; f: number;
-      constructor(init?: number[]) {
-        this.a = init?.[0] ?? 1; this.b = init?.[1] ?? 0;
-        this.c = init?.[2] ?? 0; this.d = init?.[3] ?? 1;
-        this.e = init?.[4] ?? 0; this.f = init?.[5] ?? 0;
-      }
-    } as unknown as typeof DOMMatrix;
-  }
-  if (typeof globalThis.Path2D === "undefined") {
-    globalThis.Path2D = class Path2D {
-      constructor(_d?: string | Path2D) { /* stub */ }
-    } as unknown as typeof Path2D;
-  }
-  if (typeof globalThis.ImageData === "undefined") {
-    globalThis.ImageData = class ImageData {
-      data: Uint8ClampedArray; width: number; height: number;
-      constructor(sw: number, sh: number) {
-        this.width = sw; this.height = sh;
-        this.data = new Uint8ClampedArray(sw * sh * 4);
-      }
-    } as unknown as typeof ImageData;
-  }
-}
-
-// Cached reference to pdfjs-dist library (lazy-loaded)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let pdfjsLib: any = null;
-
-// Minimal pdfjs-dist type stubs for what we need
+// Minimal type stubs for pdfjs document proxy returned by unpdf
 interface PdfjsDocProxy {
   numPages: number;
   getPage: (n: number) => Promise<PdfjsPageProxy>;
-  getMetadata: () => Promise<{
-    info?: Record<string, unknown>;
-    metadata?: unknown;
-  }>;
   destroy: () => Promise<void>;
 }
 interface PdfjsPageProxy {
@@ -69,22 +28,11 @@ interface PdfjsPageProxy {
   cleanup: () => void;
 }
 
-// pdfjs-dist OPS codes for color operators
+// pdfjs OPS codes for color operators
 const OPS_SET_FILL_RGB = 59;
 const OPS_SET_STROKE_RGB = 58;
 const OPS_SET_FILL_CMYK = 61;
 const OPS_SET_STROKE_CMYK = 60;
-
-async function getPdfjs() {
-  if (pdfjsLib) return pdfjsLib;
-  ensureDomPolyfills();
-  // Use legacy build which bundles the worker inline — no separate worker file needed.
-  // Dynamic string prevents Turbopack from resolving the subpath at build time.
-  // At runtime, Node.js resolves from node_modules (pdfjs-dist is in serverExternalPackages).
-  const legacyPath = "pdfjs-dist" + "/legacy/build/pdf.mjs";
-  pdfjsLib = await import(/* webpackIgnore: true */ legacyPath);
-  return pdfjsLib;
-}
 
 /** Convert CMYK (0–1) to hex */
 function cmykToHex(c: number, m: number, y: number, k: number): string {
@@ -173,10 +121,17 @@ async function extractStyling(
         const args = ops.argsArray[j];
         let hex: string | null = null;
 
-        if ((fn === OPS_SET_FILL_RGB || fn === OPS_SET_STROKE_RGB) && args.length >= 3) {
-          hex = rgbToHex(args[0] as number, args[1] as number, args[2] as number);
-        } else if ((fn === OPS_SET_FILL_CMYK || fn === OPS_SET_STROKE_CMYK) && args.length >= 4) {
-          hex = cmykToHex(args[0] as number, args[1] as number, args[2] as number, args[3] as number);
+        if (fn === OPS_SET_FILL_RGB || fn === OPS_SET_STROKE_RGB) {
+          // unpdf's pdfjs may return colors as hex strings or float arrays
+          if (args.length === 1 && typeof args[0] === "string") {
+            hex = args[0] as string; // Already "#rrggbb"
+          } else if (args.length >= 3) {
+            hex = rgbToHex(args[0] as number, args[1] as number, args[2] as number);
+          }
+        } else if (fn === OPS_SET_FILL_CMYK || fn === OPS_SET_STROKE_CMYK) {
+          if (args.length >= 4) {
+            hex = cmykToHex(args[0] as number, args[1] as number, args[2] as number, args[3] as number);
+          }
         }
 
         if (hex && !isNeutralColor(hex)) {
@@ -202,50 +157,31 @@ async function extractStyling(
 
 /**
  * Extract text, metadata, and detected business fields from a PDF buffer.
+ * Uses unpdf (self-contained, serverless-safe — no workers or polyfills needed).
  */
 export async function extractPdf(
   buffer: Buffer,
   fileName: string
 ): Promise<ExtractedFileData> {
-  const pdfjs = await getPdfjs();
-  const doc: PdfjsDocProxy = await pdfjs.getDocument({
-    data: new Uint8Array(buffer),
-    useSystemFonts: true,
-  }).promise;
+  const { extractText, getDocumentProxy } = await import("unpdf");
 
-  let text = "";
-  const pageCount = doc.numPages;
+  // ── Extract text via unpdf's built-in helper ──
+  const { text: rawTextArray, totalPages } = await extractText(new Uint8Array(buffer));
+  const text = (rawTextArray ?? []).join("\n\n").trim();
+  const pageCount = totalPages ?? 0;
+
+  // ── Extract metadata + fonts/colors via document proxy ──
   const metadata: Record<string, string> = {};
   let documentFonts: string[] | undefined;
   let documentColors: string[] | undefined;
 
+  const doc = await getDocumentProxy(new Uint8Array(buffer)) as unknown as PdfjsDocProxy;
   try {
-    // ── Extract text from all pages ──
-    for (let i = 1; i <= pageCount; i++) {
-      const page = await doc.getPage(i);
-      const content = await page.getTextContent();
-      const lines: string[] = [];
-      let lastY: number | null = null;
-
-      for (const item of content.items) {
-        if (!item.str) continue;
-        const y = item.transform?.[5];
-        // Detect line breaks from Y-coordinate changes
-        if (lastY !== null && y !== undefined && Math.abs(y - lastY) > 2) {
-          lines.push("\n");
-        }
-        lines.push(item.str);
-        if (y !== undefined) lastY = y;
-      }
-      text += lines.join("") + "\n\n";
-      page.cleanup();
-    }
-    text = text.trim();
-
-    // ── Extract metadata ──
+    // Metadata extraction (best-effort)
     try {
-      const meta = await doc.getMetadata();
-      if (meta.info) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const meta = await (doc as any).getMetadata?.();
+      if (meta?.info) {
         const info = meta.info;
         if (info.Title) metadata.title = String(info.Title);
         if (info.Author) metadata.author = String(info.Author);
@@ -253,9 +189,9 @@ export async function extractPdf(
         if (info.CreationDate) metadata.creationDate = String(info.CreationDate);
         if (info.ModDate) metadata.modificationDate = String(info.ModDate);
       }
-    } catch { /* metadata extraction is best-effort */ }
+    } catch { /* metadata is best-effort */ }
 
-    // ── Extract fonts and colors from the PDF's rendering data ──
+    // Font and color extraction from rendering data
     const styling = await extractStyling(doc);
     if (styling.fonts.length > 0) documentFonts = styling.fonts;
     if (styling.colors.length > 0) documentColors = styling.colors;

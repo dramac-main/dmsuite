@@ -106,7 +106,7 @@ import { extractDocx } from "./docx-extractor";
 import { extractXlsx } from "./xlsx-extractor";
 import { extractImage } from "./image-extractor";
 
-/** Lazy-load PDF extractor to avoid top-level pdfjs-dist DOM polyfill crash */
+/** Lazy-load PDF extractor to keep the unpdf bundle out of non-PDF routes */
 async function lazyExtractPdf(buf: Buffer, name: string): Promise<ExtractedFileData> {
   const { extractPdf } = await import("./pdf-extractor");
   return extractPdf(buf, name);
