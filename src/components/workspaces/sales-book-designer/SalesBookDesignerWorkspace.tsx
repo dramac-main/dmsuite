@@ -187,15 +187,13 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
       {activeTab === "more" && <SalesAdvancedTab />}
 
       {/* Start Over — always at the bottom */}
-      <div className="p-4 pb-6">
-        <ActionButton
-          variant="ghost"
-          size="sm"
+      <div className="p-4 pb-8">
+        <button
           onClick={() => setShowStartOverDialog(true)}
-          className="w-full justify-center text-gray-500 border border-gray-800/60 rounded-xl"
+          className="w-full py-2 text-[11px] font-medium text-gray-600 hover:text-gray-400 border border-gray-800/50 hover:border-gray-700/60 rounded-xl transition-all active:scale-[0.98]"
         >
           Start Over
-        </ActionButton>
+        </button>
       </div>
     </div>
   );
@@ -223,30 +221,30 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
 
   // ── Preview Panel ──
   const previewPanel = (
-    <div className="flex flex-col h-full bg-gray-900/20">
+    <div className="flex flex-col h-full bg-gray-950/40">
       {/* Preview toolbar */}
-      <div className="shrink-0 flex items-center justify-between h-12 px-3 border-b border-gray-800/40 bg-gray-900/30 backdrop-blur-sm">
-        <div className="flex items-center gap-1.5">
+      <div className="shrink-0 flex items-center justify-between h-10 px-3 border-b border-gray-800/40">
+        <div className="flex items-center gap-1">
           <IconButton onClick={() => setZoom((z) => Math.max(30, z - 10))} icon={Icons.zoomOut} tooltip="Zoom out" />
-          <span className="text-[11px] text-gray-500 w-10 text-center font-mono tabular-nums">{zoom}%</span>
+          <span className="text-[10px] text-gray-500 w-9 text-center font-mono tabular-nums">{zoom}%</span>
           <IconButton onClick={() => setZoom((z) => Math.min(200, z + 10))} icon={Icons.zoomIn} tooltip="Zoom in" />
-          <button onClick={() => setZoom(100)} className="text-[10px] text-gray-600 hover:text-gray-400 px-2 py-1 rounded-lg hover:bg-white/4 transition-colors">
+          <button onClick={() => setZoom(100)} className="text-[10px] text-gray-600 hover:text-gray-400 px-1.5 py-0.5 rounded-md hover:bg-white/4 transition-colors">
             Reset
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {/* Convert dropdown */}
           <div className="relative" ref={convertRef}>
             <ActionButton variant="secondary" size="sm" icon={Icons.convert} onClick={() => setShowConvert(!showConvert)}>
               Convert
             </ActionButton>
             {showConvert && (
-              <div className="absolute right-0 top-full mt-1 z-50 w-52 rounded-xl bg-gray-800/95 backdrop-blur-xl border border-gray-700/60 shadow-2xl shadow-black/40 py-1.5">
+              <div className="absolute right-0 top-full mt-1 z-50 w-48 rounded-xl bg-gray-800/95 backdrop-blur-xl border border-gray-700/50 shadow-2xl shadow-black/40 py-1">
                 {SALES_DOCUMENT_TYPES.filter((t) => t !== form.documentType).map((type) => {
                   const tc = DOCUMENT_TYPE_CONFIGS[type];
                   return (
-                    <button key={type} onClick={() => handleConvert(type)} className="w-full text-left px-3.5 py-2 text-[12px] text-gray-300 hover:bg-white/6 hover:text-gray-100 transition-colors">
+                    <button key={type} onClick={() => handleConvert(type)} className="w-full text-left px-3 py-1.5 text-[11px] text-gray-300 hover:bg-white/6 hover:text-gray-100 transition-colors">
                       {tc.label}
                     </button>
                   );
@@ -263,19 +261,19 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
       </div>
 
       {/* Template quick-switch strip */}
-      <div className="shrink-0 flex items-center gap-1.5 px-3 py-2 border-b border-gray-800/30 overflow-x-auto scrollbar-thin">
-        <span className="text-[9px] text-gray-600 shrink-0 mr-1 uppercase tracking-wider font-semibold">Template</span>
+      <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 border-b border-gray-800/30 overflow-x-auto scrollbar-none">
+        <span className="text-[8px] text-gray-600 shrink-0 mr-0.5 uppercase tracking-widest font-bold">TPL</span>
         {SALES_BOOK_TEMPLATES.map((tpl) => (
           <button
             key={tpl.id}
             onClick={() => updateStyle({ template: tpl.id, accentColor: tpl.accent, borderStyle: tpl.borderStyle })}
-            className={`shrink-0 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-medium transition-all ${
+            className={`shrink-0 flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium transition-all ${
               form.style.template === tpl.id
-                ? "border-primary-500/50 bg-primary-500/10 text-primary-300 ring-1 ring-primary-500/20"
-                : "border-gray-700/50 text-gray-500 hover:border-gray-600 hover:text-gray-400 hover:bg-white/2"
+                ? "border-primary-500/50 bg-primary-500/10 text-primary-300"
+                : "border-gray-700/40 text-gray-500 hover:border-gray-600 hover:text-gray-400"
             }`}
           >
-            <span className="w-2.5 h-2.5 rounded-full shrink-0 ring-1 ring-white/10" style={{ backgroundColor: tpl.accent }} />
+            <span className="w-2 h-2 rounded-full shrink-0 ring-1 ring-white/10" style={{ backgroundColor: tpl.accent }} />
             {tpl.name}
           </button>
         ))}
@@ -283,21 +281,21 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
 
       {/* Preview canvas */}
       <div
-        className="flex-1 overflow-auto sb-preview-canvas"
+        className="flex-1 overflow-auto"
         onClick={handlePreviewClick}
         style={{
-          backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0)",
-          backgroundSize: "20px 20px",
+          backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.02) 1px, transparent 0)",
+          backgroundSize: "24px 24px",
         }}
       >
         <style>{`
-          .sb-preview-canvas [data-sb-section] { transition: outline 0.15s ease, box-shadow 0.15s ease; outline: 2px solid transparent; border-radius: 2px; }
-          .sb-preview-canvas [data-sb-section]:hover { outline: 2px solid rgba(139,92,246,0.5); box-shadow: 0 0 0 4px rgba(139,92,246,0.08); }
-          .sb-preview-canvas [data-sb-section].sb-layer-highlight { outline: 2px solid rgba(139,92,246,0.7); box-shadow: 0 0 0 6px rgba(139,92,246,0.12); }
-          @media print { .sb-preview-canvas [data-sb-section] { outline: none !important; box-shadow: none !important; cursor: default !important; } }
+          .sb-canvas-root [data-sb-section] { transition: outline 0.15s ease, box-shadow 0.15s ease; outline: 2px solid transparent; border-radius: 2px; cursor: pointer; }
+          .sb-canvas-root [data-sb-section]:hover { outline: 2px solid rgba(139,92,246,0.4); box-shadow: 0 0 0 4px rgba(139,92,246,0.06); }
+          .sb-canvas-root [data-sb-section].sb-layer-highlight { outline: 2px solid rgba(139,92,246,0.6); box-shadow: 0 0 0 6px rgba(139,92,246,0.1); }
+          @media print { .sb-canvas-root [data-sb-section] { outline: none !important; box-shadow: none !important; cursor: default !important; } }
         `}</style>
         <div
-          className="flex flex-col items-center py-6 px-4"
+          className="sb-canvas-root flex flex-col items-center py-6 px-4"
           style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
         >
           <div id="sb-print-area" ref={printAreaRef}>
@@ -317,7 +315,7 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
   return (
     <div className="flex flex-col h-full bg-gray-950 text-white overflow-hidden">
       {/* Mobile bottom action bar */}
-      <div className="lg:hidden">
+      <div className="lg:hidden order-last">
         <BottomBar
           actions={[
             { key: "editor", label: "Edit", icon: Icons.edit },
@@ -338,7 +336,7 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
         <div
           className={`${
             mobileView === "editor" ? "flex" : "hidden"
-          } lg:flex w-full lg:w-96 xl:w-105 lg:min-w-90 shrink-0 flex-col border-r border-gray-800/40 bg-gray-950 overflow-hidden`}
+          } lg:flex w-full lg:w-80 xl:w-96 lg:min-w-72 shrink-0 flex-col border-r border-gray-800/40 bg-gray-950 overflow-hidden`}
         >
           {editorPanel}
         </div>

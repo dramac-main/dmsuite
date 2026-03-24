@@ -451,12 +451,12 @@ export function WorkspaceHeader({
   children,
 }: WorkspaceHeaderProps) {
   return (
-    <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-gray-800/40 bg-gray-900/30 backdrop-blur-sm">
+    <div className="shrink-0 flex items-center justify-between px-4 h-11 border-b border-gray-800/40 bg-gray-900/30">
       <div className="flex items-center gap-2 min-w-0">
         {statusDot && (
-          <div className="w-2 h-2 rounded-full bg-primary-500 shrink-0" />
+          <div className="w-1.5 h-1.5 rounded-full bg-primary-500 shrink-0" />
         )}
-        <h2 className="text-[13px] font-semibold text-gray-200 truncate">
+        <h2 className="text-xs font-semibold text-gray-300 uppercase tracking-wide truncate">
           {title}
         </h2>
         {subtitle && (
@@ -466,7 +466,7 @@ export function WorkspaceHeader({
         )}
       </div>
       {children && (
-        <div className="flex items-center gap-1 shrink-0">{children}</div>
+        <div className="flex items-center gap-0.5 shrink-0">{children}</div>
       )}
     </div>
   );
@@ -669,14 +669,14 @@ interface EditorTabNavProps {
 export function EditorTabNav({ tabs, activeTab, onTabChange }: EditorTabNavProps) {
   return (
     <div className="shrink-0 relative">
-      <div className="flex overflow-x-auto scrollbar-none border-b border-gray-800/60 bg-gray-900/40 backdrop-blur-sm">
+      <div className="flex overflow-x-auto scrollbar-none border-b border-gray-800/50">
         {tabs.map((tab) => {
           const active = activeTab === tab.key;
           return (
             <button
               key={tab.key}
               onClick={() => onTabChange(tab.key)}
-              className={`flex items-center gap-1.5 px-4 py-3 text-[12px] font-medium whitespace-nowrap transition-all relative shrink-0 ${
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap transition-all relative shrink-0 ${
                 active
                   ? "text-primary-400"
                   : "text-gray-500 hover:text-gray-300 active:bg-white/3"
@@ -689,7 +689,7 @@ export function EditorTabNav({ tabs, activeTab, onTabChange }: EditorTabNavProps
               {active && (
                 <motion.div
                   layoutId="editor-tab-indicator"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500 rounded-full"
+                  className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary-500 rounded-full"
                   transition={{ duration: 0.2, ease: "easeOut" }}
                 />
               )}
@@ -720,23 +720,23 @@ interface BottomBarProps {
 
 export function BottomBar({ actions, activeKey, onAction }: BottomBarProps) {
   return (
-    <div className="lg:hidden shrink-0 flex items-center justify-around border-t border-gray-800/60 bg-gray-950/95 backdrop-blur-xl px-2 py-1.5 safe-area-bottom">
+    <div className="lg:hidden shrink-0 flex items-center justify-around border-t border-gray-800/50 bg-gray-950/95 backdrop-blur-xl px-2 py-1.5 safe-area-bottom">
       {actions.map((action) => {
         const active = activeKey === action.key;
         return (
           <button
             key={action.key}
             onClick={() => onAction(action.key)}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all min-w-14 ${
+            className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all min-w-14 ${
               action.primary
-                ? "bg-primary-500 text-gray-950 shadow-lg shadow-primary-500/25 -mt-4 px-5 py-2.5 rounded-2xl"
+                ? "bg-primary-500 text-gray-950 shadow-lg shadow-primary-500/20 -mt-3 px-5 py-2 rounded-2xl"
                 : active
                   ? "text-primary-400"
                   : "text-gray-500 active:text-gray-300 active:bg-white/5"
             }`}
           >
             {action.icon}
-            <span className={`text-[10px] font-medium ${action.primary ? "text-gray-950" : ""}`}>
+            <span className={`text-[9px] font-semibold uppercase tracking-wide ${action.primary ? "text-gray-950" : ""}`}>
               {action.label}
             </span>
           </button>

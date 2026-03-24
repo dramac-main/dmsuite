@@ -6,10 +6,13 @@ import { toolCategories } from "@/data/tools";
 import { useParams } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
 import TopBar from "@/components/dashboard/TopBar";
+import CreditBalance from "@/components/dashboard/CreditBalance";
+import UserMenu from "@/components/dashboard/UserMenu";
+import ThemeSwitch from "@/components/ThemeSwitch";
 import { bgOpacity10 } from "@/lib/colors";
-import { getIcon, IconArrowRight, IconChevronLeft, IconSparkles, IconZap } from "@/components/icons";
+import { getIcon, IconArrowRight, IconChevronLeft, IconSparkles, IconZap, IconBell, IconMenu } from "@/components/icons";
 import { useSidebarStore } from "@/stores/sidebar";
-import { sidebar as sidebarConfig, surfaces, layout } from "@/lib/design-system";
+import { sidebar as sidebarConfig, surfaces, layout, interactive, recipes } from "@/lib/design-system";
 import { cn } from "@/lib/utils";
 
 /* ── Dynamically imported workspace components ──────────────── */
@@ -171,50 +174,92 @@ export default function ToolWorkspacePage() {
   const ToolIcon = getIcon(tool.icon);
   const CategoryIcon = getIcon(category.icon);
   const iconBg = bgOpacity10[category.colorClass] || "bg-gray-500/10";
+  const WorkspaceComponent = workspaceComponents[toolId];
 
-  /** Render the appropriate workspace based on the tool ID */
-  function renderWorkspace() {
-    const WorkspaceComponent = workspaceComponents[toolId];
-    if (WorkspaceComponent) {
-      return <WorkspaceComponent />;
-    }
+  // Status badge helpers
+  const statusColor = tool.status === "ready" ? "success" : tool.status === "beta" ? "warning" : "info";
+  const statusLabel = tool.status === "ready" ? "Ready" : tool.status === "beta" ? "Beta" : "Soon";
 
-    // Default placeholder for tools not yet built
-    const toolName = tool!.name;
+  // ── Workspace mode: compact full-height layout ──
+  if (WorkspaceComponent) {
     return (
-      <div className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 min-h-96 flex flex-col items-center justify-center p-8">
-        <div className="size-20 rounded-2xl bg-linear-to-br from-primary-500/10 to-secondary-500/10 border border-primary-500/20 flex items-center justify-center mb-6">
-          <IconSparkles className="size-8 text-primary-500" />
-        </div>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2 text-center">
-          {toolName} Workspace
-        </h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md text-center mb-6">
-          This is where the AI-powered tool interface will live.
-          Upload your assets, configure settings, and let AI do the heavy lifting.
-        </p>
-        <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl
-            bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm font-semibold
-            cursor-not-allowed">
-            <IconZap className="size-4" />
-            Coming Soon
-          </span>
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl
-              border border-gray-200 dark:border-gray-700
-              text-gray-600 dark:text-gray-400 text-sm font-medium
-              hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-          >
-            <IconChevronLeft className="size-4" />
-            Back
-          </Link>
-        </div>
+      <div className={cn("h-dvh overflow-hidden", surfaces.page, "transition-colors")}>
+        <Sidebar />
+        <main
+          className={cn(
+            "h-dvh flex flex-col overflow-hidden",
+            sidebarConfig.transition,
+            pinned ? sidebarConfig.mainMarginExpanded : sidebarConfig.mainMarginCollapsed
+          )}
+        >
+          {/* ── Compact workspace header ── */}
+          <header className="shrink-0 flex items-center justify-between h-12 px-3 sm:px-4 border-b border-gray-200 dark:border-gray-800/60 bg-white dark:bg-gray-950">
+            {/* Left: menu + breadcrumb + tool info */}
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+              <button
+                onClick={openMobile}
+                className={cn(interactive.iconButton, "lg:hidden !size-8")}
+                aria-label="Open menu"
+              >
+                <IconMenu className="size-4.5" />
+              </button>
+
+              <nav className="flex items-center gap-1 sm:gap-1.5 min-w-0">
+                <Link
+                  href="/dashboard"
+                  className="text-[11px] sm:text-xs text-gray-400 hover:text-primary-500 transition-colors hidden sm:block"
+                >
+                  Dashboard
+                </Link>
+                <IconArrowRight className="size-2.5 text-gray-500/60 hidden sm:block" />
+                <Link
+                  href={`/dashboard#${category.id}`}
+                  className="flex items-center gap-1 text-[11px] sm:text-xs text-gray-400 hover:text-primary-500 transition-colors hidden md:flex"
+                >
+                  <CategoryIcon className="size-3" />
+                  <span className="truncate max-w-28">{category.name}</span>
+                </Link>
+                <IconArrowRight className="size-2.5 text-gray-500/60 hidden md:block" />
+                <div className="flex items-center gap-1.5">
+                  <div className={`size-6 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
+                    <ToolIcon className={`size-3.5 ${category.textColorClass}`} />
+                  </div>
+                  <span className="text-[13px] font-semibold text-gray-900 dark:text-white truncate max-w-48 sm:max-w-none">
+                    {tool.name}
+                  </span>
+                  <span className={`hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide bg-${statusColor}/15 text-${statusColor}`}>
+                    <span className={`size-1 rounded-full bg-${statusColor}`} />
+                    {statusLabel}
+                  </span>
+                </div>
+              </nav>
+            </div>
+
+            {/* Right: utilities */}
+            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+              <CreditBalance />
+              <ThemeSwitch />
+              <button
+                className={cn(interactive.iconButton, "relative !size-8 hidden sm:flex")}
+                aria-label="Notifications"
+              >
+                <IconBell className="size-4" />
+                <span className={recipes.notifDot} />
+              </button>
+              <UserMenu />
+            </div>
+          </header>
+
+          {/* ── Full-height workspace ── */}
+          <div className="flex-1 overflow-hidden">
+            <WorkspaceComponent />
+          </div>
+        </main>
       </div>
     );
   }
 
+  // ── Placeholder mode: tools without workspace ──
   return (
     <div className={cn("min-h-dvh", surfaces.page, "transition-colors")}>
       <Sidebar />
@@ -243,42 +288,59 @@ export default function ToolWorkspacePage() {
             <span className="text-gray-900 dark:text-white font-medium">{tool.name}</span>
           </nav>
 
-          {/* Tool workspace header */}
-          <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 sm:p-8 mb-6">
-            <div className="flex items-start gap-4 sm:gap-6">
-              {/* Tool icon */}
-              <div className={`size-14 sm:size-16 rounded-2xl ${iconBg} flex items-center justify-center shrink-0`}>
-                <ToolIcon className={`size-7 sm:size-8 ${category.textColorClass}`} />
+          {/* Tool info card */}
+          <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 sm:p-6 mb-6">
+            <div className="flex items-center gap-4">
+              <div className={`size-11 rounded-xl ${iconBg} flex items-center justify-center shrink-0`}>
+                <ToolIcon className={`size-6 ${category.textColorClass}`} />
               </div>
-
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 flex-wrap mb-1">
-                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">
                     {tool.name}
                   </h1>
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold
-                    ${tool.status === "ready" ? "bg-success/15 text-success" : tool.status === "beta" ? "bg-warning/15 text-warning" : "bg-info/15 text-info"}`}
-                  >
-                    <span className={`size-1.5 rounded-full ${tool.status === "ready" ? "bg-success" : tool.status === "beta" ? "bg-warning" : "bg-info"}`} />
-                    {tool.status === "ready" ? "Ready" : tool.status === "beta" ? "Beta" : "Coming Soon"}
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-${statusColor}/15 text-${statusColor}`}>
+                    <span className={`size-1.5 rounded-full bg-${statusColor}`} />
+                    {statusLabel}
                   </span>
                 </div>
-                <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
                   {tool.description}
                 </p>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {tool.tags.map((tag) => (
-                    <span key={tag} className="px-2 py-0.5 rounded-md text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
               </div>
             </div>
           </div>
 
-          {/* Render the tool-specific workspace */}
-          {renderWorkspace()}
+          {/* Placeholder workspace */}
+          <div className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 min-h-96 flex flex-col items-center justify-center p-8">
+            <div className="size-16 rounded-2xl bg-linear-to-br from-primary-500/10 to-secondary-500/10 border border-primary-500/20 flex items-center justify-center mb-5">
+              <IconSparkles className="size-7 text-primary-500" />
+            </div>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2 text-center">
+              {tool.name} Workspace
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm text-center mb-5">
+              Upload your assets, configure settings, and let AI do the heavy lifting.
+            </p>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl
+                bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-sm font-semibold
+                cursor-not-allowed">
+                <IconZap className="size-4" />
+                Coming Soon
+              </span>
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl
+                  border border-gray-200 dark:border-gray-700
+                  text-gray-600 dark:text-gray-400 text-sm font-medium
+                  hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                <IconChevronLeft className="size-4" />
+                Back
+              </Link>
+            </div>
+          </div>
         </div>
       </main>
     </div>
