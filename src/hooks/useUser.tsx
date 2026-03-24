@@ -20,6 +20,7 @@ export interface UserProfile {
   credits: number;
   plan: "free" | "starter" | "pro" | "agency";
   plan_expires_at: string | null;
+  is_admin: boolean;
 }
 
 interface UseUserReturn {
@@ -42,6 +43,7 @@ const DEV_PROFILE: UserProfile = {
   credits: 9999,
   plan: "pro",
   plan_expires_at: null,
+  is_admin: true,
 };
 
 /** Race a promise against a timeout. Rejects with "timeout" on expiry. */
