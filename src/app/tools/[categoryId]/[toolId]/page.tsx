@@ -237,8 +237,8 @@ export default function ToolWorkspacePage() {
 
             {/* Right: utilities */}
             <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-              <CreditBalance />
-              <ThemeSwitch />
+              <span className="hidden sm:inline-flex"><CreditBalance /></span>
+              <span className="hidden sm:inline-flex"><ThemeSwitch /></span>
               <button
                 className={cn(interactive.iconButton, "relative !size-8 hidden sm:flex")}
                 aria-label="Notifications"

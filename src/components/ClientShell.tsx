@@ -41,12 +41,14 @@ export default function ClientShell() {
 
   // Auth pages should not show Chiko, mobile nav, or shortcuts
   const isAuthPage = pathname.startsWith("/auth/");
+  // Tool workspace pages have their own bottom bar — hide global mobile nav
+  const isToolPage = pathname.startsWith("/tools/");
 
   if (isAuthPage) return null;
 
   return (
     <>
-      <MobileBottomNav />
+      {!isToolPage && <MobileBottomNav />}
       <InstallPrompt />
       <ShortcutsHelpModal />
       <ChikoFAB />

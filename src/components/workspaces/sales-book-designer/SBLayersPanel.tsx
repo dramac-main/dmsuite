@@ -390,7 +390,7 @@ function LayerRow({
 
         {/* Visibility dot */}
         <span className={`shrink-0 size-1.5 rounded-full transition-colors ${
-          layer.visible ? "bg-emerald-400/80" : "bg-gray-600/40"
+          layer.visible ? "bg-primary-400/80" : "bg-gray-600/40"
         }`} />
 
         {/* Layer icon */}
@@ -527,7 +527,7 @@ export default function SBLayersPanel({ onOpenSection, onHoverSection, collapsed
       {/* Footer with legend */}
       <div className="shrink-0 flex items-center gap-3 px-3 py-2 border-t border-gray-800/40">
         <div className="flex items-center gap-1.5">
-          <span className="size-1.5 rounded-full bg-emerald-400/80" />
+          <span className="size-1.5 rounded-full bg-primary-400/80" />
           <span className="text-[10px] text-gray-600">Visible</span>
         </div>
         <div className="flex items-center gap-1.5">

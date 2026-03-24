@@ -25,16 +25,16 @@ import {
   SectionLabel,
 } from "../SalesUIKit";
 
-// ── Color accent per document type ──
+// ── Color accent per document type (brand-only: primary-500 / Electric Violet) ──
 
 const TYPE_COLORS: Record<SalesDocumentType, string> = {
-  "invoice":          "border-blue-500/40 bg-blue-500/8 ring-blue-500/20",
-  "quotation":        "border-emerald-500/40 bg-emerald-500/8 ring-emerald-500/20",
-  "receipt":          "border-amber-500/40 bg-amber-500/8 ring-amber-500/20",
-  "delivery-note":    "border-violet-500/40 bg-violet-500/8 ring-violet-500/20",
-  "credit-note":      "border-rose-500/40 bg-rose-500/8 ring-rose-500/20",
-  "proforma-invoice": "border-cyan-500/40 bg-cyan-500/8 ring-cyan-500/20",
-  "purchase-order":   "border-orange-500/40 bg-orange-500/8 ring-orange-500/20",
+  "invoice":          "border-primary-500/40 bg-primary-500/8 ring-primary-500/20",
+  "quotation":        "border-primary-500/40 bg-primary-500/8 ring-primary-500/20",
+  "receipt":          "border-primary-500/40 bg-primary-500/8 ring-primary-500/20",
+  "delivery-note":    "border-primary-500/40 bg-primary-500/8 ring-primary-500/20",
+  "credit-note":      "border-primary-500/40 bg-primary-500/8 ring-primary-500/20",
+  "proforma-invoice": "border-primary-500/40 bg-primary-500/8 ring-primary-500/20",
+  "purchase-order":   "border-primary-500/40 bg-primary-500/8 ring-primary-500/20",
 };
 
 const TYPE_ICONS: Record<SalesDocumentType, React.ReactNode> = {
@@ -68,7 +68,7 @@ export default function SalesFormTab() {
     <div className="space-y-5 p-4">
       {/* ── Document Type ── */}
       <SectionCard title="Document Type" description="Choose the type of sales form">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {SALES_DOCUMENT_TYPES.map((type) => {
             const cfg = DOCUMENT_TYPE_CONFIGS[type];
             const selected = docType === type;
@@ -85,7 +85,7 @@ export default function SalesFormTab() {
                     {TYPE_ICONS[type]}
                   </span>
                   <div className="min-w-0">
-                    <div className="text-[12px] font-semibold text-gray-200 truncate">{cfg.label}</div>
+                    <div className="text-[12px] font-semibold text-gray-200 leading-tight">{cfg.label}</div>
                     <div className="text-[10px] text-gray-500 line-clamp-1 mt-0.5">{cfg.description}</div>
                   </div>
                 </div>

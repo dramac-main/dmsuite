@@ -1,44 +1,40 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Session 120 — Sales Tools v3 Redesign (Accordion → Tabbed) — COMPLETE ✅
+**Phase:** Session 120 — Sales Tools v3 Redesign + Global Layout Overhaul — COMPLETE ✅
 
-### Session 120: Sales Book Designer v2→v3 Full Redesign
+### Session 120 (continued): Global Layout + End-to-End Polish
 
-#### Architecture Change: Accordion → Tabbed Navigation
-- **Before (v2):** 7 AccordionSection panels stacked vertically, MobileTabBar (Editor/Preview)
-- **After (v3):** 5-tab EditorTabNav (Form/Brand/Style/Print/More), BottomBar (Edit/Preview/Print)
+#### Global Tool Page Redesign (`page.tsx` — affects ALL 156 tools)
+- **Workspace tools**: Removed bloated hero card + duplicate breadcrumb. Replaced with compact h-12 header integrating breadcrumb + tool icon/name + status badge + utility buttons (credits, theme, notifications, user)
+- **Full-height workspace**: Workspace fills `100dvh - 48px` with fixed panels (no page scrolling)
+- **Non-workspace tools**: Slimmed hero card (smaller icon, tighter padding, line-clamp description), cleaner placeholder
+- **New imports**: CreditBalance, UserMenu, ThemeSwitch imported directly into page.tsx for compact header
+- **Responsive**: Mobile hides breadcrumb ancestors, shows only tool icon + name
 
-#### SalesUIKit.tsx — 8 NEW Primitives Added (~1000+ lines total)
-- `EditorTabNav` — Horizontal scrollable tabs with Framer Motion layoutId underline
-- `BottomBar` — Mobile fixed action bar with safe-area-bottom padding
-- `SectionCard` — Rounded-2xl grouped container with title/description
-- `SelectionCard` — Picker cards with colored accents for option grids
-- `RangeSlider` — Styled range input with value display
-- `ColorSwatchPicker` — Touch-friendly color swatches (expects `{ hex, label }[]`)
-- `ConfirmDialog` — Branded modal dialog (props: `description`, `variant="danger"|"default"`)
-- `TabIcons` — 5 SVG icon components for Form/Brand/Style/Print/More tabs
+#### Layers Panel Redesign (`SBLayersPanel.tsx`)
+- Bigger icons (14px, was 12-13px) and text (12px/xs, was 11px)
+- Tree indent lines (subtle vertical border-l for depth)
+- Always-visible colored visibility dots (emerald for visible, gray for hidden)
+- Wider panel (w-56, was w-52)
+- Header shows visible/total count
+- Footer has visibility legend
+- Better hover states with shadow
+- Cleaner collapsed state (w-8, was w-7)
 
-#### New Tab Components Created (5 files)
-- **`tabs/SalesFormTab.tsx`** (~300 lines) — Doc type selection, item table config, header fields, type-specific fields, totals/footer, currency selector, field label overrides
-- **`tabs/SalesBrandTab.tsx`** (~200 lines) — Logo upload, company info, banking details
-- **`tabs/SalesStyleTab.tsx`** (~480 lines) — Template picker, touch HexColorPicker, color swatches, font pairing, field/border style, watermark
-- **`tabs/SalesPrintTab.tsx`** (~160 lines) — Forms per page, page size, binding, serial numbering, cut lines
-- **`tabs/SalesAdvancedTab.tsx`** (~30 lines) — Wraps SBSectionCustomBlocks + SBSectionBrandLogos
-
-#### SalesBookDesignerWorkspace.tsx — Full Rewrite (v3)
-- Replaced 7 AccordionSection with 5-tab EditorTabNav
-- Replaced MobileTabBar with BottomBar (Edit/Preview/Print primary action)
-- Added ConfirmDialog replacing native confirm() for "Start Over"
-- Added click-outside handler for convert dropdown
-- Section-to-tab mapping for layers panel navigation
-
-#### Old Section Components
-- **Still used:** SBSectionCustomBlocks, SBSectionBrandLogos (wrapped by SalesAdvancedTab)
-- **Now unused:** SBSectionDocumentType, SBSectionBranding, SBSectionFormLayout, SBSectionPrintConfig, SBSectionStyle (replaced by new tab components, not yet deleted)
+#### Workspace Polish
+- WorkspaceHeader: Slimmer h-11, uppercase tracking for title
+- EditorTabNav: Tighter py-2.5, uppercase labels, inset indicator bar
+- BottomBar: Refined spacing, bolder labels, smaller lift
+- Preview toolbar: Slimmer h-10, tighter controls
+- Template strip: Smaller buttons, no scrollbar, hidden scrollbar
+- Editor panel: Narrower lg:w-80 xl:w-96 (was lg:w-96 xl:w-105)
+- Start Over: Minimal borderless button style
+- Canvas: Cleaner dot grid, cursor:pointer on hoverable sections
 
 #### Build Status
-- TypeScript: 0 errors (`npx tsc --noEmit`)
+- TypeScript: 0 errors
+- Git: pushed to `main` (commit `e75a282`)
 
 ---
 
