@@ -77,12 +77,31 @@ export async function GET(request: NextRequest) {
           .maybeSingle();
 
         if (updated) {
-          await addCredits(
+          const creditResult = await addCredits(
             payment.user_id,
             payment.credits_purchased,
             `MTN MoMo: ${payment.credits_purchased} credits (K${payment.amount})`,
             payment.flw_ref
           );
+
+          if (!creditResult.success) {
+            // CRITICAL: Revert payment to "pending" so next poll retries
+            console.error(
+              `CRITICAL: addCredits failed for payment ${payment.id}, reverting to pending for retry`
+            );
+            await serviceSupabase
+              .from("payments")
+              .update({ status: "pending" })
+              .eq("id", payment.id);
+
+            // Return pending so client keeps polling
+            return NextResponse.json({
+              status: "pending",
+              credits: payment.credits_purchased,
+              amount: payment.amount,
+              currency: payment.currency,
+            });
+          }
 
           console.log(
             `MTN status poll: +${payment.credits_purchased} credits for user ${payment.user_id.slice(0, 8)}`

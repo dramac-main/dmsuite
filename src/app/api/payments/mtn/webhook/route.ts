@@ -108,13 +108,36 @@ async function processPayment(supabase: any, payment: any, status: string, body:
       return NextResponse.json({ status: "already processed" });
     }
 
-    // Add credits
-    await addCredits(
+    // Add credits — retry once on failure
+    let creditResult = await addCredits(
       payment.user_id,
       payment.credits_purchased,
       `MTN MoMo: ${payment.credits_purchased} credits (K${payment.amount})`,
       payment.flw_ref
     );
+
+    if (!creditResult.success) {
+      // One retry after brief delay
+      await new Promise((r) => setTimeout(r, 1000));
+      creditResult = await addCredits(
+        payment.user_id,
+        payment.credits_purchased,
+        `MTN MoMo: ${payment.credits_purchased} credits (K${payment.amount})`,
+        payment.flw_ref
+      );
+    }
+
+    if (!creditResult.success) {
+      // Revert payment to pending so status polling can retry
+      console.error(
+        `CRITICAL: addCredits failed for payment ${payment.id} after retry, reverting to pending`
+      );
+      await supabase
+        .from("payments")
+        .update({ status: "pending" })
+        .eq("id", payment.id);
+      return NextResponse.json({ error: "Credit delivery failed, will retry" }, { status: 500 });
+    }
 
     console.log(
       `MTN webhook: +${payment.credits_purchased} credits for user ${payment.user_id.slice(0, 8)}`

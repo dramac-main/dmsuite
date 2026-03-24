@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useUser } from "@/hooks/useUser";
 import { cn } from "@/lib/utils";
 import { CREDIT_PACKS as PACKS_DATA } from "@/data/credit-costs";
@@ -115,8 +115,19 @@ export default function CreditPurchaseModal({ onClose }: { onClose: () => void }
   const [error, setError] = useState("");
   const [paymentRef, setPaymentRef] = useState("");
   const [polling, setPolling] = useState(false);
+  const [pollAttempts, setPollAttempts] = useState(0);
   const [touched, setTouched] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const mountedRef = useRef(true);
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup polling on unmount — prevents state updates after modal closes
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+    };
+  }, []);
 
   // Derived state — all computed from rawDigits
   const formattedLocal = useMemo(() => formatLocalDigits(rawDigits), [rawDigits]);
@@ -210,6 +221,7 @@ export default function CreditPurchaseModal({ onClose }: { onClose: () => void }
 
   const pollPaymentStatus = async (ref: string, isMtn: boolean) => {
     setPolling(true);
+    setPollAttempts(0);
     let attempts = 0;
     const maxAttempts = 60; // 5 minutes (every 5 seconds)
 
@@ -218,7 +230,10 @@ export default function CreditPurchaseModal({ onClose }: { onClose: () => void }
       : `/api/payments/status?ref=${encodeURIComponent(ref)}`;
 
     const poll = async () => {
+      if (!mountedRef.current) return; // Stop if modal unmounted
+
       if (attempts >= maxAttempts) {
+        if (!mountedRef.current) return;
         setError("Payment timed out. Check your mobile money app and contact support if charged.");
         setStep("failed");
         setPolling(false);
@@ -227,10 +242,12 @@ export default function CreditPurchaseModal({ onClose }: { onClose: () => void }
 
       try {
         const res = await fetch(statusEndpoint);
+        if (!mountedRef.current) return;
         const data = await res.json();
 
         if (data.status === "successful") {
           await refreshProfile();
+          if (!mountedRef.current) return;
           setStep("success");
           setPolling(false);
           return;
@@ -245,10 +262,15 @@ export default function CreditPurchaseModal({ onClose }: { onClose: () => void }
 
         // Still pending — poll again
         attempts++;
-        setTimeout(poll, 5000);
+        if (mountedRef.current) {
+          setPollAttempts(attempts);
+          pollTimeoutRef.current = setTimeout(poll, 5000);
+        }
       } catch {
+        if (!mountedRef.current) return;
         attempts++;
-        setTimeout(poll, 5000);
+        setPollAttempts(attempts);
+        pollTimeoutRef.current = setTimeout(poll, 5000);
       }
     };
 
@@ -484,9 +506,23 @@ export default function CreditPurchaseModal({ onClose }: { onClose: () => void }
                 Enter your PIN to confirm the payment.
               </p>
               {polling && (
-                <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">
-                  Waiting for confirmation…
-                </p>
+                <div className="mt-4 space-y-1">
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                    {pollAttempts === 0
+                      ? "Waiting for PIN confirmation…"
+                      : pollAttempts < 6
+                        ? "Waiting for confirmation…"
+                        : pollAttempts < 24
+                          ? "Still waiting — enter your PIN if you haven't already"
+                          : "This is taking longer than usual — check your phone"}
+                  </p>
+                  <div className="mx-auto h-1 w-32 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary-500 transition-all duration-500"
+                      style={{ width: `${Math.min(100, (pollAttempts / 60) * 100)}%` }}
+                    />
+                  </div>
+                </div>
               )}
             </div>
           )}
