@@ -60,6 +60,16 @@ export type PrintSize =
   | "square"
   | "custom";
 
+/**
+ * Development status — tracks whether a tool has been personally
+ * built, tested, and verified to produce correct output.
+ *
+ * - `complete`  — Fully built, QA'd, produces correct output
+ * - `scaffold`  — Has workspace UI code but NOT reviewed/polished
+ * - `no-ui`     — Registered in tools.ts but no workspace component
+ */
+export type DevStatus = "complete" | "scaffold" | "no-ui";
+
 export interface Tool {
   id: string;
   name: string;
@@ -67,6 +77,8 @@ export interface Tool {
   icon: string;
   status: ToolStatus;
   tags: string[];
+  /** Development readiness — see TOOL-STATUS.md for full tracker */
+  devStatus?: DevStatus;
   /** AI providers this tool uses */
   aiProviders?: AIProvider[];
   /** Export formats supported */
@@ -685,32 +697,6 @@ export const toolCategories: ToolCategory[] = [
     tools: [
       // ── Sales Books & Catalogs ──────────────────────────────
       {
-        id: "sales-book-a4",
-        name: "Sales Book Designer (A4)",
-        description:
-          "Design blank A4 sales book forms — invoices, receipts, quotations — with serial numbering for physical printing",
-        icon: "bookOpen",
-        status: "ready",
-        tags: ["sales book", "A4", "print", "blank form", "booklet"],
-        outputs: ["pdf", "png"],
-        printReady: true,
-        printSizes: ["A4"],
-        supportsPartEdit: true,
-      },
-      {
-        id: "sales-book-a5",
-        name: "Sales Book Designer (A5)",
-        description:
-          "Compact A5 blank form booklets — receipt pads, invoice books, and quotation booklets for physical printing",
-        icon: "bookOpen",
-        status: "ready",
-        tags: ["sales book", "A5", "print", "blank form", "compact"],
-        outputs: ["pdf", "png"],
-        printReady: true,
-        printSizes: ["A5"],
-        supportsPartEdit: true,
-      },
-      {
         id: "product-catalog",
         name: "Product Catalog Designer",
         description:
@@ -836,6 +822,7 @@ export const toolCategories: ToolCategory[] = [
           "Design blank invoice pad forms with serial numbering, item tables, and company branding for physical printing",
         icon: "receipt",
         status: "ready",
+        devStatus: "complete",
         tags: ["invoice", "blank form", "print", "booklet"],
         outputs: ["pdf"],
         printReady: true,
@@ -849,6 +836,7 @@ export const toolCategories: ToolCategory[] = [
           "Design blank quotation booklet forms with item tables, terms, and serial numbering for physical printing",
         icon: "calculator",
         status: "ready",
+        devStatus: "complete",
         tags: ["quotation", "estimate", "blank form", "print", "booklet"],
         outputs: ["pdf"],
         printReady: true,
@@ -861,6 +849,7 @@ export const toolCategories: ToolCategory[] = [
           "Design blank receipt book forms — 3 per page, serial numbered, with cut lines for physical printing",
         icon: "receipt",
         status: "ready",
+        devStatus: "complete",
         tags: ["receipt", "blank form", "print", "receipt book"],
         outputs: ["pdf"],
         printReady: true,
@@ -873,6 +862,7 @@ export const toolCategories: ToolCategory[] = [
           "Design blank purchase order forms with vendor fields, item tables, and serial numbering for physical printing",
         icon: "clipboard",
         status: "ready",
+        devStatus: "complete",
         tags: ["purchase order", "PO", "blank form", "print", "booklet"],
         outputs: ["pdf"],
         printReady: true,
@@ -885,6 +875,7 @@ export const toolCategories: ToolCategory[] = [
           "Design blank delivery note forms with item lists, receiver signature, and serial numbering for physical printing",
         icon: "truck",
         status: "ready",
+        devStatus: "complete",
         tags: ["delivery note", "blank form", "print", "dispatch", "booklet"],
         outputs: ["pdf"],
         printReady: true,
@@ -897,6 +888,7 @@ export const toolCategories: ToolCategory[] = [
           "Design blank credit note forms for refunds and adjustments with serial numbering for physical printing",
         icon: "file-minus",
         status: "ready",
+        devStatus: "complete",
         tags: ["credit note", "blank form", "print", "refund", "booklet"],
         outputs: ["pdf"],
         printReady: true,
@@ -909,6 +901,7 @@ export const toolCategories: ToolCategory[] = [
           "Design blank proforma invoice forms for customs, budgeting, and advance payments — print-ready with serial numbering",
         icon: "file-clock",
         status: "ready",
+        devStatus: "complete",
         tags: ["proforma", "blank form", "print", "customs", "booklet"],
         outputs: ["pdf"],
         printReady: true,
@@ -2676,7 +2669,7 @@ export const hubStats: HubStat[] = [
 
 export const featuredToolIds: string[] = [
   "logo-generator",
-  "sales-book-a4",
+  "invoice-designer",
   "social-media-post",
   "video-editor",
   "text-to-video",
