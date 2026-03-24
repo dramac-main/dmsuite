@@ -1,10 +1,44 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 99/197 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅
+## Overall Status: 99/197 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅
 
 ---
 
-## Current Work: Admin Panel + Payment Hardening — COMPLETE ✅
+## Current Work: Sales Book Designer v3 Redesign — COMPLETE ✅
+
+### Session 120 — Sales Tools v2→v3 Full Redesign (Accordion → Tabbed)
+
+#### SalesUIKit.tsx — 8 New Primitives — COMPLETE ✅
+- [x] **EditorTabNav** — Horizontal scrollable tabs with Framer Motion layoutId
+- [x] **BottomBar** — Mobile fixed action bar with safe-area-bottom
+- [x] **SectionCard** — Rounded-2xl grouped container with title/description
+- [x] **SelectionCard** — Picker cards with colored accents
+- [x] **RangeSlider** — Styled range input with value display
+- [x] **ColorSwatchPicker** — Touch-friendly swatches (expects `{ hex, label }[]`)
+- [x] **ConfirmDialog** — Branded modal (description prop, variant="danger"|"default")
+- [x] **TabIcons** — 5 SVG icons for Form/Brand/Style/Print/More
+
+#### New Tab Components (5 files) — COMPLETE ✅
+- [x] **SalesFormTab.tsx** (~300 lines) — Doc type, item table, header fields, type-specific, totals, currency, label overrides
+- [x] **SalesBrandTab.tsx** (~200 lines) — Logo upload, company info, banking details
+- [x] **SalesStyleTab.tsx** (~480 lines) — Templates, color picker (touch), fonts, field/border style, watermark
+- [x] **SalesPrintTab.tsx** (~160 lines) — Forms per page, page size, binding, serial numbering, cut lines
+- [x] **SalesAdvancedTab.tsx** (~30 lines) — Wraps SBSectionCustomBlocks + SBSectionBrandLogos
+
+#### Workspace Rewrite — COMPLETE ✅
+- [x] **SalesBookDesignerWorkspace.tsx** — Full v2→v3 rewrite (7 accordions → 5 tabs)
+- [x] **MobileTabBar** → **BottomBar** (Edit/Preview/Print)
+- [x] **ConfirmDialog** replacing native confirm()
+- [x] **Click-outside handler** for convert dropdown
+- [x] **Section-to-tab mapping** for layers panel
+
+#### Build Verification — COMPLETE ✅
+- [x] **8 TypeScript errors found and fixed** — ConfirmDialog props, bankSwift→bankSwiftBic, mobileMoney removed, ColorSwatchPicker hex, FormSelect children, currency→currencyCode/currencySymbol
+- [x] **Final build** — Zero TypeScript errors
+
+---
+
+## Previous Work: Admin Panel + Payment Hardening — COMPLETE ✅
 
 ### Session 118 — Payment Flow Hardening + Admin Panel
 

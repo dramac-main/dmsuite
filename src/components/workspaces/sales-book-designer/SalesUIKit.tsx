@@ -1,12 +1,12 @@
 // =============================================================================
 // DMSuite — Sales UI Kit — Global Shared Primitives
-// Uniform, mobile-first UI components for ALL sales tools.
-// Single source of truth — no more duplicate Toggles, inputs, accordions.
+// Mobile-first, app-like UI components for ALL sales tools.
+// Single source of truth for every toggle, input, tab, card in the sales suite.
 // =============================================================================
 
 "use client";
 
-import React from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // ─────────────────────────────────────────────────────────────
@@ -646,6 +646,358 @@ export const Icons = {
       <rect x="3" y="3" width="18" height="18" rx="2" />
       <circle cx="8.5" cy="8.5" r="1.5" />
       <polyline points="21 15 16 10 5 21" />
+    </svg>
+  ),
+} as const;
+
+// ─────────────────────────────────────────────────────────────
+// SECTION: Editor Tab Navigation (horizontal scrollable)
+// ─────────────────────────────────────────────────────────────
+
+export interface EditorTab {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+}
+
+interface EditorTabNavProps {
+  tabs: EditorTab[];
+  activeTab: string;
+  onTabChange: (key: string) => void;
+}
+
+export function EditorTabNav({ tabs, activeTab, onTabChange }: EditorTabNavProps) {
+  return (
+    <div className="shrink-0 relative">
+      <div className="flex overflow-x-auto scrollbar-none border-b border-gray-800/60 bg-gray-900/40 backdrop-blur-sm">
+        {tabs.map((tab) => {
+          const active = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => onTabChange(tab.key)}
+              className={`flex items-center gap-1.5 px-4 py-3 text-[12px] font-medium whitespace-nowrap transition-all relative shrink-0 ${
+                active
+                  ? "text-primary-400"
+                  : "text-gray-500 hover:text-gray-300 active:bg-white/3"
+              }`}
+            >
+              <span className={`shrink-0 transition-colors ${active ? "text-primary-400" : "text-gray-600"}`}>
+                {tab.icon}
+              </span>
+              {tab.label}
+              {active && (
+                <motion.div
+                  layoutId="editor-tab-indicator"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500 rounded-full"
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// SECTION: Bottom Action Bar (mobile fixed bar)
+// ─────────────────────────────────────────────────────────────
+
+interface BottomBarAction {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  primary?: boolean;
+}
+
+interface BottomBarProps {
+  actions: BottomBarAction[];
+  activeKey?: string;
+  onAction: (key: string) => void;
+}
+
+export function BottomBar({ actions, activeKey, onAction }: BottomBarProps) {
+  return (
+    <div className="lg:hidden shrink-0 flex items-center justify-around border-t border-gray-800/60 bg-gray-950/95 backdrop-blur-xl px-2 py-1.5 safe-area-bottom">
+      {actions.map((action) => {
+        const active = activeKey === action.key;
+        return (
+          <button
+            key={action.key}
+            onClick={() => onAction(action.key)}
+            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all min-w-14 ${
+              action.primary
+                ? "bg-primary-500 text-gray-950 shadow-lg shadow-primary-500/25 -mt-4 px-5 py-2.5 rounded-2xl"
+                : active
+                  ? "text-primary-400"
+                  : "text-gray-500 active:text-gray-300 active:bg-white/5"
+            }`}
+          >
+            {action.icon}
+            <span className={`text-[10px] font-medium ${action.primary ? "text-gray-950" : ""}`}>
+              {action.label}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// SECTION: Section Card (visual container for grouped content)
+// ─────────────────────────────────────────────────────────────
+
+interface SectionCardProps {
+  title?: string;
+  description?: string;
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function SectionCard({ title, description, children, className }: SectionCardProps) {
+  return (
+    <div className={`rounded-2xl bg-gray-800/30 border border-gray-700/30 p-4 ${className ?? ""}`}>
+      {title && (
+        <div className="mb-3">
+          <h3 className="text-[13px] font-semibold text-gray-200">{title}</h3>
+          {description && (
+            <p className="text-[11px] text-gray-500 mt-0.5">{description}</p>
+          )}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// SECTION: Selection Card (for template / doc type pickers)
+// ─────────────────────────────────────────────────────────────
+
+interface SelectionCardProps {
+  selected: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  colorAccent?: string; // Tailwind border/bg classes for colored cards
+  className?: string;
+}
+
+export function SelectionCard({ selected, onClick, children, colorAccent, className }: SelectionCardProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={`relative rounded-2xl border p-3 text-left transition-all active:scale-[0.97] ${
+        selected
+          ? colorAccent
+            ? `${colorAccent} ring-1`
+            : "border-primary-500/50 bg-primary-500/8 ring-1 ring-primary-500/20"
+          : "border-gray-700/40 bg-gray-800/30 hover:border-gray-600/60 hover:bg-gray-800/50"
+      } ${className ?? ""}`}
+    >
+      {children}
+      {selected && (
+        <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary-500 flex items-center justify-center">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-gray-950">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+      )}
+    </button>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// SECTION: Inline Range Slider
+// ─────────────────────────────────────────────────────────────
+
+interface RangeSliderProps {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+  min: number;
+  max: number;
+  step?: number;
+  suffix?: string;
+}
+
+export function RangeSlider({ label, value, onChange, min, max, step = 1, suffix }: RangeSliderProps) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[12px] text-gray-400">{label}</span>
+        <span className="text-[12px] font-mono text-primary-400 tabular-nums">
+          {value}{suffix}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full h-1.5 bg-gray-700/60 rounded-full appearance-none cursor-pointer
+          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
+          [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary-500
+          [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:shadow-primary-500/30
+          [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:transition-transform
+          [&::-webkit-slider-thumb]:active:scale-125"
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// SECTION: Color Swatch Picker (with touch-friendly targets)
+// ─────────────────────────────────────────────────────────────
+
+interface ColorSwatchPickerProps {
+  colors: readonly { hex: string; label: string }[];
+  value: string;
+  onChange: (hex: string) => void;
+}
+
+export function ColorSwatchPicker({ colors, value, onChange }: ColorSwatchPickerProps) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {colors.map((c) => {
+        const active = value.toLowerCase() === c.hex.toLowerCase();
+        return (
+          <button
+            key={c.hex}
+            onClick={() => onChange(c.hex)}
+            title={c.label}
+            className={`w-8 h-8 rounded-xl transition-all ${
+              active ? "ring-2 ring-primary-400 ring-offset-2 ring-offset-gray-900 scale-110" : "hover:scale-105"
+            }`}
+            style={{ backgroundColor: c.hex }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// SECTION: Confirm Dialog (replaces native confirm/alert)
+// ─────────────────────────────────────────────────────────────
+
+interface ConfirmDialogProps {
+  open: boolean;
+  title: string;
+  description?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  variant?: "danger" | "default";
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+export function ConfirmDialog({
+  open,
+  title,
+  description,
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
+  variant = "default",
+  onConfirm,
+  onCancel,
+}: ConfirmDialogProps) {
+  // Close on escape
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onCancel(); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [open, onCancel]);
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={onCancel}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ duration: 0.15 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-gray-900 border border-gray-700/60 rounded-2xl p-5 w-full max-w-sm shadow-2xl"
+          >
+            <h3 className="text-[15px] font-semibold text-gray-100">{title}</h3>
+            {description && (
+              <p className="text-[13px] text-gray-400 mt-1.5">{description}</p>
+            )}
+            <div className="flex gap-2.5 mt-5">
+              <button
+                onClick={onCancel}
+                className="flex-1 rounded-xl py-2.5 text-[13px] font-medium text-gray-400 bg-gray-800 border border-gray-700/60 hover:bg-gray-700 transition-all active:scale-[0.97]"
+              >
+                {cancelLabel}
+              </button>
+              <button
+                onClick={onConfirm}
+                className={`flex-1 rounded-xl py-2.5 text-[13px] font-medium transition-all active:scale-[0.97] ${
+                  variant === "danger"
+                    ? "bg-error text-white hover:bg-error/90"
+                    : "bg-primary-500 text-gray-950 hover:bg-primary-400"
+                }`}
+              >
+                {confirmLabel}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// SECTION: Tab Icons for Editor Sections
+// ─────────────────────────────────────────────────────────────
+
+export const TabIcons = {
+  form: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="8" y1="13" x2="16" y2="13" />
+      <line x1="8" y1="17" x2="12" y2="17" />
+    </svg>
+  ),
+  brand: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="2" width="16" height="20" rx="2" />
+      <path d="M9 22v-4h6v4" />
+      <line x1="8" y1="6" x2="10" y2="6" /><line x1="14" y1="6" x2="16" y2="6" />
+      <line x1="8" y1="10" x2="10" y2="10" /><line x1="14" y1="10" x2="16" y2="10" />
+    </svg>
+  ),
+  style: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="13.5" cy="6.5" r="2.5" /><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="12" r="2.5" /><circle cx="13.5" cy="17.5" r="2.5" />
+      <circle cx="12" cy="12" r="10" />
+    </svg>
+  ),
+  print: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="6 9 6 2 18 2 18 9" />
+      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+      <rect x="6" y="14" width="12" height="8" />
+    </svg>
+  ),
+  more: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
     </svg>
   ),
 } as const;

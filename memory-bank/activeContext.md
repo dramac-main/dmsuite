@@ -1,28 +1,58 @@
 # DMSuite — Active Context
 
 ## Current Focus
+**Phase:** Session 120 — Sales Tools v3 Redesign (Accordion → Tabbed) — COMPLETE ✅
+
+### Session 120: Sales Book Designer v2→v3 Full Redesign
+
+#### Architecture Change: Accordion → Tabbed Navigation
+- **Before (v2):** 7 AccordionSection panels stacked vertically, MobileTabBar (Editor/Preview)
+- **After (v3):** 5-tab EditorTabNav (Form/Brand/Style/Print/More), BottomBar (Edit/Preview/Print)
+
+#### SalesUIKit.tsx — 8 NEW Primitives Added (~1000+ lines total)
+- `EditorTabNav` — Horizontal scrollable tabs with Framer Motion layoutId underline
+- `BottomBar` — Mobile fixed action bar with safe-area-bottom padding
+- `SectionCard` — Rounded-2xl grouped container with title/description
+- `SelectionCard` — Picker cards with colored accents for option grids
+- `RangeSlider` — Styled range input with value display
+- `ColorSwatchPicker` — Touch-friendly color swatches (expects `{ hex, label }[]`)
+- `ConfirmDialog` — Branded modal dialog (props: `description`, `variant="danger"|"default"`)
+- `TabIcons` — 5 SVG icon components for Form/Brand/Style/Print/More tabs
+
+#### New Tab Components Created (5 files)
+- **`tabs/SalesFormTab.tsx`** (~300 lines) — Doc type selection, item table config, header fields, type-specific fields, totals/footer, currency selector, field label overrides
+- **`tabs/SalesBrandTab.tsx`** (~200 lines) — Logo upload, company info, banking details
+- **`tabs/SalesStyleTab.tsx`** (~480 lines) — Template picker, touch HexColorPicker, color swatches, font pairing, field/border style, watermark
+- **`tabs/SalesPrintTab.tsx`** (~160 lines) — Forms per page, page size, binding, serial numbering, cut lines
+- **`tabs/SalesAdvancedTab.tsx`** (~30 lines) — Wraps SBSectionCustomBlocks + SBSectionBrandLogos
+
+#### SalesBookDesignerWorkspace.tsx — Full Rewrite (v3)
+- Replaced 7 AccordionSection with 5-tab EditorTabNav
+- Replaced MobileTabBar with BottomBar (Edit/Preview/Print primary action)
+- Added ConfirmDialog replacing native confirm() for "Start Over"
+- Added click-outside handler for convert dropdown
+- Section-to-tab mapping for layers panel navigation
+
+#### Old Section Components
+- **Still used:** SBSectionCustomBlocks, SBSectionBrandLogos (wrapped by SalesAdvancedTab)
+- **Now unused:** SBSectionDocumentType, SBSectionBranding, SBSectionFormLayout, SBSectionPrintConfig, SBSectionStyle (replaced by new tab components, not yet deleted)
+
+#### Build Status
+- TypeScript: 0 errors (`npx tsc --noEmit`)
+
+---
+
 **Phase:** Session 119 — Sales Tools UI/UX Refactoring — COMPLETE ✅
 
 ### Session 119: Unified Sales Tools UI Kit + Component Refactor
 
-#### SalesUIKit.tsx — NEW, COMPLETE (~600 lines)
+#### SalesUIKit.tsx — CREATED (~600 lines)
 - **Purpose:** Single source of truth for ALL sales-tool UI primitives
-- **Location:** `src/components/workspaces/sales-book-designer/SalesUIKit.tsx`
-- **Exports:** `AccordionSection`, `Toggle` (h-5 w-9, bigger touch targets), `FormInput`, `FormTextarea`, `FormSelect`, `SectionLabel` (uppercase tracking), `AdvancedToggle` (border-primary-500/20 tree), `InfoBadge`, `ChipGroup`, `SIcon`, `MobileTabBar`, `WorkspaceHeader`, `IconButton`, `EmptyState`, `ActionButton` (4 variants × 2 sizes), `Icons` (SVGs for undo/redo/print/zoom/edit/preview/layers/image)
-- **Design:** `rounded-xl`, `active:scale-[0.97]`, `focus:ring-2 focus:ring-primary-500/20`, glassmorphic `bg-gray-800/60 border-gray-700/60`
-
-#### Components Refactored
-- **SalesBookDesignerWorkspace.tsx** — MobileTabBar, WorkspaceHeader, Tailwind v4 clean (`bg-white/6` etc.)
-- **SBSectionBranding.tsx** — AdvancedToggle from kit, rounded-xl inputs
-- **SBSectionFormLayout.tsx** — Toggle/AdvancedToggle/SectionLabel from kit, 32 inputs batch-updated
-- **SBSectionPrintConfig.tsx** — Toggle from kit, SectionLabel, rounded-xl cards
-- **SBSectionBrandLogos.tsx** — Toggle from kit, rounded-xl buttons
-- **SBSectionDocumentType.tsx** — rounded-xl cards, active:scale feedback
-- **SBSectionCustomBlocks.tsx** — full styling update (cards/chips/inputs/DnD)
-- **SBSectionStyle.tsx** — partial (h3 labels + card styles updated; no SalesUIKit import yet)
+- **Exports:** `AccordionSection`, `Toggle`, `FormInput`, `FormTextarea`, `FormSelect`, `SectionLabel`, `AdvancedToggle`, `InfoBadge`, `ChipGroup`, `SIcon`, `MobileTabBar`, `WorkspaceHeader`, `IconButton`, `EmptyState`, `ActionButton`, `Icons`
+- **Design:** `rounded-xl`, `active:scale-[0.97]`, `focus:ring-2 focus:ring-primary-500/20`, glassmorphic
 
 #### Build Status
-- TypeScript: 0 errors (`npx tsc --noEmit`, exit code 0)
+- TypeScript: 0 errors
 - Git: pushed to `main`
 
 ---
