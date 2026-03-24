@@ -1,0 +1,42 @@
+{
+  "_index": {
+    "status_code": "500",
+    "status_message": "Internal Server Error"
+  },
+  "Collection-APIs": {
+    "status_code": "500",
+    "status_message": "Internal Server Error"
+  },
+  "Disbursement-APIs": {
+    "status_code": "500",
+    "status_message": "Internal Server Error"
+  },
+  "Cash-In-APIs": {
+    "status_code": "500",
+    "status_message": "Internal Server Error"
+  },
+  "Cash-Out-APIs": {
+    "status_code": "500",
+    "status_message": "Internal Server Error"
+  },
+  "KYC": {
+    "status_code": "500",
+    "status_message": "Internal Server Error"
+  },
+  "Account": {
+    "status_code": "500",
+    "status_message": "Internal Server Error"
+  },
+  "Remittance-APIs": {
+    "status_code": "500",
+    "status_message": "Internal Server Error"
+  },
+  "TopUp-Notification": {
+    "status_code": "500",
+    "status_message": "Internal Server Error"
+  },
+  "ATM-Withdrawal": {
+    "status_code": "500",
+    "status_message": "Internal Server Error"
+  }
+}

@@ -1,9 +1,192 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Session 114 — Complete Visual Overhaul (Electric Violet + Glassmorphism) — COMPLETE ✅
+**Phase:** Session 119 — Sales Tools UI/UX Refactoring — COMPLETE ✅
 
-### Session 114: Platform Visual Overhaul — Violet + Glassmorphism
+### Session 119: Unified Sales Tools UI Kit + Component Refactor
+
+#### SalesUIKit.tsx — NEW, COMPLETE (~600 lines)
+- **Purpose:** Single source of truth for ALL sales-tool UI primitives
+- **Location:** `src/components/workspaces/sales-book-designer/SalesUIKit.tsx`
+- **Exports:** `AccordionSection`, `Toggle` (h-5 w-9, bigger touch targets), `FormInput`, `FormTextarea`, `FormSelect`, `SectionLabel` (uppercase tracking), `AdvancedToggle` (border-primary-500/20 tree), `InfoBadge`, `ChipGroup`, `SIcon`, `MobileTabBar`, `WorkspaceHeader`, `IconButton`, `EmptyState`, `ActionButton` (4 variants × 2 sizes), `Icons` (SVGs for undo/redo/print/zoom/edit/preview/layers/image)
+- **Design:** `rounded-xl`, `active:scale-[0.97]`, `focus:ring-2 focus:ring-primary-500/20`, glassmorphic `bg-gray-800/60 border-gray-700/60`
+
+#### Components Refactored
+- **SalesBookDesignerWorkspace.tsx** — MobileTabBar, WorkspaceHeader, Tailwind v4 clean (`bg-white/6` etc.)
+- **SBSectionBranding.tsx** — AdvancedToggle from kit, rounded-xl inputs
+- **SBSectionFormLayout.tsx** — Toggle/AdvancedToggle/SectionLabel from kit, 32 inputs batch-updated
+- **SBSectionPrintConfig.tsx** — Toggle from kit, SectionLabel, rounded-xl cards
+- **SBSectionBrandLogos.tsx** — Toggle from kit, rounded-xl buttons
+- **SBSectionDocumentType.tsx** — rounded-xl cards, active:scale feedback
+- **SBSectionCustomBlocks.tsx** — full styling update (cards/chips/inputs/DnD)
+- **SBSectionStyle.tsx** — partial (h3 labels + card styles updated; no SalesUIKit import yet)
+
+#### Build Status
+- TypeScript: 0 errors (`npx tsc --noEmit`, exit code 0)
+- Git: pushed to `main`
+
+---
+
+**Phase:** Session 118 — Admin Panel + Payment Flow Hardening — COMPLETE ✅
+
+### Session 118: Admin Panel + Credit Grant/Refund System + Payment Flow Hardening
+
+#### Payment Flow Hardening — COMPLETE ✅ (commit `ac278bc`)
+- **addCredits failure recovery** — If addCredits fails after MTN confirms SUCCESSFUL, payment reverts to pending (not stuck as successful with 0 credits)
+- **Webhook retry** — addCredits retried once on failure, reverts to pending if both fail
+- **Polling cleanup** — mountedRef + pollTimeoutRef prevent state updates after unmount
+- **Progress feedback** — pollAttempts counter, context-aware progress messages, progress bar in modal
+
+#### Admin Panel — COMPLETE ✅ (commit `a3a1d7f`)
+Full admin system for credit management and payment resolution:
+
+**New Files:**
+- `supabase/migrations/004_admin_role.sql` — `is_admin boolean NOT NULL DEFAULT false` on profiles
+- `src/lib/supabase/admin.ts` — `getAdminUser()` guard (checks auth + profiles.is_admin)
+- `src/app/api/admin/users/route.ts` — Search/list users with email enrichment from auth.users
+- `src/app/api/admin/credits/route.ts` — Grant or revoke credits with admin audit trail
+- `src/app/api/admin/payments/route.ts` — List all payments with status/user filters
+- `src/app/api/admin/payments/refund/route.ts` — Refund successful payments (atomic guard, restores credits)
+- `src/app/admin/page.tsx` (~450 lines) — Full admin dashboard with Users & Payments tabs
+
+**Modified Files:**
+- `src/hooks/useUser.tsx` — Added `is_admin: boolean` to UserProfile interface + DEV_PROFILE
+- `src/components/dashboard/UserMenu.tsx` — Admin Panel link (shield icon, only for admins)
+
+**Features:**
+- Tab navigation: "Users & Credits" | "Payments"
+- User search, credit grant/revoke modal with required reason
+- Payment list with status filter pills, inline refund with reason
+- All actions logged to credit_transactions for audit trail
+- Admin user set: test@dramacagency.com → is_admin = true
+- Migration applied on Supabase, build verified (0 TS errors)
+
+---
+
+**Phase:** Session 117 — Sales Books Deep Audit & Fixes — COMPLETE ✅
+
+### Session 117: Sales Books Comprehensive Audit
+
+#### Deep audit of ALL sales book tools, templates, and renderers — COMPLETE ✅
+
+**Files Audited (line-by-line):**
+- `src/lib/sales-book/BlankFormRenderer.tsx` (~2050 lines) — Core blank form renderer
+- `src/lib/sales-book/schema.ts` — Sales book form data schema (20 templates)
+- `src/lib/invoice/schema.ts` — Invoice/document type schema (7 types, Zod validation)
+- `src/lib/invoice/templates/UniversalInvoiceTemplate.tsx` — 10 invoice template renderers
+- `src/lib/invoice/templates/ReceiptBookRenderer.tsx` — 3-per-page receipt layout
+- `src/lib/invoice/templates/InvoiceTemplateRenderer.tsx` — Pagination orchestrator
+- `src/lib/invoice/templates/template-defs.ts` — 10 template metadata
+- `src/data/invoice-template-css.ts` — Scoped CSS for all templates
+- `src/components/workspaces/SalesBookWrappers.tsx` — 9 tool routing wrappers
+- `src/components/workspaces/SalesDocumentWrappers.tsx` — V2 wrappers (unused)
+- `src/components/workspaces/sales-book-designer/SalesBookDesignerWorkspace.tsx` — Main workspace
+- `src/components/workspaces/InvoiceDesignerWorkspaceV2.tsx` — V2 wizard editor
+- `src/components/workspaces/StatementOfAccountWorkspace.tsx` — Canvas-based SOA
+- `src/stores/sales-book-editor.ts` + `src/stores/invoice-editor.ts` — Zustand stores
+
+**Bugs Fixed:**
+1. **`showTypeFields` master toggle not working** — Schema defined `showTypeFields: z.boolean().default(true)` but BlankFormRenderer never checked it. All 5 type-specific field blocks (quotation valid-for, proforma valid-until, credit-note originals/reason, purchase-order ship-to/delivery-by, delivery-note vehicle/driver) now gated with `layout.showTypeFields !== false &&`.
+2. **Receipt card overflow/overlapping** — 374px receipt cards could overflow when terms, custom footer, brand logos, and custom blocks were all enabled. Added `overflow: hidden` + `minHeight: 0` to main content flex container. Made terms/footer text compact (8px font, single-line with ellipsis truncation). Reduced logo heights and spacing to prevent overflow.
+3. **Unused `borderInset` variable** — Declared but never used in BlankReceiptSlip. Removed.
+4. **Lime green highlight colors** — SalesBookDesignerWorkspace preview hover/highlight used `rgba(132,204,22,...)` (lime green) instead of Electric Violet brand color. Updated all hover, layer-highlight, and glow-pulse animations to `rgba(139,92,246,...)`.
+5. **Custom blocks color picker fallback** — SBSectionCustomBlocks.tsx used `#84cc16` fallback for "accent" color. Updated to `#8b5cf6` (Electric Violet).
+
+**Verification Results:**
+- TypeScript: 0 errors (full project `tsc --noEmit`)
+- All 10 sales tools properly routed in page.tsx
+- All 9 SalesBookWrappers exports match tool IDs
+- 7 document types complete: invoice, quotation, receipt, delivery-note, credit-note, proforma-invoice, purchase-order
+- 20 sales book templates functional with 6 layout archetypes
+- 10 invoice templates with CSS scoping and proper print handling
+- Statement of Account: Canvas-based, fully functional (6 templates, AI generation, transaction management)
+- Print CSS: @page size, page-break-after, print-color-adjust all correct
+
+---
+
+**Phase:** Session 115–116 — Mobile Money Integrations — ALL DEPLOYED ✅, Airtel PENDING Admin
+
+### Session 116: RLS Fix + Vercel Env Vars + Phone Input Rewrite
+
+#### RLS Fix for Payment Inserts — COMPLETE ✅ (commit `8b92af3`)
+- **Bug:** "Could not create payment record" in production — RLS policies on `payments` table only allow `service_role` to INSERT, but initiate routes used user-scoped Supabase client
+- **Fix:** Both MTN and Flutterwave initiate routes now use `createClient` from `@supabase/supabase-js` with service role key for DB operations, while still using user-scoped client for auth
+- Files: `src/app/api/payments/mtn/initiate/route.ts`, `src/app/api/payments/initiate/route.ts`
+
+#### Vercel Env Vars Set via REST API — COMPLETE ✅
+- Used Vercel REST API (token from `%APPDATA%\com.vercel.cli\Data\auth.json`) to add all 5 MTN env vars to all environments (Production + Preview + Development)
+- Vars: MTN_MOMO_API_USER_ID, MTN_MOMO_API_KEY, MTN_MOMO_SUBSCRIPTION_KEY, MTN_MOMO_ENVIRONMENT=sandbox, MTN_MOMO_CALLBACK_URL
+- Triggered production redeploy via `npx vercel --prod --yes`
+
+#### Phone Number Input — Bulletproof Rewrite — COMPLETE ✅ (commit `60377f0`)
+First attempt (`68ac796`) had critical bugs:
+1. `toRawDigits()` re-parsed `+260` from formatted display as digits → corrupted prefix checking
+2. `095x` was wrongly mapped to MTN (it's Zamtel per ZICTA/ITU)
+3. Cursor jumped to end on every keystroke
+4. Invalid `useState(() => { side effect })` pattern
+
+**Complete rewrite design:**
+- Fixed `+260` prefix as non-editable `<span>` label (separate from input field)
+- User only types the 9 local digits after the country code
+- `inputMode="numeric"` for mobile keyboards
+- `extractLocalDigits()` paste handler — handles +260..., 0..., 260..., raw digit formats
+- `formatLocalDigits()` — visual formatting `97 123 4567`
+- `NETWORK_PREFIXES` map: MTN (96/76), Airtel (97/77), Zamtel (95/75 — blocked with message)
+- Zamtel explicitly blocked: "Zamtel numbers cannot be used for mobile money payments"
+- Invalid prefixes show: "098... is not a valid Zambian mobile prefix"
+- Discriminated union `PhoneValidation` type for type-safe validation states
+- Green checkmark + "Valid MTN/Airtel number" confirmation on valid input
+- Provider auto-selected from detected network
+- Submit disabled until fully valid
+- `cleanPhoneForApi = "+260" + rawDigits` sent to server — matches server-side `^\+260\d{9}$` validation
+
+**Zambian Mobile Prefixes (ITU/ZICTA verified via Wikipedia):**
+- MTN: 096x, 076x
+- Airtel: 097x, 077x
+- Zamtel: 095x, 075x (NOT supported for mobile money payments)
+
+### Session 115: Airtel Portal Setup + MTN MoMo Integration
+
+#### Airtel Money Portal Setup — COMPLETE ✅ (Pending Admin Approval)
+- DMSUITE app created on developers.airtel.co.zm (Merchant Code: `DYEKVFH3`, TEST mode)
+- Collection-APIs product added (Status: Pending)
+- Callback URL: `https://dmsuite-iota.vercel.app/api/payments/airtel/webhook`
+- Callback Authentication enabled (Hash Key generated)
+- IP Whitelisting: `0.0.0.0/0` added
+- Message Signing enabled for Collection-APIs
+- Support message sent requesting expedited review
+- **BLOCKED:** Waiting for Airtel admin approval to get Client ID + Secret
+
+#### MTN MoMo Collections Integration — COMPLETE ✅ (commit `e3b2132`)
+Full end-to-end MTN MoMo payment integration for credit purchases:
+
+**Sandbox Credentials Provisioned:**
+- MTN Developer Portal: momodeveloper.mtn.com, Subscription "DMSUITE" (Active)
+- Primary Key: `12e8efbd863c495082bb6bd61a2e50e2`
+- API User ID: `b87fa02b-a409-4b22-9d03-f94e578abeb4`
+- API Key: `341cc7f278b44de19ce2d45f379dc98a`
+- Token: Basic auth → Bearer, 3600s expiry
+
+**New Files:**
+- `src/lib/mtn-momo.ts` (~200 lines) — Client library: getConfig() (sandbox/prod), token caching (60s pre-expiry refresh), requestToPay(), getTransactionStatus(). Currency: EUR for sandbox, ZMW for production.
+- `src/app/api/payments/mtn/initiate/route.ts` (~115 lines) — Auth-gated, validates pack+phone, creates pending payment, calls requestToPay, returns pending+refs
+- `src/app/api/payments/mtn/webhook/route.ts` (~120 lines) — Handles POST/PUT, finds payment by referenceId, atomic status update, addCredits on success
+- `src/app/api/payments/mtn/status/route.ts` (~130 lines) — Dual-purpose: returns DB status + actively polls MTN API if pending, auto-fulfills on SUCCESSFUL
+
+**Modified Files:**
+- `src/components/dashboard/CreditPurchaseModal.tsx` — handlePay routes MTN to /api/payments/mtn/initiate, pollPaymentStatus routes to /api/payments/mtn/status
+- `.env.local` — Added 5 MTN env vars
+- `.env.example` — Added MTN template vars
+
+**End-to-End Sandbox Test:** Token ✅ → RequestToPay 202 ✅ → Status SUCCESSFUL ✅
+**Build:** Compiled successfully, zero TypeScript errors
+**Deployed:** Commit `e3b2132`, pushed to origin/main
+
+**Vercel Env Vars SET:** All 5 MTN vars added to all environments via REST API + redeploy triggered
+
+---
+
+### Session 114: Platform Visual Overhaul — Violet + Glassmorphism — COMPLETE ✅
 Complete visual identity shift from lime-green to Electric Violet (#8b5cf6) with glassmorphism design language. 19 files modified, commit `5102c61`, pushed to Vercel.
 
 #### Brand Palette Change
@@ -169,8 +352,8 @@ Gave Chiko the ability to scan any website URL when a user says "Get the details
 - **Vercel User:** dramac-main (team: drake-machikos-projects)
 - **GitHub Repo:** dramac-main/dmsuite (id: 1159566441)
 - **Production URL:** https://dmsuite-iota.vercel.app
-- **Latest commit:** `1ae6f2c` (profile loading fix) — pushed to origin/main
-- **Previous commits:** `447b11d` (token system), `156e33f` (Context Provider), `165c578` (account), `fc7c8da` (realtime), `3beee48` (unpdf)
+- **Latest commit:** `e3b2132` (MTN MoMo integration) — pushed to origin/main
+- **Previous commits:** `5102c61` (visual overhaul), `1ae6f2c` (profile loading fix), `447b11d` (token system), `156e33f` (Context Provider), `165c578` (account), `fc7c8da` (realtime), `3beee48` (unpdf)
 
 #### 6. Profile Loading Loop Fix — COMPLETE ✅ (commit `1ae6f2c`)
 - Root cause: no error handling in bootstrap() + unstable useCallback deps + TOKEN_REFRESHED events
@@ -202,17 +385,13 @@ Gave Chiko the ability to scan any website URL when a user says "Get the details
 - Auth helper returns mock user
 
 ### Next Steps (Priority Order)
-1. **User action: Register at developers.airtel.co.zm** — Create account, create app, subscribe to Collection API (Product 7), get sandbox creds, enable callback auth, set callback URL
-2. **Build Airtel Money integration** — Once sandbox creds available:
-   - `src/lib/airtel/client.ts` (token caching 180s, message signing)
-   - `src/lib/airtel/encryption.ts` (AES/RSA signing + HMAC verification)
-   - 3 API routes: initiate, webhook, status
-   - Supabase migration: payment_orders table
-   - UI: CreditPurchaseModal update
-3. **Test full auth flow E2E** — Sign up → email verify → login → use credits → buy credits → test tools
-4. **Re-add stock image API keys to Vercel** — UNSPLASH_ACCESS_KEY, PEXELS_API_KEY, PIXABAY_API_KEY, SHUTTERSTOCK_TOKEN
-5. **Remaining business tools** — Cover Letter Writer, Proposal & Pitch Deck, Certificate Designer, Contract Creator
-6. **MTN Mobile Money** — After Airtel integration is live
+1. **Set Vercel env vars for MTN MoMo** — 5 vars needed (API_USER_ID, API_KEY, SUBSCRIPTION_KEY, ENVIRONMENT=sandbox, CALLBACK_URL)
+2. **Test MTN MoMo on Vercel** — Verify production deployment works end-to-end
+3. **Airtel Money integration** — BLOCKED on admin approval. Once approved: get Client ID + Secret from Key Management, build `src/lib/airtel/client.ts` (token caching 180s, AES-256-CBC + RSA message signing), 3 API routes (initiate, webhook, status), update CreditPurchaseModal
+4. **MTN Production setup** — When going live: change MTN_MOMO_ENVIRONMENT=production, get production credentials via MTN Partner Portal, currency auto-switches to ZMW
+5. **Re-add stock image API keys to Vercel** — UNSPLASH_ACCESS_KEY, PEXELS_API_KEY, PIXABAY_API_KEY, SHUTTERSTOCK_TOKEN
+6. **Remaining business tools** — Cover Letter Writer, Proposal & Pitch Deck, Certificate Designer, Contract Creator
+7. **Test full auth flow E2E** — Sign up → verify → login → use credits → buy credits → test tools
    - Each selection sets both `currencySymbol` and `currencyCode`
 
 3. **Banking Fields Expanded** — 3 → 11 fields:

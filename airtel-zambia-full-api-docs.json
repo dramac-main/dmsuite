@@ -1,0 +1,42 @@
+{
+  "_index": {
+    "error": "unauthorized",
+    "error_description": "Full authentication is required to access this resource"
+  },
+  "Collection-APIs": {
+    "error": "unauthorized",
+    "error_description": "Full authentication is required to access this resource"
+  },
+  "Disbursement-APIs": {
+    "error": "unauthorized",
+    "error_description": "Full authentication is required to access this resource"
+  },
+  "Cash-In-APIs": {
+    "error": "unauthorized",
+    "error_description": "Full authentication is required to access this resource"
+  },
+  "Cash-Out-APIs": {
+    "error": "unauthorized",
+    "error_description": "Full authentication is required to access this resource"
+  },
+  "KYC": {
+    "error": "unauthorized",
+    "error_description": "Full authentication is required to access this resource"
+  },
+  "Account": {
+    "error": "unauthorized",
+    "error_description": "Full authentication is required to access this resource"
+  },
+  "Remittance-APIs": {
+    "error": "unauthorized",
+    "error_description": "Full authentication is required to access this resource"
+  },
+  "TopUp-Notification": {
+    "error": "unauthorized",
+    "error_description": "Full authentication is required to access this resource"
+  },
+  "ATM-Withdrawal": {
+    "error": "unauthorized",
+    "error_description": "Full authentication is required to access this resource"
+  }
+}

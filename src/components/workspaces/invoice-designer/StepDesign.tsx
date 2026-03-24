@@ -251,7 +251,7 @@ export default function StepDesign() {
                   <button
                     key={f.id}
                     onClick={() => setFontPairing(f.id as FontPairingId)}
-                    className={`rounded-lg px-3 py-2 text-left text-sm transition-all border ${
+                    className={`rounded-xl px-3 py-2 text-left text-sm transition-all border ${
                       isActive
                         ? "border-primary-500/60 bg-primary-500/10 text-gray-200"
                         : "border-gray-700/40 bg-gray-800/30 text-gray-400 hover:text-gray-200 hover:border-gray-600/60"
@@ -278,7 +278,7 @@ export default function StepDesign() {
                   <button
                     key={f}
                     onClick={() => setPageFormat(f as PageFormat)}
-                    className={`flex-1 rounded-lg p-3 text-center transition-all border ${
+                    className={`flex-1 rounded-xl p-3 text-center transition-all border ${
                       isActive
                         ? "border-primary-500/60 bg-primary-500/10"
                         : "border-gray-700/40 bg-gray-800/30 hover:border-gray-600/60"
@@ -318,14 +318,14 @@ export default function StepDesign() {
       >
         <button
           onClick={prevStep}
-          className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-400 hover:text-gray-200 transition-colors"
+          className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-400 hover:text-gray-200 transition-colors"
         >
           <IconArrowLeft className="w-4 h-4" />
           Back
         </button>
         <button
           onClick={nextStep}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary-500 px-5 py-2.5 text-sm font-medium text-gray-950 transition-all hover:bg-primary-400 active:scale-[0.98]"
+          className="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-5 py-2.5 text-sm font-medium text-gray-950 transition-all hover:bg-primary-400 active:scale-[0.98]"
         >
           Open Editor
           <IconArrowRight className="w-4 h-4" />

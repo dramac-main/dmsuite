@@ -152,7 +152,7 @@ function TemplateThumbnail({ headerStyle, accentColor }: { headerStyle: string; 
           <div className={`w-3 h-0.5 rounded-full ${lineShort}`} />
         </div>
         <div className="flex gap-0.5">
-          <div className="flex-1 h-[3px] rounded-sm" style={{ background: accentFade }} />
+          <div className="flex-1 h-0.75 rounded-sm" style={{ background: accentFade }} />
         </div>
         <div className={`w-full h-0.5 rounded-full ${line}`} />
         <div className={`w-5/6 h-0.5 rounded-full ${line}`} />
@@ -178,10 +178,10 @@ function TemplateGrid() {
             <button
               key={tmpl.id}
               onClick={() => setTemplate(tmpl.id as InvoiceTemplateId)}
-              className={`relative rounded-lg border p-2 text-left transition-all ${
+              className={`relative rounded-xl border p-2 text-left transition-all ${
                 isActive
                   ? "border-primary-500/60 bg-primary-500/10 ring-1 ring-primary-500/20"
-                  : "border-gray-700/50 bg-gray-800/30 hover:border-gray-600"
+                  : "border-gray-700/60 bg-gray-800/30 hover:border-gray-600"
               }`}
             >
               <TemplateThumbnail
@@ -228,10 +228,10 @@ function FontPairingList() {
           <button
             key={fp.id}
             onClick={() => setFontPairing(fp.id as FontPairingId)}
-            className={`flex items-center gap-2 w-full rounded-lg border px-3 py-2 text-left transition-all ${
+            className={`flex items-center gap-2 w-full rounded-xl border px-3 py-2 text-left transition-all ${
               isActive
                 ? "border-primary-500/60 bg-primary-500/10 ring-1 ring-primary-500/20"
-                : "border-gray-700/50 bg-gray-800/30 hover:border-gray-600"
+                : "border-gray-700/60 bg-gray-800/30 hover:border-gray-600"
             }`}
           >
             <div className="flex-1 min-w-0">
@@ -331,10 +331,10 @@ export default function InvoiceEditorDesignPanel({ onCollapse }: Props) {
                 <button
                   key={fmt}
                   onClick={() => setPageFormat(fmt)}
-                  className={`rounded-md border py-2 text-center transition-all ${
+                  className={`rounded-xl border py-2 text-center transition-all ${
                     invoice.metadata.pageFormat === fmt
                       ? "border-primary-500/60 bg-primary-500/10 text-primary-300"
-                      : "border-gray-700 bg-gray-800/40 text-gray-400 hover:border-gray-600"
+                      : "border-gray-700/60 bg-gray-800/40 text-gray-400 hover:border-gray-600"
                   }`}
                 >
                   <span className="text-xs font-medium block">{dim.label.split(" (")[0]}</span>

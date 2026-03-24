@@ -99,7 +99,7 @@ export default function InvoiceEditorPreviewPanel({
       </div>
 
       {/* Zoom controls */}
-      <div className="absolute bottom-3 right-3 flex items-center gap-0.5 rounded-lg bg-gray-900/85 border border-gray-800/50 backdrop-blur-sm px-1 py-0.5">
+      <div className="absolute bottom-3 right-3 flex items-center gap-0.5 rounded-xl bg-gray-900/85 border border-gray-800/50 backdrop-blur-sm px-1 py-0.5">
         <button
           onClick={onZoomOut}
           className="rounded p-1.5 text-gray-400 hover:text-gray-200 hover:bg-gray-800/60 transition-colors"
@@ -109,7 +109,7 @@ export default function InvoiceEditorPreviewPanel({
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /><line x1="8" y1="11" x2="14" y2="11" />
           </svg>
         </button>
-        <span className="min-w-[38px] text-center text-xs tabular-nums text-gray-400">{Math.round(zoom * 100)}%</span>
+        <span className="min-w-9.5 text-center text-xs tabular-nums text-gray-400">{Math.round(zoom * 100)}%</span>
         <button
           onClick={onZoomIn}
           className="rounded p-1.5 text-gray-400 hover:text-gray-200 hover:bg-gray-800/60 transition-colors"

@@ -302,7 +302,7 @@ export default function InvoiceEditorSectionsPanel({ onCollapse }: Props) {
             return (
               <div
                 key={item.id}
-                className="rounded-lg border border-gray-700/30 bg-gray-800/20 p-2 space-y-1.5"
+                className="rounded-xl border border-gray-700/40 bg-gray-800/20 p-2 space-y-1.5"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold text-gray-500">#{idx + 1}</span>
@@ -350,7 +350,7 @@ export default function InvoiceEditorSectionsPanel({ onCollapse }: Props) {
           })}
           <button
             onClick={() => addLineItem()}
-            className="flex items-center justify-center gap-1.5 w-full rounded-lg border border-dashed border-gray-700/40 py-2 text-[11px] text-gray-500 hover:text-primary-400 hover:border-primary-500/30 transition-colors"
+            className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-dashed border-gray-700/40 py-2 text-[11px] text-gray-500 hover:text-primary-400 hover:border-primary-500/30 transition-colors"
           >
             <IconPlus /> Add Item
           </button>
@@ -391,7 +391,7 @@ export default function InvoiceEditorSectionsPanel({ onCollapse }: Props) {
           ))}
           <button
             onClick={() => addCharge()}
-            className="flex items-center justify-center gap-1.5 w-full rounded-lg border border-dashed border-gray-700/40 py-1.5 text-[11px] text-gray-500 hover:text-primary-400 hover:border-primary-500/30 transition-colors"
+            className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-dashed border-gray-700/40 py-1.5 text-[11px] text-gray-500 hover:text-primary-400 hover:border-primary-500/30 transition-colors"
           >
             <IconPlus /> Add Charge
           </button>

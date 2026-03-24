@@ -94,7 +94,7 @@ function ConvertToDropdown() {
         <span className="hidden sm:inline">Convert</span>
       </button>
       {open && (
-        <div className="absolute top-full left-0 mt-1 w-52 rounded-lg bg-gray-900 border border-gray-700/50 shadow-xl z-50 py-1">
+        <div className="absolute top-full left-0 mt-1 w-52 rounded-xl bg-gray-900 border border-gray-700/60 shadow-xl z-50 py-1">
           <div className="px-3 py-1.5 text-[10px] font-medium text-gray-500 uppercase tracking-wider">
             Convert to…
           </div>

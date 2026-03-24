@@ -551,7 +551,6 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
 
   const sidebarW = tpl.receiptSidebar ? 44 : 0;
   const sidebarColor = tpl.receiptSidebarColor ?? accent;
-  const borderInset = form.style.borderStyle !== "none" ? 5 : 0;
 
   return (
     <div
@@ -587,7 +586,7 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
       )}
 
       {/* MAIN CONTENT â€” horizontal card layout */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", zIndex: 2 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", zIndex: 2, minHeight: 0, overflow: "hidden" }}>
 
         {/* Header band â€” full-width, content-aware height, stretches to edges */}
         {tpl.headerBand ? (
@@ -780,23 +779,23 @@ function BlankReceiptSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFo
         )}
 
         {layout.showTerms && layout.termsText && (
-          <div data-sb-section="layout" style={{ fontSize: "10px", color: "#9ca3af", marginTop: "5px", padding: `0 ${pad}px`, lineHeight: 1.35, cursor: "pointer" }}>{layout.termsText}</div>
+          <div data-sb-section="layout" style={{ fontSize: "8px", color: "#9ca3af", marginTop: "3px", padding: `0 ${pad}px`, lineHeight: 1.25, cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{layout.termsText}</div>
         )}
         {layout.customFooterText && (
-          <div data-sb-section="layout" style={{ fontSize: "10px", color: "#6b7280", marginTop: "3px", padding: `0 ${pad}px`, lineHeight: 1.35, cursor: "pointer" }}>{layout.customFooterText}</div>
+          <div data-sb-section="layout" style={{ fontSize: "8px", color: "#6b7280", marginTop: "2px", padding: `0 ${pad}px`, lineHeight: 1.25, cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{layout.customFooterText}</div>
         )}
 
         {/* Footer bar */}
-        <div data-sb-section="style" style={{ padding: `0 ${tpl.footerStyle === "bar" ? 0 : pad}px`, cursor: "pointer" }}>
+        <div data-sb-section="style" style={{ padding: `0 ${tpl.footerStyle === "bar" ? 0 : pad}px`, cursor: "pointer", flexShrink: 0 }}>
           <FooterBar tpl={tpl} density={1} branding={form.companyBranding} bleedL={padL} bleedR={padR} bleedB={padB} />
         </div>
 
         {/* Brand logos */}
         {form.brandLogos.enabled && form.brandLogos.logos.length > 0 && form.brandLogos.position === "bottom" && (
-          <div data-sb-section="logos" style={{ display: "flex", gap: "10px", justifyContent: "center", alignItems: "center", paddingTop: "5px", borderTop: "1px solid #e5e7eb", margin: `5px ${pad}px 0`, cursor: "pointer" }}>
+          <div data-sb-section="logos" style={{ display: "flex", gap: "8px", justifyContent: "center", alignItems: "center", paddingTop: "3px", borderTop: "1px solid #e5e7eb", margin: `3px ${pad}px 0`, cursor: "pointer" }}>
             {form.brandLogos.logos.map((logo, i) => (
               // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={logo.url} alt={logo.name} style={{ height: "18px", objectFit: "contain", opacity: 0.7 }} />
+              <img key={i} src={logo.url} alt={logo.name} style={{ height: "14px", objectFit: "contain", opacity: 0.7 }} />
             ))}
           </div>
         )}
@@ -1565,15 +1564,15 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
       }} />
 
 <div data-sb-section="layout" style={{ cursor: "pointer" }}>
-      {/* TYPE-SPECIFIC FIELDS */}
-      {docType === "quotation" && layout.showValidFor !== false && (
+      {/* TYPE-SPECIFIC FIELDS — gated by master toggle */}
+      {layout.showTypeFields !== false && docType === "quotation" && layout.showValidFor !== false && (
         <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginBottom: `${Math.round(8 * density)}px` }}>
           <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent, whiteSpace: "nowrap" }}>{layout.columnLabels?.["field_validFor"] || "Valid For"}</span>
           <div style={{ width: "65px", height: `${rowHeight}px`, borderBottom: fieldStyle === "dotted" ? "1.5px dotted #9ca3af" : "1.5px solid #9ca3af" }}>&nbsp;</div>
           <span style={{ fontSize: `${clampFont(Math.round(10 * density))}px`, color: "#6b7280" }}>{layout.columnLabels?.["field_validForSuffix"] || "Days from date of issue"}</span>
         </div>
       )}
-      {docType === "proforma-invoice" && layout.showValidUntil !== false && (
+      {layout.showTypeFields !== false && docType === "proforma-invoice" && layout.showValidUntil !== false && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${Math.round(6 * density)}px ${Math.round(18 * density)}px`, marginBottom: `${Math.round(8 * density)}px` }}>
           <div>
             <span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_validUntil"] || "Valid Until"}</span>
@@ -1581,7 +1580,7 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
           </div>
         </div>
       )}
-      {docType === "credit-note" && (layout.showOriginalInvoice !== false || layout.showReasonForCredit !== false) && (
+      {layout.showTypeFields !== false && docType === "credit-note" && (layout.showOriginalInvoice !== false || layout.showReasonForCredit !== false) && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${Math.round(6 * density)}px ${Math.round(18 * density)}px`, marginBottom: `${Math.round(8 * density)}px` }}>
           {layout.showOriginalInvoice !== false && (
             <div><span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_originalInvoiceNum"] || "Original Invoice #"}</span><div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div></div>
@@ -1594,7 +1593,7 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
           )}
         </div>
       )}
-      {docType === "purchase-order" && (layout.showShipTo !== false || layout.showDeliveryBy !== false) && (
+      {layout.showTypeFields !== false && docType === "purchase-order" && (layout.showShipTo !== false || layout.showDeliveryBy !== false) && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${Math.round(6 * density)}px ${Math.round(18 * density)}px`, marginBottom: `${Math.round(8 * density)}px` }}>
           {layout.showShipTo !== false && (
             <div><span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_shipTo"] || "Ship To"}</span><div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${Math.round(rowHeight * 1.5)}px`} fieldStyle={fieldStyle === "underline" ? "box" : fieldStyle} /></div></div>
@@ -1604,7 +1603,7 @@ function BlankFormSlip({ form, slipHeight, slipWidth, isLastOnPage }: BlankFormS
           )}
         </div>
       )}
-      {docType === "delivery-note" && (layout.showVehicleNo !== false || layout.showDriverName !== false) && (
+      {layout.showTypeFields !== false && docType === "delivery-note" && (layout.showVehicleNo !== false || layout.showDriverName !== false) && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: `${Math.round(6 * density)}px ${Math.round(18 * density)}px`, marginBottom: `${Math.round(8 * density)}px` }}>
           {layout.showVehicleNo !== false && (
             <div><span style={{ fontSize: `${labelSize}px`, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: accent }}>{layout.columnLabels?.["field_vehicleNo"] || "Vehicle No."}</span><div style={{ marginTop: "3px" }}><BlankField width="100%" height={`${rowHeight}px`} fieldStyle={fieldStyle} /></div></div>

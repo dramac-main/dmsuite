@@ -143,7 +143,7 @@ export default function InvoiceExportDropdown({ onExport, isExporting = false }:
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={isExporting}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-primary-500 px-3 py-1.5 text-xs font-medium text-gray-950 transition-all hover:bg-primary-400 disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-xl bg-primary-500 px-3 py-1.5 text-xs font-medium text-gray-950 transition-all hover:bg-primary-400 disabled:opacity-50"
       >
         {isExporting ? (
           <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

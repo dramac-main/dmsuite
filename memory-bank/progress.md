@@ -1,10 +1,85 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 99/197 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅
+## Overall Status: 99/197 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅
 
 ---
 
-## Current Work: Airtel Money Integration — SPEC COMPLETE, BLOCKED ON SANDBOX CREDS
+## Current Work: Admin Panel + Payment Hardening — COMPLETE ✅
+
+### Session 118 — Payment Flow Hardening + Admin Panel
+
+#### Payment Flow Hardening — COMPLETE ✅ (commit `ac278bc`)
+- [x] **addCredits failure recovery** — Reverts payment to pending if addCredits fails after MTN confirms
+- [x] **Webhook retry** — addCredits retried once, reverts to pending on double failure
+- [x] **Polling cleanup** — mountedRef + pollTimeoutRef prevent post-unmount state updates
+- [x] **Progress feedback** — pollAttempts counter, context-aware messages, progress bar
+
+#### Admin Panel — COMPLETE ✅ (commit `a3a1d7f`)
+- [x] **DB migration** — `004_admin_role.sql` — `is_admin boolean` on profiles table (applied on Supabase)
+- [x] **Admin guard** — `src/lib/supabase/admin.ts` — `getAdminUser()` checks auth + is_admin
+- [x] **Users API** — `GET /api/admin/users?q=&page=` — Search/list with email enrichment
+- [x] **Credits API** — `POST /api/admin/credits` — Grant/revoke credits with audit trail
+- [x] **Payments API** — `GET /api/admin/payments?status=&userId=&page=` — List with filters
+- [x] **Refund API** — `POST /api/admin/payments/refund` — Atomic refund (guards against double-refund)
+- [x] **Admin dashboard** — `src/app/admin/page.tsx` (~450 lines) — Users & Payments tabs, credit modal, inline refund
+- [x] **UserMenu update** — Admin Panel link with shield icon (only visible to admins)
+- [x] **useUser update** — `is_admin: boolean` added to UserProfile interface
+- [x] **Admin user set** — test@dramacagency.com → is_admin = true (via SQL)
+- [x] **Build verified** — Zero TypeScript errors, all routes in build output
+- [x] **Committed & pushed** — `a3a1d7f` to origin/main
+
+---
+
+## Previous Work: Mobile Money Integrations — MTN COMPLETE ✅, Airtel PENDING
+
+### Previous Session 116 — RLS Fix + Vercel Env Vars + Bulletproof Phone Input
+
+#### RLS Fix for Payment Inserts — COMPLETE ✅ (commit `8b92af3`)
+- [x] **Root cause** — RLS on `payments` table only allows service_role INSERT, initiate routes used user client
+- [x] **Fix** — Both MTN + Flutterwave initiate routes use `createClient` with service role key for DB ops
+- [x] **Deployed** — Committed and pushed to origin/main
+
+#### Vercel Env Vars — COMPLETE ✅
+- [x] **All 5 MTN vars** — Set via Vercel REST API for Production + Preview + Development
+- [x] **Vars:** MTN_MOMO_API_USER_ID, MTN_MOMO_API_KEY, MTN_MOMO_SUBSCRIPTION_KEY, MTN_MOMO_ENVIRONMENT=sandbox, MTN_MOMO_CALLBACK_URL
+- [x] **Production redeployed** — via `npx vercel --prod --yes`
+
+#### Phone Number Input Rewrite — COMPLETE ✅ (commit `60377f0`)
+- [x] **Previous bugs identified** — toRawDigits corrupted prefix, Zamtel wrongly mapped to MTN, cursor jumping, bad useState
+- [x] **Fixed +260 prefix** — Non-editable span label, user types only 9 local digits
+- [x] **Correct prefixes** — MTN (96/76), Airtel (97/77), Zamtel (95/75 — blocked)
+- [x] **Paste handler** — extractLocalDigits() handles +260, 0, 260, raw formats
+- [x] **Validation** — Discriminated union type, specific error messages, green checkmark on valid
+- [x] **Provider auto-select** — From detected network on type/paste
+- [x] **Build** — Compiled successfully, zero errors
+- [x] **Committed & pushed** — `60377f0` to origin/main
+
+### Session 115 — Airtel Portal Setup + MTN MoMo Integration
+
+#### Airtel Money Portal Setup — COMPLETE ✅ (Awaiting Admin Approval)
+- [x] **Portal registration** — DMSUITE app created at developers.airtel.co.zm
+- [x] **App details** — Merchant Code: DYEKVFH3, TEST mode
+- [x] **Collection-APIs** — Product added (Status: Pending)
+- [x] **Callback URL** — Set to `https://dmsuite-iota.vercel.app/api/payments/airtel/webhook`
+- [x] **Callback Authentication** — Enabled, Hash Key generated
+- [x] **IP Whitelisting** — `0.0.0.0/0` added
+- [x] **Message Signing** — Enabled for Collection-APIs
+- [x] **Support message** — Sent requesting expedited review
+- [ ] **BLOCKED** — Waiting for Airtel admin to approve Collection-APIs product → then get Client ID + Secret
+
+#### MTN MoMo Collections Integration — COMPLETE ✅ (commit `e3b2132`)
+- [x] **MTN Developer Portal** — Account created, Collections product subscribed ("DMSUITE", Active)
+- [x] **Sandbox provisioning** — API User created, API Key generated, token verified (3600s expiry)
+- [x] **Client library** — `src/lib/mtn-momo.ts` (~200 lines): getConfig(), token caching, requestToPay(), getTransactionStatus()
+- [x] **Initiate endpoint** — `src/app/api/payments/mtn/initiate/route.ts` (auth-gated, creates pending payment, calls MTN)
+- [x] **Webhook endpoint** — `src/app/api/payments/mtn/webhook/route.ts` (POST/PUT, atomic update, addCredits)
+- [x] **Status endpoint** — `src/app/api/payments/mtn/status/route.ts` (DB status + active MTN polling + auto-fulfillment)
+- [x] **CreditPurchaseModal** — Updated to route MTN payments to new endpoints
+- [x] **Environment variables** — .env.local + .env.example updated
+- [x] **End-to-end sandbox test** — Token ✅ → RequestToPay 202 ✅ → SUCCESSFUL ✅
+- [x] **Build** — Compiled successfully, zero TypeScript errors
+- [x] **Committed & pushed** — `e3b2132` to origin/main
+- [x] **Vercel env vars** — All 5 MTN vars set via REST API for all environments + production redeployed
 
 ### Session 114 — Complete Visual Overhaul (Electric Violet + Glassmorphism)
 - [x] **Brand palette** — `#84cc16` lime → `#8b5cf6` Electric Violet (full 50-950 scale in globals.css)

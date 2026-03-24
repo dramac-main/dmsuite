@@ -47,7 +47,7 @@ function Field({
   multiline?: boolean;
 }) {
   const baseClass =
-    "w-full rounded-lg bg-gray-800/50 border border-gray-700/50 px-3 py-2.5 text-sm text-gray-200 placeholder-gray-500 outline-none transition-all focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20";
+    "w-full rounded-xl bg-gray-800/60 border border-gray-700/60 px-3 py-2.5 text-sm text-gray-200 placeholder-gray-500 outline-none transition-all focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20";
 
   return (
     <div className="space-y-1.5">
@@ -161,7 +161,7 @@ export default function StepBusiness() {
       >
         <button
           onClick={nextStep}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary-500 px-5 py-2.5 text-sm font-medium text-gray-950 transition-all hover:bg-primary-400 active:scale-[0.98]"
+          className="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-5 py-2.5 text-sm font-medium text-gray-950 transition-all hover:bg-primary-400 active:scale-[0.98]"
         >
           Continue
           <IconArrowRight className="w-4 h-4" />

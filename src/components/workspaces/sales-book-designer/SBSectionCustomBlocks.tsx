@@ -161,7 +161,7 @@ function SortableBlockCard({
   );
 
   return (
-    <div ref={setNodeRef} style={style} className="rounded-lg border border-gray-700/50 bg-gray-800/50 overflow-hidden">
+    <div ref={setNodeRef} style={style} className="rounded-xl border border-gray-700/40 bg-gray-800/40 overflow-hidden">
       {/* Header row */}
       <div className="flex items-center gap-1.5 px-2 py-1.5">
         {/* Drag handle */}
@@ -231,7 +231,7 @@ function SortableBlockCard({
             <select
               value={block.position}
               onChange={(e) => updateCustomBlock(block.id, { position: e.target.value as BlockPosition })}
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-2.5 py-1.5 text-xs text-gray-300 focus:border-primary-500 focus:outline-none"
+              className="w-full rounded-xl bg-gray-800/60 border border-gray-700/60 px-3 py-1.5 text-[12px] text-gray-300 focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all"
             >
               {BLOCK_POSITIONS.map((p) => (
                 <option key={p.value} value={p.value}>{p.label}</option>
@@ -247,10 +247,10 @@ function SortableBlockCard({
                 <button
                   key={a}
                   onClick={() => updateCustomBlock(block.id, { alignment: a })}
-                  className={`rounded-lg border px-2.5 py-1 text-xs capitalize transition-all ${
+                  className={`rounded-xl border px-2.5 py-1.5 text-[12px] font-medium capitalize transition-all ${
                     block.alignment === a
-                      ? "border-primary-500 bg-primary-500/10 text-primary-300"
-                      : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
+                      ? "border-primary-500/50 bg-primary-500/10 text-primary-300 ring-1 ring-primary-500/20"
+                      : "border-gray-700/60 bg-gray-800/40 text-gray-400 hover:border-gray-600 hover:bg-gray-800/60"
                   }`}
                 >
                   {a}
@@ -297,7 +297,7 @@ function SortableBlockCard({
                   value={block.data.url}
                   onChange={(e) => updateData({ url: e.target.value })}
                   placeholder="https://example.com"
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-2.5 py-1.5 text-xs text-gray-300 placeholder:text-gray-600 focus:border-primary-500 focus:outline-none"
+                  className="w-full rounded-xl bg-gray-800/60 border border-gray-700/60 px-3 py-1.5 text-[12px] text-gray-300 placeholder:text-gray-600 focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all"
                 />
               </div>
               <div>
@@ -311,7 +311,7 @@ function SortableBlockCard({
                   value={block.data.caption}
                   onChange={(e) => updateData({ caption: e.target.value })}
                   placeholder="Scan to visit"
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-2.5 py-1.5 text-xs text-gray-300 placeholder:text-gray-600 focus:border-primary-500 focus:outline-none"
+                  className="w-full rounded-xl bg-gray-800/60 border border-gray-700/60 px-3 py-1.5 text-[12px] text-gray-300 placeholder:text-gray-600 focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all"
                 />
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -336,7 +336,7 @@ function SortableBlockCard({
                   onChange={(e) => updateData({ content: e.target.value })}
                   placeholder="Enter text..."
                   rows={3}
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-2.5 py-1.5 text-xs text-gray-300 placeholder:text-gray-600 focus:border-primary-500 focus:outline-none resize-none"
+                  className="w-full rounded-xl bg-gray-800/60 border border-gray-700/60 px-3 py-1.5 text-[12px] text-gray-300 placeholder:text-gray-600 focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 outline-none resize-none transition-all"
                 />
               </div>
               <div>
@@ -348,10 +348,10 @@ function SortableBlockCard({
                   <button
                     key={w}
                     onClick={() => updateData({ fontWeight: w })}
-                    className={`rounded-lg border px-2.5 py-1 text-xs capitalize transition-all ${
+                    className={`rounded-xl border px-2.5 py-1.5 text-[12px] font-medium capitalize transition-all ${
                       block.data.fontWeight === w
-                        ? "border-primary-500 bg-primary-500/10 text-primary-300"
-                        : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
+                        ? "border-primary-500/50 bg-primary-500/10 text-primary-300 ring-1 ring-primary-500/20"
+                        : "border-gray-700/60 bg-gray-800/40 text-gray-400 hover:border-gray-600 hover:bg-gray-800/60"
                     }`}
                   >
                     {w === "800" ? "Extra Bold" : w}
@@ -360,7 +360,7 @@ function SortableBlockCard({
               </div>
               <div>
                 <label className="block text-[11px] font-medium text-gray-500 mb-1">Color</label>
-                <input type="color" value={block.data.color === "accent" ? "#84cc16" : block.data.color} onChange={(e) => updateData({ color: e.target.value })} className="h-7 w-full rounded border border-gray-700 bg-gray-800 cursor-pointer" />
+                <input type="color" value={block.data.color === "accent" ? "#8b5cf6" : block.data.color} onChange={(e) => updateData({ color: e.target.value })} className="h-7 w-full rounded border border-gray-700 bg-gray-800 cursor-pointer" />
               </div>
               <div className="flex gap-3">
                 <label className="flex items-center gap-1.5 cursor-pointer">
@@ -384,10 +384,10 @@ function SortableBlockCard({
                     <button
                       key={s}
                       onClick={() => updateData({ style: s })}
-                      className={`rounded-lg border px-2.5 py-1 text-xs capitalize transition-all ${
+                      className={`rounded-xl border px-2.5 py-1.5 text-[12px] font-medium capitalize transition-all ${
                         block.data.style === s
-                          ? "border-primary-500 bg-primary-500/10 text-primary-300"
-                          : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
+                          ? "border-primary-500/50 bg-primary-500/10 text-primary-300 ring-1 ring-primary-500/20"
+                          : "border-gray-700/60 bg-gray-800/40 text-gray-400 hover:border-gray-600 hover:bg-gray-800/60"
                       }`}
                     >
                       {s}
@@ -405,7 +405,7 @@ function SortableBlockCard({
               </div>
               <div>
                 <label className="block text-[11px] font-medium text-gray-500 mb-1">Color</label>
-                <input type="color" value={block.data.color === "accent" ? "#84cc16" : block.data.color} onChange={(e) => updateData({ color: e.target.value })} className="h-7 w-full rounded border border-gray-700 bg-gray-800 cursor-pointer" />
+                <input type="color" value={block.data.color === "accent" ? "#8b5cf6" : block.data.color} onChange={(e) => updateData({ color: e.target.value })} className="h-7 w-full rounded border border-gray-700 bg-gray-800 cursor-pointer" />
               </div>
             </div>
           )}
@@ -425,7 +425,7 @@ function SortableBlockCard({
               )}
               <button
                 onClick={() => fileRef.current?.click()}
-                className="flex items-center gap-2 w-full rounded-lg border border-dashed border-gray-700 bg-gray-800/30 px-3 py-2 text-xs text-gray-500 hover:text-gray-300 hover:border-gray-600 transition-colors"
+                className="flex items-center gap-2 w-full rounded-xl border border-dashed border-gray-700/60 bg-gray-800/30 px-3.5 py-2.5 text-xs text-gray-500 hover:text-gray-300 hover:border-gray-600 transition-colors active:scale-[0.97]"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -451,7 +451,7 @@ function SortableBlockCard({
                   max={400}
                   value={block.data.height}
                   onChange={(e) => updateData({ height: Number(e.target.value) })}
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-2.5 py-1.5 text-xs text-gray-300 focus:border-primary-500 focus:outline-none"
+                  className="w-full rounded-xl bg-gray-800/60 border border-gray-700/60 px-3 py-1.5 text-[12px] text-gray-300 focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all"
                 />
               </div>
               <div>
@@ -466,10 +466,10 @@ function SortableBlockCard({
                     <button
                       key={f}
                       onClick={() => updateData({ objectFit: f })}
-                      className={`rounded-lg border px-2.5 py-1 text-xs capitalize transition-all ${
+                      className={`rounded-xl border px-2.5 py-1.5 text-[12px] font-medium capitalize transition-all ${
                         block.data.objectFit === f
-                          ? "border-primary-500 bg-primary-500/10 text-primary-300"
-                          : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
+                          ? "border-primary-500/50 bg-primary-500/10 text-primary-300 ring-1 ring-primary-500/20"
+                          : "border-gray-700/60 bg-gray-800/40 text-gray-400 hover:border-gray-600 hover:bg-gray-800/60"
                       }`}
                     >
                       {f}
@@ -484,7 +484,7 @@ function SortableBlockCard({
                     type="text"
                     value={block.data.caption}
                     onChange={(e) => updateData({ caption: e.target.value })}
-                    className="w-full rounded-lg border border-gray-700 bg-gray-800 px-2.5 py-1.5 text-xs text-gray-300 placeholder:text-gray-600 focus:border-primary-500 focus:outline-none"
+                    className="w-full rounded-xl bg-gray-800/60 border border-gray-700/60 px-3 py-1.5 text-[12px] text-gray-300 placeholder:text-gray-600 focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all"
                   />
                 </div>
               )}
@@ -500,7 +500,7 @@ function SortableBlockCard({
                   value={block.data.label}
                   onChange={(e) => updateData({ label: e.target.value })}
                   placeholder="Authorized Signature"
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-2.5 py-1.5 text-xs text-gray-300 placeholder:text-gray-600 focus:border-primary-500 focus:outline-none"
+                  className="w-full rounded-xl bg-gray-800/60 border border-gray-700/60 px-3 py-1.5 text-[12px] text-gray-300 placeholder:text-gray-600 focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all"
                 />
               </div>
               <div>
@@ -514,10 +514,10 @@ function SortableBlockCard({
                     <button
                       key={s}
                       onClick={() => updateData({ lineStyle: s })}
-                      className={`rounded-lg border px-2.5 py-1 text-xs capitalize transition-all ${
+                      className={`rounded-xl border px-2.5 py-1.5 text-[12px] font-medium capitalize transition-all ${
                         block.data.lineStyle === s
-                          ? "border-primary-500 bg-primary-500/10 text-primary-300"
-                          : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
+                          ? "border-primary-500/50 bg-primary-500/10 text-primary-300 ring-1 ring-primary-500/20"
+                          : "border-gray-700/60 bg-gray-800/40 text-gray-400 hover:border-gray-600 hover:bg-gray-800/60"
                       }`}
                     >
                       {s}
@@ -577,7 +577,7 @@ export default function SBSectionCustomBlocks() {
       <div>
         <button
           onClick={() => setShowTypeSelector(!showTypeSelector)}
-          className="flex items-center gap-2 w-full rounded-lg border border-dashed border-gray-700 bg-gray-800/30 px-3 py-2 text-xs text-gray-500 hover:text-gray-300 hover:border-gray-600 transition-colors"
+          className="flex items-center gap-2 w-full rounded-xl border border-dashed border-gray-700/60 bg-gray-800/30 px-3.5 py-2.5 text-xs text-gray-500 hover:text-gray-300 hover:border-gray-600 transition-colors active:scale-[0.97]"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -586,12 +586,12 @@ export default function SBSectionCustomBlocks() {
         </button>
 
         {showTypeSelector && (
-          <div className="grid grid-cols-3 gap-1.5 mt-2">
+          <div className="grid grid-cols-3 gap-2 mt-2.5">
             {BLOCK_TYPES.map((bt) => (
               <button
                 key={bt.type}
                 onClick={() => handleAddBlock(bt.type)}
-                className="flex flex-col items-center gap-1 rounded-lg border border-gray-700 bg-gray-800 px-2 py-2 text-gray-400 hover:border-primary-500 hover:text-primary-300 hover:bg-primary-500/5 transition-all"
+                className="flex flex-col items-center gap-1 rounded-xl border border-gray-700/60 bg-gray-800/40 px-2 py-2.5 text-gray-400 hover:border-primary-500/50 hover:text-primary-300 hover:bg-primary-500/5 transition-all active:scale-[0.97]"
               >
                 {BLOCK_ICONS[bt.type]}
                 <span className="text-[10px]">{bt.label}</span>
@@ -612,7 +612,7 @@ export default function SBSectionCustomBlocks() {
       {customBlocks.length > 0 && (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={customBlocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {customBlocks.map((block) => (
                 <SortableBlockCard
                   key={block.id}

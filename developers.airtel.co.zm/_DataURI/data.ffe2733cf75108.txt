@@ -1,0 +1,1 @@
+chrome-extension://kohfgcgbkjodfcfkcackpagifgbcmimk/injected/nr-ext-text-processor/nr-ext-text-processor.js

@@ -27,7 +27,7 @@ export default function SBSectionDocumentType() {
   const convertToType = useSalesBookEditor((s) => s.convertToType);
 
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-2 gap-2.5">
       {SALES_DOCUMENT_TYPES.map((type) => {
         const config = DOCUMENT_TYPE_CONFIGS[type];
         const isSelected = documentType === type;
@@ -36,8 +36,8 @@ export default function SBSectionDocumentType() {
           <button
             key={type}
             onClick={() => convertToType(type)}
-            className={`relative rounded-lg border p-2.5 text-left transition-all ${TYPE_COLORS[type]} ${
-              isSelected ? "ring-2 ring-primary-500/50 scale-[1.02]" : "hover:scale-[1.01]"
+            className={`relative rounded-xl border p-3 text-left transition-all active:scale-[0.97] ${TYPE_COLORS[type]} ${
+              isSelected ? "ring-2 ring-primary-500/40 scale-[1.02]" : "hover:scale-[1.01]"
             }`}
           >
             <h3 className="text-xs font-semibold text-gray-200">{config.label}</h3>

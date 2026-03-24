@@ -7,6 +7,7 @@
 
 import { useCallback, useRef } from "react";
 import { useSalesBookEditor } from "@/stores/sales-book-editor";
+import { Toggle } from "./SalesUIKit";
 
 export default function SBSectionBrandLogos() {
   const brandLogos = useSalesBookEditor((s) => s.form.brandLogos);
@@ -39,18 +40,11 @@ export default function SBSectionBrandLogos() {
   return (
     <div className="space-y-3">
       {/* Enable toggle */}
-      <label className="flex items-center gap-2 cursor-pointer">
-        <button
-          type="button"
-          role="switch"
-          aria-checked={brandLogos.enabled}
-          onClick={() => updateBrandLogos({ enabled: !brandLogos.enabled })}
-          className={`relative h-4 w-7 rounded-full transition-colors shrink-0 ${brandLogos.enabled ? "bg-primary-500" : "bg-gray-700"}`}
-        >
-          <span className={`absolute top-0.5 left-0.5 h-3 w-3 rounded-full bg-white transition-transform ${brandLogos.enabled ? "translate-x-3" : ""}`} />
-        </button>
-        <span className="text-xs text-gray-300">Show brand/supplier logos on forms</span>
-      </label>
+      <Toggle
+        checked={brandLogos.enabled}
+        onChange={(v) => updateBrandLogos({ enabled: v })}
+        label="Show brand/supplier logos on forms"
+      />
 
       {brandLogos.enabled && (
         <>
@@ -62,10 +56,10 @@ export default function SBSectionBrandLogos() {
                 <button
                   key={pos}
                   onClick={() => updateBrandLogos({ position: pos })}
-                  className={`rounded-lg border px-3 py-1 text-xs transition-all capitalize ${
+                  className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition-all capitalize ${
                     brandLogos.position === pos
-                      ? "border-primary-500 bg-primary-500/10 text-primary-300"
-                      : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
+                      ? "border-primary-500/50 bg-primary-500/10 text-primary-300 ring-1 ring-primary-500/20"
+                      : "border-gray-700/60 bg-gray-800/40 text-gray-400 hover:border-gray-600 hover:bg-gray-800/60"
                   }`}
                 >
                   {pos}
@@ -78,7 +72,7 @@ export default function SBSectionBrandLogos() {
           {brandLogos.logos.length > 0 && (
             <div className="space-y-1.5">
               {brandLogos.logos.map((logo, i) => (
-                <div key={i} className="flex items-center gap-2 rounded-lg bg-gray-800/50 border border-gray-700/50 p-2">
+                <div key={i} className="flex items-center gap-2 rounded-xl bg-gray-800/40 border border-gray-700/40 p-2.5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={logo.url} alt={logo.name} className="h-8 w-auto rounded object-contain bg-white/5 p-0.5" />
                   <span className="text-xs text-gray-400 flex-1 truncate">{logo.name || `Logo ${i + 1}`}</span>
@@ -96,7 +90,7 @@ export default function SBSectionBrandLogos() {
           {/* Add logo */}
           <button
             onClick={() => fileRef.current?.click()}
-            className="flex items-center gap-2 w-full rounded-lg border border-dashed border-gray-700 bg-gray-800/30 px-3 py-2 text-xs text-gray-500 hover:text-gray-300 hover:border-gray-600 transition-colors"
+            className="flex items-center gap-2 w-full rounded-xl border border-dashed border-gray-700/60 bg-gray-800/30 px-3.5 py-2.5 text-xs text-gray-500 hover:text-gray-300 hover:border-gray-600 transition-colors active:scale-[0.97]"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
