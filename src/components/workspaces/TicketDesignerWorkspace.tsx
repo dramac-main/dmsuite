@@ -71,8 +71,8 @@ const colorPresets = [
   { name: "Indigo", primary: "#6c5ce7", accent: "#a5b4fc" },
   { name: "Forest", primary: "#065f46", accent: "#6ee7b7" },
   { name: "Pink", primary: "#be185d", accent: "#f9a8d4" },
-  { name: "Black", primary: "#000000", accent: "#8ae600" },
-  { name: "Lime", primary: "#8ae600", accent: "#1e293b" },
+  { name: "Black", primary: "#000000", accent: "#84cc16" },
+  { name: "Lime", primary: "#84cc16", accent: "#1e293b" },
   { name: "Cyan", primary: "#06b6d4", accent: "#ffffff" },
 ];
 

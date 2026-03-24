@@ -59,7 +59,7 @@ const fontCategories: { id: FontCategory; label: string }[] = [
 ];
 
 const colorPresets = [
-  { name: "Electric", primary: "#8ae600", secondary: "#06b6d4" },
+  { name: "Electric", primary: "#84cc16", secondary: "#06b6d4" },
   { name: "Corporate", primary: "#2563eb", secondary: "#1e40af" },
   { name: "Sunset", primary: "#f59e0b", secondary: "#ef4444" },
   { name: "Luxury", primary: "#7c3aed", secondary: "#c084fc" },
@@ -273,7 +273,7 @@ function generateLogoVariants(config: LogoConfig): LogoVariant[] {
 export default function LogoGeneratorWorkspace() {
   const [config, setConfig] = useState<LogoConfig>({
     brandName: "", tagline: "", style: "combo", fontCategory: "sans-serif",
-    primaryColor: "#8ae600", secondaryColor: "#06b6d4", description: "",
+    primaryColor: "#84cc16", secondaryColor: "#06b6d4", description: "",
   });
   const [aiVariants, setAiVariants] = useState<LogoVariant[]>([]);
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);

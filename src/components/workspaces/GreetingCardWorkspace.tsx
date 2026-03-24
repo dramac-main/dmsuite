@@ -62,7 +62,7 @@ const TEMPLATES: { id: CardTemplate; name: string; defaultTitle: string; default
 const COLOR_PRESETS = [
   "#e11d48", "#ec4899", "#8b5cf6", "#3b82f6", "#06b6d4",
   "#10b981", "#f59e0b", "#c09c2c", "#1e3a5f", "#334155",
-  "#8ae600", "#dc2626",
+  "#84cc16", "#dc2626",
 ];
 
 // A5 folded card: 420×595

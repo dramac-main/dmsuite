@@ -1,6 +1,25 @@
 # DMSuite — Active Context
 
 ## Current Focus
+**Phase:** Session 113 — Global Brand Color Migration — COMPLETE ✅
+
+### Session 113: Brand Color Overhaul — #8ae600 → #84cc16
+Completed global migration of the primary brand color from `#8ae600` (electric-lime) to `#84cc16` (Tailwind lime-500) across the entire codebase.
+
+#### Changes
+- **54 source files** updated (`#8ae600` → `#84cc16` in .tsx, .ts, .svg files)
+- **rgba values** migrated: `rgba(138,230,0,...)` → `rgba(132,204,22,...)`
+- **Public icons**: `icon.svg`, `icon-maskable.svg` updated
+- **Chiko components**: ChikoAvatar.tsx, Chiko3DAvatar.tsx, ChikoFAB.tsx all updated
+- **All 46 workspace files** with old color references updated
+- **Editor/renderer files**: renderer.ts, canvas-layers.ts, template-generator.ts, business-card-adapter.ts
+- **Design system**: design-system.ts, design-foundation.ts, tokens.ts, globals.css, graphics-engine.ts
+- **Memory bank**: techContext.md, systemPatterns.md, activeContext.md synced
+- **Build**: Zero TypeScript errors confirmed
+- Previously completed in session 112+: BRANDING-SPEC.md created, design-system.ts overhauled with mobile/touch/Chiko presets, sidebar widths standardized (w-64/w-16), manifest.json updated, StickyCanvasLayout.tsx uses dvh units
+
+---
+
 **Phase:** Session 112 — Chiko Website Scanning Feature — COMPLETE ✅
 
 ### Session 112: Chiko Website Scanning — Scrape & Extract Business Data from URLs
@@ -234,7 +253,7 @@ User approved building 5 business tools to Resume Builder production standard:
 - Drop shadow filter for depth
 - Thinking expression: animated dots above head
 - Happy expression: squint arc lines under eyes
-- Global branding: secondary-500 (#06b6d4) cyan for accents, primary-500 (#8ae600) for interaction sparkles
+- Global branding: secondary-500 (#06b6d4) cyan for accents, primary-500 (#84cc16) for interaction sparkles
 
 #### ChikoFAB Updated
 - Uses Chiko3DAvatar instead of flat ChikoAvatar

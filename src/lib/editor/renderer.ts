@@ -602,7 +602,7 @@ export function drawSelectionHandlesV2(ctx: CanvasRenderingContext2D, layer: Lay
   }
 
   // Selection outline
-  ctx.strokeStyle = "#8ae600";
+  ctx.strokeStyle = "#84cc16";
   ctx.lineWidth = 1.5;
   ctx.setLineDash([4, 4]);
   ctx.strokeRect(x - 1, y - 1, w + 2, h + 2);
@@ -610,7 +610,7 @@ export function drawSelectionHandlesV2(ctx: CanvasRenderingContext2D, layer: Lay
 
   // Corner + edge handles
   ctx.fillStyle = "#ffffff";
-  ctx.strokeStyle = "#8ae600";
+  ctx.strokeStyle = "#84cc16";
   ctx.lineWidth = 2;
 
   const handles = [
@@ -633,14 +633,14 @@ export function drawSelectionHandlesV2(ctx: CanvasRenderingContext2D, layer: Lay
   const rotHandleY = y - 24;
   ctx.beginPath();
   ctx.arc(x + w / 2, rotHandleY, 5, 0, Math.PI * 2);
-  ctx.fillStyle = "#8ae600";
+  ctx.fillStyle = "#84cc16";
   ctx.fill();
   ctx.strokeStyle = "#ffffff";
   ctx.lineWidth = 1.5;
   ctx.stroke();
 
   // Line from rotation handle to top center
-  ctx.strokeStyle = "#8ae600";
+  ctx.strokeStyle = "#84cc16";
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(x + w / 2, rotHandleY + 5);

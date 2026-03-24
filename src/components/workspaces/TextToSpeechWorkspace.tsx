@@ -259,7 +259,7 @@ export default function TextToSpeechWorkspace() {
     ctx.fillText(`🎙️ ${voice.label}`, 36, 38);
 
     ctx.font = "12px 'JetBrains Mono', monospace";
-    ctx.fillStyle = "#8ae600";
+    ctx.fillStyle = "#84cc16";
     ctx.fillText(`${fmtTime(progress * estimatedDuration)} / ${fmtTime(estimatedDuration)}`, 200, 38);
 
     ctx.fillStyle = "#666";

@@ -156,7 +156,7 @@ export default function ColorPaletteWorkspace() {
 
   const [mode, setMode] = useState<PaletteMode>("ai");
   const [mood, setMood] = useState<Mood>("vibrant");
-  const [baseColor, setBaseColor] = useState("#8ae600");
+  const [baseColor, setBaseColor] = useState("#84cc16");
   const [palette, setPalette] = useState<string[]>([]);
   const [savedPalettes, setSavedPalettes] = useState<SavedPalette[]>([]);
   const [contrastPair, setContrastPair] = useState<[number, number]>([0, 1]);

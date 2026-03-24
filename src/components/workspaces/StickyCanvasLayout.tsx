@@ -2,6 +2,8 @@
 
 import { type ReactNode, useRef, useState } from "react";
 import { IconZoomIn, IconZoomOut, IconDownload } from "@/components/icons";
+import { mobileWorkspace, layout } from "@/lib/design-system";
+import { cn } from "@/lib/utils";
 
 // =============================================================================
 // DMSuite — Sticky Canvas Layout
@@ -72,35 +74,35 @@ export default function StickyCanvasLayout({
   return (
     <div>
       {/* ── Mobile Tabs ──────────────────────────── */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden">
+      <div className={mobileWorkspace.tabBar}>
         {allTabs.map((tab, i) => (
           <button
             key={tab}
             onClick={() => setMobileTab(i)}
-            className={`flex-1 py-2.5 text-xs font-semibold capitalize transition-colors ${
-              mobileTab === i
-                ? "text-primary-500 border-b-2 border-primary-500"
-                : "text-gray-400 hover:text-gray-300"
-            }`}
+            className={cn(
+              mobileTab === i ? mobileWorkspace.tabActive : mobileWorkspace.tabInactive
+            )}
           >
             {tab}
           </button>
         ))}
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4" style={{ minHeight: "calc(100vh - 260px)" }}>
+      <div className={cn(mobileWorkspace.container, mobileWorkspace.minHeight)}>
         {/* ── Left Panel (Scrollable Settings) ──────── */}
         <div
-          className={`w-full lg:w-80 shrink-0 space-y-4 order-2 lg:order-1 lg:overflow-y-auto ${
-            mobileTab !== 1 ? "hidden md:block" : ""
-          }`}
-          style={{ maxHeight: "calc(100vh - 260px)" }}
+          className={cn(
+            "w-full shrink-0 space-y-4 order-2 lg:order-1 lg:overflow-y-auto",
+            layout.settingsPanel.replace("w-", "lg:w-"),
+            mobileTab !== 1 && mobileWorkspace.panelHidden
+          )}
+          style={{ maxHeight: "calc(100dvh - 260px)" }}
         >
           {leftPanel}
         </div>
 
         {/* ── Center Canvas (Sticky) ───────────────── */}
-        <div className={`flex-1 min-w-0 order-1 lg:order-2 ${mobileTab !== 0 ? "hidden md:block" : ""}`}>
+        <div className={cn("flex-1 min-w-0 order-1 lg:order-2", mobileTab !== 0 && mobileWorkspace.panelHidden)}>
           <div className="lg:sticky lg:top-4">
             {/* Toolbar row: tools + zoom controls */}
             <div className="mb-3 flex items-center justify-between gap-2 flex-wrap">
@@ -145,14 +147,14 @@ export default function StickyCanvasLayout({
             {canvasSlot ? (
               <div
                 className="bg-gray-100 dark:bg-gray-800/50 rounded-2xl overflow-hidden flex flex-col"
-                style={{ height: "calc(100vh - 330px)" }}
+                style={{ height: "calc(100dvh - 330px)" }}
               >
                 {canvasSlot}
               </div>
             ) : (
               <div
                 className="flex items-center justify-center bg-gray-100 dark:bg-gray-800/50 rounded-2xl p-4 overflow-auto"
-                style={{ maxHeight: "calc(100vh - 330px)" }}
+                style={{ maxHeight: "calc(100dvh - 330px)" }}
               >
                 <canvas
                   ref={canvasRef}
@@ -182,10 +184,12 @@ export default function StickyCanvasLayout({
         {/* ── Right Panel (Scrollable) ─────────────── */}
         {rightPanel && (
           <div
-            className={`w-full lg:w-72 shrink-0 order-3 lg:overflow-y-auto ${
-              mobileTab !== 2 ? "hidden md:block" : ""
-            }`}
-            style={{ maxHeight: "calc(100vh - 260px)" }}
+            className={cn(
+              "w-full shrink-0 order-3 lg:overflow-y-auto",
+              layout.detailsPanel.replace("w-", "lg:w-"),
+              mobileTab !== 2 && mobileWorkspace.panelHidden
+            )}
+            style={{ maxHeight: "calc(100dvh - 260px)" }}
           >
             {rightPanel}
           </div>

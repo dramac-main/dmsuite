@@ -256,7 +256,7 @@ RULES:
       recommendedOverlay: analysis.recommendedOverlay || "gradient-bottom",
       focalPoint: analysis.focalPoint || { x: 0.5, y: 0.5 },
       suggestedTextColor: analysis.suggestedTextColor || "#ffffff",
-      suggestedAccentColor: analysis.suggestedAccentColor || "#8ae600",
+      suggestedAccentColor: analysis.suggestedAccentColor || "#84cc16",
     };
 
     // Deduct credits AFTER successful AI response with token tracking

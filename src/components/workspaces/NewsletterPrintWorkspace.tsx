@@ -42,7 +42,7 @@ const TEMPLATES: { id: NLTemplate; name: string }[] = [
   { id: "minimal", name: "Minimal" }, { id: "community", name: "Community" },
   { id: "elegant", name: "Elegant" }, { id: "bold", name: "Bold" },
 ];
-const COLOR_PRESETS = ["#1e3a5f", "#2d3436", "#0f4c75", "#3c1361", "#0d7377", "#6c5ce7", "#e74c3c", "#8ae600", "#06b6d4"];
+const COLOR_PRESETS = ["#1e3a5f", "#2d3436", "#0f4c75", "#3c1361", "#0d7377", "#6c5ce7", "#e74c3c", "#84cc16", "#06b6d4"];
 
 /* ── Component ───────────────────────────────────────────── */
 

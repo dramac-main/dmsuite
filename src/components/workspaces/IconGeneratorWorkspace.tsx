@@ -90,7 +90,7 @@ export default function IconGeneratorWorkspace() {
     selectedSizes: [24, 48],
     strokeWidth: 2,
     colorMode: "mono",
-    primaryColor: "#8ae600",
+    primaryColor: "#84cc16",
     secondaryColor: "#06b6d4",
     cornerRadius: "rounded",
     background: "none",

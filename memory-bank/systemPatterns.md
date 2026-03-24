@@ -317,7 +317,7 @@ const Component = forwardRef<HTMLElement, Props>(
 - Theme via `@theme inline {}` in `globals.css` (NOT tailwind.config.js)
 - Gradient: `bg-linear-to-br` (NOT `bg-gradient-to-br`)
 - Use standard tokens: `w-18` (NOT `w-[4.5rem]`)
-- Color custom properties: `--color-primary-500: #8ae600`
+- Color custom properties: `--color-primary-500: #84cc16`
 - Available colors: primary, secondary, gray, success, error, warning, info, wire-transfer, bank-transfer
 - **NO pink, purple, or other default Tailwind colors** — only theme-defined colors
 

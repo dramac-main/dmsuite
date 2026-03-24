@@ -237,7 +237,7 @@ export function createShapeLayer(
     type: "shape" as const,
     name: partial.name ?? `Shape`,
     shape: partial.shape,
-    fillColor: partial.fillColor ?? "#8ae600",
+    fillColor: partial.fillColor ?? "#84cc16",
     strokeColor: partial.strokeColor ?? "transparent",
     strokeWidth: partial.strokeWidth ?? 0,
     cornerRadius: partial.cornerRadius ?? 0,
@@ -293,7 +293,7 @@ export function createCtaLayer(
     text: partial.text,
     fontSize: partial.fontSize ?? 16,
     fontStyle: partial.fontStyle ?? "modern",
-    bgColor: partial.bgColor ?? "#8ae600",
+    bgColor: partial.bgColor ?? "#84cc16",
     textColor: partial.textColor ?? "#000000",
     cornerRadius: partial.cornerRadius ?? 6,
     paddingX: partial.paddingX ?? 32,
@@ -796,7 +796,7 @@ export function drawSelectionHandles(
   const half = handleSize / 2;
 
   // Selection outline
-  ctx.strokeStyle = "#8ae600";
+  ctx.strokeStyle = "#84cc16";
   ctx.lineWidth = 1.5;
   ctx.setLineDash([4, 4]);
   ctx.strokeRect(x - 1, y - 1, width + 2, height + 2);
@@ -804,7 +804,7 @@ export function drawSelectionHandles(
 
   // Corner handles
   ctx.fillStyle = "#ffffff";
-  ctx.strokeStyle = "#8ae600";
+  ctx.strokeStyle = "#84cc16";
   ctx.lineWidth = 2;
 
   const handles = [

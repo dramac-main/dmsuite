@@ -72,7 +72,7 @@ const SIZES: { id: ComponentSize; label: string }[] = [
 ];
 
 const COLOR_THEMES = [
-  { name: "Lime", value: "#8ae600" },
+  { name: "Lime", value: "#84cc16" },
   { name: "Blue", value: "#3b82f6" },
   { name: "Violet", value: "#8b5cf6" },
   { name: "Red", value: "#ef4444" },
@@ -183,7 +183,7 @@ export default function UIComponentWorkspace() {
     framework: "react",
     variant: "solid",
     size: "md",
-    colorTheme: "#8ae600",
+    colorTheme: "#84cc16",
     borderRadius: 8,
   });
 

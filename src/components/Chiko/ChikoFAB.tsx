@@ -78,7 +78,7 @@ export function ChikoFAB() {
           <motion.div
             className="absolute inset-[-8px] rounded-full"
             style={{
-              background: "radial-gradient(circle, rgba(6,182,212,0.15) 0%, rgba(138,230,0,0.08) 50%, transparent 70%)",
+              background: "radial-gradient(circle, rgba(6,182,212,0.15) 0%, rgba(132,204,22,0.08) 50%, transparent 70%)",
             }}
             animate={{
               scale: [1, 1.2, 1],
@@ -108,7 +108,7 @@ export function ChikoFAB() {
             <motion.div
               className="absolute inset-[-2px] rounded-full"
               style={{
-                background: "conic-gradient(from 0deg, #06b6d4, #8ae600, #06b6d4, #8ae600, #06b6d4)",
+                background: "conic-gradient(from 0deg, #06b6d4, #84cc16, #06b6d4, #84cc16, #06b6d4)",
                 filter: "blur(4px)",
               }}
               animate={{

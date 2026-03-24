@@ -73,7 +73,7 @@ const CAMERA_MOTIONS = [
 const COLOR_MOODS = [
   { name: "Warm", bg1: "#1a1a0f", bg2: "#2d1f0e", accent: "#f59e0b" },
   { name: "Cool", bg1: "#0f1a2e", bg2: "#0e1f3d", accent: "#3b82f6" },
-  { name: "Neon", bg1: "#0a0a0a", bg2: "#1a0a2e", accent: "#8ae600" },
+  { name: "Neon", bg1: "#0a0a0a", bg2: "#1a0a2e", accent: "#84cc16" },
   { name: "Golden", bg1: "#1a1708", bg2: "#2d2810", accent: "#eab308" },
   { name: "Teal", bg1: "#0a1a1a", bg2: "#0e2d2d", accent: "#14b8a6" },
   { name: "Rose", bg1: "#1a0a0f", bg2: "#2d0e1f", accent: "#f43f5e" },
@@ -106,7 +106,7 @@ export default function AIVideoGeneratorWorkspace() {
     colorMood: "Neon",
     bgColor1: "#0a0a0a",
     bgColor2: "#1a0a2e",
-    accentColor: "#8ae600",
+    accentColor: "#84cc16",
     textOverlay: "",
     showTextOverlay: false,
     motionIntensity: 5,

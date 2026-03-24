@@ -5,6 +5,9 @@
  * transition timing, surface color token, and reusable class pattern
  * lives here. Components import from this file — never hardcode values.
  *
+ * 🎨 BRAND PALETTE: Lime #84cc16 + Cyan #06b6d4 + Slate neutral
+ * 📄 Full spec: /BRANDING-SPEC.md
+ *
  * Mirrors: globals.css (@theme inline)  for Tailwind tokens
  *          tokens.ts                     for JS color/font values
  *          z-index.ts                    for stacking contexts
@@ -17,23 +20,23 @@
 /** Sidebar widths, hover timing, and overlay config.
  *
  *  Desktop behaviour:
- *  • Default state — collapsed (icons only, w-18).
- *  • Hover — expands to w-60 as an **overlay** (shadow, no layout shift).
+ *  • Default state — collapsed (icons only, w-16).
+ *  • Hover — expands to w-64 as an **overlay** (shadow, no layout shift).
  *  • Pinned — expanded & pushes content (main uses mainMarginExpanded).
  *
  *  Mobile — unchanged: overlay drawer with swipe-to-close. */
 export const sidebar = {
   /** Expanded sidebar Tailwind width */
-  expandedWidth: "w-60", // 15rem = 240px
+  expandedWidth: "w-64", // 16rem = 256px
   /** Collapsed sidebar Tailwind width */
-  collapsedWidth: "w-18", // 4.5rem = 72px
+  collapsedWidth: "w-16", // 4rem = 64px
   /** Main content margin when sidebar is pinned open */
-  mainMarginExpanded: "lg:ml-60",
+  mainMarginExpanded: "lg:ml-64",
   /** Main content margin when sidebar is in hover/collapsed mode */
-  mainMarginCollapsed: "lg:ml-18",
+  mainMarginCollapsed: "lg:ml-16",
   /** Numeric widths for calculations (px) */
-  expandedPx: 240,
-  collapsedPx: 72,
+  expandedPx: 256,
+  collapsedPx: 64,
   /** Shared transition for sidebar width + main content margin */
   transition: "transition-all duration-200 ease-in-out",
   /** Delay before expanding on mouse-enter (ms) */
@@ -52,8 +55,45 @@ export const layout = {
   pagePadding: "px-4 py-4 sm:px-6 sm:py-6",
   /** TopBar height */
   topBarHeight: "h-16",
+  /** Mobile bottom nav height */
+  bottomNavHeight: "h-14",
   /** Standard content container */
   container: "px-4 py-4 sm:px-6 sm:py-6 max-w-screen-2xl mx-auto",
+  /** Bottom padding to clear mobile nav + safe area */
+  mobileBottomPad: "pb-20 lg:pb-0",
+  /** Settings panel width (desktop) */
+  settingsPanel: "w-80", // 320px
+  /** Details/right panel width (desktop) */
+  detailsPanel: "w-72", // 288px
+} as const;
+
+// ── Mobile Workspace ──────────────────────────────────────────
+/** Shared mobile workspace tab classes & patterns */
+export const mobileWorkspace = {
+  /** Tab bar container (hidden on md+) */
+  tabBar: "flex border-b border-gray-200 dark:border-gray-700 mb-4 md:hidden",
+  /** Active tab */
+  tabActive: "flex-1 py-3 text-xs font-semibold capitalize text-primary-500 border-b-2 border-primary-500 transition-colors",
+  /** Inactive tab */
+  tabInactive: "flex-1 py-3 text-xs font-semibold capitalize text-gray-400 hover:text-gray-300 transition-colors",
+  /** Panel hidden on wrong tab (mobile), always visible on md+ */
+  panelHidden: "hidden md:block",
+  /** Workspace main flex direction */
+  container: "flex flex-col lg:flex-row gap-4",
+  /** Minimum workspace height using dvh */
+  minHeight: "min-h-[calc(100dvh-260px)]",
+} as const;
+
+// ── Touch Targets ─────────────────────────────────────────────
+export const touch = {
+  /** Minimum touch target (44×44 = size-11) per WCAG */
+  min: "min-h-11 min-w-11",
+  /** Standard interactive element size */
+  standard: "size-10", // 40px
+  /** Small interactive element (only desktop) */
+  sm: "size-8",
+  /** Large touch target (primary FABs) */
+  lg: "size-12", // 48px
 } as const;
 
 // ── Surfaces & Elevations ─────────────────────────────────────
@@ -220,18 +260,122 @@ export const radii = {
 export const recipes = {
   /** Standard card */
   card: `rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900`,
+  /** Interactive card (tool cards, clickable) */
+  cardInteractive: `rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900
+    hover:border-gray-300 dark:hover:border-gray-700
+    hover:-translate-y-0.5 hover:shadow-lg
+    transition-all duration-200 cursor-pointer`,
+  /** Glass card (hero, overlays) */
+  cardGlass: `rounded-2xl border border-white/10 dark:border-gray-700/50
+    bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl`,
+  /** Highlighted card (selected / active) */
+  cardActive: `rounded-2xl border-2 border-primary-500/30 bg-primary-500/5`,
   /** Tool tag chip */
   tag: "px-2 py-0.5 rounded-md text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
   /** Pro / AI badge */
-  aiBadge: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-500/10",
+  aiBadge: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-500 text-xs font-medium",
+  /** Credit badge */
+  creditBadge: "px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-500 text-xs font-mono font-medium",
   /** Notification dot */
   notifDot: "absolute top-2 right-2 size-2 rounded-full bg-primary-500 ring-2 ring-white dark:ring-gray-900",
   /** Logo mark */
-  logoMark: "size-8 rounded-lg bg-linear-to-br from-primary-500 to-secondary-500 shrink-0 flex items-center justify-center shadow-lg shadow-primary-500/20",
+  logoMark: "size-8 rounded-xl bg-linear-to-br from-primary-500 to-secondary-500 shrink-0 flex items-center justify-center shadow-lg shadow-primary-500/20",
   /** User avatar */
   avatar: `size-8 rounded-lg bg-linear-to-br from-primary-400 to-secondary-500
     flex items-center justify-center text-xs font-bold text-gray-950 cursor-pointer
     ring-2 ring-transparent hover:ring-primary-500/30 transition-all`,
   /** Placeholder / coming soon box */
   placeholder: "rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50",
+  /** Primary button */
+  btnPrimary: `h-10 px-4 rounded-lg font-semibold text-sm
+    bg-primary-500 text-gray-950
+    hover:bg-primary-400 active:bg-primary-600
+    transition-colors shadow-sm shadow-primary-500/20`,
+  /** Secondary button */
+  btnSecondary: `h-10 px-4 rounded-lg font-medium text-sm
+    bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300
+    hover:bg-gray-200 dark:hover:bg-gray-700
+    border border-gray-200 dark:border-gray-700
+    transition-colors`,
+  /** Ghost button */
+  btnGhost: `h-10 px-4 rounded-lg font-medium text-sm
+    text-gray-600 dark:text-gray-400
+    hover:text-gray-900 dark:hover:text-gray-200
+    hover:bg-gray-100 dark:hover:bg-gray-800
+    transition-colors`,
+  /** Text input */
+  input: `w-full h-10 rounded-lg px-3 text-sm
+    bg-gray-100 dark:bg-gray-800/50
+    border border-gray-200 dark:border-gray-700
+    text-gray-900 dark:text-gray-200
+    placeholder:text-gray-400
+    focus:outline-none focus:ring-2 focus:ring-primary-500/40
+    focus:border-primary-500/50 transition-all`,
+} as const;
+
+// ── Chiko Mascot Animation Presets ────────────────────────────
+/** Pre-defined Framer Motion values for Chiko's physics-based animations */
+export const chiko = {
+  /** Idle floating bob (always on) */
+  idleBob: {
+    animate: { y: [0, -3, 0] },
+    transition: { duration: 3, repeat: Infinity, ease: "easeInOut" as const },
+  },
+  /** Breathing glow ring */
+  breatheGlow: {
+    animate: { opacity: [0.3, 0.6, 0.3], scale: [0.97, 1.03, 0.97] },
+    transition: { duration: 3, repeat: Infinity, ease: "easeInOut" as const },
+  },
+  /** Eye blink (random interval) */
+  eyeBlink: {
+    animate: { scaleY: [1, 0.1, 1] },
+    transition: { duration: 0.15, ease: "easeInOut" as const },
+  },
+  /** Happy bounce (on task complete) */
+  happyBounce: {
+    animate: { y: [0, -8, 0], scale: [1, 1.05, 1] },
+    transition: { type: "spring" as const, damping: 12, stiffness: 400 },
+  },
+  /** Thinking sway */
+  thinkingSway: {
+    animate: { rotate: [-3, 3, -3] },
+    transition: { duration: 2, repeat: Infinity, ease: "easeInOut" as const },
+  },
+  /** FAB entrance spring */
+  fabEntrance: {
+    initial: { opacity: 0, scale: 0.3, y: 30 },
+    animate: { opacity: 1, scale: 1, y: 0 },
+    transition: { type: "spring" as const, damping: 20, stiffness: 300 },
+  },
+  /** Panel entrance */
+  panelEntrance: {
+    initial: { opacity: 0, scale: 0.95, y: 20 },
+    animate: { opacity: 1, scale: 1, y: 0 },
+    transition: { type: "spring" as const, damping: 25, stiffness: 300 },
+  },
+  /** Expression change tween (smooth 200ms between states) */
+  expressionTween: {
+    transition: { duration: 0.2, ease: "easeInOut" as const },
+  },
+  /** Sizes */
+  sizes: {
+    xs: 24, sm: 32, md: 48, lg: 80, xl: 120, hero: 200,
+  },
+} as const;
+
+// ── Brand Constants ───────────────────────────────────────────
+/** Hardcoded brand values for non-Tailwind contexts (canvas, PWA, meta tags) */
+export const brand = {
+  /** Primary color hex (for canvas, meta, PWA) */
+  primary: "#84cc16",
+  /** Secondary color hex */
+  secondary: "#06b6d4",
+  /** Dark background hex */
+  bgDark: "#0a0f1a",
+  /** Light background hex */
+  bgLight: "#f8fafc",
+  /** App name */
+  name: "DMSuite",
+  /** Full title */
+  title: "DMSuite — AI Design & Business Suite",
 } as const;

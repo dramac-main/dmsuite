@@ -39,7 +39,7 @@ const TEMPLATES: { id: HBTemplate; name: string }[] = [
   { id: "minimal", name: "Minimal" }, { id: "warm", name: "Warm" },
 ];
 
-const COLOR_PRESETS = ["#1e3a5f", "#2d3436", "#0f4c75", "#3c1361", "#0d7377", "#6c5ce7", "#e74c3c", "#8ae600", "#06b6d4"];
+const COLOR_PRESETS = ["#1e3a5f", "#2d3436", "#0f4c75", "#3c1361", "#0d7377", "#6c5ce7", "#e74c3c", "#84cc16", "#06b6d4"];
 
 const defaultChapters: Chapter[] = [
   { title: "Welcome & Company Overview", content: "Welcome to the team! This handbook is designed to help you understand our company culture, policies, and procedures. We are committed to providing a safe, inclusive, and productive work environment for all employees." },

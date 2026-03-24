@@ -67,12 +67,12 @@ const ANIMATIONS: { id: AnimationStyle; name: string; desc: string }[] = [
 ];
 
 const COLOR_PRESETS = [
-  { name: "Dark Pro", bg1: "#0a0a0a", bg2: "#1a1a2e", text: "#ffffff", accent: "#8ae600" },
+  { name: "Dark Pro", bg1: "#0a0a0a", bg2: "#1a1a2e", text: "#ffffff", accent: "#84cc16" },
   { name: "Midnight", bg1: "#0f172a", bg2: "#1e293b", text: "#f1f5f9", accent: "#3b82f6" },
   { name: "Ember", bg1: "#1c1917", bg2: "#292524", text: "#fafaf9", accent: "#f97316" },
   { name: "Royal", bg1: "#1e1b4b", bg2: "#312e81", text: "#e0e7ff", accent: "#a78bfa" },
   { name: "Forest", bg1: "#052e16", bg2: "#14532d", text: "#dcfce7", accent: "#4ade80" },
-  { name: "Clean White", bg1: "#ffffff", bg2: "#f1f5f9", text: "#0f172a", accent: "#8ae600" },
+  { name: "Clean White", bg1: "#ffffff", bg2: "#f1f5f9", text: "#0f172a", accent: "#84cc16" },
   { name: "Warm Sand", bg1: "#fef3c7", bg2: "#fde68a", text: "#451a03", accent: "#d97706" },
   { name: "Crimson", bg1: "#1a0000", bg2: "#2d0000", text: "#fecdd3", accent: "#ef4444" },
 ];
@@ -149,7 +149,7 @@ export default function LogoRevealWorkspace() {
     bgColor1: "#0a0a0a",
     bgColor2: "#1a1a2e",
     textColor: "#ffffff",
-    accentColor: "#8ae600",
+    accentColor: "#84cc16",
     fontStyle: "modern",
     logoSize: 80,
     showTagline: true,

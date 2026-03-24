@@ -967,7 +967,7 @@ export const CARD_THEMES: CardTheme[] = [
   { id: "dark-plum",         label: "Dark Plum",         category: "luxury",    mood: "dark",     primary: "#7c3aed", secondary: "#a78bfa", text: "#f5f3ff", bg: "#1e1b2e",  font: "elegant",  pattern: "none" },
 
   // ── Vibrant / Color ────────────────────────────────────────────────────────
-  { id: "lime-pro",          label: "Lime Pro",          category: "modern",    mood: "vibrant",  primary: "#8ae600", secondary: "#06b6d4", text: "#ffffff", bg: "#0a0a0a",  font: "modern",   pattern: "none" },
+  { id: "lime-pro",          label: "Lime Pro",          category: "modern",    mood: "vibrant",  primary: "#84cc16", secondary: "#06b6d4", text: "#ffffff", bg: "#0a0a0a",  font: "modern",   pattern: "none" },
   { id: "neon-green",        label: "Neon Green",        category: "tech",      mood: "vibrant",  primary: "#00ff87", secondary: "#60efff", text: "#e8e8e8", bg: "#0a0a0a",  font: "modern",   pattern: "none" },
   { id: "electric-purple",   label: "Electric Purple",   category: "creative",  mood: "vibrant",  primary: "#6c5ce7", secondary: "#a29bfe", text: "#ffffff", bg: "#2d3436",  font: "bold",     pattern: "none" },
   { id: "hot-coral",         label: "Hot Coral",         category: "creative",  mood: "vibrant",  primary: "#ff6347", secondary: "#ffa07a", text: "#ffffff", bg: "#1a2332",  font: "bold",     pattern: "dots" },

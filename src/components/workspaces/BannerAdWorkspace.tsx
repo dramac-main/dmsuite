@@ -163,7 +163,7 @@ const compositionOptions: { id: CompositionType; label: string; desc: string }[]
 /* ── Color Themes ────────────────────────────────────────── */
 
 const colorThemes = [
-  { name: "Lime", primary: "#8ae600", secondary: "#030712", text: "#ffffff" },
+  { name: "Lime", primary: "#84cc16", secondary: "#030712", text: "#ffffff" },
   { name: "Indigo", primary: "#6366f1", secondary: "#0f0f23", text: "#ffffff" },
   { name: "Amber", primary: "#f59e0b", secondary: "#1a1400", text: "#ffffff" },
   { name: "Red", primary: "#ef4444", secondary: "#1a0005", text: "#ffffff" },
@@ -213,7 +213,7 @@ export default function BannerAdWorkspace() {
     subtext: "",
     ctaText: "",
     brandName: "",
-    primaryColor: "#8ae600",
+    primaryColor: "#84cc16",
     secondaryColor: "#030712",
     textColor: "#ffffff",
     fontStyle: "compact",
@@ -245,7 +245,7 @@ export default function BannerAdWorkspace() {
       platform: "medium-rect",
       layout: "centered-hero",
       fontStyle: "compact" as FontStyle,
-      accentColor: "#8ae600",
+      accentColor: "#84cc16",
       createdAt: Date.now(),
       updatedAt: Date.now(),
     },
@@ -1429,7 +1429,7 @@ ${innerContent}
                       layer.type === "text"
                         ? "#3b82f6"
                         : layer.type === "cta"
-                          ? "#8ae600"
+                          ? "#84cc16"
                           : layer.type === "shape"
                             ? "#f97316"
                             : "#6b7280",

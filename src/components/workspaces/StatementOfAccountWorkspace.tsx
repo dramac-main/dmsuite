@@ -40,7 +40,7 @@ const TEMPLATES: { id: SOATemplate; name: string }[] = [
 ];
 
 const CURRENCIES = ["ZMW", "USD", "EUR", "GBP", "ZAR", "BWP", "KES"];
-const COLOR_PRESETS = ["#1e3a5f", "#2d3436", "#0f4c75", "#3c1361", "#0d7377", "#6c5ce7", "#8ae600", "#06b6d4", "#e74c3c"];
+const COLOR_PRESETS = ["#1e3a5f", "#2d3436", "#0f4c75", "#3c1361", "#0d7377", "#6c5ce7", "#84cc16", "#06b6d4", "#e74c3c"];
 
 const defaultTransactions: Transaction[] = [
   { date: "01 Dec 2025", description: "Opening Balance", debit: 0, credit: 0 },

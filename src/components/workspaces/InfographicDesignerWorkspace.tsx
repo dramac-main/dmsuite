@@ -80,7 +80,7 @@ const TEMPLATES: { id: InfographicTemplate; label: string }[] = [
 ];
 
 const COLOR_PRESETS = [
-  { name: "Electric", primary: "#8ae600", secondary: "#06b6d4", bg: "#0f172a", text: "#ffffff" },
+  { name: "Electric", primary: "#84cc16", secondary: "#06b6d4", bg: "#0f172a", text: "#ffffff" },
   { name: "Corporate", primary: "#1e40af", secondary: "#3b82f6", bg: "#ffffff", text: "#1e293b" },
   { name: "Sunset", primary: "#ea580c", secondary: "#facc15", bg: "#1c1917", text: "#ffffff" },
   { name: "Ocean", primary: "#0284c7", secondary: "#67e8f9", bg: "#082f49", text: "#ffffff" },
@@ -139,7 +139,7 @@ export default function InfographicDesignerWorkspace() {
   const [config, setConfig] = useState<InfographicConfig>({
     size: "standard",
     template: "statistical",
-    primaryColor: "#8ae600",
+    primaryColor: "#84cc16",
     secondaryColor: "#06b6d4",
     bgColor: "#0f172a",
     textColor: "#ffffff",

@@ -58,7 +58,7 @@ const PAGE_W = 595, PAGE_H = 842;
 const COLOR_PRESETS = [
   "#1e3a5f", "#0f4c75", "#3c1361", "#0d7377", "#1a1a2e",
   "#2d3436", "#6c5ce7", "#00b894", "#e17055", "#2d1b69",
-  "#8ae600", "#06b6d4",
+  "#84cc16", "#06b6d4",
 ];
 
 const PAGES = [

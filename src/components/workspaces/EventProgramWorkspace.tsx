@@ -75,7 +75,7 @@ const PAGE_W = 595, PAGE_H = 842; // A4
 const COLOR_PRESETS = [
   "#1e3a5f", "#0d7377", "#2d1b69", "#0f4c75", "#b91c1c",
   "#1a1a2e", "#6c5ce7", "#065f46", "#713f12", "#831843",
-  "#8ae600", "#06b6d4",
+  "#84cc16", "#06b6d4",
 ];
 
 const TIER_COLORS: Record<string, string> = {

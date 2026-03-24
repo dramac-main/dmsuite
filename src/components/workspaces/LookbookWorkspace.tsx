@@ -41,7 +41,7 @@ const TEMPLATES: { id: LBTemplate; name: string }[] = [
   { id: "luxury", name: "Luxury" }, { id: "urban", name: "Urban" },
 ];
 
-const COLOR_PRESETS = ["#1a1a2e", "#2d3436", "#1e3a5f", "#3c1361", "#0d7377", "#6c5ce7", "#c5a355", "#e74c3c", "#8ae600"];
+const COLOR_PRESETS = ["#1a1a2e", "#2d3436", "#1e3a5f", "#3c1361", "#0d7377", "#6c5ce7", "#c5a355", "#e74c3c", "#84cc16"];
 
 const defaultPages: LookbookPage[] = [
   { title: "Heritage Collection", description: "Handcrafted leather goods inspired by traditional Zambian craftsmanship. Each piece tells a story of heritage and modern elegance.", imageUrl: "", price: "ZMW 1,200", itemCode: "HC-001" },

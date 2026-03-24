@@ -125,7 +125,7 @@ const compositionOptions: { id: CompositionType; label: string; desc: string }[]
 /* ── Color Themes ────────────────────────────────────────── */
 
 const colorThemes = [
-  { name: "Lime", primary: "#8ae600", secondary: "#030712", text: "#ffffff" },
+  { name: "Lime", primary: "#84cc16", secondary: "#030712", text: "#ffffff" },
   { name: "Midnight", primary: "#6366f1", secondary: "#0f0f23", text: "#ffffff" },
   { name: "Sunset", primary: "#f97316", secondary: "#1a0a00", text: "#ffffff" },
   { name: "Rose", primary: "#f43f5e", secondary: "#1a0005", text: "#ffffff" },
@@ -177,7 +177,7 @@ export default function PosterFlyerWorkspace() {
     label: "",
     eventDate: "",
     venue: "",
-    primaryColor: "#8ae600",
+    primaryColor: "#84cc16",
     secondaryColor: "#030712",
     textColor: "#ffffff",
     fontStyle: "modern",
@@ -210,7 +210,7 @@ export default function PosterFlyerWorkspace() {
       platform: "a4-portrait",
       layout: "typographic-poster",
       fontStyle: "modern" as FontStyle,
-      accentColor: "#8ae600",
+      accentColor: "#84cc16",
       createdAt: Date.now(),
       updatedAt: Date.now(),
     },
@@ -1501,7 +1501,7 @@ export default function PosterFlyerWorkspace() {
                       layer.type === "text"
                         ? "#3b82f6"
                         : layer.type === "cta"
-                          ? "#8ae600"
+                          ? "#84cc16"
                           : layer.type === "shape"
                             ? "#f97316"
                             : layer.type === "decorative"

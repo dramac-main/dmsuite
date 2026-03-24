@@ -107,7 +107,7 @@ export default function MobileBottomNav({
               aria-label={tab.label}
             >
               {tab.id === "create" ? (
-                <div className="size-9 rounded-full bg-primary-500 flex items-center justify-center -mt-3 shadow-lg shadow-primary-500/30">
+                <div className="size-10 rounded-full bg-primary-500 flex items-center justify-center -mt-3 shadow-lg shadow-primary-500/30">
                   <Icon className="size-5 text-gray-950" />
                 </div>
               ) : (

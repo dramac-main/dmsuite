@@ -401,7 +401,7 @@ export default function VideoEditorWorkspace() {
     roundRect(ctx, 16, 16, 160, 32, 6);
     ctx.fill();
     ctx.font = "bold 14px 'JetBrains Mono', monospace";
-    ctx.fillStyle = "#8ae600";
+    ctx.fillStyle = "#84cc16";
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
     ctx.fillText(`⏱ ${fmtTime(t)} / ${fmtTime(totalDuration)}`, 28, 32);
@@ -640,7 +640,7 @@ export default function VideoEditorWorkspace() {
 
     // ── Playhead ──
     const phX = ox + playhead * pxPerSec;
-    tlCtx.strokeStyle = "#8ae600";
+    tlCtx.strokeStyle = "#84cc16";
     tlCtx.lineWidth = 2 * scale;
     tlCtx.beginPath();
     tlCtx.moveTo(phX, 0);
@@ -648,7 +648,7 @@ export default function VideoEditorWorkspace() {
     tlCtx.stroke();
 
     // Playhead triangle
-    tlCtx.fillStyle = "#8ae600";
+    tlCtx.fillStyle = "#84cc16";
     tlCtx.beginPath();
     tlCtx.moveTo(phX - 6 * scale, 0);
     tlCtx.lineTo(phX + 6 * scale, 0);

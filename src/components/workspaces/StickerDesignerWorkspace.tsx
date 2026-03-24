@@ -75,13 +75,13 @@ const TEMPLATES: { id: StickerTemplate; label: string }[] = [
 ];
 
 const COLOR_PRESETS = [
-  { name: "Lime Pro", primary: "#8ae600", secondary: "#06b6d4", bg: "#ffffff", text: "#1e293b" },
+  { name: "Lime Pro", primary: "#84cc16", secondary: "#06b6d4", bg: "#ffffff", text: "#1e293b" },
   { name: "Classic", primary: "#1e293b", secondary: "#64748b", bg: "#ffffff", text: "#1e293b" },
   { name: "Gold", primary: "#c09c2c", secondary: "#f0e68c", bg: "#fffef5", text: "#1e293b" },
   { name: "Red", primary: "#dc2626", secondary: "#fca5a5", bg: "#ffffff", text: "#1e293b" },
   { name: "Navy", primary: "#1e40af", secondary: "#93c5fd", bg: "#ffffff", text: "#1e293b" },
   { name: "Forest", primary: "#16a34a", secondary: "#86efac", bg: "#ffffff", text: "#1e293b" },
-  { name: "Dark", primary: "#8ae600", secondary: "#06b6d4", bg: "#0f172a", text: "#ffffff" },
+  { name: "Dark", primary: "#84cc16", secondary: "#06b6d4", bg: "#0f172a", text: "#ffffff" },
   { name: "Kraft", primary: "#78350f", secondary: "#92400e", bg: "#fef3c7", text: "#451a03" },
 ];
 

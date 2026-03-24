@@ -42,7 +42,7 @@ export function ChikoAvatar({
         <motion.div
           className="absolute -inset-0.75 rounded-full"
           style={{
-            background: "radial-gradient(circle, rgba(138,230,0,0.3) 0%, transparent 70%)",
+            background: "radial-gradient(circle, rgba(132,204,22,0.3) 0%, transparent 70%)",
           }}
           animate={{ opacity: [0.4, 0.8, 0.4] }}
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
@@ -73,7 +73,7 @@ export function ChikoAvatar({
           cy="25"
           rx="3.5"
           ry="3.5"
-          fill="#8ae600"
+          fill="#84cc16"
           animate={animated ? {
             ry: [3.5, 0.8, 3.5],
           } : undefined}
@@ -92,7 +92,7 @@ export function ChikoAvatar({
           cy="25"
           rx="3.5"
           ry="3.5"
-          fill="#8ae600"
+          fill="#84cc16"
           animate={animated ? {
             ry: [3.5, 0.8, 3.5],
           } : undefined}
@@ -108,19 +108,19 @@ export function ChikoAvatar({
         {/* Mouth — happy smile */}
         <path
           d="M22 31 Q28 36 34 31"
-          stroke="#8ae600"
+          stroke="#84cc16"
           strokeWidth="1.8"
           strokeLinecap="round"
           fill="none"
         />
 
         {/* Antenna */}
-        <line x1="28" y1="16" x2="28" y2="8" stroke="#8ae600" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="28" y1="16" x2="28" y2="8" stroke="#84cc16" strokeWidth="1.5" strokeLinecap="round" />
         <motion.circle
           cx="28"
           cy="7"
           r="2.5"
-          fill="#8ae600"
+          fill="#84cc16"
           animate={animated ? { opacity: [1, 0.4, 1], scale: [1, 1.2, 1] } : undefined}
           transition={animated ? { duration: 1.5, repeat: Infinity, ease: "easeInOut" } : undefined}
         />
@@ -136,7 +136,7 @@ export function ChikoAvatar({
         {/* Sparkle decorations */}
         <motion.path
           d="M8 32 L9.5 29.5 L11 32 L9.5 34.5Z"
-          fill="#8ae600"
+          fill="#84cc16"
           opacity="0.7"
           animate={animated ? { opacity: [0.3, 0.9, 0.3], scale: [0.8, 1.2, 0.8] } : undefined}
           transition={animated ? { duration: 2, repeat: Infinity, delay: 0.5 } : undefined}
@@ -156,9 +156,9 @@ export function ChikoAvatar({
             <stop offset="100%" stopColor="#16213e" />
           </linearGradient>
           <linearGradient id="chikoStroke" x1="0" y1="0" x2="56" y2="56">
-            <stop offset="0%" stopColor="#8ae600" stopOpacity="0.6" />
+            <stop offset="0%" stopColor="#84cc16" stopOpacity="0.6" />
             <stop offset="50%" stopColor="#06b6d4" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="#8ae600" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#84cc16" stopOpacity="0.6" />
           </linearGradient>
         </defs>
       </motion.svg>

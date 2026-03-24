@@ -130,7 +130,7 @@ const CATEGORIES: { id: MotionCategory; label: string; icon: string }[] = [
 ];
 
 const COLOR_PRESETS = [
-  "#8ae600", "#3b82f6", "#ef4444", "#f59e0b",
+  "#84cc16", "#3b82f6", "#ef4444", "#f59e0b",
   "#a855f7", "#06b6d4", "#ec4899", "#10b981",
   "#f97316", "#6366f1", "#14b8a6", "#e11d48",
 ];
@@ -155,7 +155,7 @@ function createLowerThirdTemplate(name: string, desc: string): MotionTemplate {
     layers: [
       {
         id: makeId(), name: "Bar", type: "shape", visible: true, easing: "ease-out",
-        shape: "rect", shapeWidth: 600, shapeHeight: 70, fillColor: "#111827", strokeColor: "#8ae600", strokeWidth: 2,
+        shape: "rect", shapeWidth: 600, shapeHeight: 70, fillColor: "#111827", strokeColor: "#84cc16", strokeWidth: 2,
         keyframes: [
           { time: 0, x: -600, y: 420, scale: 1, opacity: 0, rotation: 0 },
           { time: 0.15, x: 40, y: 420, scale: 1, opacity: 1, rotation: 0 },
@@ -165,7 +165,7 @@ function createLowerThirdTemplate(name: string, desc: string): MotionTemplate {
       },
       {
         id: makeId(), name: "Accent Line", type: "shape", visible: true, easing: "ease-out",
-        shape: "rect", shapeWidth: 4, shapeHeight: 70, fillColor: "#8ae600", strokeWidth: 0,
+        shape: "rect", shapeWidth: 4, shapeHeight: 70, fillColor: "#84cc16", strokeWidth: 0,
         keyframes: [
           { time: 0, x: -10, y: 420, scale: 1, opacity: 0, rotation: 0 },
           { time: 0.2, x: 40, y: 420, scale: 1, opacity: 1, rotation: 0 },
@@ -185,7 +185,7 @@ function createLowerThirdTemplate(name: string, desc: string): MotionTemplate {
       },
       {
         id: makeId(), name: "Title", type: "text", visible: true, easing: "ease-out",
-        text: "Creative Director", fontSize: 16, fontWeight: "normal", fontFamily: "Inter", color: "#8ae600",
+        text: "Creative Director", fontSize: 16, fontWeight: "normal", fontFamily: "Inter", color: "#84cc16",
         keyframes: [
           { time: 0, x: 60, y: 475, scale: 0.8, opacity: 0, rotation: 0 },
           { time: 0.3, x: 60, y: 475, scale: 1, opacity: 1, rotation: 0 },
@@ -203,7 +203,7 @@ function createTitleCardTemplate(name: string, desc: string): MotionTemplate {
     layers: [
       {
         id: makeId(), name: "Top Line", type: "shape", visible: true, easing: "ease-in-out",
-        shape: "rect", shapeWidth: 120, shapeHeight: 3, fillColor: "#8ae600",
+        shape: "rect", shapeWidth: 120, shapeHeight: 3, fillColor: "#84cc16",
         keyframes: [
           { time: 0, x: 480, y: 230, scale: 0, opacity: 0, rotation: 0 },
           { time: 0.25, x: 420, y: 230, scale: 1, opacity: 1, rotation: 0 },
@@ -233,7 +233,7 @@ function createTitleCardTemplate(name: string, desc: string): MotionTemplate {
       },
       {
         id: makeId(), name: "Bottom Line", type: "shape", visible: true, easing: "ease-in-out",
-        shape: "rect", shapeWidth: 120, shapeHeight: 3, fillColor: "#8ae600",
+        shape: "rect", shapeWidth: 120, shapeHeight: 3, fillColor: "#84cc16",
         keyframes: [
           { time: 0, x: 480, y: 345, scale: 0, opacity: 0, rotation: 0 },
           { time: 0.25, x: 420, y: 345, scale: 1, opacity: 1, rotation: 0 },
@@ -251,7 +251,7 @@ function createTransitionTemplate(name: string, desc: string): MotionTemplate {
     layers: [
       {
         id: makeId(), name: "Wipe Bar 1", type: "shape", visible: true, easing: "ease-in-out",
-        shape: "rect", shapeWidth: 1000, shapeHeight: 600, fillColor: "#8ae600",
+        shape: "rect", shapeWidth: 1000, shapeHeight: 600, fillColor: "#84cc16",
         keyframes: [
           { time: 0, x: -1000, y: 270, scale: 1, opacity: 1, rotation: 0 },
           { time: 0.4, x: 480, y: 270, scale: 1, opacity: 1, rotation: 0 },
@@ -271,7 +271,7 @@ function createTransitionTemplate(name: string, desc: string): MotionTemplate {
       },
       {
         id: makeId(), name: "Center Flash", type: "particle", visible: true, easing: "ease-out",
-        particleCount: 30, particleSize: 4, particleColor: "#8ae600", particleSpread: 200,
+        particleCount: 30, particleSize: 4, particleColor: "#84cc16", particleSpread: 200,
         keyframes: [
           { time: 0, x: 480, y: 270, scale: 0, opacity: 0, rotation: 0 },
           { time: 0.45, x: 480, y: 270, scale: 1, opacity: 1, rotation: 0 },
@@ -289,7 +289,7 @@ function createIntroTemplate(name: string, desc: string): MotionTemplate {
     layers: [
       {
         id: makeId(), name: "Particles", type: "particle", visible: true, easing: "ease-out",
-        particleCount: 60, particleSize: 3, particleColor: "#8ae600", particleSpread: 400,
+        particleCount: 60, particleSize: 3, particleColor: "#84cc16", particleSpread: 400,
         keyframes: [
           { time: 0, x: 480, y: 270, scale: 2, opacity: 0, rotation: 0 },
           { time: 0.3, x: 480, y: 270, scale: 1, opacity: 1, rotation: 180 },
@@ -299,7 +299,7 @@ function createIntroTemplate(name: string, desc: string): MotionTemplate {
       },
       {
         id: makeId(), name: "Glow Ring", type: "shape", visible: true, easing: "ease-in-out",
-        shape: "circle", shapeWidth: 200, shapeHeight: 200, fillColor: "transparent", strokeColor: "#8ae600", strokeWidth: 3,
+        shape: "circle", shapeWidth: 200, shapeHeight: 200, fillColor: "transparent", strokeColor: "#84cc16", strokeWidth: 3,
         keyframes: [
           { time: 0, x: 480, y: 270, scale: 0, opacity: 0, rotation: 0 },
           { time: 0.2, x: 480, y: 270, scale: 1.5, opacity: 1, rotation: 90 },
@@ -321,7 +321,7 @@ function createIntroTemplate(name: string, desc: string): MotionTemplate {
       },
       {
         id: makeId(), name: "Tagline", type: "text", visible: true, easing: "ease-out",
-        text: "Your tagline goes here", fontSize: 18, fontWeight: "normal", fontFamily: "Inter", color: "#8ae600",
+        text: "Your tagline goes here", fontSize: 18, fontWeight: "normal", fontFamily: "Inter", color: "#84cc16",
         keyframes: [
           { time: 0, x: 480, y: 310, scale: 1, opacity: 0, rotation: 0 },
           { time: 0.45, x: 480, y: 310, scale: 1, opacity: 1, rotation: 0 },
@@ -339,7 +339,7 @@ function createSocialBumperTemplate(name: string, desc: string): MotionTemplate 
     layers: [
       {
         id: makeId(), name: "BG Circle", type: "shape", visible: true, easing: "elastic",
-        shape: "circle", shapeWidth: 180, shapeHeight: 180, fillColor: "#8ae600",
+        shape: "circle", shapeWidth: 180, shapeHeight: 180, fillColor: "#84cc16",
         keyframes: [
           { time: 0, x: 480, y: 240, scale: 0, opacity: 0, rotation: 0 },
           { time: 0.3, x: 480, y: 240, scale: 1, opacity: 1, rotation: 0 },
@@ -369,7 +369,7 @@ function createSocialBumperTemplate(name: string, desc: string): MotionTemplate 
       },
       {
         id: makeId(), name: "Sparkles", type: "particle", visible: true, easing: "ease-out",
-        particleCount: 20, particleSize: 3, particleColor: "#8ae600", particleSpread: 160,
+        particleCount: 20, particleSize: 3, particleColor: "#84cc16", particleSpread: 160,
         keyframes: [
           { time: 0, x: 480, y: 240, scale: 0, opacity: 0, rotation: 0 },
           { time: 0.3, x: 480, y: 240, scale: 0.5, opacity: 1, rotation: 90 },
@@ -387,7 +387,7 @@ function createCountdownTemplate(name: string, desc: string): MotionTemplate {
     layers: [
       {
         id: makeId(), name: "Ring", type: "shape", visible: true, easing: "linear",
-        shape: "circle", shapeWidth: 220, shapeHeight: 220, fillColor: "transparent", strokeColor: "#8ae600", strokeWidth: 6,
+        shape: "circle", shapeWidth: 220, shapeHeight: 220, fillColor: "transparent", strokeColor: "#84cc16", strokeWidth: 6,
         keyframes: [
           { time: 0, x: 480, y: 270, scale: 1, opacity: 1, rotation: 0 },
           { time: 1, x: 480, y: 270, scale: 1, opacity: 1, rotation: 360 },
@@ -417,7 +417,7 @@ function createCountdownTemplate(name: string, desc: string): MotionTemplate {
       },
       {
         id: makeId(), name: "Pulse Ring", type: "shape", visible: true, easing: "ease-out",
-        shape: "circle", shapeWidth: 240, shapeHeight: 240, fillColor: "transparent", strokeColor: "#8ae600", strokeWidth: 2,
+        shape: "circle", shapeWidth: 240, shapeHeight: 240, fillColor: "transparent", strokeColor: "#84cc16", strokeWidth: 2,
         keyframes: [
           { time: 0, x: 480, y: 270, scale: 0.8, opacity: 0.5, rotation: 0 },
           { time: 0.5, x: 480, y: 270, scale: 1.3, opacity: 0, rotation: 0 },
@@ -577,8 +577,8 @@ export default function MotionGraphicsWorkspace() {
         { time: 1, x: 480, y: 270, scale: 0, opacity: 0, rotation: 0 },
       ],
       ...(type === "text" ? { text: "New Text", fontSize: 32, fontWeight: "bold", fontFamily: "Inter", color: "#ffffff" } : {}),
-      ...(type === "shape" ? { shape: "rect" as const, shapeWidth: 100, shapeHeight: 100, fillColor: "#8ae600" } : {}),
-      ...(type === "particle" ? { particleCount: 30, particleSize: 3, particleColor: "#8ae600", particleSpread: 150 } : {}),
+      ...(type === "shape" ? { shape: "rect" as const, shapeWidth: 100, shapeHeight: 100, fillColor: "#84cc16" } : {}),
+      ...(type === "particle" ? { particleCount: 30, particleSize: 3, particleColor: "#84cc16", particleSpread: 150 } : {}),
     };
     setLayers((p) => [...p, newLayer]);
     setSelectedLayerId(newLayer.id);
@@ -668,7 +668,7 @@ export default function MotionGraphicsWorkspace() {
         case "shape": {
           const w = (layer.shapeWidth ?? 100) * sx;
           const h = (layer.shapeHeight ?? 100) * sy;
-          ctx.fillStyle = layer.fillColor ?? "#8ae600";
+          ctx.fillStyle = layer.fillColor ?? "#84cc16";
           if (layer.strokeColor) {
             ctx.strokeStyle = layer.strokeColor;
             ctx.lineWidth = (layer.strokeWidth ?? 2) * sx;
@@ -714,7 +714,7 @@ export default function MotionGraphicsWorkspace() {
               ctx.beginPath();
               ctx.moveTo(-w / 2, 0);
               ctx.lineTo(w / 2, 0);
-              ctx.strokeStyle = layer.fillColor ?? "#8ae600";
+              ctx.strokeStyle = layer.fillColor ?? "#84cc16";
               ctx.lineWidth = (layer.strokeWidth ?? 3) * sx;
               ctx.stroke();
               break;
@@ -726,7 +726,7 @@ export default function MotionGraphicsWorkspace() {
           const count = layer.particleCount ?? 30;
           const size = (layer.particleSize ?? 3) * sx;
           const spread = (layer.particleSpread ?? 150) * sx;
-          const color = layer.particleColor ?? "#8ae600";
+          const color = layer.particleColor ?? "#84cc16";
           const particles = generateParticles(layer.id.charCodeAt(0) * 1000, count, spread);
 
           for (const p of particles) {
@@ -752,7 +752,7 @@ export default function MotionGraphicsWorkspace() {
         case "accent": {
           // Decorative accent elements
           const w = (layer.shapeWidth ?? 80) * sx;
-          ctx.strokeStyle = layer.fillColor ?? "#8ae600";
+          ctx.strokeStyle = layer.fillColor ?? "#84cc16";
           ctx.lineWidth = 2 * sx;
           ctx.beginPath();
           ctx.moveTo(-w / 2, 0);
@@ -839,7 +839,7 @@ export default function MotionGraphicsWorkspace() {
     const trackH = 28;
     const trackGap = 2;
     const trackY0 = rulerH + 6;
-    const layerColors = ["#8ae600", "#3b82f6", "#ef4444", "#f59e0b", "#a855f7", "#06b6d4", "#ec4899"];
+    const layerColors = ["#84cc16", "#3b82f6", "#ef4444", "#f59e0b", "#a855f7", "#06b6d4", "#ec4899"];
 
     layers.forEach((layer, i) => {
       const y = trackY0 + i * (trackH + trackGap);
@@ -1099,7 +1099,7 @@ export default function MotionGraphicsWorkspace() {
         } else if (layer.type === "shape") {
           const w = (layer.shapeWidth ?? 100) * sx;
           const h = (layer.shapeHeight ?? 100) * sy;
-          tCtx.fillStyle = layer.fillColor ?? "#8ae600";
+          tCtx.fillStyle = layer.fillColor ?? "#84cc16";
           if (layer.shape === "rect") {
             if (layer.fillColor && layer.fillColor !== "transparent") tCtx.fillRect(-w / 2, -h / 2, w, h);
             if (layer.strokeColor) { tCtx.strokeStyle = layer.strokeColor; tCtx.lineWidth = (layer.strokeWidth ?? 2) * sx; tCtx.strokeRect(-w / 2, -h / 2, w, h); }
@@ -1115,7 +1115,7 @@ export default function MotionGraphicsWorkspace() {
             const pProgress = Math.sin(t * Math.PI * p.speed + p.phase);
             tCtx.beginPath();
             tCtx.arc(p.ax * sx * t * 2, p.ay * sy * t * 2, (layer.particleSize ?? 3) * sx * (0.5 + pProgress * 0.5), 0, Math.PI * 2);
-            tCtx.fillStyle = hexToRgba(layer.particleColor ?? "#8ae600", Math.max(0, pProgress * 0.8 + 0.2));
+            tCtx.fillStyle = hexToRgba(layer.particleColor ?? "#84cc16", Math.max(0, pProgress * 0.8 + 0.2));
             tCtx.fill();
           }
         }
@@ -1411,7 +1411,7 @@ export default function MotionGraphicsWorkspace() {
 
               <label className="block text-xs text-gray-400">Fill / Stroke</label>
               <div className="flex items-center gap-2">
-                <input type="color" value={selectedLayer.fillColor ?? "#8ae600"}
+                <input type="color" value={selectedLayer.fillColor ?? "#84cc16"}
                   onChange={(e) => updateLayer(selectedLayer.id, { fillColor: e.target.value })}
                   className="size-7 rounded-lg cursor-pointer border-0" />
                 <input type="color" value={selectedLayer.strokeColor ?? "#ffffff"}
@@ -1453,7 +1453,7 @@ export default function MotionGraphicsWorkspace() {
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400">Color</label>
-                  <input type="color" value={selectedLayer.particleColor ?? "#8ae600"}
+                  <input type="color" value={selectedLayer.particleColor ?? "#84cc16"}
                     onChange={(e) => updateLayer(selectedLayer.id, { particleColor: e.target.value })}
                     className="w-full h-8 rounded-lg cursor-pointer border-0" />
                 </div>

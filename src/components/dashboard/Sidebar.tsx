@@ -33,9 +33,9 @@ const PinIcon = ({ className }: { className?: string }) => (
  * Sidebar — Hover-to-expand with optional pin.
  *
  * Desktop behaviour:
- *  • Default — collapsed (icons only, w-18). Content has lg:ml-18.
- *  • Hover   — expands to w-60 as an **overlay** with shadow. No layout shift.
- *  • Pinned  — expanded permanently, pushes content (lg:ml-60).
+ *  • Default — collapsed (icons only, w-16). Content has lg:ml-16.
+ *  • Hover   — expands to w-64 as an **overlay** with shadow. No layout shift.
+ *  • Pinned  — expanded permanently, pushes content (lg:ml-64).
  *
  * Mobile — unchanged: overlay drawer with swipe-to-close.
  *
@@ -318,7 +318,7 @@ export default function Sidebar() {
             exit={{ x: "-100%" }}
             transition={animations.sidebarSpring}
             drag="x"
-            dragConstraints={{ left: -260, right: 0 }}
+            dragConstraints={{ left: -sidebarConfig.expandedPx, right: 0 }}
             dragElastic={0.1}
             onDragEnd={handleDragEnd}
             className={cn(

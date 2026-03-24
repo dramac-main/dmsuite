@@ -2,7 +2,7 @@ export default function DashboardLoading() {
   return (
     <div className="flex min-h-dvh bg-gray-50 dark:bg-gray-950">
       {/* Sidebar skeleton */}
-      <aside className="hidden lg:flex flex-col w-60 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 gap-4">
+      <aside className="hidden lg:flex flex-col w-64 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 gap-4">
         <div className="h-10 w-32 bg-gray-200 dark:bg-gray-800 rounded-lg animate-pulse" />
         <div className="space-y-2 mt-4">
           {Array.from({ length: 8 }).map((_, i) => (

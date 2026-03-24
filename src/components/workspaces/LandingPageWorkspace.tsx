@@ -97,7 +97,7 @@ export default function LandingPageWorkspace() {
 
   const [goal, setGoal] = useState<PageGoal>("lead-capture");
   const [fontPairing, setFontPairing] = useState<FontPairing>("modern");
-  const [colors, setColors] = useState<ColorScheme>({ primary: "#8ae600", secondary: "#06b6d4", accent: "#f59e0b" });
+  const [colors, setColors] = useState<ColorScheme>({ primary: "#84cc16", secondary: "#06b6d4", accent: "#f59e0b" });
   const [sections, setSections] = useState<Section[]>([makeSection("hero"), makeSection("features"), makeSection("cta"), makeSection("footer")]);
 
   /* ── Section management ─────────────────────────────────── */

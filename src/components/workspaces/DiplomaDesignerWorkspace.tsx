@@ -42,7 +42,7 @@ const TEMPLATES: { id: DiplomaTemplate; name: string }[] = [
 ];
 
 const GOLD_PRESETS = ["#b8860b", "#d4a843", "#c5a355", "#a0785a", "#8b7355", "#cd853f"];
-const COLOR_PRESETS = ["#1e3a5f", "#2d3436", "#1a1a2e", "#3c1361", "#0d7377", "#6c5ce7", "#0f4c75", "#8ae600", "#06b6d4"];
+const COLOR_PRESETS = ["#1e3a5f", "#2d3436", "#1a1a2e", "#3c1361", "#0d7377", "#6c5ce7", "#0f4c75", "#84cc16", "#06b6d4"];
 
 /* ── Component ───────────────────────────────────────────── */
 

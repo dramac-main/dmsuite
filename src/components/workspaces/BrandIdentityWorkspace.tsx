@@ -82,7 +82,7 @@ const personalityPresets = [
 ];
 
 const palettePresets: ColorPalette[] = [
-  { name: "Electric Lime", primary: "#8ae600", secondary: "#06b6d4", accent: "#f59e0b", neutral: "#6b7280", background: "#030712" },
+  { name: "Electric Lime", primary: "#84cc16", secondary: "#06b6d4", accent: "#f59e0b", neutral: "#6b7280", background: "#030712" },
   { name: "Corporate Blue", primary: "#2563eb", secondary: "#1e40af", accent: "#f97316", neutral: "#64748b", background: "#0f172a" },
   { name: "Sunset Warm", primary: "#f97316", secondary: "#ef4444", accent: "#eab308", neutral: "#78716c", background: "#1c1917" },
   { name: "Luxury Gold", primary: "#c09c2c", secondary: "#7c3aed", accent: "#f0e68c", neutral: "#9ca3af", background: "#0a0a0a" },
@@ -924,7 +924,7 @@ export default function BrandIdentityWorkspace() {
     personality: "",
     palette: palettePresets[0],
     fontPairing: fontPairings[0],
-    pattern: { type: "dots", color: "#8ae600", opacity: 0.12 },
+    pattern: { type: "dots", color: "#84cc16", opacity: 0.12 },
     toneOfVoice: { attributes: "", exampleDo: [""], exampleDont: [""] },
   });
 

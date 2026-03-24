@@ -52,7 +52,7 @@ const TEMPLATES: { id: TemplateName; label: string; bgColor: string; textColor: 
   { id: "gaming", label: "Gaming", bgColor: "#1a0533", textColor: "#ffffff", accent: "#a855f7" },
   { id: "education", label: "Education", bgColor: "#1e3a5f", textColor: "#ffffff", accent: "#22d3ee" },
   { id: "vlog", label: "Vlog", bgColor: "#fef3c7", textColor: "#1c1917", accent: "#f59e0b" },
-  { id: "business", label: "Business", bgColor: "#111827", textColor: "#ffffff", accent: "#8ae600" },
+  { id: "business", label: "Business", bgColor: "#111827", textColor: "#ffffff", accent: "#84cc16" },
   { id: "cooking", label: "Cooking", bgColor: "#451a03", textColor: "#fff7ed", accent: "#ea580c" },
   { id: "fitness", label: "Fitness", bgColor: "#052e16", textColor: "#ffffff", accent: "#22c55e" },
   { id: "review", label: "Review", bgColor: "#1e1b4b", textColor: "#ffffff", accent: "#f472b6" },

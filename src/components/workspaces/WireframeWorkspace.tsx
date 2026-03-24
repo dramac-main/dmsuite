@@ -194,7 +194,7 @@ export default function WireframeWorkspace() {
     // Guides (center + margins)
     if (config.showGuides) {
       ctx.setLineDash([6, 4]);
-      ctx.strokeStyle = "rgba(138,230,0,0.25)";
+      ctx.strokeStyle = "rgba(132,204,22,0.25)";
       ctx.lineWidth = 1;
       const cx = sourceW / 2;
       ctx.beginPath();
@@ -221,8 +221,8 @@ export default function WireframeWorkspace() {
       const isSelected = el.id === selectedId;
 
       // Block
-      ctx.fillStyle = isSelected ? "rgba(138,230,0,0.12)" : "rgba(255,255,255,0.06)";
-      ctx.strokeStyle = isSelected ? "#8ae600" : "rgba(255,255,255,0.15)";
+      ctx.fillStyle = isSelected ? "rgba(132,204,22,0.12)" : "rgba(255,255,255,0.06)";
+      ctx.strokeStyle = isSelected ? "#84cc16" : "rgba(255,255,255,0.15)";
       ctx.lineWidth = isSelected ? 2 : 1;
       ctx.beginPath();
       ctx.roundRect(x, y, w, h, 6);
@@ -242,7 +242,7 @@ export default function WireframeWorkspace() {
       ctx.setLineDash([]);
 
       // Label
-      ctx.fillStyle = isSelected ? "#8ae600" : "rgba(255,255,255,0.5)";
+      ctx.fillStyle = isSelected ? "#84cc16" : "rgba(255,255,255,0.5)";
       ctx.font = "600 13px Inter, system-ui, sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -251,7 +251,7 @@ export default function WireframeWorkspace() {
       // Annotation
       if (el.annotation) {
         ctx.font = "11px Inter, system-ui, sans-serif";
-        ctx.fillStyle = "rgba(138,230,0,0.7)";
+        ctx.fillStyle = "rgba(132,204,22,0.7)";
         ctx.textAlign = "left";
         ctx.fillText(el.annotation, x + 8, y + h - 10);
       }

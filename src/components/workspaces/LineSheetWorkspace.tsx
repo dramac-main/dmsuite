@@ -43,7 +43,7 @@ const TEMPLATES: { id: LSTemplate; name: string }[] = [
 ];
 
 const CURRENCIES = ["ZMW", "USD", "EUR", "GBP", "ZAR"];
-const COLOR_PRESETS = ["#1a1a2e", "#2d3436", "#1e3a5f", "#3c1361", "#0d7377", "#6c5ce7", "#c5a355", "#8ae600", "#06b6d4"];
+const COLOR_PRESETS = ["#1a1a2e", "#2d3436", "#1e3a5f", "#3c1361", "#0d7377", "#6c5ce7", "#c5a355", "#84cc16", "#06b6d4"];
 
 const defaultItems: LineItem[] = [
   { name: "Heritage Tote Bag", style: "HT-001", wholesale: 180, retail: 350, moq: 12, imageUrl: "" },

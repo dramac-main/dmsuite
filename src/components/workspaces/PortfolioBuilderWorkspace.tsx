@@ -62,7 +62,7 @@ const TEMPLATES: { id: PortfolioTemplate; name: string }[] = [
 const COLOR_PRESETS = [
   "#1e3a5f", "#0f766e", "#7c3aed", "#b91c1c", "#1e40af",
   "#059669", "#c09c2c", "#334155", "#9f1239", "#06b6d4",
-  "#8ae600", "#2d3436",
+  "#84cc16", "#2d3436",
 ];
 
 const PAGE_W = 595, PAGE_H = 842; // A4

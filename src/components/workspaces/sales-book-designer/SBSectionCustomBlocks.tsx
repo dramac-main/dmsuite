@@ -360,7 +360,7 @@ function SortableBlockCard({
               </div>
               <div>
                 <label className="block text-[11px] font-medium text-gray-500 mb-1">Color</label>
-                <input type="color" value={block.data.color === "accent" ? "#8ae600" : block.data.color} onChange={(e) => updateData({ color: e.target.value })} className="h-7 w-full rounded border border-gray-700 bg-gray-800 cursor-pointer" />
+                <input type="color" value={block.data.color === "accent" ? "#84cc16" : block.data.color} onChange={(e) => updateData({ color: e.target.value })} className="h-7 w-full rounded border border-gray-700 bg-gray-800 cursor-pointer" />
               </div>
               <div className="flex gap-3">
                 <label className="flex items-center gap-1.5 cursor-pointer">
@@ -405,7 +405,7 @@ function SortableBlockCard({
               </div>
               <div>
                 <label className="block text-[11px] font-medium text-gray-500 mb-1">Color</label>
-                <input type="color" value={block.data.color === "accent" ? "#8ae600" : block.data.color} onChange={(e) => updateData({ color: e.target.value })} className="h-7 w-full rounded border border-gray-700 bg-gray-800 cursor-pointer" />
+                <input type="color" value={block.data.color === "accent" ? "#84cc16" : block.data.color} onChange={(e) => updateData({ color: e.target.value })} className="h-7 w-full rounded border border-gray-700 bg-gray-800 cursor-pointer" />
               </div>
             </div>
           )}

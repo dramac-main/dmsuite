@@ -883,7 +883,7 @@ export const PROFESSIONAL_PALETTES = {
   "ocean-teal": { primary: "#0f766e", secondary: "#14b8a6", accent: "#5eead4", bg: "#042f2e", text: "#ffffff" },
   "luxury-purple": { primary: "#6d28d9", secondary: "#8b5cf6", accent: "#c4b5fd", bg: "#1e1b4b", text: "#ffffff" },
   "sunset-warm": { primary: "#c2410c", secondary: "#f97316", accent: "#fdba74", bg: "#1c1917", text: "#ffffff" },
-  "lime-tech": { primary: "#65a30d", secondary: "#8ae600", accent: "#d9f99d", bg: "#0a0a0a", text: "#ffffff" },
+  "lime-tech": { primary: "#65a30d", secondary: "#84cc16", accent: "#d9f99d", bg: "#0a0a0a", text: "#ffffff" },
   "rose-elegant": { primary: "#be123c", secondary: "#f43f5e", accent: "#fda4af", bg: "#1c1917", text: "#ffffff" },
 } as const;
 

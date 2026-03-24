@@ -103,7 +103,7 @@ export const FONT_FAMILIES: Record<string, string> = {
 
 export const COLOR_PRESETS = [
   // — Core —
-  { name: "Lime Pro",       primary: "#8ae600", secondary: "#6bb800", text: "#1a1a2e", bg: "#ffffff" },
+  { name: "Lime Pro",       primary: "#84cc16", secondary: "#6bb800", text: "#1a1a2e", bg: "#ffffff" },
   { name: "Navy",           primary: "#1e3a5f", secondary: "#4a90d9", text: "#ffffff", bg: "#0f1c2e" },
   { name: "Charcoal",       primary: "#333333", secondary: "#666666", text: "#ffffff", bg: "#1a1a1a" },
   { name: "Midnight",       primary: "#6c5ce7", secondary: "#a29bfe", text: "#e8e8e8", bg: "#0a0a1a" },

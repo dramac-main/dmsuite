@@ -119,7 +119,7 @@ const colorPresets = [
   { name: "Gold", primary: "#713f12", accent: "#eab308", bg: "#fefce8" },
   { name: "Teal", primary: "#0f766e", accent: "#14b8a6", bg: "#f0fdfa" },
   { name: "Dark Mode", primary: "#f8fafc", accent: "#c09c2c", bg: "#0f172a" },
-  { name: "Charcoal", primary: "#ffffff", accent: "#8ae600", bg: "#18181b" },
+  { name: "Charcoal", primary: "#ffffff", accent: "#84cc16", bg: "#18181b" },
 ];
 
 const patternOptions = [

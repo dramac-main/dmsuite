@@ -59,7 +59,7 @@ const CURRENCIES = [
   { code: "NGN", symbol: "₦", name: "Nigerian Naira" },
 ];
 
-const COLOR_PRESETS = ["#1e3a5f", "#0f4c75", "#2d3436", "#0d7377", "#6c5ce7", "#00b894", "#e17055", "#8ae600", "#06b6d4", "#1a1a2e", "#2d1b69", "#3c1361"];
+const COLOR_PRESETS = ["#1e3a5f", "#0f4c75", "#2d3436", "#0d7377", "#6c5ce7", "#00b894", "#e17055", "#84cc16", "#06b6d4", "#1a1a2e", "#2d1b69", "#3c1361"];
 
 /* ── Component ───────────────────────────────────────────── */
 
