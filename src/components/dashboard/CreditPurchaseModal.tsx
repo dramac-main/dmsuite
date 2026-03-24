@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { useUser } from "@/hooks/useUser";
 import { cn } from "@/lib/utils";
 import { CREDIT_PACKS as PACKS_DATA } from "@/data/credit-costs";
@@ -22,51 +22,74 @@ type PaymentProvider = "airtel_money" | "mtn_momo";
 type PaymentStep = "select-pack" | "enter-phone" | "processing" | "success" | "failed";
 
 /* ── Zambian Phone Number Utilities ────────────────────────── */
+/* Official prefixes (ZICTA / ITU):
+   MTN:    096x, 076x
+   Airtel: 097x, 077x
+   Zamtel: 095x, 075x
+   All numbers are +260 XX XXX XXXX (9 local digits after country code) */
 
-// Zambian mobile network prefixes (after 0 or +260)
-const NETWORK_PREFIXES: Record<string, { network: PaymentProvider; label: string }> = {
+type NetworkInfo = { network: PaymentProvider | "zamtel"; label: string };
+
+const NETWORK_PREFIXES: Record<string, NetworkInfo> = {
+  // MTN Zambia
   "96": { network: "mtn_momo", label: "MTN" },
   "76": { network: "mtn_momo", label: "MTN" },
-  "95": { network: "mtn_momo", label: "MTN" },
+  // Airtel Zambia
   "97": { network: "airtel_money", label: "Airtel" },
   "77": { network: "airtel_money", label: "Airtel" },
+  // Zamtel (no payment integration — informational only)
+  "95": { network: "zamtel", label: "Zamtel" },
+  "75": { network: "zamtel", label: "Zamtel" },
 };
 
-/** Strip all non-digits, strip leading country code → return local 9 or 10 digits */
-function toRawDigits(input: string): string {
+const VALID_MOBILE_PREFIXES = new Set(Object.keys(NETWORK_PREFIXES));
+
+/** Extract only the local 9 digits from any input format */
+function extractLocalDigits(input: string): string {
   const digits = input.replace(/\D/g, "");
-  // Strip leading 260 if present (e.g. 260971234567 → 971234567)
-  if (digits.startsWith("260") && digits.length >= 12) return digits.slice(3);
-  // Strip leading 0 if present (e.g. 0971234567 → 971234567)
-  if (digits.startsWith("0") && digits.length >= 10) return digits.slice(1);
-  return digits;
+  // +260XXXXXXXXX or 260XXXXXXXXX → strip country code
+  if (digits.startsWith("260") && digits.length >= 12) return digits.slice(3, 12);
+  // 0XXXXXXXXX → strip leading zero
+  if (digits.startsWith("0") && digits.length >= 10) return digits.slice(1, 10);
+  // Already local digits
+  return digits.slice(0, 9);
 }
 
-/** Format raw local digits (e.g. "971234567") → "+260 97 123 4567" */
-function formatZambianNumber(raw: string): string {
-  if (raw.length === 0) return "+260 ";
-  if (raw.length <= 2) return `+260 ${raw}`;
-  if (raw.length <= 5) return `+260 ${raw.slice(0, 2)} ${raw.slice(2)}`;
-  return `+260 ${raw.slice(0, 2)} ${raw.slice(2, 5)} ${raw.slice(5, 9)}`;
+/** Format 9 local digits with spaces: "97 123 4567" */
+function formatLocalDigits(raw: string): string {
+  if (raw.length <= 2) return raw;
+  if (raw.length <= 5) return `${raw.slice(0, 2)} ${raw.slice(2)}`;
+  return `${raw.slice(0, 2)} ${raw.slice(2, 5)} ${raw.slice(5, 9)}`;
 }
 
-/** Detect network from raw digits */
-function detectNetwork(raw: string): { network: PaymentProvider; label: string } | null {
+/** Detect network from raw local digits */
+function detectNetwork(raw: string): NetworkInfo | null {
   if (raw.length < 2) return null;
-  const prefix = raw.slice(0, 2);
-  return NETWORK_PREFIXES[prefix] ?? null;
+  return NETWORK_PREFIXES[raw.slice(0, 2)] ?? null;
 }
+
+type PhoneValidation = 
+  | { valid: true }
+  | { valid: false; error?: string };
 
 /** Validate and return specific error */
-function validateZambianPhone(raw: string): { valid: boolean; error?: string } {
+function validatePhone(raw: string): PhoneValidation {
   if (raw.length === 0) return { valid: false };
-  if (raw.length < 2) return { valid: false, error: "Keep typing…" };
+  if (raw.length === 1) return { valid: false, error: "Keep typing…" };
+  
   const prefix = raw.slice(0, 2);
-  if (!NETWORK_PREFIXES[prefix]) {
-    return { valid: false, error: `${prefix}X is not a valid Zambian mobile prefix` };
+  if (!VALID_MOBILE_PREFIXES.has(prefix)) {
+    return { valid: false, error: `"0${prefix}..." is not a valid Zambian mobile prefix` };
   }
-  if (raw.length < 9) return { valid: false, error: `${9 - raw.length} more digits needed` };
+  
+  const net = NETWORK_PREFIXES[prefix];
+  if (net.network === "zamtel") {
+    return { valid: false, error: "Zamtel numbers cannot be used for mobile money payments" };
+  }
+  
+  if (raw.length < 9) return { valid: false, error: `${9 - raw.length} more digit${9 - raw.length > 1 ? "s" : ""} needed` };
   if (raw.length > 9) return { valid: false, error: "Too many digits" };
+  
   return { valid: true };
 }
 
@@ -75,33 +98,65 @@ export default function CreditPurchaseModal({ onClose }: { onClose: () => void }
   const [step, setStep] = useState<PaymentStep>("select-pack");
   const [selectedPack, setSelectedPack] = useState<CreditPack | null>(null);
   const [rawDigits, setRawDigits] = useState(() => {
+    // Pre-fill from profile phone if available
     const initial = profile?.phone ?? "";
-    return initial ? toRawDigits(initial) : "";
+    return initial ? extractLocalDigits(initial) : "";
   });
-  const [provider, setProvider] = useState<PaymentProvider>("airtel_money");
+  const [provider, setProvider] = useState<PaymentProvider>(() => {
+    // Auto-detect provider from pre-filled profile phone
+    const initial = profile?.phone ?? "";
+    if (initial) {
+      const local = extractLocalDigits(initial);
+      const net = detectNetwork(local);
+      if (net && net.network !== "zamtel") return net.network;
+    }
+    return "mtn_momo";
+  });
   const [error, setError] = useState("");
   const [paymentRef, setPaymentRef] = useState("");
   const [polling, setPolling] = useState(false);
   const [touched, setTouched] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Derived state from raw digits
-  const formattedPhone = useMemo(() => formatZambianNumber(rawDigits), [rawDigits]);
+  // Derived state — all computed from rawDigits
+  const formattedLocal = useMemo(() => formatLocalDigits(rawDigits), [rawDigits]);
   const detectedNetwork = useMemo(() => detectNetwork(rawDigits), [rawDigits]);
-  const validation = useMemo(() => validateZambianPhone(rawDigits), [rawDigits]);
-  const cleanPhoneForApi = useMemo(() => rawDigits.length === 9 ? `+260${rawDigits}` : "", [rawDigits]);
+  const validation = useMemo(() => validatePhone(rawDigits), [rawDigits]);
+  const isValid = validation.valid;
+  const cleanPhoneForApi = useMemo(
+    () => (rawDigits.length === 9 ? `+260${rawDigits}` : ""),
+    [rawDigits],
+  );
 
-  const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target.value;
-    // Extract raw digits from whatever the user typed/pasted
-    let raw = toRawDigits(input);
-    // Cap at 9 digits (Zambian local number length)
-    if (raw.length > 9) raw = raw.slice(0, 9);
-    setRawDigits(raw);
+  const handlePhoneInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    // Strip everything except digits
+    const digits = inputValue.replace(/\D/g, "");
+    // Cap at 9 local digits
+    const capped = digits.slice(0, 9);
+    setRawDigits(capped);
     setTouched(true);
 
     // Auto-select provider based on detected network
-    const net = detectNetwork(raw);
-    if (net) setProvider(net.network);
+    const net = detectNetwork(capped);
+    if (net && net.network !== "zamtel") setProvider(net.network);
+  }, []);
+
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text");
+    // Handle any format: +260971234567, 0971234567, 260971234567, 971234567
+    const local = extractLocalDigits(pasted);
+    setRawDigits(local.slice(0, 9));
+    setTouched(true);
+
+    const net = detectNetwork(local);
+    if (net && net.network !== "zamtel") setProvider(net.network);
+  }, []);
+
+  // Focus the input field when clicking the +260 prefix area
+  const focusInput = useCallback(() => {
+    inputRef.current?.focus();
   }, []);
 
   const handleSelectPack = (pack: CreditPack) => {
@@ -112,8 +167,8 @@ export default function CreditPurchaseModal({ onClose }: { onClose: () => void }
   const handlePay = async () => {
     setError("");
 
-    if (!validation.valid) {
-      setError(validation.error || "Enter a valid Zambian number");
+    if (!isValid || !cleanPhoneForApi) {
+      setError(!validation.valid && validation.error ? validation.error : "Enter a valid Zambian number");
       return;
     }
 
@@ -328,53 +383,64 @@ export default function CreditPurchaseModal({ onClose }: { onClose: () => void }
                 </div>
               </div>
 
-              {/* Phone number with smart formatting */}
+              {/* Phone number with fixed +260 prefix */}
               <div className="mb-6">
                 <label htmlFor="payPhone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                   Phone number
                 </label>
-                <div className="relative">
+                <div
+                  className={cn(
+                    "flex items-center rounded-lg border bg-white dark:bg-gray-800 overflow-hidden transition-colors",
+                    isValid
+                      ? "border-success ring-1 ring-success/20"
+                      : touched && rawDigits.length > 1 && !validation.valid && validation.error
+                        ? "border-error ring-1 ring-error/20"
+                        : "border-gray-300 dark:border-gray-700 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20"
+                  )}
+                  onClick={focusInput}
+                >
+                  {/* Fixed country code prefix */}
+                  <span className="shrink-0 select-none pl-3.5 pr-2 text-sm font-medium text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700 py-2.5">
+                    +260
+                  </span>
+                  {/* User types only the local digits */}
                   <input
+                    ref={inputRef}
                     id="payPhone"
                     type="tel"
-                    value={formattedPhone}
-                    onChange={handlePhoneChange}
+                    inputMode="numeric"
+                    autoComplete="tel-local"
+                    value={formattedLocal}
+                    onChange={handlePhoneInput}
+                    onPaste={handlePaste}
                     onBlur={() => setTouched(true)}
-                    placeholder="+260 97 123 4567"
-                    className={cn(
-                      "w-full rounded-lg border bg-white dark:bg-gray-800 px-3.5 py-2.5 pr-10 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none transition-colors",
-                      validation.valid
-                        ? "border-success focus:border-success focus:ring-2 focus:ring-success/20"
-                        : touched && rawDigits.length > 0 && validation.error
-                          ? "border-error focus:border-error focus:ring-2 focus:ring-error/20"
-                          : "border-gray-300 dark:border-gray-700 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
-                    )}
+                    placeholder="97 123 4567"
+                    className="flex-1 min-w-0 bg-transparent px-3 py-2.5 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none tracking-wide"
                   />
                   {/* Validation icon */}
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {validation.valid ? (
-                      <svg className="h-5 w-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <div className="shrink-0 pr-3">
+                    {isValid ? (
+                      <svg className="h-5 w-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
-                    ) : touched && rawDigits.length > 1 && validation.error ? (
-                      <svg className="h-5 w-5 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    ) : touched && rawDigits.length > 1 && !validation.valid && validation.error ? (
+                      <svg className="h-5 w-5 text-error/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                       </svg>
                     ) : null}
                   </div>
                 </div>
-                {/* Inline hint / error */}
-                <div className="mt-1.5 h-5">
-                  {validation.valid && detectedNetwork ? (
-                    <p className="text-xs text-success flex items-center gap-1">
-                      <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><circle cx="10" cy="10" r="10" /></svg>
-                      Valid {detectedNetwork.label} number
+                {/* Inline feedback */}
+                <div className="mt-1.5 min-h-5">
+                  {isValid && detectedNetwork ? (
+                    <p className="text-xs text-success font-medium">
+                      ✓ Valid {detectedNetwork.label} number — +260{rawDigits}
                     </p>
-                  ) : touched && rawDigits.length > 1 && validation.error ? (
+                  ) : touched && rawDigits.length > 1 && !validation.valid && validation.error ? (
                     <p className="text-xs text-error">{validation.error}</p>
                   ) : (
                     <p className="text-xs text-gray-400 dark:text-gray-500">
-                      Enter your Zambian mobile number
+                      MTN (096/076) · Airtel (097/077)
                     </p>
                   )}
                 </div>
@@ -382,10 +448,10 @@ export default function CreditPurchaseModal({ onClose }: { onClose: () => void }
 
               <button
                 onClick={handlePay}
-                disabled={!validation.valid}
+                disabled={!isValid}
                 className={cn(
                   "w-full rounded-lg px-4 py-3 text-sm font-semibold shadow-sm transition-colors",
-                  validation.valid
+                  isValid
                     ? "bg-primary-500 text-gray-950 hover:bg-primary-400 cursor-pointer"
                     : "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                 )}
