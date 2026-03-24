@@ -1,6 +1,30 @@
 # DMSuite — Active Context
 
 ## Current Focus
+**Phase:** Session 121 — Sales Book Cleanup + Tool Tracker Created — COMPLETE ✅
+
+### Session 121: Sales Book Tool Consolidation + Development Tracker
+
+#### Tool Development Tracker — CREATED
+- **`TOOL-STATUS.md`** at project root — master reference for all 200+ tools
+- **`DevStatus` type** added to `Tool` interface in `src/data/tools.ts` (`"complete" | "scaffold" | "no-ui"`)
+- **`devStatus` field** is optional on every Tool entry — defaults to unset (treated as scaffold)
+- **7 sales book tools tagged** `devStatus: "complete"` (invoice, quotation, receipt, purchase-order, delivery-note, credit-note, proforma-invoice)
+- **Rule added** to `.github/copilot-instructions.md` — AI must auto-update tracker whenever a tool is finished
+- **Counts:** 7 COMPLETE, ~88 SCAFFOLD, ~100+ NO-UI
+
+#### Removed Generic Sales Book Tools
+- **Removed `sales-book-a4`** — Redundant; all 7 individual document type tools already support type switching
+- **Removed `sales-book-a5`** — Messy/needs rework; individual tools cover all use cases
+- **Deleted files**: `SalesBookA4Workspace.tsx`, `SalesBookA5Workspace.tsx` (dead standalone files)
+- **Cleaned**: tools.ts (2 tool defs), credit-costs.ts, page.tsx routes, SalesBookWrappers.tsx (2 exports), ChikoAssistant.tsx, workflow-engine.ts, chiko route.ts
+- **Featured tools**: Replaced `sales-book-a4` with `invoice-designer` in featured strip
+- **Decision**: Keep all 7 individual document type tools (invoice, quotation, receipt, purchase-order, delivery-note, credit-note, proforma-invoice) + statement-of-account. Each pre-selects its type but allows switching to any other type — best UX.
+- **TypeScript**: 0 errors confirmed
+
+---
+
+## Previous Focus
 **Phase:** Session 120 — Sales Tools v3 Redesign + Global Layout Overhaul — COMPLETE ✅
 
 ### Session 120 (continued): Global Layout + End-to-End Polish

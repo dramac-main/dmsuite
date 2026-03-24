@@ -36,6 +36,21 @@ When updating:
 3. Document insights, patterns, and learnings
 4. Update next steps and considerations
 
+### Tool Development Tracker — MANDATORY
+The project has a `TOOL-STATUS.md` file at the root that tracks which tools are `COMPLETE`, `SCAFFOLD`, or `NO-UI`.
+
+**You MUST update `TOOL-STATUS.md` AND the `devStatus` field in `src/data/tools.ts` whenever:**
+- A tool workspace is fully built, tested, and verified → change to `devStatus: "complete"` and move to COMPLETE section
+- A new workspace component is created → add `devStatus: "scaffold"` if not already set
+- A tool is discussed as finished/working by Drake → treat as signal to mark complete
+
+**Change Log entry format** (add to the table at the bottom of `TOOL-STATUS.md`):
+```
+| YYYY-MM-DD | tool-id (Tool Name) | Summary of work done | Drake |
+```
+
+**Do NOT wait to be asked.** If you finish work on a tool in a session, update the tracker automatically before committing.
+
 ### Project Context
 - **Project:** DMSuite — AI-powered design & business creative suite
 - **Stack:** Next.js 16+, React 19, TypeScript, Tailwind CSS v4

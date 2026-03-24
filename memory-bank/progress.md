@@ -1,10 +1,41 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 99/197 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅
+## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅
 
 ---
 
-## Current Work: Global Layout + Sales Tools End-to-End Polish — COMPLETE ✅
+## Tool Development Tracker
+- **Location:** `TOOL-STATUS.md` (project root) — always check this before session work
+- **Code field:** `devStatus` on `Tool` interface in `src/data/tools.ts` (`"complete" | "scaffold" | "no-ui"`)
+- **Auto-update rule:** AI must update both `TOOL-STATUS.md` and `devStatus` in tools.ts when marking any tool complete
+- **Counts (2026-03-25):** 7 COMPLETE · ~88 SCAFFOLD · ~100+ NO-UI
+- **COMPLETE tools:** invoice-designer, quote-estimate, receipt-designer, purchase-order, delivery-note, credit-note, proforma-invoice
+
+---
+
+## Current Work: Sales Book Consolidation — COMPLETE ✅
+
+### Session 121 — Removed Generic Sales Book Tools
+- [x] **Removed `sales-book-a4`** — Redundant generic tool; individual types cover all use cases
+- [x] **Removed `sales-book-a5`** — Messy; needs future rework; A5 not needed now
+- [x] **Deleted dead files** — `SalesBookA4Workspace.tsx`, `SalesBookA5Workspace.tsx`
+- [x] **Cleaned all references** — tools.ts, credit-costs.ts, page.tsx, SalesBookWrappers.tsx, ChikoAssistant.tsx, workflow-engine.ts, chiko API route
+- [x] **Updated featured tools** — `invoice-designer` replaces `sales-book-a4` in featured strip
+- [x] **TypeScript** — 0 errors confirmed
+
+**7 Sales Book Tools retained (individual document types):**
+1. Invoice Book Designer — `invoice-designer`
+2. Quotation Book Designer — `quote-estimate`
+3. Receipt Book Designer — `receipt-designer`
+4. Purchase Order Book Designer — `purchase-order`
+5. Delivery Note Book Designer — `delivery-note`
+6. Credit Note Book Designer — `credit-note`
+7. Proforma Invoice Book Designer — `proforma-invoice`
++ Statement of Account — `statement-of-account` (separate tool)
+
+---
+
+## Previous Work: Global Layout + Sales Tools End-to-End Polish — COMPLETE ✅
 
 ### Session 120 (continued) — Global Layout Overhaul + Layers Redesign
 
@@ -579,7 +610,7 @@ Rebuilt the entire sales document tool from a data-entry invoicing system to a b
 - [x] `src/components/workspaces/SalesBookWrappers.tsx` — 7 document type wrappers
 - [x] Router page.tsx — All 9 sales tools rewired to new Sales Book Designer
 
-**9 Sales Tools (all blank form designers):**
+**7 Sales Tools (all blank form designers):**
 1. Invoice Book Designer — `invoice-designer`
 2. Quotation Book Designer — `quote-estimate`
 3. Receipt Book Designer — `receipt-designer`
@@ -587,8 +618,6 @@ Rebuilt the entire sales document tool from a data-entry invoicing system to a b
 5. Delivery Note Book Designer — `delivery-note`
 6. Credit Note Book Designer — `credit-note`
 7. Proforma Invoice Book Designer — `proforma-invoice`
-8. Sales Book Designer (A4) — `sales-book-a4`
-9. Sales Book Designer (A5) — `sales-book-a5`
 
 **Zero TypeScript errors confirmed ✅**
 - [x] **Interactive sparkles** — 4 particles on hover (primary + secondary)
