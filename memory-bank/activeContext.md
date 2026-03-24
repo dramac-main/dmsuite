@@ -162,9 +162,9 @@ Full end-to-end MTN MoMo payment integration for credit purchases:
 
 **Sandbox Credentials Provisioned:**
 - MTN Developer Portal: momodeveloper.mtn.com, Subscription "DMSUITE" (Active)
-- Primary Key: `12e8efbd863c495082bb6bd61a2e50e2`
-- API User ID: `b87fa02b-a409-4b22-9d03-f94e578abeb4`
-- API Key: `341cc7f278b44de19ce2d45f379dc98a`
+- Primary Key: `[REDACTED — stored in Vercel env vars]`
+- API User ID: `[REDACTED — stored in Vercel env vars]`
+- API Key: `[REDACTED — stored in Vercel env vars]`
 - Token: Basic auth → Bearer, 3600s expiry
 
 **New Files:**
