@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
    - Floating animation with breathing/idle motion
    - Expression states: idle, thinking, speaking, happy, waving
    - Uses CSS 3D transforms + Framer Motion for life-like feel
-   - Global branding: primary-500 (#84cc16) + secondary-500 (#06b6d4)
+   - Global branding: primary-500 (#8b5cf6) + secondary-500 (#06b6d4)
    - Dark background optimized (#3a3a3a / transparent)
    ============================================================ */
 
@@ -615,7 +615,7 @@ export function Chiko3DAvatar({
                   width: 4,
                   height: 4,
                   borderRadius: "50%",
-                  background: i % 2 === 0 ? "#84cc16" : ACCENT_CYAN,
+                  background: i % 2 === 0 ? "#8b5cf6" : ACCENT_CYAN,
                 }}
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{

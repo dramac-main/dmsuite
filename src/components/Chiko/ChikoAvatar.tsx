@@ -1,13 +1,13 @@
-"use client";
+﻿"use client";
 
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-/* ── Chiko Avatar ────────────────────────────────────────────
-   Animated SVG avatar for Chiko — a friendly robot/sparkle
+/* â”€â”€ Chiko Avatar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   Animated SVG avatar for Chiko â€” a friendly robot/sparkle
    character with a glowing electric-lime aura.
    Sizes: sm (32px), md (40px), lg (56px)
-   ──────────────────────────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 interface ChikoAvatarProps {
   size?: "sm" | "md" | "lg";
@@ -73,7 +73,7 @@ export function ChikoAvatar({
           cy="25"
           rx="3.5"
           ry="3.5"
-          fill="#84cc16"
+          fill="#8b5cf6"
           animate={animated ? {
             ry: [3.5, 0.8, 3.5],
           } : undefined}
@@ -92,7 +92,7 @@ export function ChikoAvatar({
           cy="25"
           rx="3.5"
           ry="3.5"
-          fill="#84cc16"
+          fill="#8b5cf6"
           animate={animated ? {
             ry: [3.5, 0.8, 3.5],
           } : undefined}
@@ -105,22 +105,22 @@ export function ChikoAvatar({
         />
         <circle cx="35" cy="24" r="1.2" fill="#ffffff" opacity="0.9" />
 
-        {/* Mouth — happy smile */}
+        {/* Mouth â€” happy smile */}
         <path
           d="M22 31 Q28 36 34 31"
-          stroke="#84cc16"
+          stroke="#8b5cf6"
           strokeWidth="1.8"
           strokeLinecap="round"
           fill="none"
         />
 
         {/* Antenna */}
-        <line x1="28" y1="16" x2="28" y2="8" stroke="#84cc16" strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="28" y1="16" x2="28" y2="8" stroke="#8b5cf6" strokeWidth="1.5" strokeLinecap="round" />
         <motion.circle
           cx="28"
           cy="7"
           r="2.5"
-          fill="#84cc16"
+          fill="#8b5cf6"
           animate={animated ? { opacity: [1, 0.4, 1], scale: [1, 1.2, 1] } : undefined}
           transition={animated ? { duration: 1.5, repeat: Infinity, ease: "easeInOut" } : undefined}
         />
@@ -136,7 +136,7 @@ export function ChikoAvatar({
         {/* Sparkle decorations */}
         <motion.path
           d="M8 32 L9.5 29.5 L11 32 L9.5 34.5Z"
-          fill="#84cc16"
+          fill="#8b5cf6"
           opacity="0.7"
           animate={animated ? { opacity: [0.3, 0.9, 0.3], scale: [0.8, 1.2, 0.8] } : undefined}
           transition={animated ? { duration: 2, repeat: Infinity, delay: 0.5 } : undefined}
@@ -156,9 +156,9 @@ export function ChikoAvatar({
             <stop offset="100%" stopColor="#16213e" />
           </linearGradient>
           <linearGradient id="chikoStroke" x1="0" y1="0" x2="56" y2="56">
-            <stop offset="0%" stopColor="#84cc16" stopOpacity="0.6" />
+            <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.6" />
             <stop offset="50%" stopColor="#06b6d4" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="#84cc16" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.6" />
           </linearGradient>
         </defs>
       </motion.svg>

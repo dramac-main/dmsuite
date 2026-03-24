@@ -11,17 +11,23 @@ export default function StatsBar() {
         return (
           <div
             key={stat.label}
-            className="group relative rounded-xl border border-gray-200 dark:border-gray-800
-              bg-white dark:bg-gray-900 p-4 sm:p-5
-              hover:border-primary-500/30 hover:shadow-lg hover:shadow-primary-500/5
-              transition-all duration-200"
+            className="group relative rounded-2xl overflow-hidden
+              border border-white/10 dark:border-white/[0.06]
+              bg-white/60 dark:bg-gray-900/40 backdrop-blur-lg
+              p-4 sm:p-5
+              hover:border-primary-500/20 dark:hover:border-primary-500/15
+              hover:shadow-xl hover:shadow-primary-500/5 dark:hover:shadow-primary-500/10
+              transition-all duration-300"
           >
+            {/* Subtle gradient accent top edge */}
+            <div className="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-primary-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
             {/* Icon */}
-            <div className="size-10 rounded-lg bg-gray-100 dark:bg-gray-800
+            <div className="size-10 rounded-xl bg-primary-500/10 dark:bg-primary-500/10
               flex items-center justify-center mb-3
-              group-hover:bg-primary-500/10 transition-colors">
-              <Icon className="size-5 text-gray-500 dark:text-gray-400
-                  group-hover:text-primary-500 transition-colors" />
+              group-hover:bg-primary-500/20 group-hover:shadow-lg group-hover:shadow-primary-500/10
+              transition-all duration-300">
+              <Icon className="size-5 text-primary-500 dark:text-primary-400 transition-colors" />
             </div>
 
             {/* Value */}

@@ -5,7 +5,7 @@
  * transition timing, surface color token, and reusable class pattern
  * lives here. Components import from this file — never hardcode values.
  *
- * 🎨 BRAND PALETTE: Lime #84cc16 + Cyan #06b6d4 + Slate neutral
+ * 🎨 BRAND PALETTE: Violet #8b5cf6 + Cyan #06b6d4 + Cosmic Slate neutral
  * 📄 Full spec: /BRANDING-SPEC.md
  *
  * Mirrors: globals.css (@theme inline)  for Tailwind tokens
@@ -102,33 +102,33 @@ export const surfaces = {
   /** Page background */
   page: "bg-gray-50 dark:bg-gray-950",
   /** Sidebar / top-level panels */
-  sidebar: "bg-white dark:bg-gray-900",
+  sidebar: "bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl",
   /** Cards and secondary panels */
-  card: "bg-white dark:bg-gray-900",
+  card: "bg-white/60 dark:bg-gray-900/40 backdrop-blur-lg",
   /** Glassmorphic card */
-  glass: "bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl",
+  glass: "bg-white/50 dark:bg-gray-900/50 backdrop-blur-2xl",
   /** Elevated card (modals, popovers) */
-  elevated: "bg-white dark:bg-gray-800",
+  elevated: "bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl",
   /** Input / form fields */
-  input: "bg-gray-100 dark:bg-gray-800/50",
+  input: "bg-gray-100/80 dark:bg-gray-800/50",
   /** Hover states on list items */
-  hoverItem: "hover:bg-gray-100 dark:hover:bg-gray-800/70",
+  hoverItem: "hover:bg-gray-100/80 dark:hover:bg-gray-800/50",
   /** Active / selected state */
-  activeItem: "bg-primary-500 text-gray-950 font-semibold shadow-sm shadow-primary-500/20",
+  activeItem: "bg-primary-500/15 text-primary-500 dark:text-primary-400 font-semibold",
   /** Muted / disabled state */
-  muted: "bg-gray-100 dark:bg-gray-800",
+  muted: "bg-gray-100/80 dark:bg-gray-800/50",
 } as const;
 
 // ── Borders ───────────────────────────────────────────────────
 export const borders = {
   /** Default border */
-  default: "border border-gray-200 dark:border-gray-800",
+  default: "border border-white/10 dark:border-white/[0.06]",
   /** Subtle / lighter border */
-  subtle: "border border-gray-200 dark:border-gray-700",
+  subtle: "border border-gray-200/60 dark:border-gray-700/50",
   /** Sidebar border */
-  sidebar: "border-r border-gray-200 dark:border-gray-700",
+  sidebar: "border-r border-gray-200/60 dark:border-white/[0.06]",
   /** Card border */
-  card: "border border-gray-200 dark:border-gray-800",
+  card: "border border-white/10 dark:border-white/[0.06]",
   /** Focus ring */
   focusRing: "focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500/50",
   /** Dashed placeholder */
@@ -224,11 +224,13 @@ export const animations = {
 // ── Gradients ─────────────────────────────────────────────────
 export const gradients = {
   /** Brand gradient (primary → secondary) */
-  brand: "bg-linear-to-br from-primary-500 to-secondary-500",
+  brand: "bg-linear-to-br from-primary-500 via-primary-600 to-secondary-500",
   /** Brand gradient with opacity */
-  brandSubtle: "bg-linear-to-br from-primary-500/10 to-secondary-500/10",
+  brandSubtle: "bg-linear-to-br from-primary-500/10 via-primary-500/5 to-secondary-500/10",
   /** Card gradient (dark mode) */
   cardDark: "bg-linear-to-br from-card-gradient-from via-card-gradient-via to-card-gradient-to",
+  /** Hero mesh gradient */
+  heroMesh: "bg-linear-to-br from-primary-500/15 via-transparent to-secondary-500/15",
 } as const;
 
 // ── Shadows ───────────────────────────────────────────────────
@@ -259,17 +261,17 @@ export const radii = {
 /** Pre-composed class combinations for common UI elements */
 export const recipes = {
   /** Standard card */
-  card: `rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900`,
+  card: `rounded-2xl border border-white/10 dark:border-white/[0.06] bg-white/60 dark:bg-gray-900/40 backdrop-blur-lg`,
   /** Interactive card (tool cards, clickable) */
-  cardInteractive: `rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900
-    hover:border-gray-300 dark:hover:border-gray-700
-    hover:-translate-y-0.5 hover:shadow-lg
-    transition-all duration-200 cursor-pointer`,
+  cardInteractive: `rounded-2xl border border-white/10 dark:border-white/[0.06] bg-white/60 dark:bg-gray-900/40 backdrop-blur-lg
+    hover:border-primary-500/30 dark:hover:border-primary-500/20
+    hover:-translate-y-1 hover:shadow-xl hover:shadow-primary-500/5
+    transition-all duration-300 cursor-pointer`,
   /** Glass card (hero, overlays) */
-  cardGlass: `rounded-2xl border border-white/10 dark:border-gray-700/50
-    bg-white/50 dark:bg-gray-900/50 backdrop-blur-xl`,
+  cardGlass: `rounded-2xl border border-white/15 dark:border-white/[0.08]
+    bg-white/50 dark:bg-gray-900/50 backdrop-blur-2xl`,
   /** Highlighted card (selected / active) */
-  cardActive: `rounded-2xl border-2 border-primary-500/30 bg-primary-500/5`,
+  cardActive: `rounded-2xl border-2 border-primary-500/30 bg-primary-500/5 backdrop-blur-lg`,
   /** Tool tag chip */
   tag: "px-2 py-0.5 rounded-md text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
   /** Pro / AI badge */
@@ -367,7 +369,7 @@ export const chiko = {
 /** Hardcoded brand values for non-Tailwind contexts (canvas, PWA, meta tags) */
 export const brand = {
   /** Primary color hex (for canvas, meta, PWA) */
-  primary: "#84cc16",
+  primary: "#8b5cf6",
   /** Secondary color hex */
   secondary: "#06b6d4",
   /** Dark background hex */

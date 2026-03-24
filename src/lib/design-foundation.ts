@@ -890,9 +890,9 @@ export function parseAIDesignDirective(raw: string): Partial<AIDesignDirective> 
   const textC = raw.match(/TEXT_COLOR:\s*(#[0-9a-fA-F]{6})/i);
   if (primary || secondary) {
     directive.colors = {
-      primary: primary?.[1] ?? "#84cc16",
+      primary: primary?.[1] ?? "#8b5cf6",
       secondary: secondary?.[1] ?? "#030712",
-      accent: accent?.[1] ?? primary?.[1] ?? "#84cc16",
+      accent: accent?.[1] ?? primary?.[1] ?? "#8b5cf6",
       text: textC?.[1] ?? "#ffffff",
     };
   }
@@ -957,7 +957,7 @@ CURRENT DESIGN:
 - CTA: "${cd.ctaText || ""}"
 - Label: "${cd.label || ""}"
 - Composition: ${cd.composition || "centered-hero"}
-- Primary Color: ${cd.primaryColor || "#84cc16"}
+- Primary Color: ${cd.primaryColor || "#8b5cf6"}
 - Secondary Color: ${cd.secondaryColor || "#030712"}
 - Text Color: ${cd.textColor || "#ffffff"}
 - Font Style: ${cd.fontStyle || "modern"}
@@ -1013,7 +1013,7 @@ HEADLINE: [max 6 words, powerful, scroll-stopping]
 SUBTEXT: [max 15 words, compelling supporting copy]
 CTA: [max 3 words, action verb]
 LABEL: [max 3 words, category/brand tag]
-PRIMARY_COLOR: [hex, e.g. #84cc16 — the vibrant accent color]
+PRIMARY_COLOR: [hex, e.g. #8b5cf6 — the vibrant accent color]
 SECONDARY_COLOR: [hex, e.g. #0a0a0a — the background/dominant color]
 ACCENT_COLOR: [hex — a complementary highlight color]
 TEXT_COLOR: [hex — main text color, ensure contrast with secondary]

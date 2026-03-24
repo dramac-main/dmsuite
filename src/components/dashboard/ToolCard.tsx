@@ -3,64 +3,60 @@
 import Link from "next/link";
 import { type Tool, statusConfig } from "@/data/tools";
 import { getIcon, IconArrowRight } from "@/components/icons";
-import { groupHoverBg10 } from "@/lib/colors";
 import { getToolCreditCost } from "@/data/credit-costs";
 
 interface ToolCardProps {
   tool: Tool;
   categoryId: string;
-  accentColor?: string; // e.g. "primary-500"
+  accentColor?: string;
 }
 
-export default function ToolCard({ tool, categoryId, accentColor }: ToolCardProps) {
+export default function ToolCard({ tool, categoryId }: ToolCardProps) {
   const Icon = getIcon(tool.icon);
   const badge = statusConfig[tool.status];
   const isReady = tool.status === "ready";
-  const hoverBg = groupHoverBg10[accentColor || "primary-500"] || groupHoverBg10["primary-500"];
   const creditCost = getToolCreditCost(tool.id);
 
   const cardClasses = `
-    group relative flex flex-col rounded-xl border p-4
-    transition-all duration-200
+    group relative flex flex-col rounded-2xl p-4 sm:p-5
+    transition-all duration-300 ease-out
     ${isReady
-      ? "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 cursor-pointer hover:-translate-y-0.5"
-      : "border-gray-200/50 dark:border-gray-800/50 bg-gray-50/50 dark:bg-gray-900/50 cursor-default opacity-75"
+      ? `border border-white/10 dark:border-white/[0.06]
+         bg-white/60 dark:bg-gray-900/40 backdrop-blur-lg
+         hover:border-primary-500/30 dark:hover:border-primary-500/20
+         hover:shadow-xl hover:shadow-primary-500/5 dark:hover:shadow-primary-500/10
+         hover:-translate-y-1 cursor-pointer`
+      : `border border-gray-200/30 dark:border-gray-800/30
+         bg-gray-50/40 dark:bg-gray-900/20 backdrop-blur-sm
+         cursor-default opacity-60`
     }
   `;
 
   const cardContent = (
     <>
       {/* Top row: Icon + Badges */}
-      <div className="flex items-start justify-between mb-3">
-        <div
-          className={`
-            size-10 rounded-lg flex items-center justify-center transition-colors
-            ${isReady
-              ? `bg-gray-100 dark:bg-gray-800 ${hoverBg}`
-              : "bg-gray-100/50 dark:bg-gray-800/50"
-            }
-          `}
-        >
-          <Icon
-            className={`size-5 transition-colors ${
-              isReady
-                ? "text-gray-600 dark:text-gray-400 group-hover:text-primary-500"
-                : "text-gray-400 dark:text-gray-600"
-            }`}
-          />
+      <div className="flex items-start justify-between mb-4">
+        <div className={`
+          size-11 rounded-xl flex items-center justify-center transition-all duration-300
+          ${isReady
+            ? "bg-primary-500/10 dark:bg-primary-500/10 group-hover:bg-primary-500/20 group-hover:shadow-lg group-hover:shadow-primary-500/10"
+            : "bg-gray-100/50 dark:bg-gray-800/30"
+          }
+        `}>
+          <Icon className={`size-5 transition-colors duration-300 ${
+            isReady
+              ? "text-primary-500 dark:text-primary-400"
+              : "text-gray-400 dark:text-gray-600"
+          }`} />
         </div>
 
         <div className="flex items-center gap-1.5">
-          {/* Credit cost badge */}
           {isReady && creditCost > 0 && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.6rem] font-semibold bg-primary-500/10 text-primary-500">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.6rem] font-semibold bg-secondary-500/10 text-secondary-500 dark:text-secondary-400">
               {creditCost} cr
             </span>
           )}
-          {/* Status badge */}
-          <span
-            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[0.625rem] font-semibold ${badge.bgClass} ${badge.textClass}`}
-          >
+          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[0.625rem] font-semibold ${badge.bgClass} ${badge.textClass}`}>
             <span className={`size-1.5 rounded-full ${badge.dotClass}`} />
             {badge.label}
           </span>
@@ -68,28 +64,24 @@ export default function ToolCard({ tool, categoryId, accentColor }: ToolCardProp
       </div>
 
       {/* Tool name */}
-      <h3
-        className={`text-sm font-semibold mb-1 ${
-          isReady ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-500"
-        }`}
-      >
+      <h3 className={`text-sm font-semibold mb-1.5 transition-colors ${
+        isReady ? "text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-300" : "text-gray-500 dark:text-gray-500"
+      }`}>
         {tool.name}
       </h3>
 
       {/* Description */}
-      <p
-        className={`text-xs leading-relaxed flex-1 ${
-          isReady ? "text-gray-500 dark:text-gray-400" : "text-gray-400 dark:text-gray-600"
-        }`}
-      >
+      <p className={`text-xs leading-relaxed flex-1 ${
+        isReady ? "text-gray-500 dark:text-gray-400" : "text-gray-400 dark:text-gray-600"
+      }`}>
         {tool.description}
       </p>
 
       {/* Arrow indicator on hover */}
       {isReady && (
-        <div className="flex items-center gap-1 mt-3 text-xs font-medium text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1.5 mt-4 text-xs font-medium text-primary-500 opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-300">
           <span>Open tool</span>
-          <IconArrowRight className="size-3 group-hover:translate-x-0.5 transition-transform" />
+          <IconArrowRight className="size-3.5 group-hover:translate-x-0.5 transition-transform" />
         </div>
       )}
     </>
@@ -103,9 +95,5 @@ export default function ToolCard({ tool, categoryId, accentColor }: ToolCardProp
     );
   }
 
-  return (
-    <div className={cardClasses}>
-      {cardContent}
-    </div>
-  );
+  return <div className={cardClasses}>{cardContent}</div>;
 }

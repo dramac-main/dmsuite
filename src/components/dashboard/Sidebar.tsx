@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 
 /* ── Shared recipes (inline to avoid circular imports) ───────── */
 const LOGO_MARK =
-  "size-8 rounded-lg bg-linear-to-br from-primary-500 to-secondary-500 shrink-0 flex items-center justify-center shadow-lg shadow-primary-500/20";
+  "size-9 rounded-xl bg-linear-to-br from-primary-500 to-secondary-500 shrink-0 flex items-center justify-center shadow-lg shadow-primary-500/25 ring-1 ring-white/10";
 
 /** Inline pin icon (Bootstrap-style thumbtack) */
 const PinIcon = ({ className }: { className?: string }) => (

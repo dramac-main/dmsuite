@@ -31,7 +31,13 @@ export default function DashboardPage() {
   const openMobile = useSidebarStore((s) => s.openMobile);
 
   return (
-    <div className={cn("min-h-dvh", surfaces.page, "transition-colors")}>
+    <div className={cn("min-h-dvh relative", surfaces.page, "transition-colors")}>
+      {/* ── Ambient gradient background ── */}
+      <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
+        <div className="absolute -top-[40%] -right-[20%] w-[70%] h-[70%] rounded-full bg-primary-500/[0.04] dark:bg-primary-500/[0.06] blur-[120px]" />
+        <div className="absolute -bottom-[30%] -left-[20%] w-[60%] h-[60%] rounded-full bg-secondary-500/[0.04] dark:bg-secondary-500/[0.06] blur-[120px]" />
+      </div>
+
       {/* Sidebar */}
       <Sidebar />
 
@@ -68,7 +74,7 @@ export default function DashboardPage() {
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
                   All Categories
                 </h2>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-400 bg-gray-100/80 dark:bg-gray-800/50 px-3 py-1 rounded-full">
                   {toolCategories.length} categories &middot; {toolCategories.reduce((a, c) => a + c.tools.length, 0)} tools
                 </span>
               </div>

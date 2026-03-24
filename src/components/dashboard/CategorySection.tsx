@@ -23,15 +23,15 @@ export default function CategorySection({
   const betaCount = category.tools.filter((t) => t.status === "beta").length;
 
   return (
-    <section id={category.id} className="mb-8 scroll-mt-24">
+    <section id={category.id} className="mb-10 scroll-mt-24">
       {/* Category header */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-3 group mb-4"
+        className="w-full flex items-center gap-3 group mb-5 p-3 -mx-3 rounded-2xl hover:bg-white/40 dark:hover:bg-gray-900/30 transition-colors duration-200"
       >
         {/* Category icon */}
         <div
-          className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${iconBg}`}
+          className={`size-11 rounded-xl flex items-center justify-center shrink-0 ${iconBg} transition-transform duration-200 group-hover:scale-105`}
         >
           <Icon className={`size-5 ${category.textColorClass}`} />
         </div>

@@ -61,11 +61,13 @@ export default function MobileBottomNav({
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 lg:hidden z-30 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800"
+      className="fixed bottom-0 left-0 right-0 lg:hidden z-30
+        bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl
+        border-t border-gray-200/60 dark:border-white/[0.06]"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       aria-label="Mobile navigation"
     >
-      <div className="flex items-center justify-around h-14">
+      <div className="flex items-center justify-around h-16">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = tab.id === activeTab;
@@ -107,8 +109,8 @@ export default function MobileBottomNav({
               aria-label={tab.label}
             >
               {tab.id === "create" ? (
-                <div className="size-10 rounded-full bg-primary-500 flex items-center justify-center -mt-3 shadow-lg shadow-primary-500/30">
-                  <Icon className="size-5 text-gray-950" />
+                <div className="size-12 rounded-2xl bg-linear-to-br from-primary-500 to-secondary-500 flex items-center justify-center -mt-5 shadow-xl shadow-primary-500/30 ring-4 ring-white dark:ring-gray-950">
+                  <Icon className="size-5 text-white" />
                 </div>
               ) : (
                 <Icon className="size-5" />
