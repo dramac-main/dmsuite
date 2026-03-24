@@ -83,7 +83,7 @@ d:\dramac-ai-suite\
 - ❌ No `tailwind.config.js` — use `@theme inline {}` in CSS
 - ❌ No `bg-gradient-to-br` — use `bg-linear-to-br`
 - ❌ No arbitrary `w-[4.5rem]` when tokens exist — use `w-18`
-- ✅ Custom colors: `--color-primary-500: #84cc16` in `@theme inline`
+- ✅ Custom colors: `--color-primary-500: #8b5cf6` in `@theme inline`
 - ✅ All standard utilities still work as expected
 
 ### React 19
@@ -98,10 +98,11 @@ d:\dramac-ai-suite\
 
 ### Color Token System
 ```
-Primary:    #84cc16 (lime-500) — brand accent
-Secondary:  #06b6d4 (cyan/teal) — secondary accent
-Gray:       Slate scale #f8fafc → #0a0f1a
+Primary:    #8b5cf6 (violet-500) — brand accent (Electric Violet)
+Secondary:  #06b6d4 (cyan/teal) — secondary accent (Neon Cyan)
+Gray:       Cosmic Slate scale #f8fafc → #070b14
 Semantic:   success (#22c55e), error (#ef4444), warning (#f59e0b), info (#3b82f6)
+Design:     Glassmorphism — backdrop-blur + white/opacity borders + translucent surfaces
 ```
 
 ## Dependencies (Production)

@@ -1,5 +1,15 @@
 # DMSuite — System Patterns
 
+## Visual Design Language: Glassmorphism + Electric Violet
+- **Primary:** Electric Violet `#8b5cf6` (50-950 scale)
+- **Secondary:** Neon Cyan `#06b6d4`
+- **Neutrals:** Cosmic Slate (`#070b14` darkest)
+- **Surface pattern:** `bg-white/60 dark:bg-gray-900/40 backdrop-blur-lg` + `border-white/10 dark:border-white/[0.06]`
+- **Hover pattern:** `translate-y` lift + `shadow-xl` with primary glow
+- **Interactive reveals:** Slide-up elements on hover (arrows, "Launch" labels)
+- **Ambient bg:** Fixed gradient orbs behind content (blurred, low opacity)
+- **Single source:** globals.css (`@theme inline`) → tokens.ts → design-system.ts `brand` object
+
 ## Architecture: Hub-and-Spoke
 
 ```
