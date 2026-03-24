@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { CREDIT_PACKS } from "@/data/credit-costs";
 import { requestToPay, isMtnConfigured } from "@/lib/mtn-momo";
 import { randomUUID } from "crypto";
@@ -31,6 +32,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Service role client to bypass RLS for payment inserts
+    const supabaseAdmin = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+
     const body = await request.json();
     const { packId, phoneNumber } = body as {
       packId: string;
@@ -59,8 +66,8 @@ export async function POST(request: Request) {
     const referenceId = randomUUID();
     const txRef = `mtn-${user.id.slice(0, 8)}-${Date.now()}`;
 
-    // Create pending payment record FIRST
-    const { error: dbError } = await supabase.from("payments").insert({
+    // Create pending payment record FIRST (service role bypasses RLS)
+    const { error: dbError } = await supabaseAdmin.from("payments").insert({
       user_id: user.id,
       flw_ref: txRef,
       flw_tx_id: referenceId, // Store MTN reference ID for status checks
@@ -92,7 +99,7 @@ export async function POST(request: Request) {
 
     if (!result.success) {
       // Mark payment as failed
-      await supabase
+      await supabaseAdmin
         .from("payments")
         .update({ status: "failed" })
         .eq("flw_ref", txRef);

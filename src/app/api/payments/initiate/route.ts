@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { CREDIT_PACKS } from "@/data/credit-costs";
 
 /* ── Credit Pack Definitions ───────────────────────────────── */
@@ -20,6 +21,12 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Service role client to bypass RLS for payment inserts
+    const supabaseAdmin = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
 
     const body = await request.json();
     const { packId, phoneNumber, provider } = body as {
@@ -59,8 +66,8 @@ export async function POST(request: Request) {
     // Create a unique transaction reference
     const txRef = `dms-${user.id.slice(0, 8)}-${Date.now()}`;
 
-    // Create pending payment record FIRST (before calling Flutterwave)
-    const { error: dbError } = await supabase.from("payments").insert({
+    // Create pending payment record FIRST (service role bypasses RLS)
+    const { error: dbError } = await supabaseAdmin.from("payments").insert({
       user_id: user.id,
       flw_ref: txRef,
       amount: pack.priceZMW,
@@ -111,7 +118,7 @@ export async function POST(request: Request) {
 
     if (flwData.status !== "success") {
       // Update payment as failed
-      await supabase
+      await supabaseAdmin
         .from("payments")
         .update({ status: "failed" })
         .eq("flw_ref", txRef);
