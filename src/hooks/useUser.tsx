@@ -26,8 +26,12 @@ interface UseUserReturn {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
+  /** True when bootstrap or profile fetch failed (timeout, network, etc.) */
+  error: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  /** Manually retry the entire auth + profile bootstrap */
+  retry: () => void;
 }
 
 const DEV_PROFILE: UserProfile = {
@@ -40,12 +44,28 @@ const DEV_PROFILE: UserProfile = {
   plan_expires_at: null,
 };
 
+/** Race a promise against a timeout. Rejects with "timeout" on expiry. */
+function withTimeout<T>(promise: PromiseLike<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("timeout")), ms);
+    Promise.resolve(promise).then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
 /* ── Context ────────────────────────────────────────────────── */
 
 const UserContext = createContext<UseUserReturn | null>(null);
 
 // Singleton supabase client — created once, reused everywhere
 const supabase = createClient();
+
+/** Bootstrap timeout — if auth + profile don't resolve in 10s, give up */
+const BOOTSTRAP_TIMEOUT_MS = 10_000;
+/** Individual fetch timeout — auth or profile query */
+const FETCH_TIMEOUT_MS = 8_000;
 
 /**
  * Single source of truth for user state. Mount once in layout.
@@ -60,30 +80,33 @@ export function UserProvider({ children }: { children: ReactNode }) {
     configured ? null : DEV_PROFILE
   );
   const [loading, setLoading] = useState(configured);
+  const [error, setError] = useState(false);
 
   // Stable refs
   const realtimeRef = useRef<RealtimeChannel | null>(null);
   const userIdRef = useRef<string | null>(null);
+  const cancelledRef = useRef(false);
+  const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
+  // Bump to re-run bootstrap
+  const [bootKey, setBootKey] = useState(0);
 
-  /* ── Auth bootstrap + listener (runs once, zero deps) ── */
+  /* ── Auth bootstrap + listener ── */
   useEffect(() => {
     if (!configured) return;
 
-    let cancelled = false;
+    cancelledRef.current = false;
+    setLoading(true);
+    setError(false);
 
-    // ── helpers scoped to this effect (no useCallback — no stale deps) ──
+    // ── helpers scoped to this effect ──
 
     const fetchProfile = async (userId: string) => {
-      try {
-        const { data } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", userId)
-          .single();
-        if (!cancelled && data) setProfile(data as UserProfile);
-      } catch {
-        // Profile fetch failed — non-fatal, user can still use the app
-      }
+      const res = await withTimeout(
+        supabase.from("profiles").select("*").eq("id", userId).single().then((r) => r),
+        FETCH_TIMEOUT_MS,
+      );
+      if (res.error) console.warn("[useUser] profile fetch error:", res.error.message);
+      if (!cancelledRef.current && res.data) setProfile(res.data as UserProfile);
     };
 
     const subscribeRealtime = (userId: string) => {
@@ -103,7 +126,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
             filter: `id=eq.${userId}`,
           },
           (payload) => {
-            if (!cancelled) {
+            if (!cancelledRef.current) {
               const newRow = payload.new as UserProfile;
               setProfile((prev) => (prev ? { ...prev, ...newRow } : newRow));
             }
@@ -120,35 +143,45 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // 1. Bootstrap — always sets loading=false via finally
+    // 1. Bootstrap with hard timeout
     const bootstrap = async () => {
       try {
         const {
           data: { user: currentUser },
-        } = await supabase.auth.getUser();
+        } = await withTimeout(supabase.auth.getUser(), FETCH_TIMEOUT_MS);
 
-        if (cancelled) return;
+        if (cancelledRef.current) return;
 
         if (currentUser) {
           setUser(currentUser);
           userIdRef.current = currentUser.id;
           await fetchProfile(currentUser.id);
-          if (!cancelled) subscribeRealtime(currentUser.id);
+          if (!cancelledRef.current) subscribeRealtime(currentUser.id);
         }
-      } catch {
-        // Auth check failed — user stays null, non-fatal
+      } catch (err) {
+        console.warn("[useUser] bootstrap failed:", (err as Error).message);
+        if (!cancelledRef.current) setError(true);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelledRef.current) setLoading(false);
       }
     };
 
-    bootstrap();
+    // Outer hard timeout — no matter what, stop loading after BOOTSTRAP_TIMEOUT_MS
+    const hardTimer = setTimeout(() => {
+      if (!cancelledRef.current) {
+        console.warn("[useUser] bootstrap hard timeout reached");
+        setLoading(false);
+        setError(true);
+      }
+    }, BOOTSTRAP_TIMEOUT_MS);
+
+    bootstrap().finally(() => clearTimeout(hardTimer));
 
     // 2. Auth state listener — only handles sign-in / sign-out
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (cancelled) return;
+      if (cancelledRef.current) return;
 
       // Skip events that don't change auth state
       if (event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") return;
@@ -158,42 +191,49 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       if (currentUser) {
         userIdRef.current = currentUser.id;
-        await fetchProfile(currentUser.id);
-        if (!cancelled) subscribeRealtime(currentUser.id);
+        try {
+          await fetchProfile(currentUser.id);
+        } catch (err) {
+          console.warn("[useUser] profile fetch on auth change failed:", (err as Error).message);
+        }
+        if (!cancelledRef.current) subscribeRealtime(currentUser.id);
       } else {
         userIdRef.current = null;
         setProfile(null);
         unsubscribeRealtime();
       }
     });
+    subscriptionRef.current = subscription;
 
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
+      clearTimeout(hardTimer);
       subscription.unsubscribe();
       unsubscribeRealtime();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [configured]);
+  }, [configured, bootKey]);
+
+  /* ── retry (bump bootKey to re-run bootstrap) ────────── */
+  const retry = useCallback(() => setBootKey((k) => k + 1), []);
 
   /* ── refreshProfile (stable — no deps on callbacks) ─── */
   const refreshProfile = useCallback(async () => {
     const uid = userIdRef.current;
     if (!uid) return;
     try {
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", uid)
-        .single();
-      if (data) setProfile(data as UserProfile);
-    } catch {
-      // Non-fatal
+      const res = await withTimeout(
+        supabase.from("profiles").select("*").eq("id", uid).single().then((r) => r),
+        FETCH_TIMEOUT_MS,
+      );
+      if (res.data) setProfile(res.data as UserProfile);
+    } catch (err) {
+      console.warn("[useUser] refreshProfile failed:", (err as Error).message);
     }
   }, []);
 
   /* ── signOut ──────────────────────────────────────────── */
   const signOut = useCallback(async () => {
-    // Clear all persisted localStorage stores (privacy)
     const storeKeys = [
       "dmsuite-chat",
       "dmsuite-chiko",
@@ -208,11 +248,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       "dmsuite-revision-history",
     ];
     storeKeys.forEach((key) => {
-      try {
-        localStorage.removeItem(key);
-      } catch {
-        /* SSR safety */
-      }
+      try { localStorage.removeItem(key); } catch { /* SSR safety */ }
     });
 
     if (realtimeRef.current) {
@@ -223,9 +259,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
+    setError(false);
   }, []);
 
-  const value: UseUserReturn = { user, profile, loading, signOut, refreshProfile };
+  const value: UseUserReturn = { user, profile, loading, error, signOut, refreshProfile, retry };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
@@ -235,13 +272,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
 export function useUser(): UseUserReturn {
   const ctx = useContext(UserContext);
   if (!ctx) {
-    // Fallback for components rendered outside the provider (e.g. dev mode)
     return {
       user: null,
       profile: isSupabaseConfigured() ? null : DEV_PROFILE,
       loading: false,
+      error: false,
       signOut: async () => {},
       refreshProfile: async () => {},
+      retry: () => {},
     };
   }
   return ctx;
