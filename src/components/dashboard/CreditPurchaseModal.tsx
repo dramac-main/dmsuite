@@ -49,14 +49,18 @@ export default function CreditPurchaseModal({ onClose }: { onClose: () => void }
 
     setStep("processing");
 
+    // Route to the correct API based on provider
+    const isMtn = provider === "mtn_momo";
+    const endpoint = isMtn ? "/api/payments/mtn/initiate" : "/api/payments/initiate";
+
     try {
-      const res = await fetch("/api/payments/initiate", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           packId: selectedPack.id,
           phoneNumber: cleanPhone.startsWith("+") ? cleanPhone : `+${cleanPhone}`,
-          provider,
+          ...(isMtn ? {} : { provider }),
         }),
       });
 
@@ -69,18 +73,22 @@ export default function CreditPurchaseModal({ onClose }: { onClose: () => void }
       }
 
       setPaymentRef(data.paymentRef);
-      // Start polling for payment status
-      pollPaymentStatus(data.paymentRef);
+      // Poll the correct status endpoint based on provider
+      pollPaymentStatus(data.paymentRef, isMtn);
     } catch {
       setError("Network error — please try again");
       setStep("enter-phone");
     }
   };
 
-  const pollPaymentStatus = async (ref: string) => {
+  const pollPaymentStatus = async (ref: string, isMtn: boolean) => {
     setPolling(true);
     let attempts = 0;
     const maxAttempts = 60; // 5 minutes (every 5 seconds)
+
+    const statusEndpoint = isMtn
+      ? `/api/payments/mtn/status?ref=${encodeURIComponent(ref)}`
+      : `/api/payments/status?ref=${encodeURIComponent(ref)}`;
 
     const poll = async () => {
       if (attempts >= maxAttempts) {
@@ -91,7 +99,7 @@ export default function CreditPurchaseModal({ onClose }: { onClose: () => void }
       }
 
       try {
-        const res = await fetch(`/api/payments/status?ref=${encodeURIComponent(ref)}`);
+        const res = await fetch(statusEndpoint);
         const data = await res.json();
 
         if (data.status === "successful") {
