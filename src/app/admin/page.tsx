@@ -416,8 +416,7 @@ function PaymentsSection() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState("");
-  const [refunding, setRefunding] = useState<string | null>(null);
-  const [refundReason, setRefundReason] = useState("");
+  const [refundTarget, setRefundTarget] = useState<Payment | null>(null);
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fetchPayments = useCallback(async () => {
@@ -437,33 +436,6 @@ function PaymentsSection() {
   useEffect(() => {
     fetchPayments();
   }, [fetchPayments]);
-
-  const handleRefund = async (paymentId: string) => {
-    if (!refundReason.trim()) return;
-    setMsg(null);
-
-    try {
-      const res = await fetch("/api/admin/payments/refund", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentId, reason: refundReason.trim() }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMsg({ type: "error", text: data.error ?? "Refund failed" });
-        return;
-      }
-
-      setMsg({ type: "success", text: `Refunded ${data.creditsRefunded} credits. New balance: ${data.newBalance}` });
-      setRefunding(null);
-      setRefundReason("");
-      fetchPayments();
-    } catch {
-      setMsg({ type: "error", text: "Network error" });
-    }
-  };
 
   const statusColors: Record<string, string> = {
     successful: "bg-success/10 text-success",
@@ -547,41 +519,12 @@ function PaymentsSection() {
                 </td>
                 <td className="px-4 py-3 text-right">
                   {p.status === "successful" && (
-                    <>
-                      {refunding === p.id ? (
-                        <div className="flex items-center gap-2 justify-end">
-                          <input
-                            type="text"
-                            value={refundReason}
-                            onChange={(e) => setRefundReason(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleRefund(p.id)}
-                            placeholder="Reason…"
-                            className="w-40 rounded border border-gray-300 dark:border-gray-600 bg-transparent px-2 py-1 text-xs outline-none"
-                            autoFocus
-                          />
-                          <button
-                            onClick={() => handleRefund(p.id)}
-                            disabled={!refundReason.trim()}
-                            className="rounded bg-error px-2 py-1 text-xs font-medium text-white hover:bg-error/90 disabled:opacity-50"
-                          >
-                            Confirm
-                          </button>
-                          <button
-                            onClick={() => { setRefunding(null); setRefundReason(""); }}
-                            className="text-xs text-gray-400 hover:text-gray-600"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setRefunding(p.id)}
-                          className="rounded-lg border border-error/30 px-3 py-1.5 text-xs font-medium text-error hover:bg-error/10 transition-colors"
-                        >
-                          Refund
-                        </button>
-                      )}
-                    </>
+                    <button
+                      onClick={() => setRefundTarget(p)}
+                      className="rounded-lg border border-error/30 px-3 py-1.5 text-xs font-medium text-error hover:bg-error/10 transition-colors"
+                    >
+                      Refund
+                    </button>
                   )}
                   {p.status === "refunded" && (
                     <span className="text-xs text-gray-400">Refunded</span>
@@ -598,6 +541,179 @@ function PaymentsSection() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Refund confirmation modal */}
+      {refundTarget && (
+        <RefundModal
+          payment={refundTarget}
+          onClose={() => setRefundTarget(null)}
+          onDone={(resultMsg) => {
+            setRefundTarget(null);
+            setMsg(resultMsg);
+            fetchPayments();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   Refund Confirmation Modal
+   ============================================================ */
+
+function RefundModal({
+  payment,
+  onClose,
+  onDone,
+}: {
+  payment: Payment;
+  onClose: () => void;
+  onDone: (msg: { type: "success" | "error"; text: string }) => void;
+}) {
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isAutoRefund = !["mtn_momo", "airtel_money"].includes(payment.payment_method);
+  const methodLabel = payment.payment_method.replace(/_/g, " ");
+
+  const handleRefund = async () => {
+    if (!reason.trim()) return;
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/admin/payments/refund", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentId: payment.id, reason: reason.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error ?? "Refund failed");
+        setSubmitting(false);
+        return;
+      }
+
+      const parts: string[] = [];
+      parts.push(`Refund processed. ${data.creditsDeducted} credits deducted (balance: ${data.newBalance}).`);
+      if (data.moneyRefunded) {
+        parts.push("Money refund initiated automatically via Flutterwave.");
+      } else {
+        parts.push(data.refundNote || "Manual money transfer required.");
+      }
+
+      onDone({ type: "success", text: parts.join(" ") });
+    } catch {
+      setError("Network error");
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          Confirm Payment Refund
+        </h3>
+
+        {/* Payment summary */}
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4 mb-4 space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">User</span>
+            <span className="text-gray-900 dark:text-white font-medium">{payment.user_name}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">Amount</span>
+            <span className="text-gray-900 dark:text-white font-medium">K{payment.amount} {payment.currency}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">Credits purchased</span>
+            <span className="text-gray-900 dark:text-white font-medium">{payment.credits_purchased}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">Method</span>
+            <span className="text-gray-900 dark:text-white font-medium capitalize">{methodLabel}</span>
+          </div>
+          {payment.phone_number && (
+            <div className="flex justify-between">
+              <span className="text-gray-500 dark:text-gray-400">Phone</span>
+              <span className="text-gray-900 dark:text-white font-medium">{payment.phone_number}</span>
+            </div>
+          )}
+          <div className="flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">Date</span>
+            <span className="text-gray-900 dark:text-white font-medium">{new Date(payment.created_at).toLocaleString()}</span>
+          </div>
+        </div>
+
+        {/* What will happen */}
+        <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 mb-4 text-sm space-y-2">
+          <p className="font-semibold text-warning">What will happen:</p>
+          <ul className="list-disc pl-5 space-y-1 text-gray-700 dark:text-gray-300">
+            <li>
+              <strong>{payment.credits_purchased} credits</strong> will be{" "}
+              <strong className="text-error">deducted</strong> from the user&apos;s balance
+              (capped at their available credits)
+            </li>
+            <li>Payment status will be marked as <strong>refunded</strong></li>
+            {isAutoRefund ? (
+              <li>
+                <strong className="text-success">Automated refund:</strong>{" "}
+                K{payment.amount} will be refunded automatically via Flutterwave
+              </li>
+            ) : (
+              <li>
+                <strong className="text-warning">Manual action required:</strong>{" "}
+                You must manually transfer K{payment.amount} back to{" "}
+                {payment.phone_number || "the user"} via {methodLabel}.
+                The system cannot auto-refund {methodLabel} payments.
+              </li>
+            )}
+          </ul>
+        </div>
+
+        {error && (
+          <div className="rounded-lg bg-error/10 border border-error/20 px-4 py-3 text-sm text-error mb-4">
+            {error}
+          </div>
+        )}
+
+        {/* Reason */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Reason for refund <span className="text-error">*</span>
+          </label>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="e.g. Customer complaint — payment went through but credits didn't appear"
+            rows={2}
+            className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-900 dark:text-white outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 resize-none"
+          />
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleRefund}
+            disabled={submitting || !reason.trim()}
+            className="flex-1 rounded-lg bg-error px-4 py-2.5 text-sm font-semibold text-white hover:bg-error/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {submitting ? "Processing Refund…" : `Refund K${payment.amount}`}
+          </button>
+          <button
+            onClick={onClose}
+            disabled={submitting}
+            className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   );
