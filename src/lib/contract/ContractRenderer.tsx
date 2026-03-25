@@ -1,5 +1,5 @@
-// =============================================================================
-// DMSuite — Contract Document Renderer (Paginated)
+﻿// =============================================================================
+// DMSuite â€” Contract Document Renderer (Paginated)
 // Real measurement-based pagination. Each page is a discrete <div> with exact
 // dimensions for print-perfect output. Content blocks are measured in a hidden
 // container, bin-packed into pages, and rendered with per-page decorations &
@@ -17,7 +17,7 @@ import {
 } from "@/lib/contract/schema";
 
 // ---------------------------------------------------------------------------
-// Constants — exported for workspace scroll calculations
+// Constants â€” exported for workspace scroll calculations
 // ---------------------------------------------------------------------------
 
 export const PAGE_PX: Record<string, { w: number; h: number }> = {
@@ -66,7 +66,7 @@ function contrastText(bgHex: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Fillable Line — renders a dotted line for pen fill-in when fields are empty
+// Fillable Line â€” renders a dotted line for pen fill-in when fields are empty
 // ---------------------------------------------------------------------------
 
 function FillableLine({ width = "200px", label }: { width?: string; label?: string }) {
@@ -81,7 +81,7 @@ function FillableLine({ width = "200px", label }: { width?: string; label?: stri
 }
 
 // ---------------------------------------------------------------------------
-// Cover Page — Multiple design variants
+// Cover Page â€” Multiple design variants
 // ---------------------------------------------------------------------------
 
 function formatCoverDate(dateStr: string): React.ReactNode {
@@ -124,284 +124,284 @@ interface CoverProps {
   fontStyles: React.CSSProperties;
 }
 
-// ── Classic Legal (Zambian standard: title + parties + date) ────────────────
-function CoverClassic({ form, config, fonts, tpl, accent, pageW, pageH, fontStyles }: CoverProps) {
-  const lineW = "260px";
+
+// â”€â”€ Classic Legal (Ref: Tenancy Agreement â€” pure formal legal standard) â”€â”€â”€â”€â”€
+function CoverClassic({ form, config, fonts, pageW, pageH, fontStyles }: CoverProps) {
+  const title = form.documentInfo.title || config.defaultTitle;
+  const lineW = "280px";
   return (
     <div data-contract-page="cover" style={{ width: `${pageW}px`, height: `${pageH}px`, position: "relative", overflow: "hidden", backgroundColor: "#ffffff", ...fontStyles, pageBreakAfter: "always" }}>
-      <PageBorder tpl={tpl} accent={accent} />
-      <div style={{ position: "absolute", top: `${MARGIN}px`, left: `${MARGIN}px`, right: `${MARGIN}px`, bottom: `${MARGIN}px`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", paddingTop: "60px", zIndex: 1 }}>
-        <h1 style={{ fontSize: "28px", fontWeight: 800, fontFamily: `'${fonts.heading}', serif`, letterSpacing: "2px", textTransform: "uppercase", color: "#1a1a1a", margin: "0 0 48px 0", textAlign: "center", lineHeight: 1.3 }}>
-          {form.documentInfo.title || config.defaultTitle}
+      <div style={{ position: "absolute", top: `${MARGIN + 30}px`, left: `${MARGIN + 20}px`, right: `${MARGIN + 20}px`, bottom: `${MARGIN}px`, display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+        {/* Title â€” top, bold, left-aligned, all caps */}
+        <h1 style={{ fontSize: "22px", fontWeight: 700, fontFamily: `'${fonts.heading}', serif`, letterSpacing: "3px", textTransform: "uppercase", color: "#000000", margin: "0 0 56px 0", textAlign: "left", width: "100%", lineHeight: 1.6 }}>
+          {title}
         </h1>
-        <div style={{ fontSize: "16px", fontWeight: 700, color: "#1a1a1a", letterSpacing: "2px", marginBottom: "36px" }}>BETWEEN</div>
-        <div style={{ textAlign: "center", marginBottom: "8px" }}>
-          <div style={{ width: lineW, borderBottom: "2px solid #1a1a1a", marginBottom: "6px", paddingBottom: "4px", fontSize: "16px", fontWeight: 600, color: "#1a1a1a", textAlign: "center", minHeight: "24px" }}>{form.partyA.name || ""}</div>
-          <div style={{ fontSize: "14px", fontWeight: 700, color: "#1a1a1a", letterSpacing: "1px" }}>({(form.partyA.role || config.partyARole).toUpperCase()})</div>
+        {/* BETWEEN */}
+        <div style={{ fontSize: "15px", fontWeight: 700, color: "#000000", letterSpacing: "3px", marginBottom: "36px", textAlign: "center", width: "100%" }}>BETWEEN</div>
+        {/* Party A underline + role */}
+        <div style={{ textAlign: "center", width: "100%", marginBottom: "6px" }}>
+          <div style={{ width: lineW, borderBottom: "2px solid #000000", paddingBottom: "6px", fontSize: "15px", fontWeight: 500, color: "#000000", textAlign: "center", minHeight: "22px", margin: "0 auto" }}>{form.partyA.name || ""}</div>
         </div>
-        <div style={{ fontSize: "16px", fontWeight: 700, color: "#1a1a1a", letterSpacing: "2px", margin: "28px 0" }}>AND</div>
-        <div style={{ textAlign: "center", marginBottom: "8px" }}>
-          <div style={{ width: lineW, borderBottom: "2px solid #1a1a1a", marginBottom: "6px", paddingBottom: "4px", fontSize: "16px", fontWeight: 600, color: "#1a1a1a", textAlign: "center", minHeight: "24px" }}>{form.partyB.name || ""}</div>
-          <div style={{ fontSize: "14px", fontWeight: 700, color: "#1a1a1a", letterSpacing: "1px" }}>({(form.partyB.role || config.partyBRole).toUpperCase()})</div>
+        <div style={{ fontSize: "14px", fontWeight: 700, color: "#000000", letterSpacing: "1px", marginBottom: "32px", textAlign: "center", width: "100%" }}>
+          ({(form.partyA.role || config.partyARole).toUpperCase()})
         </div>
+        {/* AND */}
+        <div style={{ fontSize: "15px", fontWeight: 700, color: "#000000", letterSpacing: "3px", marginBottom: "36px", textAlign: "center", width: "100%" }}>AND</div>
+        {/* Party B underline + role */}
+        <div style={{ textAlign: "center", width: "100%", marginBottom: "6px" }}>
+          <div style={{ width: lineW, borderBottom: "2px solid #000000", paddingBottom: "6px", fontSize: "15px", fontWeight: 500, color: "#000000", textAlign: "center", minHeight: "22px", margin: "0 auto" }}>{form.partyB.name || ""}</div>
+        </div>
+        <div style={{ fontSize: "14px", fontWeight: 700, color: "#000000", letterSpacing: "1px", textAlign: "center", width: "100%" }}>
+          ({(form.partyB.role || config.partyBRole).toUpperCase()})
+        </div>
+        {/* Flexible spacer pushes date to bottom */}
         <div style={{ flex: "1 1 auto" }} />
+        {/* Date at bottom-left â€” formal legal style */}
         {form.documentInfo.effectiveDate && (
-          <div style={{ fontSize: "16px", fontWeight: 700, color: "#1a1a1a", letterSpacing: "1px", marginBottom: "80px" }}>{formatCoverDate(form.documentInfo.effectiveDate)}</div>
-        )}
-        {form.documentInfo.referenceNumber && (
-          <div style={{ fontSize: "11px", color: "#94a3b8", letterSpacing: "1px" }}>Ref: {form.documentInfo.referenceNumber}</div>
+          <div style={{ fontSize: "15px", fontWeight: 700, color: "#000000", letterSpacing: "1px", marginBottom: "80px" }}>
+            {formatCoverDate(form.documentInfo.effectiveDate)}
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-// ── Corporate (accent header bar + logo placeholder + centered body) ─────────
+// â”€â”€ Corporate (Ref: Vendor Agreement â€” gray bg, border, footer bar) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function CoverCorporate({ form, config, fonts, accent, pageW, pageH, fontStyles }: CoverProps) {
-  const onDark = contrastText(accent);
-  const barH = Math.round(pageH * 0.12);
+  const title = form.documentInfo.title || config.defaultTitle;
+  const footerH = Math.round(pageH * 0.068);
+  const inset = 18;
+  const onAccent = contrastText(accent);
+  // Split title: first word bold, rest lighter weight
+  const words = title.split(/\s+/);
+  const firstWord = words[0] || title;
+  const restWords = words.slice(1).join(" ");
   return (
-    <div data-contract-page="cover" style={{ width: `${pageW}px`, height: `${pageH}px`, position: "relative", overflow: "hidden", backgroundColor: "#ffffff", ...fontStyles, pageBreakAfter: "always" }}>
-      {/* Top accent bar */}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: `${barH}px`, backgroundColor: accent, zIndex: 1 }} />
-      {/* Bottom thin accent rule */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "6px", backgroundColor: accent, opacity: 0.6, zIndex: 1 }} />
-      {/* Logo placeholder inside bar */}
-      <div style={{ position: "absolute", top: `${Math.round(barH * 0.18)}px`, right: `${MARGIN}px`, zIndex: 2, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
-        <div style={{ width: "48px", height: "48px", border: `2px solid ${onDark}60`, borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontSize: "10px", color: onDark, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "center", lineHeight: 1.2, whiteSpace: "pre" }}>{"Your\nLogo"}</span>
+    <div data-contract-page="cover" style={{ width: `${pageW}px`, height: `${pageH}px`, position: "relative", overflow: "hidden", backgroundColor: "#ededed", ...fontStyles, pageBreakAfter: "always" }}>
+      {/* Inner thin border frame */}
+      <div style={{ position: "absolute", top: `${inset}px`, left: `${inset}px`, right: `${inset}px`, bottom: `${inset}px`, border: "1px solid #c0c0c0", pointerEvents: "none", zIndex: 1 }} />
+      {/* Logo box â€” top center */}
+      <div style={{ position: "absolute", top: `${Math.round(pageH * 0.055)}px`, left: "50%", transform: "translateX(-50%)", zIndex: 2 }}>
+        <div style={{ width: "64px", height: "64px", border: "1.5px solid #999999", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontSize: "11px", color: "#666666", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "center", lineHeight: 1.3, fontWeight: 700, whiteSpace: "pre" }}>{"YOUR\nLOGO"}</span>
         </div>
       </div>
-      {/* Contract type pill in bar */}
-      <div style={{ position: "absolute", top: `${Math.round(barH * 0.35)}px`, left: `${MARGIN}px`, zIndex: 2 }}>
-        <span style={{ fontSize: "11px", color: onDark, opacity: 0.75, letterSpacing: "2px", textTransform: "uppercase", fontWeight: 600 }}>Official Agreement</span>
-      </div>
-      {/* Main body */}
-      <div style={{ position: "absolute", top: `${barH + 60}px`, left: `${MARGIN}px`, right: `${MARGIN}px`, bottom: `${MARGIN + 30}px`, display: "flex", flexDirection: "column", alignItems: "flex-start", zIndex: 1 }}>
-        <h1 style={{ fontSize: "32px", fontWeight: 800, fontFamily: `'${fonts.heading}', serif`, color: "#111827", margin: "0 0 12px 0", lineHeight: 1.2, textTransform: "uppercase", letterSpacing: "1.5px" }}>
-          {form.documentInfo.title || config.defaultTitle}
-        </h1>
-        {/* Accent rule under title */}
-        <div style={{ width: "60px", height: "4px", backgroundColor: accent, borderRadius: "2px", marginBottom: "40px" }} />
-        {/* Parties */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
-          <div>
-            <div style={{ fontSize: "10px", color: "#94a3b8", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "4px" }}>{(form.partyA.role || config.partyARole).toUpperCase()}</div>
-            <div style={{ fontSize: "16px", fontWeight: 700, color: "#111827", borderBottom: `2px solid ${accent}`, paddingBottom: "6px", minWidth: "220px", display: "inline-block" }}>{form.partyA.name || "—"}</div>
+      {/* Title block â€” centered vertically */}
+      <div style={{ position: "absolute", top: "50%", left: `${MARGIN}px`, right: `${MARGIN}px`, transform: "translateY(-55%)", zIndex: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <div style={{ textAlign: "center", marginBottom: "20px" }}>
+          <div style={{ fontSize: "34px", fontWeight: 900, fontFamily: `'${fonts.heading}', serif`, color: "#1a1a1a", letterSpacing: "2px", textTransform: "uppercase", lineHeight: 1.25 }}>
+            {firstWord}
           </div>
-          <div style={{ fontSize: "13px", color: "#6b7280", fontWeight: 600, letterSpacing: "2px" }}>AND</div>
-          <div>
-            <div style={{ fontSize: "10px", color: "#94a3b8", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "4px" }}>{(form.partyB.role || config.partyBRole).toUpperCase()}</div>
-            <div style={{ fontSize: "16px", fontWeight: 700, color: "#111827", borderBottom: `2px solid ${accent}`, paddingBottom: "6px", minWidth: "220px", display: "inline-block" }}>{form.partyB.name || "—"}</div>
-          </div>
-        </div>
-        <div style={{ flex: "1 1 auto" }} />
-        {/* Date row */}
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          {form.documentInfo.effectiveDate && (
-            <div style={{ fontSize: "13px", color: "#374151", fontWeight: 600 }}>{formatCoverDate(form.documentInfo.effectiveDate)}</div>
-          )}
-          {form.documentInfo.referenceNumber && (
-            <div style={{ fontSize: "11px", color: "#94a3b8", letterSpacing: "1px", borderLeft: "1px solid #e5e7eb", paddingLeft: "16px" }}>Ref: {form.documentInfo.referenceNumber}</div>
+          {restWords && (
+            <div style={{ fontSize: "30px", fontWeight: 400, fontFamily: `'${fonts.heading}', serif`, color: "#1a1a1a", letterSpacing: "3px", textTransform: "uppercase", lineHeight: 1.4 }}>
+              {restWords}
+            </div>
           )}
         </div>
+        {/* Horizontal rule under title */}
+        <div style={{ width: "260px", height: "1.5px", backgroundColor: "#333333" }} />
       </div>
+      {/* Dark footer bar */}
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: `${footerH}px`, backgroundColor: "#333333", zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 24px" }}>
+        <span style={{ fontSize: "11px", color: "#d4d4d4", letterSpacing: "1px", textAlign: "center" }}>
+          {[form.partyA.name, form.partyB.name, form.documentInfo.referenceNumber ? `Ref: ${form.documentInfo.referenceNumber}` : null].filter(Boolean).join("  |  ")}
+        </span>
+      </div>
+      {/* Corner accent squares */}
+      <div style={{ position: "absolute", bottom: `${footerH + 8}px`, left: `${inset + 8}px`, width: "10px", height: "10px", backgroundColor: "#888888", zIndex: 2 }} />
+      <div style={{ position: "absolute", bottom: `${footerH + 8}px`, right: `${inset + 8}px`, width: "10px", height: "10px", backgroundColor: "#888888", zIndex: 2 }} />
     </div>
   );
 }
 
-// ── Dark Executive (full-bleed dark + accent highlights) ────────────────────
+// â”€â”€ Dark Executive (Ref: LLC Membership â€” navy bg, accent title, edge stripes) â”€
 function CoverDarkExecutive({ form, config, fonts, accent, pageW, pageH, fontStyles }: CoverProps) {
-  const bg = "#0f172a";
+  const title = form.documentInfo.title || config.defaultTitle;
+  const bg = "#1b2a4a";
+  const onAccent = contrastText(accent);
+  const stripeR = 24;
+  const stripeW = 2.5;
+  const stripeGap = 7;
   return (
     <div data-contract-page="cover" style={{ width: `${pageW}px`, height: `${pageH}px`, position: "relative", overflow: "hidden", backgroundColor: bg, ...fontStyles, pageBreakAfter: "always" }}>
-      {/* Subtle diagonal accent shape */}
-      <div style={{ position: "absolute", top: 0, right: 0, width: `${Math.round(pageW * 0.35)}px`, height: `${Math.round(pageH * 0.45)}px`, backgroundColor: accent, opacity: 0.12, clipPath: "polygon(100% 0, 100% 100%, 0 0)", zIndex: 0 }} />
-      {/* Top left accent pill */}
-      <div style={{ position: "absolute", top: `${MARGIN}px`, left: `${MARGIN}px`, height: "4px", width: "48px", backgroundColor: accent, borderRadius: "2px", zIndex: 1 }} />
-      {/* Body */}
-      <div style={{ position: "absolute", top: `${MARGIN + 32}px`, left: `${MARGIN}px`, right: `${MARGIN}px`, bottom: `${MARGIN}px`, display: "flex", flexDirection: "column", zIndex: 1 }}>
-        {/* Agreement label */}
-        <div style={{ fontSize: "11px", color: accent, letterSpacing: "3px", textTransform: "uppercase", fontWeight: 600, marginBottom: "24px" }}>Formal Agreement</div>
-        {/* Title */}
-        <h1 style={{ fontSize: "34px", fontWeight: 900, fontFamily: `'${fonts.heading}', serif`, color: "#f8fafc", margin: "0 0 24px 0", lineHeight: 1.15, textTransform: "uppercase", letterSpacing: "1px" }}>
-          {form.documentInfo.title || config.defaultTitle}
-        </h1>
-        {/* Divider */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "40px" }}>
-          <div style={{ height: "1px", width: "40px", backgroundColor: accent }} />
-          <div style={{ height: "1px", flex: 1, backgroundColor: "#ffffff20" }} />
-        </div>
-        {/* Parties */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          <div>
-            <div style={{ fontSize: "10px", color: accent, letterSpacing: "2px", textTransform: "uppercase", marginBottom: "6px", fontWeight: 600 }}>{(form.partyA.role || config.partyARole).toUpperCase()}</div>
-            <div style={{ fontSize: "15px", fontWeight: 700, color: "#f1f5f9" }}>{form.partyA.name || "—"}</div>
-          </div>
-          <div style={{ fontSize: "12px", color: "#475569", fontWeight: 600, letterSpacing: "3px" }}>AND</div>
-          <div>
-            <div style={{ fontSize: "10px", color: accent, letterSpacing: "2px", textTransform: "uppercase", marginBottom: "6px", fontWeight: 600 }}>{(form.partyB.role || config.partyBRole).toUpperCase()}</div>
-            <div style={{ fontSize: "15px", fontWeight: 700, color: "#f1f5f9" }}>{form.partyB.name || "—"}</div>
-          </div>
-        </div>
-        <div style={{ flex: "1 1 auto" }} />
-        {/* Bottom row */}
-        <div style={{ borderTop: "1px solid #ffffff15", paddingTop: "20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          {form.documentInfo.effectiveDate ? (
-            <div style={{ fontSize: "12px", color: "#94a3b8" }}>{formatCoverDate(form.documentInfo.effectiveDate)}</div>
-          ) : <div />}
-          {form.documentInfo.referenceNumber && (
-            <div style={{ fontSize: "11px", color: "#475569" }}>Ref: {form.documentInfo.referenceNumber}</div>
-          )}
+      {/* Logo box â€” top left with accent border */}
+      <div style={{ position: "absolute", top: `${MARGIN + 10}px`, left: `${MARGIN}px`, zIndex: 2 }}>
+        <div style={{ width: "56px", height: "56px", border: `1.5px solid ${accent}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontSize: "10px", color: accent, textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "center", lineHeight: 1.3, fontWeight: 700, whiteSpace: "pre" }}>{"YOUR\nLOGO"}</span>
         </div>
       </div>
-    </div>
-  );
-}
-
-// ── Accent Split (left accent panel, right white body) ───────────────────────
-function CoverAccentSplit({ form, config, fonts, accent, pageW, pageH, fontStyles }: CoverProps) {
-  const panelW = Math.round(pageW * 0.38);
-  const onAccent = contrastText(accent);
-  return (
-    <div data-contract-page="cover" style={{ width: `${pageW}px`, height: `${pageH}px`, position: "relative", overflow: "hidden", backgroundColor: "#ffffff", ...fontStyles, pageBreakAfter: "always" }}>
-      {/* Left accent panel */}
-      <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: `${panelW}px`, backgroundColor: accent, zIndex: 1 }}>
-        <div style={{ position: "absolute", bottom: `${MARGIN}px`, left: `${MARGIN * 0.7}px`, right: `${MARGIN * 0.7}px` }}>
-          {/* Role labels on panel */}
-          <div style={{ fontSize: "10px", color: `${onAccent}80`, letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px", fontWeight: 600 }}>Between</div>
-          <div style={{ fontSize: "12px", fontWeight: 700, color: onAccent, marginBottom: "4px" }}>{form.partyA.name || (form.partyA.role || config.partyARole)}</div>
-          <div style={{ fontSize: "10px", color: `${onAccent}70`, letterSpacing: "1px", textTransform: "uppercase", marginBottom: "12px" }}>{(form.partyA.role || config.partyARole).toUpperCase()}</div>
-          <div style={{ height: "1px", backgroundColor: `${onAccent}30`, marginBottom: "12px" }} />
-          <div style={{ fontSize: "10px", color: `${onAccent}80`, letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px", fontWeight: 600 }}>And</div>
-          <div style={{ fontSize: "12px", fontWeight: 700, color: onAccent, marginBottom: "4px" }}>{form.partyB.name || (form.partyB.role || config.partyBRole)}</div>
-          <div style={{ fontSize: "10px", color: `${onAccent}70`, letterSpacing: "1px", textTransform: "uppercase" }}>{(form.partyB.role || config.partyBRole).toUpperCase()}</div>
+      {/* Title â€” large, left-aligned, accent-colored, positioned at ~38% */}
+      <div style={{ position: "absolute", top: `${Math.round(pageH * 0.38)}px`, left: `${MARGIN}px`, right: `${MARGIN + 60}px`, zIndex: 2 }}>
+        <h1 style={{ fontSize: "42px", fontWeight: 800, fontFamily: `'${fonts.heading}', serif`, color: accent, margin: "0 0 24px 0", lineHeight: 1.12, textTransform: "uppercase", letterSpacing: "1px" }}>
+          {title}
+        </h1>
+        {/* Two-part rule: short solid accent + longer faded */}
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <div style={{ height: "3px", width: "48px", backgroundColor: accent }} />
+          <div style={{ height: "1.5px", width: "180px", backgroundColor: "#ffffff25" }} />
         </div>
       </div>
-      {/* Right white area */}
-      <div style={{ position: "absolute", top: 0, left: `${panelW}px`, right: 0, bottom: 0, zIndex: 1, display: "flex", flexDirection: "column", padding: `${MARGIN * 1.2}px ${MARGIN}px ${MARGIN}px ${MARGIN}px` }}>
-        {/* Type label */}
-        <div style={{ fontSize: "10px", color: "#94a3b8", letterSpacing: "3px", textTransform: "uppercase", marginBottom: "20px", fontWeight: 600 }}>Legal Document</div>
-        {/* Title */}
-        <h1 style={{ fontSize: "26px", fontWeight: 800, fontFamily: `'${fonts.heading}', serif`, color: "#111827", margin: "0 0 20px 0", lineHeight: 1.25, textTransform: "uppercase", letterSpacing: "1px" }}>
-          {form.documentInfo.title || config.defaultTitle}
-        </h1>
-        {/* Accent divider */}
-        <div style={{ width: "40px", height: "3px", backgroundColor: accent, borderRadius: "2px", marginBottom: "0" }} />
-        <div style={{ flex: "1 1 auto" }} />
-        {/* Date block */}
+      {/* Bottom-left: party/contact info */}
+      <div style={{ position: "absolute", bottom: `${MARGIN + 20}px`, left: `${MARGIN}px`, zIndex: 2, display: "flex", flexDirection: "column", gap: "4px" }}>
+        {form.partyA.name && <div style={{ fontSize: "12px", color: "#94a3b8", lineHeight: 1.6 }}>{form.partyA.name}</div>}
+        {form.partyB.name && <div style={{ fontSize: "12px", color: "#94a3b8", lineHeight: 1.6 }}>{form.partyB.name}</div>}
         {form.documentInfo.effectiveDate && (
-          <div style={{ marginBottom: "16px" }}>
-            <div style={{ fontSize: "10px", color: "#94a3b8", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "6px" }}>Date</div>
-            <div style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}>{formatCoverDate(form.documentInfo.effectiveDate)}</div>
+          <div style={{ fontSize: "12px", color: "#94a3b8", lineHeight: 1.6 }}>
+            {new Date(form.documentInfo.effectiveDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
           </div>
         )}
-        {form.documentInfo.referenceNumber && (
-          <div style={{ fontSize: "11px", color: "#94a3b8" }}>Ref: {form.documentInfo.referenceNumber}</div>
-        )}
+        {form.documentInfo.referenceNumber && <div style={{ fontSize: "12px", color: "#94a3b8", lineHeight: 1.6 }}>Ref: {form.documentInfo.referenceNumber}</div>}
       </div>
-    </div>
-  );
-}
-
-// ── Bold Frame (thick border frame, centered, accent accents) ────────────────
-function CoverBoldFrame({ form, config, fonts, accent, pageW, pageH, fontStyles }: CoverProps) {
-  const borderW = 12;
-  const innerPad = MARGIN;
-  return (
-    <div data-contract-page="cover" style={{ width: `${pageW}px`, height: `${pageH}px`, position: "relative", overflow: "hidden", backgroundColor: "#ffffff", ...fontStyles, pageBreakAfter: "always" }}>
-      {/* Outer frame */}
-      <div style={{ position: "absolute", inset: `${borderW}px`, border: `2px solid ${accent}`, zIndex: 1, pointerEvents: "none" }} />
-      {/* Inner corner accents */}
-      {[
-        { top: borderW + 6, left: borderW + 6 },
-        { top: borderW + 6, right: borderW + 6 },
-        { bottom: borderW + 6, left: borderW + 6 },
-        { bottom: borderW + 6, right: borderW + 6 },
-      ].map((pos, i) => (
-        <div key={i} style={{ position: "absolute", width: "16px", height: "16px", ...pos, border: `3px solid ${accent}`, zIndex: 2, pointerEvents: "none" }} />
+      {/* Right edge: 3 thin vertical accent stripes */}
+      {[0, 1, 2].map((i) => (
+        <div key={i} style={{ position: "absolute", top: `${MARGIN}px`, bottom: `${MARGIN}px`, right: `${stripeR + i * (stripeW + stripeGap)}px`, width: `${stripeW}px`, backgroundColor: accent, zIndex: 1 }} />
       ))}
-      {/* Content */}
-      <div style={{ position: "absolute", top: `${borderW + innerPad + 20}px`, left: `${borderW + innerPad}px`, right: `${borderW + innerPad}px`, bottom: `${borderW + innerPad}px`, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", zIndex: 1 }}>
-        {/* Top decorative rule */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "40px", width: "100%", justifyContent: "center" }}>
-          <div style={{ flex: 1, height: "1px", backgroundColor: `${accent}40` }} />
-          <div style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: accent }} />
-          <div style={{ flex: 1, height: "1px", backgroundColor: `${accent}40` }} />
-        </div>
-        {/* Title */}
-        <h1 style={{ fontSize: "30px", fontWeight: 900, fontFamily: `'${fonts.heading}', serif`, color: "#111827", margin: "0 0 40px 0", lineHeight: 1.2, textTransform: "uppercase", letterSpacing: "2px" }}>
-          {form.documentInfo.title || config.defaultTitle}
-        </h1>
-        {/* Parties */}
-        <div style={{ marginBottom: "12px", width: "100%" }}>
-          <div style={{ width: "240px", borderBottom: `1.5px solid ${accent}`, paddingBottom: "6px", fontSize: "15px", fontWeight: 600, color: "#111827", margin: "0 auto 4px" }}>{form.partyA.name || ""}</div>
-          <div style={{ fontSize: "12px", color: "#6b7280", letterSpacing: "1.5px", textTransform: "uppercase" }}>({(form.partyA.role || config.partyARole).toUpperCase()})</div>
-        </div>
-        <div style={{ fontSize: "14px", fontWeight: 700, color: "#374151", letterSpacing: "2px", margin: "16px 0" }}>AND</div>
-        <div style={{ marginBottom: "12px", width: "100%" }}>
-          <div style={{ width: "240px", borderBottom: `1.5px solid ${accent}`, paddingBottom: "6px", fontSize: "15px", fontWeight: 600, color: "#111827", margin: "0 auto 4px" }}>{form.partyB.name || ""}</div>
-          <div style={{ fontSize: "12px", color: "#6b7280", letterSpacing: "1.5px", textTransform: "uppercase" }}>({(form.partyB.role || config.partyBRole).toUpperCase()})</div>
-        </div>
-        <div style={{ flex: "1 1 auto" }} />
-        {/* Bottom decorative rule */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "20px", width: "100%", justifyContent: "center" }}>
-          <div style={{ flex: 1, height: "1px", backgroundColor: `${accent}40` }} />
-          <div style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: accent }} />
-          <div style={{ flex: 1, height: "1px", backgroundColor: `${accent}40` }} />
-        </div>
-        {form.documentInfo.effectiveDate && (
-          <div style={{ fontSize: "13px", fontWeight: 700, color: "#374151", letterSpacing: "1px", marginBottom: "8px" }}>{formatCoverDate(form.documentInfo.effectiveDate)}</div>
-        )}
-        {form.documentInfo.referenceNumber && (
-          <div style={{ fontSize: "11px", color: "#94a3b8", letterSpacing: "1px" }}>Ref: {form.documentInfo.referenceNumber}</div>
-        )}
-      </div>
     </div>
   );
 }
 
-// ── Minimal Line (clean typography + single accent underline) ────────────────
-function CoverMinimalLine({ form, config, fonts, accent, pageW, pageH, fontStyles }: CoverProps) {
+// â”€â”€ Accent Split (Ref: Office Lease â€” white left, navy right, highlight bar) â”€â”€
+function CoverAccentSplit({ form, config, fonts, accent, pageW, pageH, fontStyles }: CoverProps) {
+  const title = form.documentInfo.title || config.defaultTitle;
+  const panelW = Math.round(pageW * 0.32);
+  const navy = "#1b2a4a";
+  const onAccent = contrastText(accent);
+  // Split title: extract trailing keyword for highlight bar
+  const titleWords = title.split(/\s+/);
+  const lastWord = titleWords[titleWords.length - 1]?.toLowerCase() ?? "";
+  const isKeyword = ["agreement", "contract", "nda", "mou"].includes(lastWord);
+  const mainTitle = isKeyword && titleWords.length > 1 ? titleWords.slice(0, -1).join(" ") : title;
+  const highlightWord = isKeyword ? titleWords[titleWords.length - 1].toUpperCase() : "AGREEMENT";
   return (
-    <div data-contract-page="cover" style={{ width: `${pageW}px`, height: `${pageH}px`, position: "relative", overflow: "hidden", backgroundColor: "#fafafa", ...fontStyles, pageBreakAfter: "always" }}>
-      {/* Vertical accent strip on left */}
-      <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: "4px", backgroundColor: accent, zIndex: 1 }} />
-      {/* Content */}
-      <div style={{ position: "absolute", top: `${MARGIN * 1.5}px`, left: `${MARGIN + 24}px`, right: `${MARGIN}px`, bottom: `${MARGIN}px`, display: "flex", flexDirection: "column", zIndex: 1 }}>
-        {/* Year/type label */}
-        <div style={{ fontSize: "11px", color: "#94a3b8", letterSpacing: "3px", textTransform: "uppercase", marginBottom: "32px", fontWeight: 500 }}>Legal Agreement</div>
-        {/* Title */}
-        <h1 style={{ fontSize: "36px", fontWeight: 300, fontFamily: `'${fonts.heading}', serif`, color: "#111827", margin: "0 0 16px 0", lineHeight: 1.15, letterSpacing: "0.5px" }}>
-          {form.documentInfo.title || config.defaultTitle}
-        </h1>
-        {/* Accent rule */}
-        <div style={{ width: "48px", height: "2px", backgroundColor: accent, marginBottom: "48px" }} />
-        {/* Parties — label/value pairs */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          <div style={{ display: "flex", gap: "16px", alignItems: "baseline" }}>
-            <div style={{ fontSize: "10px", color: "#94a3b8", letterSpacing: "2px", textTransform: "uppercase", minWidth: "80px", flexShrink: 0 }}>{(form.partyA.role || config.partyARole).replace(/-/g, " ").toUpperCase()}</div>
-            <div style={{ fontSize: "15px", fontWeight: 600, color: "#111827", borderBottom: "1px solid #e5e7eb", flex: 1, paddingBottom: "4px" }}>{form.partyA.name || ""}</div>
-          </div>
-          <div style={{ display: "flex", gap: "16px", alignItems: "baseline" }}>
-            <div style={{ fontSize: "10px", color: "#94a3b8", letterSpacing: "2px", textTransform: "uppercase", minWidth: "80px", flexShrink: 0 }}>{(form.partyB.role || config.partyBRole).replace(/-/g, " ").toUpperCase()}</div>
-            <div style={{ fontSize: "15px", fontWeight: 600, color: "#111827", borderBottom: "1px solid #e5e7eb", flex: 1, paddingBottom: "4px" }}>{form.partyB.name || ""}</div>
-          </div>
+    <div data-contract-page="cover" style={{ width: `${pageW}px`, height: `${pageH}px`, position: "relative", overflow: "hidden", backgroundColor: "#ffffff", ...fontStyles, pageBreakAfter: "always" }}>
+      {/* Left white panel */}
+      <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: `${panelW}px`, backgroundColor: "#ffffff", zIndex: 0 }} />
+      {/* Right dark navy panel */}
+      <div style={{ position: "absolute", top: 0, left: `${panelW}px`, right: 0, bottom: 0, backgroundColor: navy, zIndex: 0 }} />
+      {/* Logo box â€” top-left of the navy section */}
+      <div style={{ position: "absolute", top: `${MARGIN + 10}px`, left: `${panelW + Math.round(MARGIN * 0.6)}px`, zIndex: 2 }}>
+        <div style={{ width: "50px", height: "50px", backgroundColor: "#111827", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontSize: "10px", color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "center", lineHeight: 1.3, fontWeight: 700, whiteSpace: "pre" }}>{"YOUR\nLOGO"}</span>
         </div>
-        <div style={{ flex: "1 1 auto" }} />
-        {/* Date + ref */}
-        {form.documentInfo.effectiveDate && (
-          <div style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px" }}>{formatCoverDate(form.documentInfo.effectiveDate)}</div>
+      </div>
+      {/* Contact info below logo */}
+      <div style={{ position: "absolute", top: `${MARGIN + 70}px`, left: `${panelW + Math.round(MARGIN * 0.6)}px`, zIndex: 2, display: "flex", flexDirection: "column", gap: "3px" }}>
+        {form.partyA.name && <div style={{ fontSize: "10px", color: "#94a3b8", letterSpacing: "0.5px" }}>{form.partyA.name}</div>}
+        {form.partyB.name && <div style={{ fontSize: "10px", color: "#94a3b8", letterSpacing: "0.5px" }}>{form.partyB.name}</div>}
+        {form.documentInfo.referenceNumber && <div style={{ fontSize: "10px", color: "#94a3b8", letterSpacing: "0.5px" }}>Ref: {form.documentInfo.referenceNumber}</div>}
+      </div>
+      {/* Title area â€” mid-page, across both panels */}
+      <div style={{ position: "absolute", top: `${Math.round(pageH * 0.45)}px`, left: `${MARGIN}px`, right: `${MARGIN}px`, zIndex: 3 }}>
+        {/* Main title text */}
+        <div style={{ fontSize: "36px", fontWeight: 700, fontFamily: `'${fonts.heading}', serif`, color: "#ffffff", lineHeight: 1.15, marginBottom: "6px", fontStyle: "italic" }}>
+          {mainTitle}
+        </div>
+        {/* Highlight bar behind keyword */}
+        <div style={{ display: "inline-block", backgroundColor: accent, padding: "8px 20px" }}>
+          <span style={{ fontSize: "26px", fontWeight: 800, fontFamily: `'${fonts.heading}', serif`, color: onAccent, letterSpacing: "5px", textTransform: "uppercase" }}>
+            {highlightWord}
+          </span>
+        </div>
+      </div>
+      {/* Date at bottom-left â€” across white area */}
+      {form.documentInfo.effectiveDate && (
+        <div style={{ position: "absolute", bottom: `${MARGIN + 20}px`, left: `${MARGIN}px`, zIndex: 3 }}>
+          <div style={{ fontSize: "11px", color: "#6b7280", fontWeight: 500 }}>{formatCoverDate(form.documentInfo.effectiveDate)}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// â”€â”€ Bold Frame (Ref: Consulting Agreement â€” thick accent frame, logo top-right)
+function CoverBoldFrame({ form, config, fonts, accent, pageW, pageH, fontStyles }: CoverProps) {
+  const title = form.documentInfo.title || config.defaultTitle;
+  const onAccent = contrastText(accent);
+  const frameInset = 26;
+  const frameW = 5;
+  return (
+    <div data-contract-page="cover" style={{ width: `${pageW}px`, height: `${pageH}px`, position: "relative", overflow: "hidden", backgroundColor: "#ffffff", ...fontStyles, pageBreakAfter: "always" }}>
+      {/* Thick accent-colored frame border */}
+      <div style={{ position: "absolute", top: `${frameInset}px`, left: `${frameInset}px`, right: `${frameInset}px`, bottom: `${frameInset}px`, border: `${frameW}px solid ${accent}`, pointerEvents: "none", zIndex: 1 }} />
+      {/* Logo box â€” top right inside frame, accent-colored */}
+      <div style={{ position: "absolute", top: `${frameInset + 30}px`, right: `${frameInset + 30}px`, zIndex: 2, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
+        <div style={{ width: "48px", height: "48px", backgroundColor: accent, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontSize: "10px", color: onAccent, fontWeight: 700, textAlign: "center", lineHeight: 1.3, whiteSpace: "pre" }}>{"YOUR\nLOGO"}</span>
+        </div>
+        {form.partyA.name && (
+          <div style={{ fontSize: "10px", color: "#6b7280", letterSpacing: "1.5px" }}>{form.partyA.name}</div>
         )}
-        {form.documentInfo.referenceNumber && (
-          <div style={{ fontSize: "11px", color: "#94a3b8", letterSpacing: "1px" }}>Ref: {form.documentInfo.referenceNumber}</div>
+      </div>
+      {/* Title â€” left-aligned in accent color, positioned ~40% down */}
+      <div style={{ position: "absolute", top: `${Math.round(pageH * 0.38)}px`, left: `${frameInset + MARGIN}px`, right: `${frameInset + MARGIN}px`, zIndex: 2 }}>
+        <h1 style={{ fontSize: "36px", fontWeight: 700, fontFamily: `'${fonts.heading}', serif`, color: accent, margin: "0 0 36px 0", lineHeight: 1.2, textTransform: "uppercase", letterSpacing: "1px" }}>
+          {title}
+        </h1>
+      </div>
+      {/* Contact/party info â€” centered below title */}
+      <div style={{ position: "absolute", top: `${Math.round(pageH * 0.56)}px`, left: `${frameInset + MARGIN}px`, right: `${frameInset + MARGIN}px`, zIndex: 2, display: "flex", flexDirection: "column", alignItems: "center", gap: "5px" }}>
+        {form.partyB.name && <div style={{ fontSize: "12px", color: "#6b7280", letterSpacing: "2px" }}>{form.partyB.name}</div>}
+        {form.documentInfo.effectiveDate && (
+          <div style={{ fontSize: "12px", color: "#6b7280", letterSpacing: "2px" }}>
+            {new Date(form.documentInfo.effectiveDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+          </div>
+        )}
+        {form.documentInfo.referenceNumber && <div style={{ fontSize: "12px", color: "#6b7280", letterSpacing: "2px" }}>Ref: {form.documentInfo.referenceNumber}</div>}
+      </div>
+    </div>
+  );
+}
+
+// â”€â”€ Minimal Line (Ref: Contract Agreement â€” left strip, logo right, bold title)
+function CoverMinimalLine({ form, config, fonts, accent, pageW, pageH, fontStyles }: CoverProps) {
+  const title = form.documentInfo.title || config.defaultTitle;
+  return (
+    <div data-contract-page="cover" style={{ width: `${pageW}px`, height: `${pageH}px`, position: "relative", overflow: "hidden", backgroundColor: "#ffffff", ...fontStyles, pageBreakAfter: "always" }}>
+      {/* Left accent strip â€” dual-tone: accent top, dark bottom */}
+      <div style={{ position: "absolute", top: 0, left: 0, bottom: `${Math.round(pageH * 0.30)}px`, width: "10px", backgroundColor: accent, opacity: 0.75, zIndex: 1 }} />
+      <div style={{ position: "absolute", top: `${Math.round(pageH * 0.70)}px`, left: 0, bottom: 0, width: "10px", backgroundColor: "#1e2d4f", zIndex: 1 }} />
+      {/* Logo box â€” top right, dark square */}
+      <div style={{ position: "absolute", top: `${MARGIN + 10}px`, right: `${MARGIN}px`, zIndex: 2, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
+        <div style={{ width: "48px", height: "48px", backgroundColor: "#1e2d4f", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontSize: "10px", color: "#ffffff", fontWeight: 700, textAlign: "center", lineHeight: 1.3, whiteSpace: "pre" }}>{"YOUR\nLOGO"}</span>
+        </div>
+      </div>
+      {/* Thin horizontal rule â€” upper area */}
+      <div style={{ position: "absolute", top: `${MARGIN + 80}px`, left: `${MARGIN + 24}px`, right: `${MARGIN + 140}px`, height: "1.5px", backgroundColor: "#333333", zIndex: 2 }} />
+      {/* Title â€” large bold dark text, left-aligned */}
+      <div style={{ position: "absolute", top: `${Math.round(pageH * 0.40)}px`, left: `${MARGIN + 24}px`, right: `${MARGIN}px`, zIndex: 2 }}>
+        <h1 style={{ fontSize: "38px", fontWeight: 800, fontFamily: `'${fonts.heading}', serif`, color: "#1e2d4f", margin: 0, lineHeight: 1.15, textTransform: "uppercase", letterSpacing: "1px" }}>
+          {title}
+        </h1>
+      </div>
+      {/* Bottom-left: party info with accent underlines */}
+      <div style={{ position: "absolute", bottom: `${MARGIN + 20}px`, left: `${MARGIN + 24}px`, zIndex: 2, display: "flex", flexDirection: "column", gap: "6px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ fontSize: "11px", color: "#4b5563", fontWeight: 500 }}>
+            {[form.partyA.name, form.partyB.name].filter(Boolean).join("  |  ")}
+          </span>
+          <div style={{ height: "1.5px", width: "60px", backgroundColor: accent }} />
+        </div>
+        {(form.documentInfo.effectiveDate || form.documentInfo.referenceNumber) && (
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontSize: "11px", color: "#4b5563", fontWeight: 500 }}>
+              {[
+                form.documentInfo.effectiveDate
+                  ? new Date(form.documentInfo.effectiveDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+                  : null,
+                form.documentInfo.referenceNumber ? `Ref: ${form.documentInfo.referenceNumber}` : null,
+              ].filter(Boolean).join("  |  ")}
+            </span>
+            <div style={{ height: "1.5px", width: "40px", backgroundColor: accent }} />
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-// ── Cover Page dispatcher ────────────────────────────────────────────────────
+// â”€â”€ Cover Page dispatcher â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function CoverPage(props: CoverProps) {
   const design: CoverDesignId = props.form.style.coverDesign ?? "classic";
   switch (design) {
@@ -596,7 +596,7 @@ function PageFooter({
         </div>
       )}
 
-      {/* Legal disclaimer — last page only */}
+      {/* Legal disclaimer â€” last page only */}
       {isLastPage && (
         <div
           style={{
@@ -640,7 +640,7 @@ function buildContentBlocks(
   const blocks: ContentBlock[] = [];
   const enabledClauses = form.clauses.filter((c) => c.enabled);
 
-  // ─── CONFIDENTIAL BANNER ───
+  // â”€â”€â”€ CONFIDENTIAL BANNER â”€â”€â”€
   if (form.documentInfo.showConfidentialBanner) {
     blocks.push({
       id: "confidential",
@@ -667,7 +667,7 @@ function buildContentBlocks(
     });
   }
 
-  // ─── HEADER ───
+  // â”€â”€â”€ HEADER â”€â”€â”€
   const headerElement = (() => {
     switch (form.style.headerStyle) {
       case "banner":
@@ -747,7 +747,7 @@ function buildContentBlocks(
 
   const fillable = form.style.fillableFields;
 
-  // ─── PARTIES ───
+  // â”€â”€â”€ PARTIES â”€â”€â”€
   blocks.push({
     id: "parties",
     section: "parties",
@@ -805,14 +805,14 @@ function buildContentBlocks(
     ),
   });
 
-  // ─── DIVIDER ───
+  // â”€â”€â”€ DIVIDER â”€â”€â”€
   blocks.push({
     id: "divider",
     section: "parties",
     element: <div style={{ height: "1px", backgroundColor: `${accent}20`, marginBottom: "16px" }} />,
   });
 
-  // ─── PREAMBLE ───
+  // â”€â”€â”€ PREAMBLE â”€â”€â”€
   if (form.documentInfo.preambleText) {
     blocks.push({
       id: "preamble",
@@ -830,7 +830,7 @@ function buildContentBlocks(
     });
   }
 
-  // ─── TABLE OF CONTENTS ───
+  // â”€â”€â”€ TABLE OF CONTENTS â”€â”€â”€
   if (form.documentInfo.showTableOfContents && enabledClauses.length > 0) {
     blocks.push({
       id: "toc",
@@ -855,7 +855,7 @@ function buildContentBlocks(
     });
   }
 
-  // ─── CLAUSES (one block per clause) ───
+  // â”€â”€â”€ CLAUSES (one block per clause) â”€â”€â”€
   enabledClauses.forEach((clause, i) => {
     blocks.push({
       id: `clause-${clause.id}`,
@@ -882,7 +882,7 @@ function buildContentBlocks(
     });
   });
 
-  // ─── SIGNATURES (new page only when clauses precede) ───
+  // â”€â”€â”€ SIGNATURES (new page only when clauses precede) â”€â”€â”€
   blocks.push({
     id: "signatures",
     section: "signatures",
@@ -943,7 +943,7 @@ function buildContentBlocks(
     ),
   });
 
-  // ─── WITNESSES ───
+  // â”€â”€â”€ WITNESSES â”€â”€â”€
   if (form.signatureConfig.showWitness) {
     blocks.push({
       id: "witnesses",
@@ -975,7 +975,7 @@ function buildContentBlocks(
 }
 
 // ---------------------------------------------------------------------------
-// Pagination algorithm — greedy bin-packing of blocks into pages
+// Pagination algorithm â€” greedy bin-packing of blocks into pages
 // ---------------------------------------------------------------------------
 
 function paginateBlocks(
@@ -992,7 +992,7 @@ function paginateBlocks(
     const raw = heights.get(block.id) ?? 0;
     const h = raw + SAFETY_PX; // sub-pixel safety
 
-    // Zero-height blocks (decorative dividers etc.) — always add to current page
+    // Zero-height blocks (decorative dividers etc.) â€” always add to current page
     if (raw <= 0) {
       pages[pages.length - 1].push(block.id);
       continue;
@@ -1013,7 +1013,7 @@ function paginateBlocks(
       pages.push([block.id]);
       remaining = usableH - h;
     } else {
-      // Block taller than a full page — give it its own page
+      // Block taller than a full page â€” give it its own page
       if (pages[pages.length - 1].length > 0) {
         pages.push([]);
       }
@@ -1162,7 +1162,7 @@ export default function ContractRenderer({
       {/* Google Fonts */}
       <link rel="stylesheet" href={fontUrl} />
 
-      {/* Hidden measurement container — exact content width, BFC-isolated blocks */}
+      {/* Hidden measurement container â€” exact content width, BFC-isolated blocks */}
       <div
         ref={measureRef}
         data-ct-measure
@@ -1239,7 +1239,7 @@ export default function ContractRenderer({
                 zIndex: 1,
               }}
             >
-              {/* Block content — no overflow:hidden so slight mismatch bleeds gracefully */}
+              {/* Block content â€” no overflow:hidden so slight mismatch bleeds gracefully */}
               <div style={{ flex: "1 1 auto", minHeight: 0 }}>
                 {pageBlockIds.map((id) => {
                   const block = blockMap.get(id);

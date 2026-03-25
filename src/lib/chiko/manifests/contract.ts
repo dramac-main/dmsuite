@@ -406,7 +406,7 @@ export function createContractManifest(options?: ContractManifestOptions): Chiko
             coverDesign: {
               type: "string",
               enum: ["none", "classic", "corporate", "dark-executive", "accent-split", "bold-frame", "minimal-line"],
-              description: "Cover page design style. 'none' = no cover. 'classic' = Zambian legal standard (title + parties + date). 'corporate' = accent header bar with logo area. 'dark-executive' = full-bleed dark background. 'accent-split' = two-tone split panel. 'bold-frame' = thick bordered frame. 'minimal-line' = clean typography with accent rule.",
+              description: "Cover page design style. 'none' = no cover. 'classic' = pure formal legal (BETWEEN/AND/DATED). 'corporate' = gray bg, centered logo, bold/light title, dark footer bar. 'dark-executive' = navy bg, accent-colored title, 3 vertical edge stripes. 'accent-split' = white/navy vertical split with accent highlight bar. 'bold-frame' = thick accent border frame, logo top-right, accent title. 'minimal-line' = left accent strip, dark title, clean layout.",
             },
             fillableFields: {
               type: "boolean",

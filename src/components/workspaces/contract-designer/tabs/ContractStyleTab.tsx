@@ -242,63 +242,97 @@ export default function ContractStyleTab() {
                       </div>
                     </div>
                   )}
+                  {/* Classic: White, black text, formal BETWEEN/AND, date bottom */}
                   {design.preview === "classic" && (
-                    <>
-                      <div className="h-full flex flex-col items-center justify-center gap-1 px-2 py-1">
-                        <div style={{ height: "3px", width: "70%", backgroundColor: "#1a1a1a", borderRadius: "1px", marginBottom: "2px" }} />
-                        <div style={{ height: "2px", width: "30%", backgroundColor: "#94a3b8", borderRadius: "1px" }} />
-                        <div style={{ height: "1px", width: "40%", backgroundColor: "#e5e7eb", marginTop: "2px" }} />
-                        <div style={{ height: "2px", width: "30%", backgroundColor: "#94a3b8", borderRadius: "1px" }} />
-                      </div>
-                    </>
+                    <div style={{ height: "100%", padding: "5px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+                      <div style={{ height: "3px", width: "55%", backgroundColor: "#000000", borderRadius: "1px" }} />
+                      <div style={{ fontSize: "4px", color: "#000000", fontWeight: 700, lineHeight: 1, marginTop: "2px" }}>BETWEEN</div>
+                      <div style={{ width: "40%", height: "1px", borderBottom: "1px solid #000000" }} />
+                      <div style={{ fontSize: "4px", color: "#000000", fontWeight: 700, lineHeight: 1 }}>AND</div>
+                      <div style={{ width: "40%", height: "1px", borderBottom: "1px solid #000000" }} />
+                      <div style={{ flex: 1 }} />
+                      <div style={{ height: "2px", width: "45%", backgroundColor: "#000000", borderRadius: "1px", alignSelf: "flex-start" }} />
+                    </div>
                   )}
+                  {/* Corporate: Gray bg, inner border, logo top-center, title, dark footer bar */}
                   {design.preview === "corporate" && (
-                    <>
-                      <div style={{ height: "20%", backgroundColor: accent }} />
-                      <div className="px-2 py-1 flex flex-col gap-1">
-                        <div style={{ height: "3px", width: "65%", backgroundColor: "#111827", borderRadius: "1px" }} />
-                        <div style={{ height: "2px", width: "16px", backgroundColor: accent, borderRadius: "1px" }} />
-                        <div style={{ height: "2px", width: "50%", backgroundColor: "#e2e8f0", borderRadius: "1px", marginTop: "2px" }} />
-                        <div style={{ height: "2px", width: "40%", backgroundColor: "#e2e8f0", borderRadius: "1px" }} />
+                    <div style={{ height: "100%", backgroundColor: "#ededed", position: "relative" }}>
+                      <div style={{ position: "absolute", inset: "2px", border: "0.5px solid #c0c0c0", pointerEvents: "none" }} />
+                      <div style={{ position: "absolute", top: "4px", left: "50%", transform: "translateX(-50)", width: "8px", height: "8px", border: "0.5px solid #999" }} />
+                      <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -55%)", display: "flex", flexDirection: "column", alignItems: "center", gap: "1px" }}>
+                        <div style={{ height: "3px", width: "36px", backgroundColor: "#1a1a1a", borderRadius: "1px" }} />
+                        <div style={{ height: "2px", width: "28px", backgroundColor: "#888888", borderRadius: "1px" }} />
+                        <div style={{ width: "24px", height: "0.5px", backgroundColor: "#333", marginTop: "2px" }} />
                       </div>
-                    </>
+                      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "6px", backgroundColor: "#333333" }} />
+                      <div style={{ position: "absolute", bottom: "8px", left: "4px", width: "3px", height: "3px", backgroundColor: "#888" }} />
+                      <div style={{ position: "absolute", bottom: "8px", right: "4px", width: "3px", height: "3px", backgroundColor: "#888" }} />
+                    </div>
                   )}
+                  {/* Dark Executive: Navy bg, accent logo box top-left, accent title, 3 stripes right */}
                   {design.preview === "dark" && (
-                    <div style={{ backgroundColor: "#0f172a", height: "100%", padding: "6px 8px", display: "flex", flexDirection: "column", justifyContent: "center", gap: "3px" }}>
-                      <div style={{ height: "2px", width: "12px", backgroundColor: accent, borderRadius: "1px" }} />
-                      <div style={{ height: "3px", width: "65%", backgroundColor: "#f8fafc", borderRadius: "1px", marginTop: "2px" }} />
-                      <div style={{ height: "2px", width: "45%", backgroundColor: "#334155", borderRadius: "1px" }} />
-                      <div style={{ height: "2px", width: "55%", backgroundColor: "#1e293b", borderRadius: "1px", marginTop: "4px" }} />
+                    <div style={{ backgroundColor: "#1b2a4a", height: "100%", position: "relative", padding: "5px 8px" }}>
+                      <div style={{ width: "8px", height: "8px", border: `0.5px solid ${accent}`, marginBottom: "8px" }} />
+                      <div style={{ position: "absolute", top: "50%", left: "8px", transform: "translateY(-50%)" }}>
+                        <div style={{ height: "3px", width: "50px", backgroundColor: accent, borderRadius: "1px", marginBottom: "3px" }} />
+                        <div style={{ height: "2px", width: "38px", backgroundColor: accent, borderRadius: "1px", opacity: 0.7 }} />
+                        <div style={{ display: "flex", marginTop: "3px", gap: "0" }}>
+                          <div style={{ height: "1.5px", width: "8px", backgroundColor: accent }} />
+                          <div style={{ height: "0.5px", width: "20px", backgroundColor: "#ffffff25", marginTop: "0.5px" }} />
+                        </div>
+                      </div>
+                      <div style={{ position: "absolute", bottom: "5px", left: "8px", display: "flex", flexDirection: "column", gap: "1px" }}>
+                        <div style={{ height: "1.5px", width: "20px", backgroundColor: "#94a3b8", borderRadius: "1px" }} />
+                        <div style={{ height: "1.5px", width: "16px", backgroundColor: "#94a3b8", borderRadius: "1px" }} />
+                      </div>
+                      {[0, 1, 2].map((i) => (
+                        <div key={i} style={{ position: "absolute", top: "4px", bottom: "4px", right: `${4 + i * 3}px`, width: "1px", backgroundColor: accent }} />
+                      ))}
                     </div>
                   )}
+                  {/* Accent Split: White left ~32%, navy right ~68%, highlight bar */}
                   {design.preview === "split" && (
-                    <div style={{ height: "100%", display: "flex" }}>
-                      <div style={{ width: "38%", backgroundColor: accent, flexShrink: 0 }} />
-                      <div style={{ flex: 1, padding: "5px 6px", display: "flex", flexDirection: "column", justifyContent: "center", gap: "2px" }}>
-                        <div style={{ height: "3px", width: "80%", backgroundColor: "#111827", borderRadius: "1px" }} />
-                        <div style={{ height: "2px", width: "16px", backgroundColor: accent, borderRadius: "1px" }} />
-                        <div style={{ height: "2px", width: "60%", backgroundColor: "#e2e8f0", borderRadius: "1px", marginTop: "2px" }} />
+                    <div style={{ height: "100%", display: "flex", position: "relative" }}>
+                      <div style={{ width: "32%", backgroundColor: "#ffffff", flexShrink: 0 }} />
+                      <div style={{ flex: 1, backgroundColor: "#1b2a4a" }}>
+                        <div style={{ width: "6px", height: "6px", backgroundColor: "#111827", margin: "4px 0 0 4px" }} />
+                      </div>
+                      <div style={{ position: "absolute", top: "50%", left: "6px", transform: "translateY(-50%)" }}>
+                        <div style={{ height: "2.5px", width: "30px", backgroundColor: "#ffffff", borderRadius: "1px", marginBottom: "2px" }} />
+                        <div style={{ display: "inline-block", backgroundColor: accent, padding: "1.5px 4px" }}>
+                          <div style={{ height: "2px", width: "22px", backgroundColor: "#ffffff", borderRadius: "1px" }} />
+                        </div>
                       </div>
                     </div>
                   )}
+                  {/* Bold Frame: White bg, thick accent border, accent logo top-right, accent title */}
                   {design.preview === "frame" && (
                     <div style={{ height: "100%", position: "relative" }}>
-                      <div style={{ position: "absolute", inset: "4px", border: `1.5px solid ${accent}`, borderRadius: "1px" }} />
-                      <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px" }}>
-                        <div style={{ height: "3px", width: "60%", backgroundColor: "#111827", borderRadius: "1px" }} />
-                        <div style={{ height: "2px", width: "40%", backgroundColor: "#94a3b8", borderRadius: "1px" }} />
-                        <div style={{ height: "2px", width: "30%", backgroundColor: "#94a3b8", borderRadius: "1px" }} />
+                      <div style={{ position: "absolute", inset: "3px", border: `2px solid ${accent}` }} />
+                      <div style={{ position: "absolute", top: "6px", right: "6px", width: "7px", height: "7px", backgroundColor: accent }} />
+                      <div style={{ position: "absolute", top: "50%", left: "10px", transform: "translateY(-40%)", display: "flex", flexDirection: "column", gap: "2px" }}>
+                        <div style={{ height: "3px", width: "40px", backgroundColor: accent, borderRadius: "1px" }} />
+                        <div style={{ height: "2px", width: "32px", backgroundColor: accent, borderRadius: "1px", opacity: 0.7 }} />
+                      </div>
+                      <div style={{ position: "absolute", bottom: "8px", left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: "1px" }}>
+                        <div style={{ height: "1.5px", width: "20px", backgroundColor: "#d1d5db", borderRadius: "1px" }} />
                       </div>
                     </div>
                   )}
+                  {/* Minimal Line: Left dual-tone strip, dark logo top-right, bold dark title, accent rules bottom */}
                   {design.preview === "line" && (
-                    <div style={{ height: "100%", display: "flex" }}>
-                      <div style={{ width: "3px", backgroundColor: accent, flexShrink: 0 }} />
-                      <div style={{ flex: 1, padding: "5px 7px", display: "flex", flexDirection: "column", justifyContent: "center", gap: "3px" }}>
-                        <div style={{ height: "2px", width: "50%", backgroundColor: "#94a3b8", borderRadius: "1px" }} />
-                        <div style={{ height: "3px", width: "80%", backgroundColor: "#111827", borderRadius: "1px" }} />
-                        <div style={{ height: "2px", width: "16px", backgroundColor: accent, borderRadius: "1px" }} />
-                        <div style={{ height: "2px", width: "60%", backgroundColor: "#e2e8f0", borderRadius: "1px", marginTop: "2px" }} />
+                    <div style={{ height: "100%", position: "relative" }}>
+                      <div style={{ position: "absolute", top: 0, left: 0, bottom: "30%", width: "3px", backgroundColor: accent, opacity: 0.75 }} />
+                      <div style={{ position: "absolute", top: "70%", left: 0, bottom: 0, width: "3px", backgroundColor: "#1e2d4f" }} />
+                      <div style={{ position: "absolute", top: "4px", right: "5px", width: "7px", height: "7px", backgroundColor: "#1e2d4f" }} />
+                      <div style={{ position: "absolute", top: "15px", left: "8px", right: "30px", height: "0.5px", backgroundColor: "#333" }} />
+                      <div style={{ position: "absolute", top: "50%", left: "8px", transform: "translateY(-50%)" }}>
+                        <div style={{ height: "3px", width: "50px", backgroundColor: "#1e2d4f", borderRadius: "1px", marginBottom: "2px" }} />
+                        <div style={{ height: "2.5px", width: "40px", backgroundColor: "#1e2d4f", borderRadius: "1px" }} />
+                      </div>
+                      <div style={{ position: "absolute", bottom: "5px", left: "8px", display: "flex", alignItems: "center", gap: "2px" }}>
+                        <div style={{ height: "1.5px", width: "18px", backgroundColor: "#6b7280", borderRadius: "1px" }} />
+                        <div style={{ height: "1px", width: "10px", backgroundColor: accent }} />
                       </div>
                     </div>
                   )}

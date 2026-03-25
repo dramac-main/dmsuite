@@ -355,37 +355,37 @@ export const COVER_DESIGNS: CoverDesignConfig[] = [
   {
     id: "classic",
     name: "Classic Legal",
-    description: "Traditional Zambian legal standard",
+    description: "Pure formal legal: BETWEEN / AND / DATED",
     preview: "classic",
   },
   {
     id: "corporate",
     name: "Corporate",
-    description: "Accent header bar with logo area",
+    description: "Gray bg, logo, bold title, dark footer bar",
     preview: "corporate",
   },
   {
     id: "dark-executive",
     name: "Dark Executive",
-    description: "Bold full-bleed dark background",
+    description: "Navy bg, accent title, edge stripes",
     preview: "dark",
   },
   {
     id: "accent-split",
     name: "Accent Split",
-    description: "Two-tone split with accent panel",
+    description: "White/navy split with highlight bar",
     preview: "split",
   },
   {
     id: "bold-frame",
     name: "Bold Frame",
-    description: "Thick border frame with centered layout",
+    description: "Thick accent border frame, logo top-right",
     preview: "frame",
   },
   {
     id: "minimal-line",
     name: "Minimal Line",
-    description: "Clean typography with accent rule",
+    description: "Left accent strip, dark title, clean",
     preview: "line",
   },
 ];
