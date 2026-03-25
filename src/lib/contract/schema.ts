@@ -334,6 +334,7 @@ export const styleConfigSchema = z.object({
   headerStyle: z.enum(["banner", "centered", "left-aligned", "minimal"]).default("banner"),
   pageNumbering: z.boolean().default(true),
   pageNumberPosition: z.enum(["bottom-center", "bottom-right"]).default("bottom-center"),
+  showCoverPage: z.boolean().default(true),
 });
 
 export type StyleConfig = z.infer<typeof styleConfigSchema>;
@@ -2529,6 +2530,7 @@ export function createDefaultContractForm(contractType: ContractType = "service-
       headerStyle: "banner",
       pageNumbering: true,
       pageNumberPosition: "bottom-center",
+      showCoverPage: true,
     },
     printConfig: {
       pageSize: "a4",

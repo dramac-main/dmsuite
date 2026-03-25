@@ -66,6 +66,226 @@ function contrastText(bgHex: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Cover Page — Zambian legal standard: title, parties, date (no content)
+// ---------------------------------------------------------------------------
+
+function formatCoverDate(dateStr: string): React.ReactNode {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  const day = d.getDate();
+  const monthNames = [
+    "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
+    "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
+  ];
+  const month = monthNames[d.getMonth()];
+  const year = d.getFullYear();
+  const ordinal = (n: number) => {
+    if (n >= 11 && n <= 13) return "TH";
+    switch (n % 10) {
+      case 1: return "ST";
+      case 2: return "ND";
+      case 3: return "RD";
+      default: return "TH";
+    }
+  };
+  return (
+    <>
+      DATED THIS {day}
+      <sup style={{ fontSize: "0.6em" }}>{ordinal(day)}</sup>
+      {" "}DAY OF {month} {year}
+    </>
+  );
+}
+
+function CoverPage({
+  form,
+  config,
+  fonts,
+  tpl,
+  accent,
+  pageW,
+  pageH,
+  fontStyles,
+}: {
+  form: ContractFormData;
+  config: ContractTypeConfig;
+  fonts: { heading: string; body: string };
+  tpl: ContractTemplate;
+  accent: string;
+  pageW: number;
+  pageH: number;
+  fontStyles: React.CSSProperties;
+}) {
+  const lineW = "260px";
+  return (
+    <div
+      data-contract-page="cover"
+      style={{
+        width: `${pageW}px`,
+        height: `${pageH}px`,
+        position: "relative",
+        overflow: "hidden",
+        backgroundColor: "#ffffff",
+        ...fontStyles,
+        pageBreakAfter: "always",
+      }}
+    >
+      {/* Minimal decoration — only page border if template has one */}
+      <PageBorder tpl={tpl} accent={accent} />
+
+      <div
+        style={{
+          position: "absolute",
+          top: `${MARGIN}px`,
+          left: `${MARGIN}px`,
+          right: `${MARGIN}px`,
+          bottom: `${MARGIN}px`,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "flex-start",
+          paddingTop: "60px",
+          zIndex: 1,
+        }}
+      >
+        {/* Agreement Title */}
+        <h1
+          style={{
+            fontSize: "28px",
+            fontWeight: 800,
+            fontFamily: `'${fonts.heading}', serif`,
+            letterSpacing: "2px",
+            textTransform: "uppercase",
+            color: "#1a1a1a",
+            margin: "0 0 48px 0",
+            textAlign: "center",
+            lineHeight: 1.3,
+          }}
+        >
+          {form.documentInfo.title || config.defaultTitle}
+        </h1>
+
+        {/* BETWEEN */}
+        <div
+          style={{
+            fontSize: "16px",
+            fontWeight: 700,
+            color: "#1a1a1a",
+            letterSpacing: "2px",
+            marginBottom: "36px",
+          }}
+        >
+          BETWEEN
+        </div>
+
+        {/* Party A */}
+        <div style={{ textAlign: "center", marginBottom: "8px" }}>
+          <div
+            style={{
+              width: lineW,
+              borderBottom: "2px solid #1a1a1a",
+              marginBottom: "6px",
+              paddingBottom: "4px",
+              fontSize: "16px",
+              fontWeight: 600,
+              color: "#1a1a1a",
+              textAlign: "center",
+              minHeight: "24px",
+            }}
+          >
+            {form.partyA.name || ""}
+          </div>
+          <div
+            style={{
+              fontSize: "14px",
+              fontWeight: 700,
+              color: "#1a1a1a",
+              letterSpacing: "1px",
+            }}
+          >
+            ({(form.partyA.role || config.partyARole).toUpperCase()})
+          </div>
+        </div>
+
+        {/* AND */}
+        <div
+          style={{
+            fontSize: "16px",
+            fontWeight: 700,
+            color: "#1a1a1a",
+            letterSpacing: "2px",
+            margin: "28px 0",
+          }}
+        >
+          AND
+        </div>
+
+        {/* Party B */}
+        <div style={{ textAlign: "center", marginBottom: "8px" }}>
+          <div
+            style={{
+              width: lineW,
+              borderBottom: "2px solid #1a1a1a",
+              marginBottom: "6px",
+              paddingBottom: "4px",
+              fontSize: "16px",
+              fontWeight: 600,
+              color: "#1a1a1a",
+              textAlign: "center",
+              minHeight: "24px",
+            }}
+          >
+            {form.partyB.name || ""}
+          </div>
+          <div
+            style={{
+              fontSize: "14px",
+              fontWeight: 700,
+              color: "#1a1a1a",
+              letterSpacing: "1px",
+            }}
+          >
+            ({(form.partyB.role || config.partyBRole).toUpperCase()})
+          </div>
+        </div>
+
+        {/* Spacer — pushes date toward bottom third of page */}
+        <div style={{ flex: "1 1 auto" }} />
+
+        {/* Dated line */}
+        {form.documentInfo.effectiveDate && (
+          <div
+            style={{
+              fontSize: "16px",
+              fontWeight: 700,
+              color: "#1a1a1a",
+              letterSpacing: "1px",
+              marginBottom: "80px",
+            }}
+          >
+            {formatCoverDate(form.documentInfo.effectiveDate)}
+          </div>
+        )}
+
+        {/* Reference number (subtle) */}
+        {form.documentInfo.referenceNumber && (
+          <div
+            style={{
+              fontSize: "11px",
+              color: "#94a3b8",
+              letterSpacing: "1px",
+            }}
+          >
+            Ref: {form.documentInfo.referenceNumber}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Decorative Overlays (rendered once per page)
 // ---------------------------------------------------------------------------
 
@@ -775,15 +995,16 @@ export default function ContractRenderer({
     setPages(result);
   }, [blocks, usableH, measureVer]);
 
-  // Report page count to parent
+  // Report page count to parent (include cover page if enabled)
+  const hasCover = form.style.showCoverPage;
   useEffect(() => {
-    const count = pages.length || 1;
+    const count = (pages.length || 1) + (hasCover ? 1 : 0);
     if (onPageCount) onPageCount(count);
-  }, [pages.length, onPageCount]);
+  }, [pages.length, onPageCount, hasCover]);
 
   // Use measured pages if available, fallback to all-on-one-page
   const currentPages = pages.length > 0 ? pages : [blocks.map((b) => b.id)];
-  const totalPages = currentPages.length;
+  const totalPages = currentPages.length; // content pages only (cover excluded from numbering)
 
   // Common font styles for measurement and page rendering
   const fontStyles: React.CSSProperties = {
@@ -828,6 +1049,21 @@ export default function ContractRenderer({
           gap: `${pageGap}px`,
         }}
       >
+        {/* Cover page — Zambian legal standard */}
+        {hasCover && (
+          <CoverPage
+            form={form}
+            config={config}
+            fonts={fonts}
+            tpl={tpl}
+            accent={accent}
+            pageW={pageW}
+            pageH={pageH}
+            fontStyles={fontStyles}
+          />
+        )}
+
+        {/* Content pages */}
         {currentPages.map((pageBlockIds, pageIdx) => (
           <div
             key={pageIdx}

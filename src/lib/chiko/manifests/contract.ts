@@ -283,6 +283,10 @@ export function createContractManifest(options?: ContractManifestOptions): Chiko
               enum: ["bottom-center", "bottom-right"],
               description: "Position of page numbers",
             },
+            showCoverPage: {
+              type: "boolean",
+              description: "Show a formal cover page (title, parties, date) as the first page — standard Zambian legal format",
+            },
           },
         },
         category: "Style",
