@@ -2703,9 +2703,9 @@ export const suiteNavGroups: SuiteNavGroup[] = [
     label: "MAIN",
     items: [
       { icon: "grid", label: "Dashboard", href: "/dashboard", active: true },
-      { icon: "folder", label: "My Projects", href: "/projects" },
-      { icon: "briefcase", label: "Brand Kit", href: "/brand-kit" },
-      { icon: "clock", label: "Recent", href: "/recent" },
+      { icon: "briefcase", label: "Brand Kit", href: "/tools/design/brand-identity" },
+      { icon: "user", label: "Resume Builder", href: "/tools/documents/resume-cv" },
+      { icon: "messageCircle", label: "AI Chat", href: "/tools/utilities/ai-chat" },
     ],
   },
   {
@@ -2724,8 +2724,7 @@ export const suiteNavGroups: SuiteNavGroup[] = [
   {
     label: "SYSTEM",
     items: [
-      { icon: "settings", label: "Settings", href: "/settings" },
-      { icon: "helpCircle", label: "Help Center", href: "/help" },
+      { icon: "settings", label: "Account", href: "/account" },
     ],
   },
 ];

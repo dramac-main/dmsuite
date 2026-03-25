@@ -148,7 +148,7 @@ export default function DashboardPage() {
 
           {/* Category Sections — All Tools */}
           <Suspense fallback={<SectionSkeleton />}>
-            <div data-tour="categories">
+            <div id="categories" data-tour="categories">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
                   All Categories

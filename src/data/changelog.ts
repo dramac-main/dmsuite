@@ -62,7 +62,7 @@ export const changelog: ChangelogEntry[] = [
     type: "feature",
     description:
       "Meet Chiko — your contextual AI copilot that helps inside every workspace.",
-    toolId: "ai-assistant",
+    toolId: "utilities/ai-chat",
   },
   {
     id: "cl-007",
@@ -81,6 +81,6 @@ export const changelog: ChangelogEntry[] = [
     type: "feature",
     description:
       "Professional resume builder with 13 premium templates and PDF export.",
-    toolId: "resume-cv-builder",
+    toolId: "documents/resume-cv",
   },
 ];
