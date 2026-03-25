@@ -1,31 +1,60 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Session 121 — Sales Book Cleanup + Tool Tracker Created — COMPLETE ✅
+**Phase:** Session 122 — Zambian Law-Compliant Contract Templates — COMPLETE ✅
 
-### Session 121: Sales Book Tool Consolidation + Development Tracker
+### Session 122: All 16 Contract Types Enhanced with Zambian Law Compliance
 
-#### Tool Development Tracker — CREATED
-- **`TOOL-STATUS.md`** at project root — master reference for all 200+ tools
-- **`DevStatus` type** added to `Tool` interface in `src/data/tools.ts` (`"complete" | "scaffold" | "no-ui"`)
-- **`devStatus` field** is optional on every Tool entry — defaults to unset (treated as scaffold)
-- **7 sales book tools tagged** `devStatus: "complete"` (invoice, quotation, receipt, purchase-order, delivery-note, credit-note, proforma-invoice)
-- **Rule added** to `.github/copilot-instructions.md` — AI must auto-update tracker whenever a tool is finished
-- **Counts:** 7 COMPLETE, ~88 SCAFFOLD, ~100+ NO-UI
+#### Research & Reference
+- Researched Zambian Parliament website (parliament.gov.zm) — 48 pages of Acts spanning 1914–2025
+- Created `src/lib/contract/zambian-legal-reference.ts` (~400 lines) — comprehensive legal citation database covering 30+ Acts of Parliament
+- Key Acts: Employment Act Cap. 268, Rent Act Cap. 206, Landlord & Tenant Act Cap. 190, Lands Act 1995, Sale of Goods Act Cap. 388, Companies Act 2017, Partnership Act Cap. 119, NCC Act No. 13/2003, Arbitration Act No. 19/2000, and 20+ more
 
-#### Removed Generic Sales Book Tools
-- **Removed `sales-book-a4`** — Redundant; all 7 individual document type tools already support type switching
-- **Removed `sales-book-a5`** — Messy/needs rework; individual tools cover all use cases
-- **Deleted files**: `SalesBookA4Workspace.tsx`, `SalesBookA5Workspace.tsx` (dead standalone files)
-- **Cleaned**: tools.ts (2 tool defs), credit-costs.ts, page.tsx routes, SalesBookWrappers.tsx (2 exports), ChikoAssistant.tsx, workflow-engine.ts, chiko route.ts
-- **Featured tools**: Replaced `sales-book-a4` with `invoice-designer` in featured strip
-- **Decision**: Keep all 7 individual document type tools (invoice, quotation, receipt, purchase-order, delivery-note, credit-note, proforma-invoice) + statement-of-account. Each pre-selects its type but allows switching to any other type — best UX.
-- **TypeScript**: 0 errors confirmed
+#### New Contract Type Added
+- **Tenancy Agreement** — 16th contract type added to CONTRACT_TYPES, CONTRACT_TYPE_CONFIGS, getDefaultClauses (17 clauses), getDefaultPreamble, and Chiko AI manifest enum lists
+
+#### All 16 Contract Types Enhanced (getDefaultClauses)
+Each type now has comprehensive Definitions clause citing applicable Zambian Acts, specific law references throughout, dispute resolution with appropriate tribunal/court, and governing law clause listing all applicable legislation:
+1. **service-agreement** — 11 clauses (Sale of Goods Act, VAT Act, Patents/Copyright/Trade Marks Acts)
+2. **nda** — 11 clauses (IP Acts, remedies including injunctive relief)
+3. **employment-contract** — 13 clauses (Employment Act, NAPSA, PAYE, Minimum Wages Act)
+4. **freelance-agreement** — 11 clauses (independent contractor distinction, Employment Act exclusion)
+5. **partnership-agreement** — 12 clauses (Partnership Act Cap. 119, PACRA registration)
+6. **lease-agreement** — 16 clauses (Landlord & Tenant Act Cap. 190, Lands Tribunal)
+7. **tenancy-agreement** — 17 clauses (Rent Act Cap. 206, landlord/tenant obligations)
+8. **sales-agreement** — 11 clauses (Sale of Goods Act, ZABS, CCPA)
+9. **consulting-agreement** — 11 clauses (WHT, non-solicitation, IP)
+10. **motor-vehicle-sale** — 11 clauses (RTSA Act, Road Traffic Act)
+11. **property-sale-agreement** — 11 clauses (Lands Act, PTT 5%, State Consent)
+12. **loan-agreement** — 12 clauses (Money Lenders Act, Banking Act, Corporate Insolvency Act)
+13. **shareholders-agreement** — 13 clauses (Companies Act 2017, Securities Act, deadlock resolution)
+14. **supply-agreement** — 13 clauses (Standards Act, ZABS, Public Procurement Act)
+15. **mou** — 11 clauses (binding/non-binding distinction, IP provisions)
+16. **construction-contract** — 14 clauses (NCC Act, OSHA, Workers' Compensation, EIZ, retention, defects liability, liquidated damages)
+
+#### Preambles Enhanced
+All 16 contract types now have preambles citing applicable Zambian legislation (previously only 3 had citations).
+
+#### COMMON_CLAUSES Helpers Enhanced
+- Added ZMW definition, WHT/VAT references to payment clause
+- Added Arbitration Act reference to dispute resolution
+- Added IP Act citations to intellectual property clause
+- Added force majeure notice requirement
+- Enhanced governing law with arbitration reference
+- Added fraud/negligence carve-out to liability limitation
+
+#### Other Fixes
+- Fixed 5 TypeScript errors: `"ip"` → `"intellectual-property"` clause category
+- Removed unreachable dead code block after construction-contract return
+
+#### Build Status
+- TypeScript: 0 errors in schema.ts (verified)
+- Pre-existing lint warnings in other files unchanged
 
 ---
 
 ## Previous Focus
-**Phase:** Session 120 — Sales Tools v3 Redesign + Global Layout Overhaul — COMPLETE ✅
+**Phase:** Session 121 — Sales Book Cleanup + Tool Tracker Created — COMPLETE ✅
 
 ### Session 120 (continued): Global Layout + End-to-End Polish
 

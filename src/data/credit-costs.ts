@@ -174,7 +174,6 @@ export const TOOL_CREDIT_MAP: Record<string, string> = {
   /* ── Document & Print Studio ────────────────────────── */
   "resume-cv":             "resume-generation",
   "cover-letter":          "resume-revision",
-  "sales-book-a5":         "sales-book-fill",
   "invoice-designer":      "invoice-fill",
   "proforma-invoice":      "invoice-fill",
   "quote-estimate":        "invoice-fill",

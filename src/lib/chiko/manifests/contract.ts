@@ -321,6 +321,7 @@ export function createContractManifest(options?: ContractManifestOptions): Chiko
                 "freelance-agreement",
                 "partnership-agreement",
                 "lease-agreement",
+                "tenancy-agreement",
                 "sales-agreement",
                 "consulting-agreement",
                 "motor-vehicle-sale",
@@ -350,7 +351,7 @@ export function createContractManifest(options?: ContractManifestOptions): Chiko
               type: "string",
               enum: [
                 "service-agreement", "nda", "employment-contract", "freelance-agreement",
-                "partnership-agreement", "lease-agreement", "sales-agreement", "consulting-agreement",
+                "partnership-agreement", "lease-agreement", "tenancy-agreement", "sales-agreement", "consulting-agreement",
                 "motor-vehicle-sale", "property-sale-agreement", "loan-agreement",
                 "shareholders-agreement", "supply-agreement", "mou", "construction-contract",
               ],

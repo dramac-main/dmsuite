@@ -61,8 +61,6 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   "product-catalog": dynamic(() => import("@/components/workspaces/CatalogWorkspace")),
 
   // ── Phase 3: Sales Materials ──
-  "sales-book-a4": dynamic(() => import("@/components/workspaces/SalesBookWrappers").then((m) => ({ default: m.SalesBookA4Workspace }))),
-  "sales-book-a5": dynamic(() => import("@/components/workspaces/SalesBookWrappers").then((m) => ({ default: m.SalesBookA5Workspace }))),
   "price-list": dynamic(() => import("@/components/workspaces/PriceListWorkspace")),
 
   // ── Phase 3: Document Tools (New) ──

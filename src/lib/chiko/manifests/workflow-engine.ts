@@ -29,8 +29,6 @@ function getToolPath(tool: FlatTool): string {
 
 /** Common toolIds that Chiko can navigate to */
 const COMMON_TOOL_IDS = [
-  "sales-book-a4",
-  "sales-book-a5",
   "invoice-designer",
   "resume-cv",
   "business-card",
@@ -67,7 +65,7 @@ export function createWorkflowManifest(
             toolId: {
               type: "string",
               description:
-                "The tool ID to navigate to (e.g., 'sales-book-a4', 'invoice-designer', 'resume-cv')",
+                "The tool ID to navigate to (e.g., 'invoice-designer', 'resume-cv', 'business-card')",
             },
           },
           required: ["toolId"],

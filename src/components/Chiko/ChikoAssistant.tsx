@@ -133,7 +133,7 @@ function getActiveToolLogoUri(currentToolId?: string): string | undefined {
       const { invoice } = useInvoiceEditor.getState();
       return invoice.businessInfo.logoUrl || undefined;
     }
-    if (currentToolId === "sales-book-a4" || currentToolId === "sales-book-a5") {
+    if (currentToolId === "invoice-designer" || currentToolId === "quote-estimate" || currentToolId === "receipt-designer" || currentToolId === "purchase-order" || currentToolId === "delivery-note" || currentToolId === "credit-note" || currentToolId === "proforma-invoice") {
       const { form } = useSalesBookEditor.getState();
       return form.companyBranding.logoUrl || undefined;
     }

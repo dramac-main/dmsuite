@@ -43,12 +43,4 @@ export function PurchaseOrderBookWorkspace() {
   return <SalesBookDesignerWorkspace initialDocumentType="purchase-order" />;
 }
 
-/** Sales Book — A4 format (generic, user picks doc type) */
-export function SalesBookA4Workspace() {
-  return <SalesBookDesignerWorkspace initialPageSize="a4" />;
-}
 
-/** Sales Book — A5 format (generic, user picks doc type) */
-export function SalesBookA5Workspace() {
-  return <SalesBookDesignerWorkspace initialPageSize="a5" />;
-}

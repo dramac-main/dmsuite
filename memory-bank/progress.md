@@ -1,6 +1,6 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅
+## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅
 
 ---
 
@@ -8,34 +8,31 @@
 - **Location:** `TOOL-STATUS.md` (project root) — always check this before session work
 - **Code field:** `devStatus` on `Tool` interface in `src/data/tools.ts` (`"complete" | "scaffold" | "no-ui"`)
 - **Auto-update rule:** AI must update both `TOOL-STATUS.md` and `devStatus` in tools.ts when marking any tool complete
-- **Counts (2026-03-25):** 7 COMPLETE · ~88 SCAFFOLD · ~100+ NO-UI
-- **COMPLETE tools:** invoice-designer, quote-estimate, receipt-designer, purchase-order, delivery-note, credit-note, proforma-invoice
+- **Counts (2026-03-25):** 8 COMPLETE · ~88 SCAFFOLD · ~100+ NO-UI
+- **COMPLETE tools:** invoice-designer, quote-estimate, receipt-designer, purchase-order, delivery-note, credit-note, proforma-invoice, contract-template
 
 ---
 
-## Current Work: Sales Book Consolidation — COMPLETE ✅
+## Current Work: Zambian Law-Compliant Contract Templates — COMPLETE ✅
 
-### Session 121 — Removed Generic Sales Book Tools
-- [x] **Removed `sales-book-a4`** — Redundant generic tool; individual types cover all use cases
-- [x] **Removed `sales-book-a5`** — Messy; needs future rework; A5 not needed now
-- [x] **Deleted dead files** — `SalesBookA4Workspace.tsx`, `SalesBookA5Workspace.tsx`
-- [x] **Cleaned all references** — tools.ts, credit-costs.ts, page.tsx, SalesBookWrappers.tsx, ChikoAssistant.tsx, workflow-engine.ts, chiko API route
-- [x] **Updated featured tools** — `invoice-designer` replaces `sales-book-a4` in featured strip
+### Session 122 — All 16 Contract Types Enhanced
+- [x] **Researched** Zambian Parliament website (parliament.gov.zm) — 48 pages of Acts
+- [x] **Created** `src/lib/contract/zambian-legal-reference.ts` — 30+ Acts, citation database
+- [x] **Added** Tenancy Agreement — 16th contract type (17 clauses, full Zambian law refs)
+- [x] **Enhanced** all 16 contract types in `getDefaultClauses()` with specific Zambian Act citations
+- [x] **Enhanced** all 16 preambles in `getDefaultPreamble()` with applicable Act references
+- [x] **Enhanced** COMMON_CLAUSES helpers with Zambian law references (WHT, VAT, Arbitration Act, IP Acts)
+- [x] **Fixed** 5 TS errors: `"ip"` → `"intellectual-property"` clause category
+- [x] **Removed** unreachable dead code block after construction-contract return
+- [x] **Updated** Chiko AI manifest with tenancy-agreement in both enum lists
 - [x] **TypeScript** — 0 errors confirmed
 
-**7 Sales Book Tools retained (individual document types):**
-1. Invoice Book Designer — `invoice-designer`
-2. Quotation Book Designer — `quote-estimate`
-3. Receipt Book Designer — `receipt-designer`
-4. Purchase Order Book Designer — `purchase-order`
-5. Delivery Note Book Designer — `delivery-note`
-6. Credit Note Book Designer — `credit-note`
-7. Proforma Invoice Book Designer — `proforma-invoice`
-+ Statement of Account — `statement-of-account` (separate tool)
+**Key Zambian Acts referenced across templates:**
+Employment Act Cap. 268, Rent Act Cap. 206, Landlord & Tenant Act Cap. 190, Lands Act 1995, Sale of Goods Act Cap. 388, Companies Act 2017, Partnership Act Cap. 119, NCC Act No. 13/2003, Occupational Health and Safety Act No. 16/2025, Workers' Compensation Act Cap. 271, Arbitration Act No. 19/2000, Competition & Consumer Protection Act No. 24/2010, Banking & Financial Services Act No. 7/2017, Money Lenders Act Cap. 398, RTSA Act No. 13/2002, Road Traffic Act No. 11/2002, Property Transfer Tax Act Cap. 340, Stamp Duty Act Cap. 339, Income Tax Act Cap. 323, VAT Act Cap. 331, Environmental Management Act No. 12/2011, Engineering Institution of Zambia Act Cap. 432, Public Procurement Act No. 8/2020, Copyright & Performance Rights Act No. 44/1994, Patents Act Cap. 400, Trade Marks Act Cap. 401
 
 ---
 
-## Previous Work: Global Layout + Sales Tools End-to-End Polish — COMPLETE ✅
+## Previous Work: Sales Book Consolidation — COMPLETE ✅
 
 ### Session 120 (continued) — Global Layout Overhaul + Layers Redesign
 

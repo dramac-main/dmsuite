@@ -275,3 +275,4 @@ These already have substantial workspace code and would benefit most from a poli
 | 2025-07-17 | contract-template (Contract & Agreement Creator) | Full rebuild: 8 contract types, 8 visual templates, Zustand+Immer+Zundo store, HTML/CSS renderer, 5-tab editor (Document/Parties/Clauses/Style/Print), Figma-style layers panel, click-to-edit, undo/redo, print-ready, responsive layout | Drake |
 | 2026-03-25 | Sales Books (9) | Initial COMPLETE — v3 tabbed editor, layers panel, brand colors, mobile fixes | Drake |
 | | | Tracker created | — |
+| 2026-07-24 | contract-template (Contract & Agreement Creator) | Zambian Law Enhancement: 16 contract types (added tenancy-agreement), all with comprehensive Zambian Act citations (30+ Acts), enhanced preambles, COMMON_CLAUSES with ZMW/WHT/VAT/Arbitration refs, created zambian-legal-reference.ts, fixed "ip" → "intellectual-property" TS errors, removed dead code | Drake |
