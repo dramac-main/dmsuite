@@ -1,6 +1,6 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅
+## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅
 
 ---
 
@@ -13,7 +13,45 @@
 
 ---
 
-## Current Work: ZambiaLII Cross-Reference + Legal Accuracy Overhaul — COMPLETE ✅
+## Current Work: Contract Production Hardening — COMPLETE ✅
+
+### Session 123 (continued) — Pre-Print Validation, Fillable Fields, Production Audit
+
+#### Pre-Print Validation (`contract.ts` manifest)
+- [x] **validateContract()** — checks empty parties, missing dates, empty title, no clauses, empty content, placeholder patterns
+- [x] **Date validation** — error if expiryDate <= effectiveDate
+- [x] **Placeholder regex** — refined: 2+ char brackets, 3+ underscores, 4+ dots, TBD, XXX (removed N/A false positive)
+- [x] **validateBeforePrint** Chiko action added (returns issues, ready, counts)
+- [x] **Auto-validate before exportPrint** — blocks printing on errors, shows warnings
+
+#### Fillable Fields
+- [x] **fillableFields** style option added to `styleConfigSchema` (default: false)
+- [x] **FillableLine** component added to ContractRenderer.tsx (dotted border-bottom span)
+- [x] **Conditional rendering** — empty party names show dotted lines when fillable, `[Role Name]` when not
+
+#### Font Tuning
+- [x] **Body font** reduced 14px → 13px (better print density)
+- [x] **Preamble & clause body** reduced 14px → 13px
+- [x] **Line height** adjusted 1.6 → 1.65
+
+#### Production Hardening
+- [x] **Full audit** of 16 contract types, 9 templates, renderer, manifest, legal reference
+- [x] **All schemas complete** — no truncation, no missing clauses (subagent false alarm verified)
+- [x] **Console.warn** added for missing block IDs (dev-only)
+- [x] **Arbitration Act citation** standardized: both Act No. 19 of 2000 AND Chapter 40
+
+#### Cover Page
+- [x] **Format validated** — common Zambian practice, not statutory requirement
+- [x] **All 16 types** have cover page (toggleable via showCoverPage)
+
+#### Commits
+- `1e45ffa` — Legal corrections, template overhaul, font standardization
+- `6f732d9` — Cover page implementation
+- `7c84f31` — Pre-print validation, fillable fields, font tuning, production hardening
+
+---
+
+## Previous Work: ZambiaLII Cross-Reference + Legal Accuracy Overhaul — COMPLETE ✅
 
 ### Session 123 — Employment Code Act 2019 Correction + Template Overhaul + Print Fonts
 

@@ -276,3 +276,4 @@ These already have substantial workspace code and would benefit most from a poli
 | 2026-03-25 | Sales Books (9) | Initial COMPLETE — v3 tabbed editor, layers panel, brand colors, mobile fixes | Drake |
 | | | Tracker created | — |
 | 2026-07-24 | contract-template (Contract & Agreement Creator) | Zambian Law Enhancement: 16 contract types (added tenancy-agreement), all with comprehensive Zambian Act citations (30+ Acts), enhanced preambles, COMMON_CLAUSES with ZMW/WHT/VAT/Arbitration refs, created zambian-legal-reference.ts, fixed "ip" → "intellectual-property" TS errors, removed dead code | Drake |
+| 2026-03-25 | contract-template (Contract & Agreement Creator) | Cover Design Picker: 6 optional cover templates (classic/corporate/dark-executive/accent-split/bold-frame/minimal-line) + "none" option; visual mini-preview grid in Style tab; Chiko coverDesign param; 0 TS errors | Drake |

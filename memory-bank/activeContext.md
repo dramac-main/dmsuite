@@ -1,52 +1,85 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Session 123 — ZambiaLII Cross-Reference, Employment Code Act 2019, Template Overhaul, Print Fonts — COMPLETE ✅
+**Phase:** Session 124 — Contract Cover Design Picker — COMPLETE ✅
 
-### Session 123: Legal Accuracy Overhaul + Template Cleanup + Print Standardization
+### Session 124: Optional Cover Design Templates
 
-#### 1. ZambiaLII.org Research
-- Scraped 10 pages of legislation from ZambiaLII.org — 723 indexed documents
-- Targeted searches for Sale of Goods Act and Employment Code Act
-- **CRITICAL DISCOVERY:** Employment Code Act, 2019 (Act No. 3 of 2019) **REPLACES** the old Employment Act Cap. 268 — confirmed via court judgments on ZambiaLII
-- Sale of Goods Act 1893 (Cap. 388) confirmed still in force
+#### Cover Design System
+- Added `coverDesign` field to `styleConfigSchema`: `none | classic | corporate | dark-executive | accent-split | bold-frame | minimal-line`
+- Default: `"classic"` (the existing Zambian legal standard format)
+- `"none"` removes cover entirely (also sets `showCoverPage: false`)
+- `hasCover` logic: `showCoverPage AND coverDesign !== "none"`
 
-#### 2. Legal Reference Updated (`zambian-legal-reference.ts`)
-- Replaced Employment Act Cap. 268 → Employment Code Act, 2019 (Act No. 3 of 2019)
-- Removed Employment (Amendment) Act 2015 entry (subsumed by 2019 Act)
-- Added 9 new Acts: Industrial & Labour Relations Act Cap. 269, Data Protection Act 2021, Misrepresentation Act Cap. 69, Law Reform (Frustrated Contracts) Act Cap. 73, Hire Purchase Act Cap. 399, Credit Reporting Act 2018, Movable Property (Security Interests) Act 2016, Estate Agents Act 2000
-- Updated NCC Act with 2020 amendment reference
-- Corrected ZAMBIA_LEGAL_NOTES: severance from "2 months' basic" to "25% of basic pay per year" (s.54), added mandatory gratuity for 2+ year contracts (s.73)
-- Source header updated to include ZambiaLII
+#### 6 Cover Design Variants in `ContractRenderer.tsx`
+- **classic** — Zambian legal standard (title + BETWEEN + parties + dated ordinal date)
+- **corporate** — Accent header bar (12% pageH) + logo placeholder + left-aligned body with accent rule under title
+- **dark-executive** — Full-bleed dark (`#0f172a`) + diagonal accent shape + thin accent strip top-left
+- **accent-split** — 38% left accent panel with party names, white right body with large title
+- **bold-frame** — Thick inset border + corner bracket accents + diamond dividers + centered layout
+- **minimal-line** — 4px left accent strip + lightweight font-weight-300 title + label/value party rows
 
-#### 3. Schema Employment Code Act 2019 Corrections (`schema.ts`)
-- All 19 Employment Act Cap. 268 references replaced with Employment Code Act, 2019
-- Section number mappings: s.26→s.39 (hours), s.26A→s.40 (overtime), s.34→s.42 (leave), s.36→s.44 (sick), s.36A→s.46 (maternity, now 14 weeks not 120 days), s.36B→s.47 (paternity 5 days), s.44→s.53 (notice), s.47→s.52 (termination reasons), s.53→s.54 (severance 25%), added s.73 (gratuity), s.17A→s.25 (child labour)
-- All preambles updated (employment, freelance, consulting)
-- Dispute resolution now references Industrial Relations Court
-- Verified: 0 old references remaining (grep confirmed)
+#### UI: Cover Design Accordion (`ContractStyleTab.tsx`)
+- New "Cover Design" section opens by default (before Template section)
+- 2-column grid with visual mini-previews (color reactive to current accent)
+- Each preview is a unique 64px thumbnail showing the design's structural character
+- Selecting "No Cover" auto-sets `showCoverPage: false`; all others set `showCoverPage: true`
 
-#### 4. Template Audit & Overhaul (`schema.ts`)
-- **Removed 5 unsuitable templates** (invoice-style): executive-gold, bold-slate, creative-violet, rose-professional, deep-navy
-- **Added 2 proper legal templates:** standard-legal (new DEFAULT — black, serif, centered, page-border), government-formal (very formal, dark, serif, thick divider)
-- **9 templates now:** standard-legal, legal-classic, government-formal, corporate-blue, modern-minimal, corporate-green, elegant-gray, forest-law, warm-parchment
-- Chiko manifest template enum updated to match
+#### Chiko Integration
+- `updateStyle` action updated with `coverDesign` parameter + full enum + descriptions
+- `validateContract` warning now accounts for cover design ('none' = simpler message)
 
-#### 5. Print Font Size Standardization (`ContractRenderer.tsx`)
-- All font sizes increased ~2px for print-standard legal documents
-- Base body: 12→14px, titles: 24-26→28-30px, subtitles: 13→15px
-- Parties: role labels 9→11, names 14→16, addresses 11→13
-- Clauses: heading 14→16, body 12→14
-- Signatures: all labels increased, seal 8→10
-- TOC, preamble, witnesses, footer, disclaimer — all increased
-- ~50 inline style instances updated
+#### TypeScript
+- `CoverDesignId` type exported from schema.ts
+- `COVER_DESIGNS: CoverDesignConfig[]` array exported
+- 0 TypeScript errors
 
-#### 6. Chiko AI Verification
-- All 16 contract types in manifest enum ✅
-- All 9 templates in manifest enum ✅
-- All 13 clause categories covered ✅
-- 17 core actions fully mapped ✅
-- Minor: undo/redo not exposed (not critical for AI)
+#### Commits
+- `48ea42c` — Cover design picker: 6 optional cover templates
+
+---
+
+## Previous Focus
+**Phase:** Session 123 — Contract System Production Hardening — COMPLETE ✅
+
+### Session 123 (continued): Pre-Print Validation, Fillable Fields, Production Audit
+
+#### 7. Cover Page Format Validation
+- Researched Zambian legal contract format standards (LAZ, PACRA, ZambiaLII)
+- **Finding:** Cover page format (TITLE / BETWEEN / Party A / AND / Party B / DATED) is common practice, NOT a codified statutory requirement
+- Cover page is toggleable via `showCoverPage` (default: true) on all 16 contract types
+
+#### 8. Pre-Print Validation System (`contract.ts` manifest)
+- Added `validateContract()` function with `ValidationIssue` interface
+- Checks: empty party names, missing dates, empty title, no enabled clauses, empty clause content, placeholder patterns in clauses/parties/preamble
+- Added expiry vs effective date validation (error if expiry <= effective)
+- Placeholder patterns: `[..2+chars..]`, `{..2+chars..}`, `<<...>>`, `___` (3+), `....` (4+), `TBD`, `XXX`
+- Added `validateBeforePrint` Chiko action (returns issues, ready, errorCount, warningCount)
+- Auto-validation wired into `exportPrint` — blocks printing if errors exist, shows warnings
+
+#### 9. Fillable Fields Support
+- Added `fillableFields: z.boolean().default(false)` to `styleConfigSchema` in schema.ts
+- Added `FillableLine` component in ContractRenderer.tsx (dotted border-bottom span)
+- When enabled + party name/address empty → renders dotted lines for pen fill-in
+- When disabled + empty → renders standard `[Party Role Name]` placeholder
+- Chiko `updateStyle` action updated with `fillableFields` parameter
+
+#### 10. Font Size Adjustment
+- Reduced base body from 14px to 13px, lineHeight from 1.6 to 1.65
+- Reduced preamble body and clause body from 14px to 13px
+- Cover page role text (14px) and title sizes (28-30px) kept unchanged
+
+#### 11. Production Readiness Audit & Hardening
+- Full audit of all 16 contract types, 9 templates, renderer, manifest, legal reference
+- **Schema.ts:** All 16 types fully complete with real Zambian legal text (no truncation)
+- **Renderer:** Added dev-only console.warn for missing block IDs
+- **Legal reference:** Standardized Arbitration Act citation to include both Act No. 19 of 2000 AND Chapter 40
+- **TypeScript:** 0 errors across all changes
+
+#### Commits
+- `1e45ffa` — Legal corrections, template overhaul, font standardization
+- `6f732d9` — Cover page implementation
+- `7c84f31` — Pre-print validation, fillable fields, font tuning, production hardening
 
 #### Build Status
 - TypeScript: 0 errors (verified via `npx tsc --noEmit`)
