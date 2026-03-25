@@ -1,14 +1,15 @@
 // =============================================================================
-// DMSuite — Contract Document Renderer
-// Renders legal contracts as styled HTML for preview and print.
-// Uses the same HTML/CSS approach as BlankFormRenderer for print fidelity.
-// Each section has data-ct-section attributes for click-to-edit & layers.
+// DMSuite — Contract Document Renderer (Paginated)
+// Real measurement-based pagination. Each page is a discrete <div> with exact
+// dimensions for print-perfect output. Content blocks are measured in a hidden
+// container, bin-packed into pages, and rendered with per-page decorations &
+// footers showing "Page X of N".
 // =============================================================================
 
 "use client";
 
-import React, { useMemo } from "react";
-import type { ContractFormData, ContractTemplate } from "@/lib/contract/schema";
+import React, { useMemo, useLayoutEffect, useRef, useState, useEffect } from "react";
+import type { ContractFormData, ContractTemplate, ContractTypeConfig } from "@/lib/contract/schema";
 import {
   getContractTemplate,
   CONTRACT_TYPE_CONFIGS,
@@ -16,14 +17,18 @@ import {
 } from "@/lib/contract/schema";
 
 // ---------------------------------------------------------------------------
-// Page dimensions at 96 CSS PPI
+// Constants — exported for workspace scroll calculations
 // ---------------------------------------------------------------------------
 
-const PAGE_PX: Record<string, { w: number; h: number }> = {
+export const PAGE_PX: Record<string, { w: number; h: number }> = {
   a4: { w: 794, h: 1123 },
   letter: { w: 816, h: 1056 },
   legal: { w: 816, h: 1344 },
 };
+
+const MARGIN = 50;
+const FOOTER_H = 44; // reserved height for page footer
+export const PAGE_GAP = 16; // visual gap between pages in preview
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -34,10 +39,12 @@ function getFonts(fontPairingId: string) {
   return { heading: fp.heading, body: fp.body };
 }
 
-function getGoogleFontUrl(fontPairingId: string): string {
+export function getGoogleFontUrl(fontPairingId: string): string {
   const fp = FONT_PAIRINGS.find((f) => f.id === fontPairingId) ?? FONT_PAIRINGS[0];
   const families = new Set([fp.heading, fp.body]);
-  const params = [...families].map((f) => `family=${f.replace(/ /g, "+")}:wght@400;500;600;700;800;900`).join("&");
+  const params = [...families]
+    .map((f) => `family=${f.replace(/ /g, "+")}:wght@400;500;600;700;800;900`)
+    .join("&");
   return `https://fonts.googleapis.com/css2?${params}&display=swap`;
 }
 
@@ -47,7 +54,9 @@ function luminance(hex: string): number {
   const r = parseInt(c.substring(0, 2), 16) / 255;
   const g = parseInt(c.substring(2, 4), 16) / 255;
   const b = parseInt(c.substring(4, 6), 16) / 255;
-  const srgb = [r, g, b].map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
+  const srgb = [r, g, b].map((v) =>
+    v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4),
+  );
   return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
 }
 
@@ -56,20 +65,28 @@ function contrastText(bgHex: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Decorative Overlays
+// Decorative Overlays (rendered once per page)
 // ---------------------------------------------------------------------------
 
 function WatermarkOverlay({ form }: { form: ContractFormData }) {
   if (!form.printConfig.showWatermark || !form.printConfig.watermarkText) return null;
   return (
     <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
-      <div style={{
-        position: "absolute", top: "50%", left: "50%",
-        transform: "translate(-50%, -50%) rotate(-30deg)",
-        fontSize: "72px", fontWeight: 900,
-        color: form.style.accentColor, opacity: 0.05,
-        whiteSpace: "nowrap", letterSpacing: "8px", textTransform: "uppercase",
-      }}>
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%) rotate(-30deg)",
+          fontSize: "72px",
+          fontWeight: 900,
+          color: form.style.accentColor,
+          opacity: 0.05,
+          whiteSpace: "nowrap",
+          letterSpacing: "8px",
+          textTransform: "uppercase",
+        }}
+      >
         {form.printConfig.watermarkText}
       </div>
     </div>
@@ -80,17 +97,20 @@ function PageBorder({ tpl, accent }: { tpl: ContractTemplate; accent: string }) 
   if (tpl.borderStyle === "none") return null;
   const w = tpl.borderStyle === "thick" ? 3 : 1;
   return (
-    <div style={{
-      position: "absolute", inset: "6px",
-      border: `${w}px solid ${accent}40`,
-      pointerEvents: "none", zIndex: 0,
-    }} />
+    <div
+      style={{
+        position: "absolute",
+        inset: "6px",
+        border: `${w}px solid ${accent}40`,
+        pointerEvents: "none",
+        zIndex: 0,
+      }}
+    />
   );
 }
 
 function DecorativeOverlay({ tpl }: { tpl: ContractTemplate }) {
   if (tpl.decorative === "none") return null;
-
   if (tpl.decorative === "corner-gradient") {
     const accent2 = tpl.accentSecondary ?? tpl.accent;
     return (
@@ -99,31 +119,35 @@ function DecorativeOverlay({ tpl }: { tpl: ContractTemplate }) {
       </div>
     );
   }
-
   if (tpl.decorative === "accent-strip") {
     const accent2 = tpl.accentSecondary ?? tpl.accent;
     return (
-      <div style={{
-        position: "absolute", top: 0, left: 0, bottom: 0, width: "6px",
-        background: `linear-gradient(180deg, ${tpl.accent}, ${accent2})`,
-        pointerEvents: "none", zIndex: 0,
-      }} />
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          bottom: 0,
+          width: "6px",
+          background: `linear-gradient(180deg, ${tpl.accent}, ${accent2})`,
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
     );
   }
-
-  // page-border decorative
   return (
-    <div style={{
-      position: "absolute", inset: "4px",
-      border: `2px solid ${tpl.accent}30`,
-      pointerEvents: "none", zIndex: 0,
-    }} />
+    <div
+      style={{
+        position: "absolute",
+        inset: "4px",
+        border: `2px solid ${tpl.accent}30`,
+        pointerEvents: "none",
+        zIndex: 0,
+      }}
+    />
   );
 }
-
-// ---------------------------------------------------------------------------
-// Header Divider
-// ---------------------------------------------------------------------------
 
 function HeaderDivider({ tpl }: { tpl: ContractTemplate }) {
   const accent = tpl.accent;
@@ -133,7 +157,16 @@ function HeaderDivider({ tpl }: { tpl: ContractTemplate }) {
     case "double-line":
       return <div style={{ borderTop: `3px double ${accent}`, marginTop: "12px" }} />;
     case "accent-bar":
-      return <div style={{ height: "4px", background: `linear-gradient(to right, ${accent}, ${accent}40)`, marginTop: "12px", borderRadius: "2px" }} />;
+      return (
+        <div
+          style={{
+            height: "4px",
+            background: `linear-gradient(to right, ${accent}, ${accent}40)`,
+            marginTop: "12px",
+            borderRadius: "2px",
+          }}
+        />
+      );
     case "none":
       return null;
     default:
@@ -142,364 +175,704 @@ function HeaderDivider({ tpl }: { tpl: ContractTemplate }) {
 }
 
 // ---------------------------------------------------------------------------
+// Page Footer (rendered at the bottom of every page)
+// ---------------------------------------------------------------------------
+
+function PageFooter({
+  form,
+  tpl,
+  accent,
+  pageNum,
+  totalPages,
+  isLastPage,
+}: {
+  form: ContractFormData;
+  tpl: ContractTemplate;
+  accent: string;
+  pageNum: number;
+  totalPages: number;
+  isLastPage: boolean;
+}) {
+  const pageLabel = `Page ${pageNum} of ${totalPages}`;
+  return (
+    <div>
+      {tpl.footerStyle === "bar" && (
+        <div
+          style={{
+            backgroundColor: accent,
+            color: contrastText(accent),
+            padding: "6px 16px",
+            marginLeft: `-${MARGIN}px`,
+            marginRight: `-${MARGIN}px`,
+            fontSize: "10px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span style={{ fontWeight: 600 }}>{form.documentInfo.title}</span>
+          {form.style.pageNumbering && <span style={{ opacity: 0.75 }}>{pageLabel}</span>}
+        </div>
+      )}
+
+      {tpl.footerStyle === "line" && (
+        <div
+          style={{
+            borderTop: `1px solid ${accent}30`,
+            paddingTop: "6px",
+            display: "flex",
+            justifyContent: "space-between",
+            fontSize: "9px",
+            color: "#94a3b8",
+          }}
+        >
+          <span>{form.documentInfo.title}</span>
+          <span>{form.documentInfo.referenceNumber}</span>
+          {form.style.pageNumbering && <span>{pageLabel}</span>}
+        </div>
+      )}
+
+      {tpl.footerStyle === "none" && form.style.pageNumbering && (
+        <div
+          style={{
+            textAlign: form.style.pageNumberPosition === "bottom-center" ? "center" : "right",
+            fontSize: "9px",
+            color: "#94a3b8",
+          }}
+        >
+          {pageLabel}
+        </div>
+      )}
+
+      {/* Legal disclaimer — last page only */}
+      {isLastPage && (
+        <div
+          style={{
+            textAlign: "center",
+            fontSize: "8px",
+            color: "#94a3b8",
+            marginTop: "6px",
+            fontStyle: "italic",
+          }}
+        >
+          This document is a template generated by DMSuite. It is not a substitute for professional
+          legal advice. Consult a qualified attorney before executing any legal agreement.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Content Block definition
+// ---------------------------------------------------------------------------
+
+interface ContentBlock {
+  id: string;
+  section: string; // maps to data-ct-section for click-to-edit
+  element: React.ReactNode;
+  breakBefore?: boolean; // force new page before this block
+}
+
+// ---------------------------------------------------------------------------
+// Build all content blocks from form data
+// ---------------------------------------------------------------------------
+
+function buildContentBlocks(
+  form: ContractFormData,
+  config: ContractTypeConfig,
+  fonts: { heading: string; body: string },
+  accent: string,
+  tpl: ContractTemplate,
+): ContentBlock[] {
+  const blocks: ContentBlock[] = [];
+  const enabledClauses = form.clauses.filter((c) => c.enabled);
+
+  // ─── CONFIDENTIAL BANNER ───
+  if (form.documentInfo.showConfidentialBanner) {
+    blocks.push({
+      id: "confidential",
+      section: "confidential",
+      element: (
+        <div
+          style={{
+            textAlign: "center",
+            padding: "6px 16px",
+            backgroundColor: `${accent}10`,
+            border: `1px solid ${accent}30`,
+            borderRadius: "4px",
+            fontSize: "10px",
+            fontWeight: 700,
+            letterSpacing: "3px",
+            textTransform: "uppercase",
+            color: accent,
+            marginBottom: "20px",
+          }}
+        >
+          CONFIDENTIAL
+        </div>
+      ),
+    });
+  }
+
+  // ─── HEADER ───
+  const headerElement = (() => {
+    switch (form.style.headerStyle) {
+      case "banner":
+        return (
+          <div
+            style={{
+              backgroundColor: accent,
+              color: contrastText(accent),
+              padding: "20px 24px",
+              marginLeft: `-${MARGIN}px`,
+              marginRight: `-${MARGIN}px`,
+              marginBottom: "24px",
+            }}
+          >
+            <h1 style={{ fontSize: "24px", fontWeight: 800, fontFamily: `'${fonts.heading}', sans-serif`, letterSpacing: "1px", textTransform: "uppercase", margin: 0 }}>
+              {form.documentInfo.title || config.defaultTitle}
+            </h1>
+            {form.documentInfo.subtitle && (
+              <p style={{ fontSize: "13px", opacity: 0.85, marginTop: "4px", margin: 0 }}>{form.documentInfo.subtitle}</p>
+            )}
+            <div style={{ display: "flex", gap: "20px", marginTop: "10px", fontSize: "11px", opacity: 0.75 }}>
+              {form.documentInfo.referenceNumber && <span>Ref: {form.documentInfo.referenceNumber}</span>}
+              {form.documentInfo.effectiveDate && <span>Date: {form.documentInfo.effectiveDate}</span>}
+            </div>
+          </div>
+        );
+      case "centered":
+        return (
+          <div style={{ textAlign: "center", marginBottom: "24px" }}>
+            <h1 style={{ fontSize: "26px", fontWeight: 800, fontFamily: `'${fonts.heading}', serif`, letterSpacing: "2px", textTransform: "uppercase", color: accent, margin: 0 }}>
+              {form.documentInfo.title || config.defaultTitle}
+            </h1>
+            {form.documentInfo.subtitle && (
+              <p style={{ fontSize: "13px", color: "#64748b", margin: "6px 0 0 0" }}>{form.documentInfo.subtitle}</p>
+            )}
+            <HeaderDivider tpl={tpl} />
+            <div style={{ display: "flex", justifyContent: "center", gap: "24px", marginTop: "10px", fontSize: "11px", color: "#64748b" }}>
+              {form.documentInfo.referenceNumber && <span>Ref: {form.documentInfo.referenceNumber}</span>}
+              {form.documentInfo.effectiveDate && <span>Effective: {form.documentInfo.effectiveDate}</span>}
+              {form.documentInfo.expiryDate && <span>Expires: {form.documentInfo.expiryDate}</span>}
+            </div>
+          </div>
+        );
+      case "left-aligned":
+        return (
+          <div style={{ marginBottom: "24px" }}>
+            <h1 style={{ fontSize: "24px", fontWeight: 700, fontFamily: `'${fonts.heading}', sans-serif`, color: accent, margin: 0 }}>
+              {form.documentInfo.title || config.defaultTitle}
+            </h1>
+            {form.documentInfo.subtitle && (
+              <p style={{ fontSize: "13px", color: "#64748b", margin: "4px 0 0 0" }}>{form.documentInfo.subtitle}</p>
+            )}
+            <HeaderDivider tpl={tpl} />
+            <div style={{ display: "flex", gap: "20px", marginTop: "10px", fontSize: "11px", color: "#64748b" }}>
+              {form.documentInfo.referenceNumber && <span>Ref: {form.documentInfo.referenceNumber}</span>}
+              {form.documentInfo.effectiveDate && <span>Effective: {form.documentInfo.effectiveDate}</span>}
+            </div>
+          </div>
+        );
+      default: // minimal
+        return (
+          <div style={{ marginBottom: "20px" }}>
+            <h1 style={{ fontSize: "20px", fontWeight: 600, fontFamily: `'${fonts.heading}', sans-serif`, color: "#1e293b", margin: 0 }}>
+              {form.documentInfo.title || config.defaultTitle}
+            </h1>
+            <div style={{ height: "1px", backgroundColor: "#e2e8f0", marginTop: "8px" }} />
+            <div style={{ display: "flex", gap: "16px", marginTop: "8px", fontSize: "10px", color: "#94a3b8" }}>
+              {form.documentInfo.referenceNumber && <span>Ref: {form.documentInfo.referenceNumber}</span>}
+              {form.documentInfo.effectiveDate && <span>{form.documentInfo.effectiveDate}</span>}
+            </div>
+          </div>
+        );
+    }
+  })();
+
+  blocks.push({ id: "header", section: "header", element: headerElement });
+
+  // ─── PARTIES ───
+  blocks.push({
+    id: "parties",
+    section: "parties",
+    element: (
+      <div style={{ marginBottom: "20px" }}>
+        <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+          {/* Party A */}
+          <div style={{ flex: "1 1 45%", minWidth: "200px" }}>
+            <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "6px" }}>
+              {form.partyA.role || config.partyARole}
+            </div>
+            <div style={{ fontSize: "14px", fontWeight: 700, color: "#1e293b" }}>
+              {form.partyA.name || `[${config.partyARole} Name]`}
+            </div>
+            {form.partyA.address && <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>{form.partyA.address}</div>}
+            {form.partyA.city && <div style={{ fontSize: "11px", color: "#64748b" }}>{form.partyA.city}, {form.partyA.country}</div>}
+            {form.partyA.representative && (
+              <div style={{ fontSize: "11px", color: "#475569", marginTop: "4px" }}>
+                Rep: {form.partyA.representative}
+                {form.partyA.representativeTitle && <span style={{ color: "#94a3b8" }}> ({form.partyA.representativeTitle})</span>}
+              </div>
+            )}
+          </div>
+          {/* AND */}
+          <div style={{ display: "flex", alignItems: "center", padding: "0 4px" }}>
+            <span style={{ fontSize: "10px", fontWeight: 600, color: "#94a3b8", letterSpacing: "1px" }}>AND</span>
+          </div>
+          {/* Party B */}
+          <div style={{ flex: "1 1 45%", minWidth: "200px" }}>
+            <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "6px" }}>
+              {form.partyB.role || config.partyBRole}
+            </div>
+            <div style={{ fontSize: "14px", fontWeight: 700, color: "#1e293b" }}>
+              {form.partyB.name || `[${config.partyBRole} Name]`}
+            </div>
+            {form.partyB.address && <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>{form.partyB.address}</div>}
+            {form.partyB.city && <div style={{ fontSize: "11px", color: "#64748b" }}>{form.partyB.city}, {form.partyB.country}</div>}
+            {form.partyB.representative && (
+              <div style={{ fontSize: "11px", color: "#475569", marginTop: "4px" }}>
+                Rep: {form.partyB.representative}
+                {form.partyB.representativeTitle && <span style={{ color: "#94a3b8" }}> ({form.partyB.representativeTitle})</span>}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    ),
+  });
+
+  // ─── DIVIDER ───
+  blocks.push({
+    id: "divider",
+    section: "parties",
+    element: <div style={{ height: "1px", backgroundColor: `${accent}20`, marginBottom: "16px" }} />,
+  });
+
+  // ─── PREAMBLE ───
+  if (form.documentInfo.preambleText) {
+    blocks.push({
+      id: "preamble",
+      section: "preamble",
+      element: (
+        <div style={{ marginBottom: "20px" }}>
+          <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "8px" }}>
+            Preamble
+          </div>
+          <p style={{ fontSize: "12px", lineHeight: 1.7, color: "#475569", textAlign: "justify", margin: 0 }}>
+            {form.documentInfo.preambleText}
+          </p>
+        </div>
+      ),
+    });
+  }
+
+  // ─── TABLE OF CONTENTS ───
+  if (form.documentInfo.showTableOfContents && enabledClauses.length > 0) {
+    blocks.push({
+      id: "toc",
+      section: "toc",
+      element: (
+        <div style={{ marginBottom: "24px", padding: "12px 16px", backgroundColor: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "4px" }}>
+          <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "8px" }}>
+            Table of Contents
+          </div>
+          {enabledClauses.map((clause, i) => (
+            <div key={clause.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "3px 0", fontSize: "11px" }}>
+              <span style={{ color: "#1e293b" }}>
+                <span style={{ fontWeight: 600, color: accent, marginRight: "6px" }}>{i + 1}.</span>
+                {clause.title}
+              </span>
+              <span style={{ flex: 1, borderBottom: "1px dotted #cbd5e1", margin: "0 8px", minWidth: "20px" }} />
+              <span style={{ color: "#94a3b8", fontSize: "10px" }}>{i + 1}</span>
+            </div>
+          ))}
+        </div>
+      ),
+    });
+  }
+
+  // ─── CLAUSES (one block per clause) ───
+  enabledClauses.forEach((clause, i) => {
+    blocks.push({
+      id: `clause-${clause.id}`,
+      section: "clauses",
+      element: (
+        <div style={{ marginBottom: "20px" }}>
+          <h3
+            style={{
+              fontSize: "14px",
+              fontWeight: 700,
+              fontFamily: `'${fonts.heading}', sans-serif`,
+              color: "#1e293b",
+              margin: "0 0 8px 0",
+            }}
+          >
+            <span style={{ color: accent, marginRight: "8px" }}>{i + 1}.</span>
+            {clause.title}
+          </h3>
+          <p style={{ fontSize: "12px", lineHeight: 1.7, color: "#475569", textAlign: "justify", margin: 0, paddingLeft: "20px" }}>
+            {clause.content}
+          </p>
+        </div>
+      ),
+    });
+  });
+
+  // ─── SIGNATURES (force new page) ───
+  blocks.push({
+    id: "signatures",
+    section: "signatures",
+    breakBefore: true,
+    element: (
+      <div>
+        <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "12px", textAlign: "center" }}>
+          IN WITNESS WHEREOF
+        </div>
+        <p style={{ fontSize: "11px", color: "#64748b", textAlign: "center", margin: "0 0 30px 0" }}>
+          The parties have executed this Agreement as of the Effective Date first written above.
+        </p>
+        <div style={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
+          {/* Party A Signature */}
+          <div style={{ flex: "1 1 45%", minWidth: "200px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 600, color: "#1e293b", marginBottom: "20px" }}>
+              For and on behalf of {form.partyA.name || `[${config.partyARole}]`}:
+            </div>
+            <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #1e293b" : "1px solid #1e293b", width: "220px", marginBottom: "4px" }} />
+            <div style={{ fontSize: "10px", color: "#64748b" }}>Signature</div>
+            <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #cbd5e1" : "1px solid #cbd5e1", width: "220px", marginTop: "16px", marginBottom: "4px" }} />
+            <div style={{ fontSize: "10px", color: "#64748b" }}>Name & Title</div>
+            {form.signatureConfig.showDate && (
+              <>
+                <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #cbd5e1" : "1px solid #cbd5e1", width: "140px", marginTop: "16px", marginBottom: "4px" }} />
+                <div style={{ fontSize: "10px", color: "#64748b" }}>Date</div>
+              </>
+            )}
+            {form.signatureConfig.showSeal && (
+              <div style={{ width: "80px", height: "80px", border: "2px dashed #cbd5e1", borderRadius: "50%", marginTop: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: "8px", color: "#94a3b8", textTransform: "uppercase" }}>Seal</span>
+              </div>
+            )}
+          </div>
+          {/* Party B Signature */}
+          <div style={{ flex: "1 1 45%", minWidth: "200px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 600, color: "#1e293b", marginBottom: "20px" }}>
+              For and on behalf of {form.partyB.name || `[${config.partyBRole}]`}:
+            </div>
+            <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #1e293b" : "1px solid #1e293b", width: "220px", marginBottom: "4px" }} />
+            <div style={{ fontSize: "10px", color: "#64748b" }}>Signature</div>
+            <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #cbd5e1" : "1px solid #cbd5e1", width: "220px", marginTop: "16px", marginBottom: "4px" }} />
+            <div style={{ fontSize: "10px", color: "#64748b" }}>Name & Title</div>
+            {form.signatureConfig.showDate && (
+              <>
+                <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #cbd5e1" : "1px solid #cbd5e1", width: "140px", marginTop: "16px", marginBottom: "4px" }} />
+                <div style={{ fontSize: "10px", color: "#64748b" }}>Date</div>
+              </>
+            )}
+            {form.signatureConfig.showSeal && (
+              <div style={{ width: "80px", height: "80px", border: "2px dashed #cbd5e1", borderRadius: "50%", marginTop: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: "8px", color: "#94a3b8", textTransform: "uppercase" }}>Seal</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    ),
+  });
+
+  // ─── WITNESSES ───
+  if (form.signatureConfig.showWitness) {
+    blocks.push({
+      id: "witnesses",
+      section: "witnesses",
+      element: (
+        <div style={{ marginTop: "36px" }}>
+          <div style={{ fontSize: "11px", fontWeight: 700, color: "#1e293b", marginBottom: "16px", textTransform: "uppercase", letterSpacing: "1px" }}>
+            Witness{form.signatureConfig.witnessCount > 1 ? "es" : ""}
+          </div>
+          <div style={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
+            {Array.from({ length: form.signatureConfig.witnessCount }, (_, i) => (
+              <div key={i} style={{ flex: "1 1 45%", minWidth: "200px" }}>
+                <div style={{ fontSize: "10px", color: "#64748b", marginBottom: "16px" }}>Witness {i + 1}</div>
+                <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #1e293b" : "1px solid #1e293b", width: "200px", marginBottom: "4px" }} />
+                <div style={{ fontSize: "10px", color: "#64748b" }}>Signature</div>
+                <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #cbd5e1" : "1px solid #cbd5e1", width: "200px", marginTop: "12px", marginBottom: "4px" }} />
+                <div style={{ fontSize: "10px", color: "#64748b" }}>Full Name</div>
+                <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #cbd5e1" : "1px solid #cbd5e1", width: "200px", marginTop: "12px", marginBottom: "4px" }} />
+                <div style={{ fontSize: "10px", color: "#64748b" }}>ID/NRC Number</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ),
+    });
+  }
+
+  return blocks;
+}
+
+// ---------------------------------------------------------------------------
+// Pagination algorithm — greedy bin-packing of blocks into pages
+// ---------------------------------------------------------------------------
+
+function paginateBlocks(
+  blocks: ContentBlock[],
+  heights: Map<string, number>,
+  usableH: number,
+): string[][] {
+  const pages: string[][] = [[]];
+  let remaining = usableH;
+
+  for (const block of blocks) {
+    const h = heights.get(block.id) ?? 0;
+
+    // Force page break
+    if (block.breakBefore && pages[pages.length - 1].length > 0) {
+      pages.push([]);
+      remaining = usableH;
+    }
+
+    if (h <= remaining) {
+      // Fits on current page
+      pages[pages.length - 1].push(block.id);
+      remaining -= h;
+    } else if (h <= usableH) {
+      // Doesn't fit here but fits on a fresh page
+      pages.push([block.id]);
+      remaining = usableH - h;
+    } else {
+      // Block taller than a full page — give it its own page
+      if (pages[pages.length - 1].length > 0) {
+        pages.push([]);
+      }
+      pages[pages.length - 1].push(block.id);
+      // Start a new page after an oversized block
+      pages.push([]);
+      remaining = usableH;
+    }
+  }
+
+  // Remove trailing empty pages
+  while (pages.length > 1 && pages[pages.length - 1].length === 0) {
+    pages.pop();
+  }
+
+  return pages;
+}
+
+// ---------------------------------------------------------------------------
 // Main Renderer
 // ---------------------------------------------------------------------------
 
 interface ContractRendererProps {
   form: ContractFormData;
+  onPageCount?: (count: number) => void;
+  pageGap?: number;
 }
 
-export default function ContractRenderer({ form }: ContractRendererProps) {
+export default function ContractRenderer({
+  form,
+  onPageCount,
+  pageGap = PAGE_GAP,
+}: ContractRendererProps) {
   const tpl = useMemo(() => getContractTemplate(form.style.template), [form.style.template]);
   const fonts = useMemo(() => getFonts(form.style.fontPairing), [form.style.fontPairing]);
   const fontUrl = useMemo(() => getGoogleFontUrl(form.style.fontPairing), [form.style.fontPairing]);
   const { w: pageW, h: pageH } = PAGE_PX[form.printConfig.pageSize] ?? PAGE_PX.a4;
   const accent = form.style.accentColor;
   const config = CONTRACT_TYPE_CONFIGS[form.contractType];
-  const enabledClauses = form.clauses.filter((c) => c.enabled);
+  const usableH = pageH - 2 * MARGIN - FOOTER_H;
 
-  const M = 50; // margin
-  const CW = pageW - M * 2; // content width
+  const measureRef = useRef<HTMLDivElement>(null);
+  const [pages, setPages] = useState<string[][]>([]);
+
+  // Build content blocks
+  const blocks = useMemo(
+    () => buildContentBlocks(form, config, fonts, accent, tpl),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      form.contractType,
+      form.documentInfo.title,
+      form.documentInfo.subtitle,
+      form.documentInfo.referenceNumber,
+      form.documentInfo.effectiveDate,
+      form.documentInfo.expiryDate,
+      form.documentInfo.preambleText,
+      form.documentInfo.showConfidentialBanner,
+      form.documentInfo.showTableOfContents,
+      form.partyA.name,
+      form.partyA.role,
+      form.partyA.address,
+      form.partyA.city,
+      form.partyA.country,
+      form.partyA.representative,
+      form.partyA.representativeTitle,
+      form.partyB.name,
+      form.partyB.role,
+      form.partyB.address,
+      form.partyB.city,
+      form.partyB.country,
+      form.partyB.representative,
+      form.partyB.representativeTitle,
+      form.clauses,
+      form.signatureConfig.lineStyle,
+      form.signatureConfig.showDate,
+      form.signatureConfig.showSeal,
+      form.signatureConfig.showWitness,
+      form.signatureConfig.witnessCount,
+      form.style.headerStyle,
+      form.style.accentColor,
+      form.style.fontPairing,
+      form.style.template,
+    ],
+  );
+
+  // Build block lookup
+  const blockMap = useMemo(() => {
+    const map = new Map<string, ContentBlock>();
+    for (const b of blocks) map.set(b.id, b);
+    return map;
+  }, [blocks]);
+
+  // Measure block heights & paginate (runs before paint)
+  useLayoutEffect(() => {
+    const container = measureRef.current;
+    if (!container || blocks.length === 0) return;
+
+    // Measure effective height of each block using position deltas
+    const els = container.querySelectorAll<HTMLElement>("[data-block-id]");
+    const heights = new Map<string, number>();
+    const containerRect = container.getBoundingClientRect();
+
+    for (let i = 0; i < els.length; i++) {
+      const el = els[i];
+      const id = el.dataset.blockId;
+      if (!id) continue;
+      const top = el.getBoundingClientRect().top - containerRect.top;
+      const nextTop =
+        i < els.length - 1
+          ? els[i + 1].getBoundingClientRect().top - containerRect.top
+          : container.scrollHeight;
+      heights.set(id, nextTop - top);
+    }
+
+    const result = paginateBlocks(blocks, heights, usableH);
+    setPages(result);
+  }, [blocks, usableH]);
+
+  // Report page count to parent
+  useEffect(() => {
+    if (onPageCount && pages.length > 0) {
+      onPageCount(pages.length);
+    }
+  }, [pages.length, onPageCount]);
+
+  const totalPages = pages.length || 1;
+
+  // Common font styles for measurement and page rendering
+  const fontStyles: React.CSSProperties = {
+    fontFamily: `'${fonts.body}', 'Inter', sans-serif`,
+    fontSize: "12px",
+    lineHeight: 1.6,
+    color: "#1e293b",
+  };
 
   return (
-    <div data-contract-page style={{ position: "relative" }}>
+    <div data-contract-document>
       {/* Google Fonts */}
       <link rel="stylesheet" href={fontUrl} />
 
+      {/* Hidden measurement container — same width/padding as real content area */}
       <div
+        ref={measureRef}
+        data-ct-measure
+        aria-hidden="true"
         style={{
+          position: "fixed",
+          left: "-99999px",
+          top: 0,
           width: `${pageW}px`,
-          minHeight: `${pageH}px`,
-          backgroundColor: "#ffffff",
-          color: "#1e293b",
-          fontFamily: `'${fonts.body}', 'Inter', sans-serif`,
-          fontSize: "12px",
-          lineHeight: 1.6,
-          position: "relative",
+          padding: `0 ${MARGIN}px`,
+          visibility: "hidden",
+          ...fontStyles,
         }}
       >
-        {/* Decorative layers */}
-        <WatermarkOverlay form={form} />
-        <PageBorder tpl={tpl} accent={accent} />
-        <DecorativeOverlay tpl={tpl} />
+        {blocks.map((b) => (
+          <div key={b.id} data-block-id={b.id}>
+            {b.element}
+          </div>
+        ))}
+      </div>
 
-        {/* Content container */}
-        <div style={{ position: "relative", zIndex: 1, padding: `${M}px` }}>
+      {/* Rendered pages */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: `${pageGap}px`,
+        }}
+      >
+        {pages.map((pageBlockIds, pageIdx) => (
+          <div
+            key={pageIdx}
+            data-contract-page={pageIdx + 1}
+            style={{
+              width: `${pageW}px`,
+              height: `${pageH}px`,
+              position: "relative",
+              overflow: "hidden",
+              backgroundColor: "#ffffff",
+              ...fontStyles,
+              pageBreakAfter: pageIdx < totalPages - 1 ? "always" : "auto",
+            }}
+          >
+            {/* Decorative overlays */}
+            <WatermarkOverlay form={form} />
+            <PageBorder tpl={tpl} accent={accent} />
+            <DecorativeOverlay tpl={tpl} />
 
-          {/* ─── CONFIDENTIAL BANNER ─── */}
-          {form.documentInfo.showConfidentialBanner && (
+            {/* Content area */}
             <div
-              data-ct-section="confidential"
               style={{
-                textAlign: "center",
-                padding: "6px 16px",
-                backgroundColor: `${accent}10`,
-                border: `1px solid ${accent}30`,
-                borderRadius: "4px",
-                fontSize: "10px",
-                fontWeight: 700,
-                letterSpacing: "3px",
-                textTransform: "uppercase",
-                color: accent,
-                marginBottom: "20px",
+                position: "absolute",
+                top: `${MARGIN}px`,
+                left: `${MARGIN}px`,
+                right: `${MARGIN}px`,
+                bottom: `${MARGIN}px`,
+                display: "flex",
+                flexDirection: "column",
+                zIndex: 1,
+                overflow: "visible",
               }}
             >
-              CONFIDENTIAL
-            </div>
-          )}
-
-          {/* ─── DOCUMENT HEADER ─── */}
-          <div data-ct-section="header">
-            {form.style.headerStyle === "banner" && (
-              <div style={{
-                backgroundColor: accent,
-                color: contrastText(accent),
-                padding: "20px 24px",
-                marginLeft: `-${M}px`,
-                marginRight: `-${M}px`,
-                marginTop: form.documentInfo.showConfidentialBanner ? "0" : `-${M}px`,
-                marginBottom: "24px",
-              }}>
-                <h1 style={{ fontSize: "24px", fontWeight: 800, fontFamily: `'${fonts.heading}', sans-serif`, letterSpacing: "1px", textTransform: "uppercase", margin: 0 }}>
-                  {form.documentInfo.title || config.defaultTitle}
-                </h1>
-                {form.documentInfo.subtitle && (
-                  <p style={{ fontSize: "13px", opacity: 0.85, marginTop: "4px", margin: 0 }}>{form.documentInfo.subtitle}</p>
-                )}
-                <div style={{ display: "flex", gap: "20px", marginTop: "10px", fontSize: "11px", opacity: 0.75 }}>
-                  {form.documentInfo.referenceNumber && <span>Ref: {form.documentInfo.referenceNumber}</span>}
-                  {form.documentInfo.effectiveDate && <span>Date: {form.documentInfo.effectiveDate}</span>}
-                </div>
-              </div>
-            )}
-
-            {form.style.headerStyle === "centered" && (
-              <div style={{ textAlign: "center", marginBottom: "24px" }}>
-                <h1 style={{ fontSize: "26px", fontWeight: 800, fontFamily: `'${fonts.heading}', serif`, letterSpacing: "2px", textTransform: "uppercase", color: accent, margin: 0 }}>
-                  {form.documentInfo.title || config.defaultTitle}
-                </h1>
-                {form.documentInfo.subtitle && (
-                  <p style={{ fontSize: "13px", color: "#64748b", marginTop: "6px", margin: "6px 0 0 0" }}>{form.documentInfo.subtitle}</p>
-                )}
-                <HeaderDivider tpl={tpl} />
-                <div style={{ display: "flex", justifyContent: "center", gap: "24px", marginTop: "10px", fontSize: "11px", color: "#64748b" }}>
-                  {form.documentInfo.referenceNumber && <span>Ref: {form.documentInfo.referenceNumber}</span>}
-                  {form.documentInfo.effectiveDate && <span>Effective: {form.documentInfo.effectiveDate}</span>}
-                  {form.documentInfo.expiryDate && <span>Expires: {form.documentInfo.expiryDate}</span>}
-                </div>
-              </div>
-            )}
-
-            {form.style.headerStyle === "left-aligned" && (
-              <div style={{ marginBottom: "24px" }}>
-                <h1 style={{ fontSize: "24px", fontWeight: 700, fontFamily: `'${fonts.heading}', sans-serif`, color: accent, margin: 0 }}>
-                  {form.documentInfo.title || config.defaultTitle}
-                </h1>
-                {form.documentInfo.subtitle && (
-                  <p style={{ fontSize: "13px", color: "#64748b", marginTop: "4px", margin: "4px 0 0 0" }}>{form.documentInfo.subtitle}</p>
-                )}
-                <HeaderDivider tpl={tpl} />
-                <div style={{ display: "flex", gap: "20px", marginTop: "10px", fontSize: "11px", color: "#64748b" }}>
-                  {form.documentInfo.referenceNumber && <span>Ref: {form.documentInfo.referenceNumber}</span>}
-                  {form.documentInfo.effectiveDate && <span>Effective: {form.documentInfo.effectiveDate}</span>}
-                </div>
-              </div>
-            )}
-
-            {form.style.headerStyle === "minimal" && (
-              <div style={{ marginBottom: "20px" }}>
-                <h1 style={{ fontSize: "20px", fontWeight: 600, fontFamily: `'${fonts.heading}', sans-serif`, color: "#1e293b", margin: 0 }}>
-                  {form.documentInfo.title || config.defaultTitle}
-                </h1>
-                <div style={{ height: "1px", backgroundColor: "#e2e8f0", marginTop: "8px" }} />
-                <div style={{ display: "flex", gap: "16px", marginTop: "8px", fontSize: "10px", color: "#94a3b8" }}>
-                  {form.documentInfo.referenceNumber && <span>Ref: {form.documentInfo.referenceNumber}</span>}
-                  {form.documentInfo.effectiveDate && <span>{form.documentInfo.effectiveDate}</span>}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* ─── PARTIES SECTION ─── */}
-          <div data-ct-section="parties" style={{ marginBottom: "20px" }}>
-            <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
-              {/* Party A */}
-              <div style={{ flex: "1 1 45%", minWidth: "200px" }}>
-                <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "6px" }}>
-                  {form.partyA.role || config.partyARole}
-                </div>
-                <div style={{ fontSize: "14px", fontWeight: 700, color: "#1e293b" }}>
-                  {form.partyA.name || `[${config.partyARole} Name]`}
-                </div>
-                {form.partyA.address && <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>{form.partyA.address}</div>}
-                {form.partyA.city && <div style={{ fontSize: "11px", color: "#64748b" }}>{form.partyA.city}, {form.partyA.country}</div>}
-                {form.partyA.representative && (
-                  <div style={{ fontSize: "11px", color: "#475569", marginTop: "4px" }}>
-                    Rep: {form.partyA.representative}
-                    {form.partyA.representativeTitle && <span style={{ color: "#94a3b8" }}> ({form.partyA.representativeTitle})</span>}
-                  </div>
-                )}
-              </div>
-
-              {/* AND separator */}
-              <div style={{ display: "flex", alignItems: "center", padding: "0 4px" }}>
-                <span style={{ fontSize: "10px", fontWeight: 600, color: "#94a3b8", letterSpacing: "1px" }}>AND</span>
-              </div>
-
-              {/* Party B */}
-              <div style={{ flex: "1 1 45%", minWidth: "200px" }}>
-                <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "6px" }}>
-                  {form.partyB.role || config.partyBRole}
-                </div>
-                <div style={{ fontSize: "14px", fontWeight: 700, color: "#1e293b" }}>
-                  {form.partyB.name || `[${config.partyBRole} Name]`}
-                </div>
-                {form.partyB.address && <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>{form.partyB.address}</div>}
-                {form.partyB.city && <div style={{ fontSize: "11px", color: "#64748b" }}>{form.partyB.city}, {form.partyB.country}</div>}
-                {form.partyB.representative && (
-                  <div style={{ fontSize: "11px", color: "#475569", marginTop: "4px" }}>
-                    Rep: {form.partyB.representative}
-                    {form.partyB.representativeTitle && <span style={{ color: "#94a3b8" }}> ({form.partyB.representativeTitle})</span>}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Divider after parties */}
-          <div style={{ height: "1px", backgroundColor: `${accent}20`, marginBottom: "16px" }} />
-
-          {/* ─── PREAMBLE ─── */}
-          {form.documentInfo.preambleText && (
-            <div data-ct-section="preamble" style={{ marginBottom: "20px" }}>
-              <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "8px" }}>
-                Preamble
-              </div>
-              <p style={{ fontSize: "12px", lineHeight: 1.7, color: "#475569", textAlign: "justify", margin: 0 }}>
-                {form.documentInfo.preambleText}
-              </p>
-            </div>
-          )}
-
-          {/* ─── TABLE OF CONTENTS ─── */}
-          {form.documentInfo.showTableOfContents && enabledClauses.length > 0 && (
-            <div data-ct-section="toc" style={{ marginBottom: "24px", padding: "12px 16px", backgroundColor: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "4px" }}>
-              <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "8px" }}>
-                Table of Contents
-              </div>
-              {enabledClauses.map((clause, i) => (
-                <div key={clause.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "3px 0", fontSize: "11px" }}>
-                  <span style={{ color: "#1e293b" }}>
-                    <span style={{ fontWeight: 600, color: accent, marginRight: "6px" }}>{i + 1}.</span>
-                    {clause.title}
-                  </span>
-                  <span style={{ flex: 1, borderBottom: "1px dotted #cbd5e1", margin: "0 8px", minWidth: "20px" }} />
-                  <span style={{ color: "#94a3b8", fontSize: "10px" }}>{i + 1}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* ─── CLAUSES ─── */}
-          <div data-ct-section="clauses">
-            {enabledClauses.map((clause, i) => (
-              <div key={clause.id} style={{ marginBottom: "20px" }}>
-                <h3 style={{
-                  fontSize: "14px",
-                  fontWeight: 700,
-                  fontFamily: `'${fonts.heading}', sans-serif`,
-                  color: "#1e293b",
-                  margin: "0 0 8px 0",
-                }}>
-                  <span style={{ color: accent, marginRight: "8px" }}>{i + 1}.</span>
-                  {clause.title}
-                </h3>
-                <p style={{ fontSize: "12px", lineHeight: 1.7, color: "#475569", textAlign: "justify", margin: 0, paddingLeft: "20px" }}>
-                  {clause.content}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* ─── SIGNATURES ─── */}
-          <div data-ct-section="signatures" style={{ marginTop: "40px" }}>
-            <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "12px", textAlign: "center" }}>
-              IN WITNESS WHEREOF
-            </div>
-            <p style={{ fontSize: "11px", color: "#64748b", textAlign: "center", marginBottom: "30px", margin: "0 0 30px 0" }}>
-              The parties have executed this Agreement as of the Effective Date first written above.
-            </p>
-
-            <div style={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
-              {/* Party A Signature */}
-              <div style={{ flex: "1 1 45%", minWidth: "200px" }}>
-                <div style={{ fontSize: "11px", fontWeight: 600, color: "#1e293b", marginBottom: "20px" }}>
-                  For and on behalf of {form.partyA.name || `[${config.partyARole}]`}:
-                </div>
-                <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #1e293b" : "1px solid #1e293b", width: "220px", marginBottom: "4px" }} />
-                <div style={{ fontSize: "10px", color: "#64748b" }}>Signature</div>
-                <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #cbd5e1" : "1px solid #cbd5e1", width: "220px", marginTop: "16px", marginBottom: "4px" }} />
-                <div style={{ fontSize: "10px", color: "#64748b" }}>Name & Title</div>
-                {form.signatureConfig.showDate && (
-                  <>
-                    <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #cbd5e1" : "1px solid #cbd5e1", width: "140px", marginTop: "16px", marginBottom: "4px" }} />
-                    <div style={{ fontSize: "10px", color: "#64748b" }}>Date</div>
-                  </>
-                )}
-                {form.signatureConfig.showSeal && (
-                  <div style={{ width: "80px", height: "80px", border: "2px dashed #cbd5e1", borderRadius: "50%", marginTop: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: "8px", color: "#94a3b8", textTransform: "uppercase" }}>Seal</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Party B Signature */}
-              <div style={{ flex: "1 1 45%", minWidth: "200px" }}>
-                <div style={{ fontSize: "11px", fontWeight: 600, color: "#1e293b", marginBottom: "20px" }}>
-                  For and on behalf of {form.partyB.name || `[${config.partyBRole}]`}:
-                </div>
-                <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #1e293b" : "1px solid #1e293b", width: "220px", marginBottom: "4px" }} />
-                <div style={{ fontSize: "10px", color: "#64748b" }}>Signature</div>
-                <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #cbd5e1" : "1px solid #cbd5e1", width: "220px", marginTop: "16px", marginBottom: "4px" }} />
-                <div style={{ fontSize: "10px", color: "#64748b" }}>Name & Title</div>
-                {form.signatureConfig.showDate && (
-                  <>
-                    <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #cbd5e1" : "1px solid #cbd5e1", width: "140px", marginTop: "16px", marginBottom: "4px" }} />
-                    <div style={{ fontSize: "10px", color: "#64748b" }}>Date</div>
-                  </>
-                )}
-                {form.signatureConfig.showSeal && (
-                  <div style={{ width: "80px", height: "80px", border: "2px dashed #cbd5e1", borderRadius: "50%", marginTop: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: "8px", color: "#94a3b8", textTransform: "uppercase" }}>Seal</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* ─── WITNESSES ─── */}
-            {form.signatureConfig.showWitness && (
-              <div data-ct-section="witnesses" style={{ marginTop: "36px" }}>
-                <div style={{ fontSize: "11px", fontWeight: 700, color: "#1e293b", marginBottom: "16px", textTransform: "uppercase", letterSpacing: "1px" }}>
-                  Witness{form.signatureConfig.witnessCount > 1 ? "es" : ""}
-                </div>
-                <div style={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
-                  {Array.from({ length: form.signatureConfig.witnessCount }, (_, i) => (
-                    <div key={i} style={{ flex: "1 1 45%", minWidth: "200px" }}>
-                      <div style={{ fontSize: "10px", color: "#64748b", marginBottom: "16px" }}>Witness {i + 1}</div>
-                      <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #1e293b" : "1px solid #1e293b", width: "200px", marginBottom: "4px" }} />
-                      <div style={{ fontSize: "10px", color: "#64748b" }}>Signature</div>
-                      <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #cbd5e1" : "1px solid #cbd5e1", width: "200px", marginTop: "12px", marginBottom: "4px" }} />
-                      <div style={{ fontSize: "10px", color: "#64748b" }}>Full Name</div>
-                      <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #cbd5e1" : "1px solid #cbd5e1", width: "200px", marginTop: "12px", marginBottom: "4px" }} />
-                      <div style={{ fontSize: "10px", color: "#64748b" }}>ID/NRC Number</div>
+              {/* Block content */}
+              <div style={{ flex: 1, overflow: "hidden" }}>
+                {pageBlockIds.map((id) => {
+                  const block = blockMap.get(id);
+                  if (!block) return null;
+                  return (
+                    <div key={id} data-ct-section={block.section}>
+                      {block.element}
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-            )}
-          </div>
 
-          {/* ─── FOOTER ─── */}
-          <div data-ct-section="footer" style={{ marginTop: "40px" }}>
-            {tpl.footerStyle === "bar" && (
-              <div style={{
-                backgroundColor: accent,
-                color: contrastText(accent),
-                padding: "8px 16px",
-                marginLeft: `-${M}px`, marginRight: `-${M}px`, marginBottom: `-${M}px`,
-                fontSize: "10px",
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-              }}>
-                <span style={{ fontWeight: 600 }}>{form.documentInfo.title}</span>
-                {form.style.pageNumbering && <span style={{ opacity: 0.75 }}>Page 1</span>}
+              {/* Page footer */}
+              <div style={{ flexShrink: 0, marginTop: "auto" }}>
+                <PageFooter
+                  form={form}
+                  tpl={tpl}
+                  accent={accent}
+                  pageNum={pageIdx + 1}
+                  totalPages={totalPages}
+                  isLastPage={pageIdx === totalPages - 1}
+                />
               </div>
-            )}
-
-            {tpl.footerStyle === "line" && (
-              <div style={{ borderTop: `1px solid ${accent}30`, paddingTop: "8px", display: "flex", justifyContent: "space-between", fontSize: "9px", color: "#94a3b8" }}>
-                <span>{form.documentInfo.title}</span>
-                <span>{form.documentInfo.referenceNumber}</span>
-                {form.style.pageNumbering && <span>Page 1</span>}
-              </div>
-            )}
-
-            {tpl.footerStyle === "none" && form.style.pageNumbering && (
-              <div style={{
-                textAlign: form.style.pageNumberPosition === "bottom-center" ? "center" : "right",
-                fontSize: "9px", color: "#94a3b8", marginTop: "16px",
-              }}>
-                Page 1
-              </div>
-            )}
-
-            {/* Legal disclaimer */}
-            <div style={{ textAlign: "center", fontSize: "8px", color: "#94a3b8", marginTop: "12px", fontStyle: "italic" }}>
-              This document is a template generated by DMSuite. It is not a substitute for professional legal advice.
-              Consult a qualified attorney before executing any legal agreement.
             </div>
           </div>
-
-        </div>
+        ))}
       </div>
     </div>
   );

@@ -18,10 +18,9 @@ import {
   CONTRACT_TYPES,
   CONTRACT_TYPE_CONFIGS,
   CONTRACT_TEMPLATES,
-  PAGE_DIMENSIONS,
 } from "@/lib/contract/schema";
 import type { ContractType } from "@/lib/contract/schema";
-import ContractRenderer from "@/lib/contract/ContractRenderer";
+import ContractRenderer, { PAGE_PX, PAGE_GAP } from "@/lib/contract/ContractRenderer";
 import ContractDocumentTab from "./tabs/ContractDocumentTab";
 import ContractPartiesTab from "./tabs/ContractPartiesTab";
 import ContractClausesTab from "./tabs/ContractClausesTab";
@@ -124,9 +123,9 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
   // Derived
   const config = CONTRACT_TYPE_CONFIGS[form.contractType];
   const enabledClauses = form.clauses.filter((c) => c.enabled).length;
-  const pageDim = PAGE_DIMENSIONS[form.printConfig.pageSize] ?? PAGE_DIMENSIONS.a4;
+  const pageDim = PAGE_PX[form.printConfig.pageSize] ?? PAGE_PX.a4;
   const pageH = pageDim.h;
-  const pageW = pageDim.w;
+  const pageStep = pageH + PAGE_GAP; // scroll distance between page starts
 
   // Initialize contract type from wrapper props
   useEffect(() => {
@@ -153,17 +152,10 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
     return () => document.removeEventListener("mousedown", handler);
   }, [showConvert]);
 
-  // Measure rendered document height → compute total pages
-  useEffect(() => {
-    const el = printAreaRef.current;
-    if (!el) return;
-    const obs = new ResizeObserver(() => {
-      const h = el.scrollHeight;
-      setTotalPages(Math.max(1, Math.ceil(h / pageH)));
-    });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [pageH]);
+  // Page count is reported by the renderer via onPageCount callback
+  const handlePageCount = useCallback((count: number) => {
+    setTotalPages(count);
+  }, []);
 
   // Reset to page 1 when contract type or page size changes
   useEffect(() => {
@@ -182,14 +174,16 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
   const handlePrint = useCallback(() => {
     const printEl = document.getElementById("ct-print-area");
     if (!printEl) return;
+    const pageSize = form.printConfig.pageSize === "a4" ? "A4" : form.printConfig.pageSize === "letter" ? "letter" : "legal";
     const html = `<!DOCTYPE html><html><head>
       <title>${form.documentInfo.title} - Contract</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        @page { size: ${form.printConfig.pageSize === "a4" ? "A4" : form.printConfig.pageSize === "letter" ? "letter" : "legal"} portrait; margin: 0; }
+        @page { size: ${pageSize} portrait; margin: 0; }
         body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        [data-ct-section="signatures"] { break-before: page; }
-        [data-ct-section="clauses"] > div { break-inside: avoid; }
+        [data-ct-measure] { display: none !important; }
+        [data-contract-page] { page-break-after: always; }
+        [data-contract-page]:last-child { page-break-after: auto; }
       </style></head><body>${printEl.innerHTML}</body></html>`;
     printHTML(html);
   }, [form.documentInfo.title, form.printConfig.pageSize]);
@@ -208,23 +202,23 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
     setActiveTab("document");
   }, [resetForm, initialContractType]);
 
-  // Page navigation
+  // Page navigation — accounts for page gap between discrete page divs
   const goToPage = useCallback(
     (page: number) => {
       const clamped = Math.max(1, Math.min(totalPages, page));
       setCurrentPage(clamped);
       const el = previewScrollRef.current;
-      if (el) el.scrollTo({ top: (clamped - 1) * pageH, behavior: "smooth" });
+      if (el) el.scrollTo({ top: (clamped - 1) * pageStep, behavior: "smooth" });
     },
-    [totalPages, pageH],
+    [totalPages, pageStep],
   );
 
   const handlePreviewScroll = useCallback(() => {
     const el = previewScrollRef.current;
     if (!el) return;
-    const page = Math.min(totalPages, Math.floor(el.scrollTop / pageH) + 1);
+    const page = Math.min(totalPages, Math.floor(el.scrollTop / pageStep) + 1);
     setCurrentPage(page);
-  }, [totalPages, pageH]);
+  }, [totalPages, pageStep]);
 
   // Tab-to-section mapping for layers panel click
   const handleLayerOpenSection = useCallback((section: string) => {
@@ -365,7 +359,8 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
           .ct-canvas-root [data-ct-section] { transition: outline 0.15s ease, box-shadow 0.15s ease; outline: 2px solid transparent; border-radius: 2px; cursor: pointer; }
           .ct-canvas-root [data-ct-section]:hover { outline: 2px solid rgba(139,92,246,0.4); box-shadow: 0 0 0 4px rgba(139,92,246,0.06); }
           .ct-canvas-root [data-ct-section].ct-layer-highlight { outline: 2px solid rgba(139,92,246,0.6); box-shadow: 0 0 0 6px rgba(139,92,246,0.1); }
-          @media print { .ct-canvas-root [data-ct-section] { outline: none !important; box-shadow: none !important; cursor: default !important; } }
+          .ct-canvas-root [data-contract-page] { box-shadow: 0 4px 32px rgba(0,0,0,0.45); }
+          @media print { .ct-canvas-root [data-ct-section] { outline: none !important; box-shadow: none !important; cursor: default !important; } .ct-canvas-root [data-contract-page] { box-shadow: none !important; } }
         `}</style>
         <div
           className="ct-canvas-root flex justify-center py-6 px-4"
@@ -373,43 +368,17 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
         >
           {/* Page-sized container with overflow visible — inner doc is naturally wider */}
           <div style={{ position: "relative" }}>
-            {/* The document — rendered at full natural height */}
+            {/* The document — paginated with discrete page divs */}
             <div
               id="ct-print-area"
               ref={printAreaRef}
               style={{
                 transform: `scale(${zoom / 100})`,
                 transformOrigin: "top center",
-                boxShadow: "0 4px 32px rgba(0,0,0,0.45)",
               }}
             >
-              <ContractRenderer form={form} />
+              <ContractRenderer form={form} onPageCount={handlePageCount} pageGap={PAGE_GAP} />
             </div>
-
-            {/* Grey page-break gutters — overlaid at pageH intervals */}
-            {totalPages > 1 && Array.from({ length: totalPages - 1 }).map((_, i) => (
-              <div
-                key={i}
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  right: 0,
-                  top: `${(i + 1) * pageH * (zoom / 100)}px`,
-                  height: `${16 * (zoom / 100)}px`,
-                  backgroundColor: "#374151",
-                  zIndex: 10,
-                  pointerEvents: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-end",
-                  paddingRight: "8px",
-                }}
-              >
-                <span style={{ fontSize: 9, color: "#9ca3af", fontFamily: "monospace" }}>
-                  p.{i + 2}
-                </span>
-              </div>
-            ))}
           </div>
         </div>
       </div>
