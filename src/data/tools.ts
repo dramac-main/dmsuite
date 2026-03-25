@@ -930,6 +930,7 @@ export const toolCategories: ToolCategory[] = [
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
         supportsPartEdit: true,
+        devStatus: "complete",
       },
       {
         id: "business-plan",

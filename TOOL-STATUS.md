@@ -90,7 +90,7 @@ These have real workspace code (state management, canvas/editor, templates) but 
 | 12 | `calendar-designer` | Calendar Designer | CalendarDesignerWorkspace | `SCAFFOLD` |
 | 13 | `signage` | Signage | SignageDesignerWorkspace | `SCAFFOLD` |
 | 14 | `proposal-generator` | Proposal Generator | ProposalWorkspace | `SCAFFOLD` |
-| 15 | `contract-template` | Contract Template | ContractWorkspace | `SCAFFOLD` |
+| 15 | `contract-template` | Contract & Agreement Creator | ContractDesignerWorkspace | `COMPLETE` |
 | 16 | `report-generator` | Report Generator | ReportWorkspace | `SCAFFOLD` |
 | 17 | `product-catalog` | Product Catalog | CatalogWorkspace | `SCAFFOLD` |
 | 18 | `price-list` | Price List | PriceListWorkspace | `SCAFFOLD` |
@@ -272,5 +272,6 @@ These already have substantial workspace code and would benefit most from a poli
 
 | Date | Tool(s) | Change | By |
 |------|---------|--------|----|
+| 2025-07-17 | contract-template (Contract & Agreement Creator) | Full rebuild: 8 contract types, 8 visual templates, Zustand+Immer+Zundo store, HTML/CSS renderer, 5-tab editor (Document/Parties/Clauses/Style/Print), Figma-style layers panel, click-to-edit, undo/redo, print-ready, responsive layout | Drake |
 | 2026-03-25 | Sales Books (9) | Initial COMPLETE — v3 tabbed editor, layers panel, brand colors, mobile fixes | Drake |
 | | | Tracker created | — |
