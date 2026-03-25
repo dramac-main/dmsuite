@@ -248,7 +248,7 @@ export default function Sidebar() {
 
         {/* Pro badge at bottom */}
         {!isCollapsed && (
-          <div className="p-3 shrink-0">
+          <div className="p-3 shrink-0 space-y-2">
             <div
               className={cn(
                 "rounded-xl p-4",
@@ -265,6 +265,17 @@ export default function Sidebar() {
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Every tool uses advanced AI to deliver jaw-dropping results.
               </p>
+            </div>
+            {/* Keyboard shortcut hints */}
+            <div className="flex flex-col gap-1 px-1 text-[10px] text-gray-500">
+              <div className="flex items-center justify-between">
+                <span>Search tools</span>
+                <kbd className="px-1.5 py-0.5 rounded border border-gray-700/60 bg-gray-800/60 font-mono">Ctrl K</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Toggle sidebar</span>
+                <kbd className="px-1.5 py-0.5 rounded border border-gray-700/60 bg-gray-800/60 font-mono">Ctrl B</kbd>
+              </div>
             </div>
           </div>
         )}
@@ -292,6 +303,7 @@ export default function Sidebar() {
 
       {/* ── Desktop sidebar (hover-to-expand + pin) ────────────── */}
       <aside
+        data-tour="sidebar"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         className={cn(

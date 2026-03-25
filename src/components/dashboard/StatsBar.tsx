@@ -2,11 +2,43 @@
 
 import { hubStats } from "@/data/tools";
 import { getIcon } from "@/components/icons";
+import { useAnalyticsStore } from "@/stores/analytics";
+import { usePreferencesStore } from "@/stores/preferences";
 
 export default function StatsBar() {
+  const totalOpens = useAnalyticsStore((s) => s.getTotalOpens());
+  const totalHours = useAnalyticsStore((s) => s.getTotalHours());
+  const favCount = usePreferencesStore((s) => s.favoriteTools.length);
+
+  // Merge static hub stats with dynamic analytics
+  const dynamicStats = [
+    ...hubStats,
+    ...(totalOpens > 0
+      ? [
+          {
+            label: "Sessions",
+            value: totalOpens.toString(),
+            icon: "clock" as const,
+            change: `${totalHours}h total time`,
+            changeType: "up" as const,
+          },
+        ]
+      : []),
+    ...(favCount > 0
+      ? [
+          {
+            label: "Favorites",
+            value: favCount.toString(),
+            icon: "star" as const,
+            change: "Quick access",
+            changeType: "up" as const,
+          },
+        ]
+      : []),
+  ];
   return (
     <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
-      {hubStats.map((stat) => {
+      {dynamicStats.map((stat) => {
         const Icon = getIcon(stat.icon);
         return (
           <div

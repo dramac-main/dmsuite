@@ -4,7 +4,15 @@ import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { searchTools, type FlatTool, totalToolCount } from "@/data/tools";
-import { getIcon, IconSearch, IconArrowRight, IconX, IconSparkles } from "@/components/icons";
+import { getIcon, IconSearch, IconArrowRight, IconX, IconSparkles, IconClock } from "@/components/icons";
+import { usePreferencesStore } from "@/stores/preferences";
+
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
 
 export default function HeroBanner() {
   const [query, setQuery] = useState("");
@@ -13,6 +21,9 @@ export default function HeroBanner() {
   const [selectedIdx, setSelectedIdx] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const recentSearches = usePreferencesStore((s) => s.recentSearches);
+  const addRecentSearch = usePreferencesStore((s) => s.addRecentSearch);
+  const clearRecentSearches = usePreferencesStore((s) => s.clearRecentSearches);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), 150);
@@ -22,6 +33,7 @@ export default function HeroBanner() {
   const results: FlatTool[] = useMemo(() => searchTools(debouncedQuery), [debouncedQuery]);
   const visibleResults = results.slice(0, 8);
   const showResults = focused && query.length > 0;
+  const showRecents = focused && query.length === 0 && recentSearches.length > 0;
 
   const handleBlur = useCallback((e: React.FocusEvent) => {
     if (containerRef.current && !containerRef.current.contains(e.relatedTarget as Node)) {
@@ -45,6 +57,7 @@ export default function HeroBanner() {
         e.preventDefault();
         if (selectedIdx >= 0 && visibleResults[selectedIdx]) {
           const t = visibleResults[selectedIdx];
+          addRecentSearch(query);
           router.push(`/tools/${t.categoryId}/${t.id}`);
         }
         break;
@@ -85,9 +98,9 @@ export default function HeroBanner() {
 
         {/* Title */}
         <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-900 dark:text-white tracking-tight mb-3 leading-[1.15]">
-          Your Complete{" "}
+          {getGreeting()} —{" "}
           <span className="text-transparent bg-clip-text bg-linear-to-r from-primary-400 via-primary-500 to-secondary-400">
-            AI Creative Studio
+            Let&apos;s Create
           </span>
         </h1>
         <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base max-w-2xl mb-8 leading-relaxed">
@@ -96,7 +109,7 @@ export default function HeroBanner() {
         </p>
 
         {/* Search bar — elevated glassmorphic */}
-        <div ref={containerRef} onBlur={handleBlur} className="relative max-w-xl z-50">
+        <div ref={containerRef} onBlur={handleBlur} className="relative max-w-xl z-50" data-tour="search">
           <div
             className={`
               relative flex items-center h-13 sm:h-14 rounded-2xl
@@ -111,7 +124,7 @@ export default function HeroBanner() {
             <IconSearch className={`absolute left-4 sm:left-5 size-5 transition-colors duration-200 ${focused ? "text-primary-500" : "text-gray-400"}`} />
             <input
               type="text"
-              placeholder="Search any tool — logos, sales books, video editor..."
+              placeholder="Search 250+ AI tools…"
               value={query}
               onChange={(e) => { setQuery(e.target.value); setSelectedIdx(-1); }}
               onFocus={() => setFocused(true)}
@@ -124,13 +137,17 @@ export default function HeroBanner() {
                 text-gray-900 dark:text-white placeholder:text-gray-400
                 focus:outline-none"
             />
-            {query && (
+            {query ? (
               <button
                 onClick={() => setQuery("")}
                 className="absolute right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <IconX className="size-4" />
               </button>
+            ) : (
+              <kbd className="absolute right-3 hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border border-gray-300/60 dark:border-gray-600/60 bg-gray-100/80 dark:bg-gray-700/60 text-[10px] font-mono text-gray-400 select-none pointer-events-none">
+                Ctrl K
+              </kbd>
             )}
           </div>
 
@@ -160,6 +177,7 @@ export default function HeroBanner() {
                         role="option"
                         aria-selected={idx === selectedIdx}
                         href={`/tools/${tool.categoryId}/${tool.id}`}
+                        onClick={() => addRecentSearch(query)}
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-xl
                           transition-all duration-150 group
                           ${idx === selectedIdx
@@ -192,6 +210,41 @@ export default function HeroBanner() {
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Recent searches dropdown (when query is empty) */}
+          {showRecents && (
+            <div className="absolute top-full left-0 right-0 mt-2 z-50
+              bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl
+              border border-gray-200/60 dark:border-gray-700/60
+              rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/30 overflow-hidden"
+            >
+              <div className="p-2">
+                <div className="flex items-center justify-between px-3 py-1.5">
+                  <p className="text-[0.625rem] font-semibold uppercase tracking-widest text-gray-400">
+                    Recent Searches
+                  </p>
+                  <button
+                    onClick={clearRecentSearches}
+                    className="text-[0.625rem] text-gray-400 hover:text-red-400 transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+                {recentSearches.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => { setQuery(s); setFocused(true); }}
+                    className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-left
+                      hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
+                  >
+                    <IconClock className="size-4 text-gray-400 shrink-0" />
+                    <span className="text-sm text-gray-600 dark:text-gray-300 truncate">{s}</span>
+                    <IconArrowRight className="size-3.5 text-gray-300 dark:text-gray-600 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>

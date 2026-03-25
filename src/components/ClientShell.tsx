@@ -14,6 +14,10 @@ const ShortcutsHelpModal = dynamic(
   () => import("@/components/ShortcutsHelpModal"),
   { ssr: false }
 );
+const ToastContainer = dynamic(
+  () => import("@/components/ToastContainer"),
+  { ssr: false }
+);
 const ChikoFAB = dynamic(
   () => import("@/components/Chiko/ChikoFAB").then((m) => ({ default: m.ChikoFAB })),
   { ssr: false }
@@ -51,6 +55,7 @@ export default function ClientShell() {
       {!isToolPage && <MobileBottomNav />}
       <InstallPrompt />
       <ShortcutsHelpModal />
+      <ToastContainer />
       <ChikoFAB />
       <ChikoAssistant />
       <ChikoOnboarding />

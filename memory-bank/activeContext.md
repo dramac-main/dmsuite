@@ -1,6 +1,32 @@
 # DMSuite — Active Context
 
 ## Current Focus
+**Phase:** UX Enhancement Masterplan — ALL 4 PHASES COMPLETE ✅
+
+### 35-Item UX Masterplan — Summary
+All 35 UX improvements implemented across 4 phases:
+
+- **Phase 1** ✅ Quick Wins (6/6): Recent tools wiring, star button, RecentTools section, FavoriteTools section, Mobile Recents bottom sheet, Global toast system
+- **Phase 2** ✅ Table Stakes (6/6): Notification store + panel, TopBar integration, What's New changelog, Error boundaries, Onboarding tour, Save indicator + keyboard hints
+- **Phase 3** ✅ Differentiation (6/6): Active projects, Usage analytics, Search enhancements, Tool card context menu, Filter/sort toolbar, Explore collections
+- **Phase 4** ✅ Delight (11/11): Personalized greeting, Credits progress bar, Empty state illustrations, Loading skeletons, Tool preview hover, Breadcrumb memory, Dashboard customization, Export history store, Help tooltips, Similar tools, Quick start templates, Session continuity prompt
+
+### Key New Systems
+- **Preferences Store**: `recentTools`, `favoriteTools`, `recentSearches`, `lastVisitedPerCategory`, `hiddenSections`, `toggleSection`, `setLastVisited`
+- **Dashboard Customizer**: Gear icon panel lets users toggle visibility of 6 dashboard sections
+- **Breadcrumb Memory**: Tracks last visited tool per category, shows "Continue: [tool] →" link
+- **Session Continuity**: "Welcome back" banner when returning after 30+ min
+- **Empty States**: Illustrated empty states for Favorites, Recents, and Projects sections
+- **Export History Store**: Tracks all exports (max 100, persisted)
+- **Quick Start Templates**: Preset configs for 9 tools (logo, card, social, invoice, etc.)
+- **Similar Tools**: Related tool suggestions on workspace pages
+
+### TypeScript
+- 0 errors — validated after every change
+
+---
+
+## Previous Focus
 **Phase:** Session 124 — Contract Cover Design Picker — COMPLETE ✅
 
 ### Session 124: Optional Cover Design Templates

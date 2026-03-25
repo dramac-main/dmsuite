@@ -6,6 +6,12 @@ interface PreferencesState {
   recentTools: string[];
   /** Favorite / pinned tool IDs */
   favoriteTools: string[];
+  /** Recent search queries (max 8) */
+  recentSearches: string[];
+  /** Last visited tool per category for breadcrumb return */
+  lastVisitedPerCategory: Record<string, string>;
+  /** Dashboard sections the user has hidden */
+  hiddenSections: string[];
   /** Whether to show tool descriptions in cards */
   showDescriptions: boolean;
   /** Default category expansion on dashboard */
@@ -17,6 +23,14 @@ interface PreferencesState {
   toggleFavorite: (toolId: string) => void;
   /** Check if a tool is favorite */
   isFavorite: (toolId: string) => boolean;
+  /** Add a search query to recent searches */
+  addRecentSearch: (query: string) => void;
+  /** Clear recent searches */
+  clearRecentSearches: () => void;
+  /** Track last visited tool for a category */
+  setLastVisited: (categoryId: string, toolId: string) => void;
+  /** Toggle a dashboard section's visibility */
+  toggleSection: (sectionId: string) => void;
   /** Toggle description visibility */
   toggleDescriptions: () => void;
   /** Toggle a category expansion */
@@ -30,6 +44,9 @@ export const usePreferencesStore = create<PreferencesState>()(
     (set, get) => ({
       recentTools: [],
       favoriteTools: [],
+      recentSearches: [],
+      lastVisitedPerCategory: {},
+      hiddenSections: [],
       showDescriptions: true,
       expandedCategories: [],
 
@@ -47,6 +64,27 @@ export const usePreferencesStore = create<PreferencesState>()(
 
       isFavorite: (toolId) => get().favoriteTools.includes(toolId),
 
+      addRecentSearch: (query) => {
+        const q = query.trim();
+        if (!q || q.length < 2) return;
+        set((s) => ({
+          recentSearches: [q, ...s.recentSearches.filter((s) => s !== q)].slice(0, 8),
+        }));
+      },
+      clearRecentSearches: () => set({ recentSearches: [] }),
+
+      setLastVisited: (categoryId, toolId) =>
+        set((s) => ({
+          lastVisitedPerCategory: { ...s.lastVisitedPerCategory, [categoryId]: toolId },
+        })),
+
+      toggleSection: (sectionId) =>
+        set((s) => ({
+          hiddenSections: s.hiddenSections.includes(sectionId)
+            ? s.hiddenSections.filter((id) => id !== sectionId)
+            : [...s.hiddenSections, sectionId],
+        })),
+
       toggleDescriptions: () => set((s) => ({ showDescriptions: !s.showDescriptions })),
 
       toggleCategory: (categoryId) =>
@@ -60,6 +98,9 @@ export const usePreferencesStore = create<PreferencesState>()(
         set({
           recentTools: [],
           favoriteTools: [],
+          recentSearches: [],
+          lastVisitedPerCategory: {},
+          hiddenSections: [],
           showDescriptions: true,
           expandedCategories: [],
         }),

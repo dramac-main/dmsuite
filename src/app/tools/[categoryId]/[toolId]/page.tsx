@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { toolCategories } from "@/data/tools";
@@ -10,10 +11,15 @@ import CreditBalance from "@/components/dashboard/CreditBalance";
 import UserMenu from "@/components/dashboard/UserMenu";
 import ThemeSwitch from "@/components/ThemeSwitch";
 import { bgOpacity10 } from "@/lib/colors";
-import { getIcon, IconArrowRight, IconChevronLeft, IconSparkles, IconZap, IconBell, IconMenu } from "@/components/icons";
+import { getIcon, IconArrowRight, IconChevronLeft, IconSparkles, IconZap, IconMenu } from "@/components/icons";
 import { useSidebarStore } from "@/stores/sidebar";
-import { sidebar as sidebarConfig, surfaces, layout, interactive, recipes } from "@/lib/design-system";
+import { usePreferencesStore } from "@/stores/preferences";
+import { useAnalyticsStore } from "@/stores/analytics";
+import { sidebar as sidebarConfig, surfaces, layout, interactive } from "@/lib/design-system";
 import { cn } from "@/lib/utils";
+import NotificationPanel from "@/components/dashboard/NotificationPanel";
+import SaveIndicator from "@/components/dashboard/SaveIndicator";
+import SimilarTools from "@/components/dashboard/SimilarTools";
 
 /* ── Dynamically imported workspace components ──────────────── */
 const workspaceComponents: Record<string, React.ComponentType> = {
@@ -149,6 +155,23 @@ export default function ToolWorkspacePage() {
   const toolId = params.toolId as string;
   const pinned = useSidebarStore((s) => s.pinned);
   const openMobile = useSidebarStore((s) => s.openMobile);
+  const addRecentTool = usePreferencesStore((s) => s.addRecentTool);
+  const setLastVisited = usePreferencesStore((s) => s.setLastVisited);
+  const trackOpen = useAnalyticsStore((s) => s.trackOpen);
+  const trackTime = useAnalyticsStore((s) => s.trackTime);
+
+  // Track tool usage on mount + time spent
+  useEffect(() => {
+    if (!toolId) return;
+    addRecentTool(toolId);
+    trackOpen(toolId);
+    if (categoryId) setLastVisited(categoryId, toolId);
+    const start = Date.now();
+    return () => {
+      const elapsed = Math.round((Date.now() - start) / 1000);
+      if (elapsed > 2) trackTime(toolId, elapsed);
+    };
+  }, [toolId, categoryId, addRecentTool, setLastVisited, trackOpen, trackTime]);
 
   // Find the category and tool
   const category = toolCategories.find((c) => c.id === categoryId);
@@ -235,15 +258,10 @@ export default function ToolWorkspacePage() {
 
             {/* Right: utilities */}
             <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+              <SaveIndicator />
               <span className="hidden sm:inline-flex"><CreditBalance /></span>
               <span className="hidden sm:inline-flex"><ThemeSwitch /></span>
-              <button
-                className={cn(interactive.iconButton, "relative !size-8 hidden sm:flex")}
-                aria-label="Notifications"
-              >
-                <IconBell className="size-4" />
-                <span className={recipes.notifDot} />
-              </button>
+              <NotificationPanel />
               <UserMenu />
             </div>
           </header>
@@ -338,6 +356,11 @@ export default function ToolWorkspacePage() {
                 Back
               </Link>
             </div>
+          </div>
+
+          {/* Similar tools from same category */}
+          <div className="mt-6">
+            <SimilarTools categoryId={categoryId} currentToolId={toolId} max={6} />
           </div>
         </div>
       </main>

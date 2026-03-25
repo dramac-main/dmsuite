@@ -1,11 +1,12 @@
 "use client";
 
 import ThemeSwitch from "@/components/ThemeSwitch";
-import { IconBell, IconMenu, IconSparkles } from "@/components/icons";
+import { IconMenu, IconSparkles } from "@/components/icons";
 import { interactive, typography, recipes, layout } from "@/lib/design-system";
 import { cn } from "@/lib/utils";
 import UserMenu from "./UserMenu";
 import CreditBalance from "./CreditBalance";
+import NotificationPanel from "./NotificationPanel";
 
 interface TopBarProps {
   onMenuClick?: () => void;
@@ -41,14 +42,7 @@ export default function TopBar({ onMenuClick, title = "Dashboard" }: TopBarProps
         <CreditBalance />
         <ThemeSwitch />
 
-        <button
-          className={cn(interactive.iconButton, "relative")}
-          aria-label="Notifications"
-        >
-          <IconBell className="size-5" />
-          {/* Notification dot */}
-          <span className={recipes.notifDot} />
-        </button>
+        <NotificationPanel />
 
         {/* User menu (avatar + dropdown) */}
         <UserMenu />

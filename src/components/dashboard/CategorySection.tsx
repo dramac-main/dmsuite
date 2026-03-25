@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { type ToolCategory } from "@/data/tools";
 import { getIcon, IconChevronDown } from "@/components/icons";
 import { bgOpacity10 } from "@/lib/colors";
+import { usePreferencesStore } from "@/stores/preferences";
 import ToolCard from "./ToolCard";
 
 interface CategorySectionProps {
@@ -18,6 +20,10 @@ export default function CategorySection({
   const [expanded, setExpanded] = useState(defaultExpanded);
   const Icon = getIcon(category.icon);
   const iconBg = bgOpacity10[category.colorClass] || "bg-gray-500/10";
+  const lastVisitedId = usePreferencesStore((s) => s.lastVisitedPerCategory[category.id]);
+  const lastVisitedTool = lastVisitedId
+    ? category.tools.find((t) => t.id === lastVisitedId)
+    : undefined;
 
   const readyCount = category.tools.filter((t) => t.status === "ready").length;
   const betaCount = category.tools.filter((t) => t.status === "beta").length;
@@ -61,6 +67,15 @@ export default function CategorySection({
           <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">
             {category.description}
           </p>
+          {lastVisitedTool && (
+            <Link
+              href={`/tools/${category.id}/${lastVisitedTool.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 mt-1 text-[10px] font-medium text-primary-500 hover:text-primary-400 transition-colors"
+            >
+              Continue: {lastVisitedTool.name} →
+            </Link>
+          )}
         </div>
 
         {/* Expand/collapse */}

@@ -1,15 +1,25 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState, useMemo } from "react";
 import { toolCategories } from "@/data/tools";
 import Sidebar from "@/components/dashboard/Sidebar";
 import TopBar from "@/components/dashboard/TopBar";
 import HeroBanner from "@/components/dashboard/HeroBanner";
 import StatsBar from "@/components/dashboard/StatsBar";
 import QuickAccess from "@/components/dashboard/QuickAccess";
+import RecentTools from "@/components/dashboard/RecentTools";
+import FavoriteTools from "@/components/dashboard/FavoriteTools";
+import WhatsNew from "@/components/dashboard/WhatsNew";
+import ActiveProjects from "@/components/dashboard/ActiveProjects";
+import ExploreSection from "@/components/dashboard/ExploreSection";
+import OnboardingTour from "@/components/dashboard/OnboardingTour";
+import CategoryToolbar, { type SortOption, type FilterStatus } from "@/components/dashboard/CategoryToolbar";
 import CategorySection from "@/components/dashboard/CategorySection";
+import DashboardCustomizer from "@/components/dashboard/DashboardCustomizer";
+import SessionContinuity from "@/components/dashboard/SessionContinuity";
 import { Skeleton } from "@/components/ui";
 import { useSidebarStore } from "@/stores/sidebar";
+import { usePreferencesStore } from "@/stores/preferences";
 import { sidebar as sidebarConfig, surfaces, layout } from "@/lib/design-system";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +39,35 @@ function SectionSkeleton() {
 export default function DashboardPage() {
   const pinned = useSidebarStore((s) => s.pinned);
   const openMobile = useSidebarStore((s) => s.openMobile);
+  const hiddenSections = usePreferencesStore((s) => s.hiddenSections);
+  const [sortBy, setSortBy] = useState<SortOption>("default");
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
+
+  const filteredCategories = useMemo(() => {
+    return toolCategories
+      .map((cat) => {
+        let tools = cat.tools;
+        if (filterStatus !== "all") {
+          tools = tools.filter((t) =>
+            filterStatus === "ready"
+              ? t.status === "ready"
+              : filterStatus === "beta"
+                ? t.status === "beta"
+                : t.status === "coming-soon"
+          );
+        }
+        if (sortBy === "name-asc") tools = [...tools].sort((a, b) => a.name.localeCompare(b.name));
+        else if (sortBy === "name-desc") tools = [...tools].sort((a, b) => b.name.localeCompare(a.name));
+        else if (sortBy === "status") {
+          const order = { ready: 0, beta: 1, "coming-soon": 2 };
+          tools = [...tools].sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
+        }
+        return { ...cat, tools };
+      })
+      .filter((cat) => cat.tools.length > 0);
+  }, [sortBy, filterStatus]);
+
+  const totalFilteredTools = filteredCategories.reduce((a, c) => a + c.tools.length, 0);
 
   return (
     <div className={cn("min-h-dvh relative", surfaces.page, "transition-colors")}>
@@ -57,28 +96,80 @@ export default function DashboardPage() {
           {/* Hero Banner with Search */}
           <HeroBanner />
 
+          {/* Session continuity prompt */}
+          <SessionContinuity />
+
           {/* Stats Overview */}
           <Suspense fallback={<div className="h-24 rounded-xl bg-gray-200 dark:bg-gray-800 animate-pulse mb-6" />}>
             <StatsBar />
           </Suspense>
 
+          {/* Favorite Tools */}
+          {!hiddenSections.includes("favorites") && (
+            <Suspense fallback={null}>
+              <FavoriteTools />
+            </Suspense>
+          )}
+
+          {/* Recently Used */}
+          {!hiddenSections.includes("recent") && (
+            <Suspense fallback={null}>
+              <RecentTools />
+            </Suspense>
+          )}
+
+          {/* Active Projects */}
+          {!hiddenSections.includes("projects") && (
+            <Suspense fallback={null}>
+              <ActiveProjects />
+            </Suspense>
+          )}
+
           {/* Quick Access — Featured Tools */}
-          <Suspense fallback={<div className="h-32 rounded-xl bg-gray-200 dark:bg-gray-800 animate-pulse mb-6" />}>
-            <QuickAccess />
-          </Suspense>
+          {!hiddenSections.includes("quick-access") && (
+            <Suspense fallback={<div className="h-32 rounded-xl bg-gray-200 dark:bg-gray-800 animate-pulse mb-6" />}>
+              <QuickAccess />
+            </Suspense>
+          )}
+
+          {/* What's New — Changelog */}
+          {!hiddenSections.includes("whats-new") && (
+            <Suspense fallback={null}>
+              <WhatsNew />
+            </Suspense>
+          )}
+
+          {/* Explore — Curated collections */}
+          {!hiddenSections.includes("explore") && (
+            <Suspense fallback={null}>
+              <ExploreSection />
+            </Suspense>
+          )}
 
           {/* Category Sections — All Tools */}
           <Suspense fallback={<SectionSkeleton />}>
-            <div>
-              <div className="flex items-center justify-between mb-6">
+            <div data-tour="categories">
+              <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
                   All Categories
                 </h2>
-                <span className="text-xs text-gray-400 bg-gray-100/80 dark:bg-gray-800/50 px-3 py-1 rounded-full">
-                  {toolCategories.length} categories &middot; {toolCategories.reduce((a, c) => a + c.tools.length, 0)} tools
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400 bg-gray-100/80 dark:bg-gray-800/50 px-3 py-1 rounded-full">
+                    {filteredCategories.length} categories &middot; {totalFilteredTools} tools
+                  </span>
+                  <DashboardCustomizer />
+                </div>
               </div>
-              {toolCategories.map((category, i) => (
+              <div className="mb-6">
+                <CategoryToolbar
+                  sortBy={sortBy}
+                  filterStatus={filterStatus}
+                  onSortChange={setSortBy}
+                  onFilterChange={setFilterStatus}
+                  totalCount={totalFilteredTools}
+                />
+              </div>
+              {filteredCategories.map((category, i) => (
                 <CategorySection
                   key={category.id}
                   category={category}
@@ -89,6 +180,9 @@ export default function DashboardPage() {
           </Suspense>
         </div>
       </main>
+
+      {/* First-visit onboarding tour */}
+      <OnboardingTour />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useUser } from "@/hooks/useUser";
 import CreditPurchaseModal from "./CreditPurchaseModal";
+import HelpTooltip from "@/components/HelpTooltip";
 
 /** Dispatch this event from anywhere to open the purchase modal */
 export function openCreditPurchase() {
@@ -44,23 +45,34 @@ export default function CreditBalance() {
   if (!profile) return null;
 
   const isLow = profile.credits <= 10;
+  const planMax: Record<string, number> = { free: 50, starter: 200, pro: 1000, agency: 5000 };
+  const maxCredits = planMax[profile.plan] ?? 100;
+  const pct = Math.min(100, Math.max(0, (profile.credits / maxCredits) * 100));
+  const barColor = isLow ? "bg-error" : pct < 30 ? "bg-amber-400" : "bg-primary-500";
 
   return (
     <>
-      <button
-        onClick={() => setShowPurchase(true)}
-        className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-          isLow
-            ? "bg-error/10 text-error hover:bg-error/20"
-            : "bg-primary-500/10 text-primary-600 dark:text-primary-400 hover:bg-primary-500/20"
-        }`}
-        title="Click to buy credits"
-      >
-        <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-          <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
-        </svg>
-        {profile.credits} credits
-      </button>
+      <div className="inline-flex items-center gap-1">
+        <button
+          onClick={() => setShowPurchase(true)}
+          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors group ${
+            isLow
+              ? "bg-error/10 text-error hover:bg-error/20"
+              : "bg-primary-500/10 text-primary-600 dark:text-primary-400 hover:bg-primary-500/20"
+          }`}
+          title="Click to buy credits"
+        >
+          <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
+          </svg>
+          {profile.credits} credits
+          {/* Mini progress bar */}
+          <span className="hidden sm:block w-12 h-1 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+            <span className={`block h-full rounded-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
+          </span>
+        </button>
+        <HelpTooltip text="Credits are used when AI generates content. Each tool costs 1–5 credits per generation." />
+      </div>
 
       {showPurchase && (
         <CreditPurchaseModal onClose={() => setShowPurchase(false)} />
