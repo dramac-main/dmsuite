@@ -10,6 +10,7 @@ import { useContractEditor } from "@/stores/contract-editor";
 import { withActivityLogging } from "@/stores/activity-log";
 import { useBusinessMemory } from "@/stores/business-memory";
 import type {
+  ContractFormData,
   ContractType,
   ClauseCategory,
   DocumentInfo,
@@ -475,7 +476,7 @@ export function createContractManifest(options?: ContractManifestOptions): Chiko
             }
             const profile = memory.profile;
             const partyPatch: Partial<PartyInfo> = {};
-            if (profile.name) partyPatch.name = profile.name;
+            if (profile.companyName) partyPatch.name = profile.companyName;
             if (profile.address) partyPatch.address = profile.address;
             if (profile.phone) partyPatch.phone = profile.phone;
             if (profile.email) partyPatch.email = profile.email;
@@ -520,5 +521,9 @@ export function createContractManifest(options?: ContractManifestOptions): Chiko
     },
   };
 
-  return withActivityLogging(baseManifest);
+  return withActivityLogging(
+    baseManifest,
+    () => useContractEditor.getState().form,
+    (snapshot) => useContractEditor.getState().setForm(snapshot as ContractFormData),
+  );
 }
