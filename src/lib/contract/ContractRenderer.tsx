@@ -127,7 +127,6 @@ interface CoverProps {
 // ── Classic Legal (Zambian standard: title + parties + date) ────────────────
 function CoverClassic({ form, config, fonts, tpl, accent, pageW, pageH, fontStyles }: CoverProps) {
   const lineW = "260px";
-  const onDark = contrastText(accent);
   return (
     <div data-contract-page="cover" style={{ width: `${pageW}px`, height: `${pageH}px`, position: "relative", overflow: "hidden", backgroundColor: "#ffffff", ...fontStyles, pageBreakAfter: "always" }}>
       <PageBorder tpl={tpl} accent={accent} />
@@ -170,7 +169,7 @@ function CoverCorporate({ form, config, fonts, accent, pageW, pageH, fontStyles 
       {/* Logo placeholder inside bar */}
       <div style={{ position: "absolute", top: `${Math.round(barH * 0.18)}px`, right: `${MARGIN}px`, zIndex: 2, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
         <div style={{ width: "48px", height: "48px", border: `2px solid ${onDark}60`, borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontSize: "10px", color: onDark, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "center", lineHeight: 1.2 }}>Your{"\n"}Logo</span>
+          <span style={{ fontSize: "10px", color: onDark, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.5px", textAlign: "center", lineHeight: 1.2, whiteSpace: "pre" }}>{"Your\nLogo"}</span>
         </div>
       </div>
       {/* Contract type pill in bar */}
@@ -213,7 +212,6 @@ function CoverCorporate({ form, config, fonts, accent, pageW, pageH, fontStyles 
 
 // ── Dark Executive (full-bleed dark + accent highlights) ────────────────────
 function CoverDarkExecutive({ form, config, fonts, accent, pageW, pageH, fontStyles }: CoverProps) {
-  const onDark = contrastText(accent);
   const bg = "#0f172a";
   return (
     <div data-contract-page="cover" style={{ width: `${pageW}px`, height: `${pageH}px`, position: "relative", overflow: "hidden", backgroundColor: bg, ...fontStyles, pageBreakAfter: "always" }}>
@@ -405,7 +403,7 @@ function CoverMinimalLine({ form, config, fonts, accent, pageW, pageH, fontStyle
 
 // ── Cover Page dispatcher ────────────────────────────────────────────────────
 function CoverPage(props: CoverProps) {
-  const design: CoverDesignId = (props.form.style as { coverDesign?: CoverDesignId }).coverDesign ?? "classic";
+  const design: CoverDesignId = props.form.style.coverDesign ?? "classic";
   switch (design) {
     case "none":           return null;
     case "corporate":      return <CoverCorporate {...props} />;
