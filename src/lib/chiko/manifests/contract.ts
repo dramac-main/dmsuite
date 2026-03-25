@@ -90,7 +90,12 @@ function validateContract(): { issues: ValidationIssue[]; ready: boolean } {
 
   // --- Date checks ---
   if (!form.documentInfo.effectiveDate) {
-    issues.push({ severity: "warning", field: "documentInfo.effectiveDate", message: "No effective date set — cover page will have no date" });
+    const hasCover = form.style.showCoverPage && (form.style.coverDesign ?? "classic") !== "none";
+    if (hasCover) {
+      issues.push({ severity: "warning", field: "documentInfo.effectiveDate", message: "No effective date set — cover page will have no date" });
+    } else {
+      issues.push({ severity: "warning", field: "documentInfo.effectiveDate", message: "No effective date set" });
+    }
   }
   if (form.documentInfo.effectiveDate && form.documentInfo.expiryDate) {
     if (form.documentInfo.expiryDate <= form.documentInfo.effectiveDate) {
@@ -360,7 +365,7 @@ export function createContractManifest(options?: ContractManifestOptions): Chiko
       {
         name: "updateStyle",
         description:
-          "Change visual design: template preset, accentColor (any hex), fontPairing, headerStyle, pageNumbering, pageNumberPosition, showCoverPage, fillableFields.",
+          "Change visual design: template preset, accentColor (any hex), fontPairing, headerStyle, pageNumbering, pageNumberPosition, showCoverPage, coverDesign, fillableFields.",
         parameters: {
           type: "object",
           properties: {
@@ -396,7 +401,12 @@ export function createContractManifest(options?: ContractManifestOptions): Chiko
             },
             showCoverPage: {
               type: "boolean",
-              description: "Show a formal cover page (title, parties, date) as the first page — standard Zambian legal format",
+              description: "Show or hide the cover page entirely. Setting coverDesign to 'none' also hides the cover.",
+            },
+            coverDesign: {
+              type: "string",
+              enum: ["none", "classic", "corporate", "dark-executive", "accent-split", "bold-frame", "minimal-line"],
+              description: "Cover page design style. 'none' = no cover. 'classic' = Zambian legal standard (title + parties + date). 'corporate' = accent header bar with logo area. 'dark-executive' = full-bleed dark background. 'accent-split' = two-tone split panel. 'bold-frame' = thick bordered frame. 'minimal-line' = clean typography with accent rule.",
             },
             fillableFields: {
               type: "boolean",

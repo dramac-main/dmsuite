@@ -327,6 +327,69 @@ export type SignatureConfig = z.infer<typeof signatureConfigSchema>;
 // Style Config
 // ---------------------------------------------------------------------------
 
+export const coverDesignIds = [
+  "none",
+  "classic",
+  "corporate",
+  "dark-executive",
+  "accent-split",
+  "bold-frame",
+  "minimal-line",
+] as const;
+export type CoverDesignId = (typeof coverDesignIds)[number];
+
+export interface CoverDesignConfig {
+  id: CoverDesignId;
+  name: string;
+  description: string;
+  preview: "none" | "classic" | "corporate" | "dark" | "split" | "frame" | "line";
+}
+
+export const COVER_DESIGNS: CoverDesignConfig[] = [
+  {
+    id: "none",
+    name: "No Cover",
+    description: "Start directly with contract body",
+    preview: "none",
+  },
+  {
+    id: "classic",
+    name: "Classic Legal",
+    description: "Traditional Zambian legal standard",
+    preview: "classic",
+  },
+  {
+    id: "corporate",
+    name: "Corporate",
+    description: "Accent header bar with logo area",
+    preview: "corporate",
+  },
+  {
+    id: "dark-executive",
+    name: "Dark Executive",
+    description: "Bold full-bleed dark background",
+    preview: "dark",
+  },
+  {
+    id: "accent-split",
+    name: "Accent Split",
+    description: "Two-tone split with accent panel",
+    preview: "split",
+  },
+  {
+    id: "bold-frame",
+    name: "Bold Frame",
+    description: "Thick border frame with centered layout",
+    preview: "frame",
+  },
+  {
+    id: "minimal-line",
+    name: "Minimal Line",
+    description: "Clean typography with accent rule",
+    preview: "line",
+  },
+];
+
 export const styleConfigSchema = z.object({
   template: z.string().default("corporate-blue"),
   accentColor: z.string().default("#1e40af"),
@@ -335,6 +398,7 @@ export const styleConfigSchema = z.object({
   pageNumbering: z.boolean().default(true),
   pageNumberPosition: z.enum(["bottom-center", "bottom-right"]).default("bottom-center"),
   showCoverPage: z.boolean().default(true),
+  coverDesign: z.enum(coverDesignIds).default("classic"),
   fillableFields: z.boolean().default(false),
 });
 
@@ -2532,6 +2596,7 @@ export function createDefaultContractForm(contractType: ContractType = "service-
       pageNumbering: true,
       pageNumberPosition: "bottom-center",
       showCoverPage: true,
+      coverDesign: "classic",
       fillableFields: false,
     },
     printConfig: {

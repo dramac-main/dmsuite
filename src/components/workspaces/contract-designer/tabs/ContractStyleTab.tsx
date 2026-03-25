@@ -10,9 +10,11 @@ import React, { useState, useRef, useCallback } from "react";
 import { useContractEditor } from "@/stores/contract-editor";
 import {
   CONTRACT_TEMPLATES,
+  COVER_DESIGNS,
   ACCENT_COLORS,
   FONT_PAIRINGS,
   type ContractTemplate,
+  type CoverDesignId,
 } from "@/lib/contract/schema";
 import {
   AccordionSection,
@@ -23,6 +25,12 @@ import {
 } from "@/components/workspaces/shared/WorkspaceUIKit";
 
 const icons = {
+  cover: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M3 9h18M9 21V9" />
+    </svg>
+  ),
   template: <SIcon d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />,
   color: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -182,7 +190,8 @@ export default function ContractStyleTab() {
   const updateStyle = useContractEditor((s) => s.updateStyle);
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    template: true,
+    cover: true,
+    template: false,
     color: true,
     font: false,
     header: false,
@@ -194,6 +203,120 @@ export default function ContractStyleTab() {
 
   return (
     <div>
+      {/* Cover Design */}
+      <AccordionSection
+        title="Cover Design"
+        icon={icons.cover}
+        isOpen={openSections.cover}
+        onToggle={() => toggle("cover")}
+        badge={COVER_DESIGNS.find((d) => d.id === (form.style.coverDesign ?? "classic"))?.name}
+      >
+        <div className="grid grid-cols-2 gap-2">
+          {COVER_DESIGNS.map((design) => {
+            const selected = (form.style.coverDesign ?? "classic") === design.id;
+            const accent = form.style.accentColor || "#1e40af";
+            return (
+              <button
+                key={design.id}
+                onClick={() => {
+                  if (design.id === "none") {
+                    updateStyle({ showCoverPage: false, coverDesign: "none" as CoverDesignId });
+                  } else {
+                    updateStyle({ showCoverPage: true, coverDesign: design.id as CoverDesignId });
+                  }
+                }}
+                className={`relative rounded-xl border p-2 text-left transition-all active:scale-[0.97] ${
+                  selected
+                    ? "border-primary-500/50 bg-primary-500/8 ring-1 ring-primary-500/20"
+                    : "border-gray-700/40 bg-gray-800/30 hover:border-gray-600/60 hover:bg-gray-800/50"
+                }`}
+              >
+                {/* Cover mini preview */}
+                <div className="w-full h-16 rounded-lg mb-1.5 overflow-hidden relative bg-white">
+                  {design.preview === "none" && (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="flex flex-col gap-1.5 items-center">
+                        {[70, 55, 40].map((w, i) => (
+                          <div key={i} style={{ height: "2px", width: `${w}%`, backgroundColor: "#e2e8f0", borderRadius: "1px" }} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {design.preview === "classic" && (
+                    <>
+                      <div className="h-full flex flex-col items-center justify-center gap-1 px-2 py-1">
+                        <div style={{ height: "3px", width: "70%", backgroundColor: "#1a1a1a", borderRadius: "1px", marginBottom: "2px" }} />
+                        <div style={{ height: "2px", width: "30%", backgroundColor: "#94a3b8", borderRadius: "1px" }} />
+                        <div style={{ height: "1px", width: "40%", backgroundColor: "#e5e7eb", marginTop: "2px" }} />
+                        <div style={{ height: "2px", width: "30%", backgroundColor: "#94a3b8", borderRadius: "1px" }} />
+                      </div>
+                    </>
+                  )}
+                  {design.preview === "corporate" && (
+                    <>
+                      <div style={{ height: "20%", backgroundColor: accent }} />
+                      <div className="px-2 py-1 flex flex-col gap-1">
+                        <div style={{ height: "3px", width: "65%", backgroundColor: "#111827", borderRadius: "1px" }} />
+                        <div style={{ height: "2px", width: "16px", backgroundColor: accent, borderRadius: "1px" }} />
+                        <div style={{ height: "2px", width: "50%", backgroundColor: "#e2e8f0", borderRadius: "1px", marginTop: "2px" }} />
+                        <div style={{ height: "2px", width: "40%", backgroundColor: "#e2e8f0", borderRadius: "1px" }} />
+                      </div>
+                    </>
+                  )}
+                  {design.preview === "dark" && (
+                    <div style={{ backgroundColor: "#0f172a", height: "100%", padding: "6px 8px", display: "flex", flexDirection: "column", justifyContent: "center", gap: "3px" }}>
+                      <div style={{ height: "2px", width: "12px", backgroundColor: accent, borderRadius: "1px" }} />
+                      <div style={{ height: "3px", width: "65%", backgroundColor: "#f8fafc", borderRadius: "1px", marginTop: "2px" }} />
+                      <div style={{ height: "2px", width: "45%", backgroundColor: "#334155", borderRadius: "1px" }} />
+                      <div style={{ height: "2px", width: "55%", backgroundColor: "#1e293b", borderRadius: "1px", marginTop: "4px" }} />
+                    </div>
+                  )}
+                  {design.preview === "split" && (
+                    <div style={{ height: "100%", display: "flex" }}>
+                      <div style={{ width: "38%", backgroundColor: accent, flexShrink: 0 }} />
+                      <div style={{ flex: 1, padding: "5px 6px", display: "flex", flexDirection: "column", justifyContent: "center", gap: "2px" }}>
+                        <div style={{ height: "3px", width: "80%", backgroundColor: "#111827", borderRadius: "1px" }} />
+                        <div style={{ height: "2px", width: "16px", backgroundColor: accent, borderRadius: "1px" }} />
+                        <div style={{ height: "2px", width: "60%", backgroundColor: "#e2e8f0", borderRadius: "1px", marginTop: "2px" }} />
+                      </div>
+                    </div>
+                  )}
+                  {design.preview === "frame" && (
+                    <div style={{ height: "100%", position: "relative" }}>
+                      <div style={{ position: "absolute", inset: "4px", border: `1.5px solid ${accent}`, borderRadius: "1px" }} />
+                      <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px" }}>
+                        <div style={{ height: "3px", width: "60%", backgroundColor: "#111827", borderRadius: "1px" }} />
+                        <div style={{ height: "2px", width: "40%", backgroundColor: "#94a3b8", borderRadius: "1px" }} />
+                        <div style={{ height: "2px", width: "30%", backgroundColor: "#94a3b8", borderRadius: "1px" }} />
+                      </div>
+                    </div>
+                  )}
+                  {design.preview === "line" && (
+                    <div style={{ height: "100%", display: "flex" }}>
+                      <div style={{ width: "3px", backgroundColor: accent, flexShrink: 0 }} />
+                      <div style={{ flex: 1, padding: "5px 7px", display: "flex", flexDirection: "column", justifyContent: "center", gap: "3px" }}>
+                        <div style={{ height: "2px", width: "50%", backgroundColor: "#94a3b8", borderRadius: "1px" }} />
+                        <div style={{ height: "3px", width: "80%", backgroundColor: "#111827", borderRadius: "1px" }} />
+                        <div style={{ height: "2px", width: "16px", backgroundColor: accent, borderRadius: "1px" }} />
+                        <div style={{ height: "2px", width: "60%", backgroundColor: "#e2e8f0", borderRadius: "1px", marginTop: "2px" }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className={`text-[11px] font-medium ${selected ? "text-primary-300" : "text-gray-300"}`}>{design.name}</div>
+                {selected && (
+                  <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-primary-500 flex items-center justify-center">
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-gray-950">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </AccordionSection>
+
       {/* Template Selection */}
       <AccordionSection
         title="Template"
