@@ -176,8 +176,6 @@ export default function ContractRenderer({ form }: ContractRendererProps) {
           fontSize: "12px",
           lineHeight: 1.6,
           position: "relative",
-          overflow: "hidden",
-          boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
         }}
       >
         {/* Decorative layers */}

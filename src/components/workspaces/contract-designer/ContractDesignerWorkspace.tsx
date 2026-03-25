@@ -12,6 +12,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useContractEditor, useContractUndo } from "@/stores/contract-editor";
 import { printHTML } from "@/lib/print";
+import { useChikoActions } from "@/hooks/useChikoActions";
+import { createContractManifest } from "@/lib/chiko/manifests/contract";
 import {
   CONTRACT_TYPES,
   CONTRACT_TYPE_CONFIGS,
@@ -90,6 +92,10 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
   const { undo, redo, canUndo, canRedo } = useContractUndo();
 
   const printAreaRef = useRef<HTMLDivElement>(null);
+  // Scroll container ref for the preview area
+  const previewScrollRef = useRef<HTMLDivElement>(null);
+  // Ref for Chiko print action
+  const chikoOnPrintRef = useRef<(() => void) | null>(null);
 
   // Active editor tab
   const [activeTab, setActiveTab] = useState<EditorTabKey>("document");
@@ -99,6 +105,10 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
 
   // Zoom
   const [zoom, setZoom] = useState(100);
+
+  // Multi-page tracking
+  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Convert dropdown
   const [showConvert, setShowConvert] = useState(false);
@@ -114,6 +124,9 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
   // Derived
   const config = CONTRACT_TYPE_CONFIGS[form.contractType];
   const enabledClauses = form.clauses.filter((c) => c.enabled).length;
+  const pageDim = PAGE_DIMENSIONS[form.printConfig.pageSize] ?? PAGE_DIMENSIONS.a4;
+  const pageH = pageDim.h;
+  const pageW = pageDim.w;
 
   // Initialize contract type from wrapper props
   useEffect(() => {
@@ -140,6 +153,24 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
     return () => document.removeEventListener("mousedown", handler);
   }, [showConvert]);
 
+  // Measure rendered document height → compute total pages
+  useEffect(() => {
+    const el = printAreaRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(() => {
+      const h = el.scrollHeight;
+      setTotalPages(Math.max(1, Math.ceil(h / pageH)));
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [pageH]);
+
+  // Reset to page 1 when contract type or page size changes
+  useEffect(() => {
+    setCurrentPage(1);
+    if (previewScrollRef.current) previewScrollRef.current.scrollTop = 0;
+  }, [form.contractType, form.printConfig.pageSize]);
+
   const handleConvert = useCallback(
     (type: ContractType) => {
       convertToType(type);
@@ -151,24 +182,49 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
   const handlePrint = useCallback(() => {
     const printEl = document.getElementById("ct-print-area");
     if (!printEl) return;
-    const pageDim = PAGE_DIMENSIONS[form.printConfig.pageSize];
     const html = `<!DOCTYPE html><html><head>
       <title>${form.documentInfo.title} - Contract</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         @page { size: ${form.printConfig.pageSize === "a4" ? "A4" : form.printConfig.pageSize === "letter" ? "letter" : "legal"} portrait; margin: 0; }
         body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        [data-contract-page] { page-break-after: always; }
-        [data-contract-page]:last-child { page-break-after: auto; }
+        [data-ct-section="signatures"] { break-before: page; }
+        [data-ct-section="clauses"] > div { break-inside: avoid; }
       </style></head><body>${printEl.innerHTML}</body></html>`;
     printHTML(html);
   }, [form.documentInfo.title, form.printConfig.pageSize]);
+
+  // Keep Chiko's print ref in sync
+  useEffect(() => {
+    chikoOnPrintRef.current = handlePrint;
+  }, [handlePrint]);
+
+  // Register Chiko manifest
+  useChikoActions(() => createContractManifest({ onPrintRef: chikoOnPrintRef }));
 
   const handleStartOver = useCallback(() => {
     resetForm(initialContractType);
     setShowStartOverDialog(false);
     setActiveTab("document");
   }, [resetForm, initialContractType]);
+
+  // Page navigation
+  const goToPage = useCallback(
+    (page: number) => {
+      const clamped = Math.max(1, Math.min(totalPages, page));
+      setCurrentPage(clamped);
+      const el = previewScrollRef.current;
+      if (el) el.scrollTo({ top: (clamped - 1) * pageH, behavior: "smooth" });
+    },
+    [totalPages, pageH],
+  );
+
+  const handlePreviewScroll = useCallback(() => {
+    const el = previewScrollRef.current;
+    if (!el) return;
+    const page = Math.min(totalPages, Math.floor(el.scrollTop / pageH) + 1);
+    setCurrentPage(page);
+  }, [totalPages, pageH]);
 
   // Tab-to-section mapping for layers panel click
   const handleLayerOpenSection = useCallback((section: string) => {
@@ -297,14 +353,13 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
         ))}
       </div>
 
-      {/* Preview canvas */}
+      {/* Preview canvas — PDF viewer style (grey bg + page shadows) */}
       <div
+        ref={previewScrollRef}
         className="flex-1 overflow-auto"
+        onScroll={handlePreviewScroll}
         onClick={handlePreviewClick}
-        style={{
-          backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.02) 1px, transparent 0)",
-          backgroundSize: "24px 24px",
-        }}
+        style={{ backgroundColor: "#374151" }}
       >
         <style>{`
           .ct-canvas-root [data-ct-section] { transition: outline 0.15s ease, box-shadow 0.15s ease; outline: 2px solid transparent; border-radius: 2px; cursor: pointer; }
@@ -313,13 +368,105 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
           @media print { .ct-canvas-root [data-ct-section] { outline: none !important; box-shadow: none !important; cursor: default !important; } }
         `}</style>
         <div
-          className="ct-canvas-root flex flex-col items-center py-6 px-4"
-          style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
+          className="ct-canvas-root flex justify-center py-6 px-4"
+          style={{ minHeight: "100%" }}
         >
-          <div id="ct-print-area" ref={printAreaRef}>
-            <ContractRenderer form={form} />
+          {/* Page-sized container with overflow visible — inner doc is naturally wider */}
+          <div style={{ position: "relative" }}>
+            {/* The document — rendered at full natural height */}
+            <div
+              id="ct-print-area"
+              ref={printAreaRef}
+              style={{
+                transform: `scale(${zoom / 100})`,
+                transformOrigin: "top center",
+                boxShadow: "0 4px 32px rgba(0,0,0,0.45)",
+              }}
+            >
+              <ContractRenderer form={form} />
+            </div>
+
+            {/* Grey page-break gutters — overlaid at pageH intervals */}
+            {totalPages > 1 && Array.from({ length: totalPages - 1 }).map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  top: `${(i + 1) * pageH * (zoom / 100)}px`,
+                  height: `${16 * (zoom / 100)}px`,
+                  backgroundColor: "#374151",
+                  zIndex: 10,
+                  pointerEvents: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  paddingRight: "8px",
+                }}
+              >
+                <span style={{ fontSize: 9, color: "#9ca3af", fontFamily: "monospace" }}>
+                  p.{i + 2}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
+      </div>
+
+      {/* Wondershare / Acrobat-style page navigation bar */}
+      <div className="shrink-0 flex items-center justify-center gap-2 h-10 border-t border-gray-800/50 bg-gray-900/80 backdrop-blur-sm px-3">
+        {/* Prev page */}
+        <button
+          onClick={() => goToPage(currentPage - 1)}
+          disabled={currentPage <= 1}
+          className="w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-200 hover:bg-white/8 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          title="Previous page"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+
+        {/* Page dots for ≤8 pages */}
+        {totalPages <= 8 ? (
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => goToPage(i + 1)}
+                title={`Page ${i + 1}`}
+                className={`rounded-full transition-all ${
+                  i + 1 === currentPage
+                    ? "w-5 h-1.5 bg-primary-400"
+                    : "w-1.5 h-1.5 bg-gray-600 hover:bg-gray-400"
+                }`}
+              />
+            ))}
+          </div>
+        ) : (
+          /* Text counter for long docs */
+          <span className="text-[11px] text-gray-400 tabular-nums font-mono min-w-[60px] text-center">
+            {currentPage} / {totalPages}
+          </span>
+        )}
+
+        {/* Page text label */}
+        <span className="text-[10px] text-gray-600 tabular-nums hidden sm:block">
+          pg {currentPage} of {totalPages}
+        </span>
+
+        {/* Next page */}
+        <button
+          onClick={() => goToPage(currentPage + 1)}
+          disabled={currentPage >= totalPages}
+          className="w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-200 hover:bg-white/8 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          title="Next page"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
       </div>
     </div>
   );
