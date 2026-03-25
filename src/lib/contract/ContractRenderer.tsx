@@ -27,7 +27,8 @@ export const PAGE_PX: Record<string, { w: number; h: number }> = {
 };
 
 const MARGIN = 50;
-const FOOTER_H = 44; // reserved height for page footer
+const FOOTER_H = 56; // generous reserve for all footer styles + disclaimer
+const SAFETY_PX = 2; // per-block buffer for sub-pixel rounding
 export const PAGE_GAP = 16; // visual gap between pages in preview
 
 // ---------------------------------------------------------------------------
@@ -520,11 +521,11 @@ function buildContentBlocks(
     });
   });
 
-  // ─── SIGNATURES (force new page) ───
+  // ─── SIGNATURES (new page only when clauses precede) ───
   blocks.push({
     id: "signatures",
     section: "signatures",
-    breakBefore: true,
+    breakBefore: enabledClauses.length > 0,
     element: (
       <div>
         <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "12px", textAlign: "center" }}>
@@ -621,11 +622,20 @@ function paginateBlocks(
   heights: Map<string, number>,
   usableH: number,
 ): string[][] {
+  if (blocks.length === 0) return [[]];
+
   const pages: string[][] = [[]];
   let remaining = usableH;
 
   for (const block of blocks) {
-    const h = heights.get(block.id) ?? 0;
+    const raw = heights.get(block.id) ?? 0;
+    const h = raw + SAFETY_PX; // sub-pixel safety
+
+    // Zero-height blocks (decorative dividers etc.) — always add to current page
+    if (raw <= 0) {
+      pages[pages.length - 1].push(block.id);
+      continue;
+    }
 
     // Force page break
     if (block.breakBefore && pages[pages.length - 1].length > 0) {
@@ -647,9 +657,7 @@ function paginateBlocks(
         pages.push([]);
       }
       pages[pages.length - 1].push(block.id);
-      // Start a new page after an oversized block
-      pages.push([]);
-      remaining = usableH;
+      remaining = 0; // force next block to a new page
     }
   }
 
@@ -686,6 +694,7 @@ export default function ContractRenderer({
 
   const measureRef = useRef<HTMLDivElement>(null);
   const [pages, setPages] = useState<string[][]>([]);
+  const [measureVer, setMeasureVer] = useState(0);
 
   // Build content blocks
   const blocks = useMemo(
@@ -735,40 +744,46 @@ export default function ContractRenderer({
     return map;
   }, [blocks]);
 
+  // Re-measure when fonts finish loading (critical for accurate heights)
+  useEffect(() => {
+    let cancelled = false;
+    document.fonts.ready.then(() => {
+      if (!cancelled) setMeasureVer((v) => v + 1);
+    });
+    return () => { cancelled = true; };
+  }, [fontUrl]);
+
   // Measure block heights & paginate (runs before paint)
   useLayoutEffect(() => {
     const container = measureRef.current;
-    if (!container || blocks.length === 0) return;
+    if (!container || blocks.length === 0) {
+      setPages([blocks.map((b) => b.id)]);
+      return;
+    }
 
-    // Measure effective height of each block using position deltas
+    // Measure each block's actual rendered height via offsetHeight
+    // Wrappers have overflow:hidden (BFC) so margins are contained
     const els = container.querySelectorAll<HTMLElement>("[data-block-id]");
     const heights = new Map<string, number>();
-    const containerRect = container.getBoundingClientRect();
 
-    for (let i = 0; i < els.length; i++) {
-      const el = els[i];
+    for (const el of els) {
       const id = el.dataset.blockId;
-      if (!id) continue;
-      const top = el.getBoundingClientRect().top - containerRect.top;
-      const nextTop =
-        i < els.length - 1
-          ? els[i + 1].getBoundingClientRect().top - containerRect.top
-          : container.scrollHeight;
-      heights.set(id, nextTop - top);
+      if (id) heights.set(id, el.offsetHeight);
     }
 
     const result = paginateBlocks(blocks, heights, usableH);
     setPages(result);
-  }, [blocks, usableH]);
+  }, [blocks, usableH, measureVer]);
 
   // Report page count to parent
   useEffect(() => {
-    if (onPageCount && pages.length > 0) {
-      onPageCount(pages.length);
-    }
+    const count = pages.length || 1;
+    if (onPageCount) onPageCount(count);
   }, [pages.length, onPageCount]);
 
-  const totalPages = pages.length || 1;
+  // Use measured pages if available, fallback to all-on-one-page
+  const currentPages = pages.length > 0 ? pages : [blocks.map((b) => b.id)];
+  const totalPages = currentPages.length;
 
   // Common font styles for measurement and page rendering
   const fontStyles: React.CSSProperties = {
@@ -783,7 +798,7 @@ export default function ContractRenderer({
       {/* Google Fonts */}
       <link rel="stylesheet" href={fontUrl} />
 
-      {/* Hidden measurement container — same width/padding as real content area */}
+      {/* Hidden measurement container — exact content width, BFC-isolated blocks */}
       <div
         ref={measureRef}
         data-ct-measure
@@ -792,14 +807,13 @@ export default function ContractRenderer({
           position: "fixed",
           left: "-99999px",
           top: 0,
-          width: `${pageW}px`,
-          padding: `0 ${MARGIN}px`,
+          width: `${pageW - 2 * MARGIN}px`,
           visibility: "hidden",
           ...fontStyles,
         }}
       >
         {blocks.map((b) => (
-          <div key={b.id} data-block-id={b.id}>
+          <div key={b.id} data-block-id={b.id} style={{ overflow: "hidden" }}>
             {b.element}
           </div>
         ))}
@@ -807,13 +821,14 @@ export default function ContractRenderer({
 
       {/* Rendered pages */}
       <div
+        data-ct-pages
         style={{
           display: "flex",
           flexDirection: "column",
           gap: `${pageGap}px`,
         }}
       >
-        {pages.map((pageBlockIds, pageIdx) => (
+        {currentPages.map((pageBlockIds, pageIdx) => (
           <div
             key={pageIdx}
             data-contract-page={pageIdx + 1}
@@ -843,11 +858,10 @@ export default function ContractRenderer({
                 display: "flex",
                 flexDirection: "column",
                 zIndex: 1,
-                overflow: "visible",
               }}
             >
-              {/* Block content */}
-              <div style={{ flex: 1, overflow: "hidden" }}>
+              {/* Block content — no overflow:hidden so slight mismatch bleeds gracefully */}
+              <div style={{ flex: "1 1 auto", minHeight: 0 }}>
                 {pageBlockIds.map((id) => {
                   const block = blockMap.get(id);
                   if (!block) return null;

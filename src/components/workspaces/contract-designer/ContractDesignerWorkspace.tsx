@@ -20,7 +20,7 @@ import {
   CONTRACT_TEMPLATES,
 } from "@/lib/contract/schema";
 import type { ContractType } from "@/lib/contract/schema";
-import ContractRenderer, { PAGE_PX, PAGE_GAP } from "@/lib/contract/ContractRenderer";
+import ContractRenderer, { PAGE_PX, PAGE_GAP, getGoogleFontUrl } from "@/lib/contract/ContractRenderer";
 import ContractDocumentTab from "./tabs/ContractDocumentTab";
 import ContractPartiesTab from "./tabs/ContractPartiesTab";
 import ContractClausesTab from "./tabs/ContractClausesTab";
@@ -155,6 +155,8 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
   // Page count is reported by the renderer via onPageCount callback
   const handlePageCount = useCallback((count: number) => {
     setTotalPages(count);
+    // Clamp current page if it exceeds new total (e.g., clauses were removed)
+    setCurrentPage((prev) => Math.min(prev, Math.max(1, count)));
   }, []);
 
   // Reset to page 1 when contract type or page size changes
@@ -175,18 +177,21 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
     const printEl = document.getElementById("ct-print-area");
     if (!printEl) return;
     const pageSize = form.printConfig.pageSize === "a4" ? "A4" : form.printConfig.pageSize === "letter" ? "letter" : "legal";
+    const fontLink = `<link rel="stylesheet" href="${getGoogleFontUrl(form.style.fontPairing)}" />`;
     const html = `<!DOCTYPE html><html><head>
       <title>${form.documentInfo.title} - Contract</title>
+      ${fontLink}
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         @page { size: ${pageSize} portrait; margin: 0; }
         body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         [data-ct-measure] { display: none !important; }
+        [data-ct-pages] { gap: 0 !important; }
         [data-contract-page] { page-break-after: always; }
         [data-contract-page]:last-child { page-break-after: auto; }
       </style></head><body>${printEl.innerHTML}</body></html>`;
     printHTML(html);
-  }, [form.documentInfo.title, form.printConfig.pageSize]);
+  }, [form.documentInfo.title, form.printConfig.pageSize, form.style.fontPairing]);
 
   // Keep Chiko's print ref in sync
   useEffect(() => {
