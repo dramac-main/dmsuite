@@ -66,6 +66,21 @@ function contrastText(bgHex: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Fillable Line — renders a dotted line for pen fill-in when fields are empty
+// ---------------------------------------------------------------------------
+
+function FillableLine({ width = "200px", label }: { width?: string; label?: string }) {
+  return (
+    <span style={{ display: "inline-block", width, position: "relative" }}>
+      <span style={{ display: "block", borderBottom: "1.5px dotted #94a3b8", width: "100%", height: "1px", marginBottom: "2px" }} />
+      {label && (
+        <span style={{ fontSize: "9px", color: "#94a3b8", fontStyle: "italic" }}>{label}</span>
+      )}
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Cover Page — Zambian legal standard: title, parties, date (no content)
 // ---------------------------------------------------------------------------
 
@@ -614,6 +629,8 @@ function buildContentBlocks(
 
   blocks.push({ id: "header", section: "header", element: headerElement });
 
+  const fillable = form.style.fillableFields;
+
   // ─── PARTIES ───
   blocks.push({
     id: "parties",
@@ -627,9 +644,13 @@ function buildContentBlocks(
               {form.partyA.role || config.partyARole}
             </div>
             <div style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b" }}>
-              {form.partyA.name || `[${config.partyARole} Name]`}
+              {form.partyA.name || (fillable ? <FillableLine width="220px" /> : `[${config.partyARole} Name]`)}
             </div>
-            {form.partyA.address && <div style={{ fontSize: "13px", color: "#64748b", marginTop: "2px" }}>{form.partyA.address}</div>}
+            {form.partyA.address ? (
+              <div style={{ fontSize: "13px", color: "#64748b", marginTop: "2px" }}>{form.partyA.address}</div>
+            ) : fillable ? (
+              <div style={{ marginTop: "4px" }}><FillableLine width="200px" /></div>
+            ) : null}
             {form.partyA.city && <div style={{ fontSize: "13px", color: "#64748b" }}>{form.partyA.city}, {form.partyA.country}</div>}
             {form.partyA.representative && (
               <div style={{ fontSize: "13px", color: "#475569", marginTop: "4px" }}>
@@ -648,9 +669,13 @@ function buildContentBlocks(
               {form.partyB.role || config.partyBRole}
             </div>
             <div style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b" }}>
-              {form.partyB.name || `[${config.partyBRole} Name]`}
+              {form.partyB.name || (fillable ? <FillableLine width="220px" /> : `[${config.partyBRole} Name]`)}
             </div>
-            {form.partyB.address && <div style={{ fontSize: "13px", color: "#64748b", marginTop: "2px" }}>{form.partyB.address}</div>}
+            {form.partyB.address ? (
+              <div style={{ fontSize: "13px", color: "#64748b", marginTop: "2px" }}>{form.partyB.address}</div>
+            ) : fillable ? (
+              <div style={{ marginTop: "4px" }}><FillableLine width="200px" /></div>
+            ) : null}
             {form.partyB.city && <div style={{ fontSize: "13px", color: "#64748b" }}>{form.partyB.city}, {form.partyB.country}</div>}
             {form.partyB.representative && (
               <div style={{ fontSize: "13px", color: "#475569", marginTop: "4px" }}>
@@ -681,7 +706,7 @@ function buildContentBlocks(
           <div style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "8px" }}>
             Preamble
           </div>
-          <p style={{ fontSize: "14px", lineHeight: 1.7, color: "#475569", textAlign: "justify", margin: 0 }}>
+          <p style={{ fontSize: "13px", lineHeight: 1.7, color: "#475569", textAlign: "justify", margin: 0 }}>
             {form.documentInfo.preambleText}
           </p>
         </div>
@@ -733,7 +758,7 @@ function buildContentBlocks(
             <span style={{ color: accent, marginRight: "8px" }}>{i + 1}.</span>
             {clause.title}
           </h3>
-          <p style={{ fontSize: "14px", lineHeight: 1.7, color: "#475569", textAlign: "justify", margin: 0, paddingLeft: "20px" }}>
+          <p style={{ fontSize: "13px", lineHeight: 1.7, color: "#475569", textAlign: "justify", margin: 0, paddingLeft: "20px" }}>
             {clause.content}
           </p>
         </div>
@@ -954,6 +979,7 @@ export default function ContractRenderer({
       form.style.accentColor,
       form.style.fontPairing,
       form.style.template,
+      form.style.fillableFields,
     ],
   );
 
@@ -1009,8 +1035,8 @@ export default function ContractRenderer({
   // Common font styles for measurement and page rendering
   const fontStyles: React.CSSProperties = {
     fontFamily: `'${fonts.body}', 'Inter', sans-serif`,
-    fontSize: "14px",
-    lineHeight: 1.6,
+    fontSize: "13px",
+    lineHeight: 1.65,
     color: "#1e293b",
   };
 
@@ -1100,7 +1126,12 @@ export default function ContractRenderer({
               <div style={{ flex: "1 1 auto", minHeight: 0 }}>
                 {pageBlockIds.map((id) => {
                   const block = blockMap.get(id);
-                  if (!block) return null;
+                  if (!block) {
+                    if (process.env.NODE_ENV === "development") {
+                      console.warn(`[ContractRenderer] Block "${id}" not found in blockMap`);
+                    }
+                    return null;
+                  }
                   return (
                     <div key={id} data-ct-section={block.section}>
                       {block.element}

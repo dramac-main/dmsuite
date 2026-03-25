@@ -335,6 +335,7 @@ export const styleConfigSchema = z.object({
   pageNumbering: z.boolean().default(true),
   pageNumberPosition: z.enum(["bottom-center", "bottom-right"]).default("bottom-center"),
   showCoverPage: z.boolean().default(true),
+  fillableFields: z.boolean().default(false),
 });
 
 export type StyleConfig = z.infer<typeof styleConfigSchema>;
@@ -2531,6 +2532,7 @@ export function createDefaultContractForm(contractType: ContractType = "service-
       pageNumbering: true,
       pageNumberPosition: "bottom-center",
       showCoverPage: true,
+      fillableFields: false,
     },
     printConfig: {
       pageSize: "a4",

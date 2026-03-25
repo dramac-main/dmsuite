@@ -320,7 +320,8 @@ export const ZAMBIAN_LEGISLATION: ZambianAct[] = [
   },
   {
     name: "Arbitration Act",
-    citation: "Arbitration Act, Chapter 40 of the Laws of Zambia",
+    citation: "Arbitration Act (No. 19 of 2000), Chapter 40 of the Laws of Zambia",
+    actNumber: "Act No. 19 of 2000",
     chapter: "Cap. 40",
     relevance: "Governs arbitration proceedings in Zambia. Provides framework for arbitration clauses in contracts. Arbitral awards are enforceable as court judgments.",
     keyProvisions: [
@@ -651,7 +652,7 @@ export function getDisputeResolutionText(includeArbitration: boolean = false): s
     return (
       "Any dispute, difference, or question arising out of or in connection with this Agreement shall first be resolved through good-faith negotiation between the parties. " +
       "If negotiation fails within thirty (30) days, the dispute shall be referred to mediation administered by a mutually agreed mediator. " +
-      "If mediation is unsuccessful within a further thirty (30) days, the dispute shall be submitted to binding arbitration in accordance with the Arbitration Act, Chapter 40 of the Laws of Zambia. " +
+      "If mediation is unsuccessful within a further thirty (30) days, the dispute shall be submitted to binding arbitration in accordance with the Arbitration Act (No. 19 of 2000), Chapter 40 of the Laws of Zambia. " +
       "The arbitration shall be conducted in Lusaka by a sole arbitrator appointed by agreement of the parties, or failing agreement within fourteen (14) days, by the President of the Law Association of Zambia. " +
       "The arbitral award shall be final and binding on both parties."
     );

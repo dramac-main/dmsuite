@@ -56,6 +56,117 @@ function readContractState(): Record<string, unknown> {
 }
 
 // ---------------------------------------------------------------------------
+// Pre-print Validation
+// ---------------------------------------------------------------------------
+
+/** Placeholder patterns that indicate unfilled fields */
+const PLACEHOLDER_PATTERNS = [
+  /\[[^\]]{2,}\]/g,        // [Party Name], [Address] — skip single-char [A], [1]
+  /\{[^}]{2,}\}/g,         // {Company Name}
+  /<<.*?>>/g,              // <<Insert Name>>
+  /_{3,}/g,                // ___ fill lines (3+ underscores)
+  /\.{4,}/g,               // .... ellipsis placeholders (4+ dots, skip normal ...)
+  /\bTBD\b/gi,            // TBD
+  /\bXXX+\b/gi,           // XXX placeholder
+];
+
+interface ValidationIssue {
+  severity: "error" | "warning";
+  field: string;
+  message: string;
+}
+
+function validateContract(): { issues: ValidationIssue[]; ready: boolean } {
+  const { form } = useContractEditor.getState();
+  const issues: ValidationIssue[] = [];
+
+  // --- Party checks ---
+  if (!form.partyA.name || form.partyA.name.trim().length === 0) {
+    issues.push({ severity: "error", field: "partyA.name", message: "Party A name is empty" });
+  }
+  if (!form.partyB.name || form.partyB.name.trim().length === 0) {
+    issues.push({ severity: "error", field: "partyB.name", message: "Party B name is empty" });
+  }
+
+  // --- Date checks ---
+  if (!form.documentInfo.effectiveDate) {
+    issues.push({ severity: "warning", field: "documentInfo.effectiveDate", message: "No effective date set — cover page will have no date" });
+  }
+  if (form.documentInfo.effectiveDate && form.documentInfo.expiryDate) {
+    if (form.documentInfo.expiryDate <= form.documentInfo.effectiveDate) {
+      issues.push({ severity: "error", field: "documentInfo.expiryDate", message: "Expiry date is on or before the effective date" });
+    }
+  }
+
+  // --- Title check ---
+  if (!form.documentInfo.title || form.documentInfo.title.trim().length === 0) {
+    issues.push({ severity: "warning", field: "documentInfo.title", message: "Document title is empty — will use default" });
+  }
+
+  // --- Clause checks ---
+  const enabledClauses = form.clauses.filter((c) => c.enabled);
+  if (enabledClauses.length === 0) {
+    issues.push({ severity: "error", field: "clauses", message: "No clauses are enabled — document will have no terms" });
+  }
+  for (const clause of enabledClauses) {
+    if (!clause.content || clause.content.trim().length === 0) {
+      issues.push({ severity: "error", field: `clause:${clause.id}`, message: `Clause "${clause.title}" has no content` });
+    } else {
+      // Check for placeholder text within clause content
+      for (const pattern of PLACEHOLDER_PATTERNS) {
+        const matches = clause.content.match(pattern);
+        if (matches) {
+          issues.push({
+            severity: "warning",
+            field: `clause:${clause.id}`,
+            message: `Clause "${clause.title}" contains placeholder text: ${matches.slice(0, 3).join(", ")}${matches.length > 3 ? ` (+${matches.length - 3} more)` : ""}`,
+          });
+          break; // one warning per clause is enough
+        }
+      }
+    }
+  }
+
+  // --- Check party fields for placeholders ---
+  const partyFields = [
+    { val: form.partyA.name, field: "partyA.name", label: "Party A name" },
+    { val: form.partyA.address, field: "partyA.address", label: "Party A address" },
+    { val: form.partyB.name, field: "partyB.name", label: "Party B name" },
+    { val: form.partyB.address, field: "partyB.address", label: "Party B address" },
+  ];
+  for (const pf of partyFields) {
+    if (pf.val) {
+      for (const pattern of PLACEHOLDER_PATTERNS) {
+        if (pattern.test(pf.val)) {
+          issues.push({ severity: "warning", field: pf.field, message: `${pf.label} contains placeholder text` });
+          break;
+        }
+        pattern.lastIndex = 0; // reset regex state
+      }
+    }
+  }
+
+  // --- Preamble placeholder check ---
+  if (form.documentInfo.preambleText) {
+    for (const pattern of PLACEHOLDER_PATTERNS) {
+      if (pattern.test(form.documentInfo.preambleText)) {
+        issues.push({ severity: "warning", field: "documentInfo.preambleText", message: "Preamble contains placeholder text" });
+        break;
+      }
+      pattern.lastIndex = 0;
+    }
+  }
+
+  const errorCount = issues.filter((i) => i.severity === "error").length;
+  const warningCount = issues.filter((i) => i.severity === "warning").length;
+
+  return {
+    issues,
+    ready: errorCount === 0,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Manifest Factory
 // ---------------------------------------------------------------------------
 
@@ -249,7 +360,7 @@ export function createContractManifest(options?: ContractManifestOptions): Chiko
       {
         name: "updateStyle",
         description:
-          "Change visual design: template preset, accentColor (any hex), fontPairing, headerStyle, pageNumbering, pageNumberPosition.",
+          "Change visual design: template preset, accentColor (any hex), fontPairing, headerStyle, pageNumbering, pageNumberPosition, showCoverPage, fillableFields.",
         parameters: {
           type: "object",
           properties: {
@@ -286,6 +397,10 @@ export function createContractManifest(options?: ContractManifestOptions): Chiko
             showCoverPage: {
               type: "boolean",
               description: "Show a formal cover page (title, parties, date) as the first page — standard Zambian legal format",
+            },
+            fillableFields: {
+              type: "boolean",
+              description: "When enabled, empty fields render as dotted lines for pen fill-in instead of placeholder text. Useful for printed documents that need to be completed by hand.",
             },
           },
         },
@@ -386,6 +501,15 @@ export function createContractManifest(options?: ContractManifestOptions): Chiko
           },
         },
         category: "Parties",
+      },
+
+      // ── Validation ─────────────────────────────────────────────────────────
+      {
+        name: "validateBeforePrint",
+        description:
+          "Check the contract for issues before printing: missing party names, unfilled placeholder text like [Party Name] or ______, empty clauses, missing dates. Returns errors (must fix) and warnings (should review). ALWAYS call this before exportPrint to help the user catch mistakes.",
+        parameters: { type: "object", properties: {} },
+        category: "Export",
       },
 
       // ── Export ─────────────────────────────────────────────────────────────
@@ -504,14 +628,50 @@ export function createContractManifest(options?: ContractManifestOptions): Chiko
             return { success: true, message: `Pre-filled ${applyTo} from Business Memory (${Object.keys(partyPatch).length} fields).` };
           }
 
+          case "validateBeforePrint": {
+            const { issues, ready } = validateContract();
+            const errorCount = issues.filter((i) => i.severity === "error").length;
+            const warningCount = issues.filter((i) => i.severity === "warning").length;
+            let msg = "";
+            if (ready && warningCount === 0) {
+              msg = "Contract is ready to print — no issues found.";
+            } else if (ready) {
+              msg = `Contract can be printed but has ${warningCount} warning(s) to review:\n`;
+              for (const i of issues) msg += `  ⚠ ${i.message}\n`;
+            } else {
+              msg = `Contract has ${errorCount} error(s) and ${warningCount} warning(s) that should be fixed before printing:\n`;
+              for (const i of issues) msg += `  ${i.severity === "error" ? "✘" : "⚠"} ${i.message}\n`;
+            }
+            return {
+              success: true,
+              message: msg.trim(),
+              newState: { issues, ready, errorCount, warningCount },
+            };
+          }
+
           case "exportPrint": {
+            // Auto-validate before printing
+            const { issues: printIssues, ready: printReady } = validateContract();
+            const printErrors = printIssues.filter((i) => i.severity === "error");
+            if (!printReady) {
+              const errorList = printErrors.map((i) => `• ${i.message}`).join("\n");
+              return {
+                success: false,
+                message: `Cannot print — ${printErrors.length} error(s) found:\n${errorList}\n\nPlease fix these issues before printing.`,
+                newState: { issues: printIssues, errorCount: printErrors.length },
+              };
+            }
             const handler = options?.onPrintRef?.current;
             if (!handler) {
               return { success: false, message: "Export not ready yet — please wait a moment and try again." };
             }
             handler();
             const { form: f } = useContractEditor.getState();
-            return { success: true, message: `Print dialog opened for ${f.documentInfo.title}.` };
+            const printWarnings = printIssues.filter((i) => i.severity === "warning");
+            const warnMsg = printWarnings.length > 0
+              ? ` (${printWarnings.length} warning(s) — consider reviewing before finalising)`
+              : "";
+            return { success: true, message: `Print dialog opened for ${f.documentInfo.title}.${warnMsg}` };
           }
 
           default:
