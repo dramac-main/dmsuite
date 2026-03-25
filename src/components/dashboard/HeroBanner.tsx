@@ -70,7 +70,7 @@ export default function HeroBanner() {
   }, [showResults, visibleResults, selectedIdx, router]);
 
   return (
-    <section className="relative z-20 mb-8">
+    <section className="relative z-30 mb-8">
       {/* ── Animated gradient mesh background ── */}
       <div className="absolute inset-0 -z-10 overflow-hidden rounded-2xl">
         <div className="absolute -top-32 -right-32 size-96 rounded-full bg-primary-500/20 blur-[100px] animate-pulse" />
@@ -81,9 +81,11 @@ export default function HeroBanner() {
           style={{ backgroundImage: "radial-gradient(circle, currentColor 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
       </div>
 
-      <div className="relative rounded-2xl border border-white/20 dark:border-white/[0.06] bg-white/60 dark:bg-gray-900/60 backdrop-blur-2xl p-6 sm:p-8 lg:p-10 overflow-hidden">
-        {/* Top-right decorative orb */}
-        <div className="absolute -top-12 -right-12 size-40 rounded-full bg-linear-to-br from-primary-500/20 to-secondary-500/20 blur-2xl pointer-events-none" />
+      <div className="relative rounded-2xl border border-white/20 dark:border-white/[0.06] bg-white/60 dark:bg-gray-900/60 backdrop-blur-2xl p-6 sm:p-8 lg:p-10">
+        {/* Top-right decorative orb (clipped to rounded card) */}
+        <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+          <div className="absolute -top-12 -right-12 size-40 rounded-full bg-linear-to-br from-primary-500/20 to-secondary-500/20 blur-2xl" />
+        </div>
 
         {/* Badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-500/10 border border-primary-500/20 backdrop-blur-sm mb-5">
