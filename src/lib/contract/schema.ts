@@ -386,6 +386,49 @@ export interface ContractTemplate {
 }
 
 export const CONTRACT_TEMPLATES: ContractTemplate[] = [
+  // ── Standard Legal (DEFAULT) ─────────────────────────────────────────────
+  {
+    id: "standard-legal",
+    name: "Standard Legal",
+    category: "classic",
+    accent: "#111827",
+    headerStyle: "centered",
+    fontSuggestion: "crimsonpro-worksans",
+    borderStyle: "thin",
+    watermark: "none",
+    headerDivider: "double-line",
+    footerStyle: "line",
+    decorative: "page-border",
+  },
+  // ── Legal Classic ────────────────────────────────────────────────────────
+  {
+    id: "legal-classic",
+    name: "Legal Classic",
+    category: "classic",
+    accent: "#1f2937",
+    headerStyle: "centered",
+    fontSuggestion: "playfair-source",
+    borderStyle: "thin",
+    watermark: "none",
+    headerDivider: "double-line",
+    footerStyle: "line",
+    decorative: "page-border",
+  },
+  // ── Government Formal ────────────────────────────────────────────────────
+  {
+    id: "government-formal",
+    name: "Government Formal",
+    category: "classic",
+    accent: "#0f172a",
+    headerStyle: "centered",
+    fontSuggestion: "cormorant-proza",
+    borderStyle: "thin",
+    watermark: "none",
+    headerDivider: "thick-line",
+    footerStyle: "line",
+    decorative: "page-border",
+  },
+  // ── Corporate Blue ───────────────────────────────────────────────────────
   {
     id: "corporate-blue",
     name: "Corporate Blue",
@@ -400,19 +443,7 @@ export const CONTRACT_TEMPLATES: ContractTemplate[] = [
     footerStyle: "line",
     decorative: "none",
   },
-  {
-    id: "legal-classic",
-    name: "Legal Classic",
-    category: "classic",
-    accent: "#1f2937",
-    headerStyle: "centered",
-    fontSuggestion: "playfair-source",
-    borderStyle: "thin",
-    watermark: "none",
-    headerDivider: "double-line",
-    footerStyle: "line",
-    decorative: "page-border",
-  },
+  // ── Modern Minimal ───────────────────────────────────────────────────────
   {
     id: "modern-minimal",
     name: "Modern Minimal",
@@ -426,20 +457,7 @@ export const CONTRACT_TEMPLATES: ContractTemplate[] = [
     footerStyle: "none",
     decorative: "none",
   },
-  {
-    id: "executive-gold",
-    name: "Executive Gold",
-    category: "premium",
-    accent: "#b45309",
-    accentSecondary: "#d97706",
-    headerStyle: "centered",
-    fontSuggestion: "cormorant-proza",
-    borderStyle: "thin",
-    watermark: "faded-title",
-    headerDivider: "accent-bar",
-    footerStyle: "bar",
-    decorative: "corner-gradient",
-  },
+  // ── Corporate Green ──────────────────────────────────────────────────────
   {
     id: "corporate-green",
     name: "Corporate Green",
@@ -454,20 +472,7 @@ export const CONTRACT_TEMPLATES: ContractTemplate[] = [
     footerStyle: "bar",
     decorative: "none",
   },
-  {
-    id: "bold-slate",
-    name: "Bold Slate",
-    category: "modern",
-    accent: "#0f172a",
-    accentSecondary: "#334155",
-    headerStyle: "banner",
-    fontSuggestion: "poppins-inter",
-    borderStyle: "none",
-    watermark: "none",
-    headerDivider: "accent-bar",
-    footerStyle: "bar",
-    decorative: "accent-strip",
-  },
+  // ── Elegant Gray ─────────────────────────────────────────────────────────
   {
     id: "elegant-gray",
     name: "Elegant Gray",
@@ -481,48 +486,7 @@ export const CONTRACT_TEMPLATES: ContractTemplate[] = [
     footerStyle: "line",
     decorative: "none",
   },
-  {
-    id: "creative-violet",
-    name: "Creative Violet",
-    category: "modern",
-    accent: "#7c3aed",
-    accentSecondary: "#a78bfa",
-    headerStyle: "left-aligned",
-    fontSuggestion: "raleway-lato",
-    borderStyle: "none",
-    watermark: "none",
-    headerDivider: "accent-bar",
-    footerStyle: "line",
-    decorative: "corner-gradient",
-  },
-  {
-    id: "deep-navy",
-    name: "Deep Navy",
-    category: "premium",
-    accent: "#0f2744",
-    accentSecondary: "#1e4080",
-    headerStyle: "banner",
-    fontSuggestion: "dmserif-dmsans",
-    borderStyle: "thin",
-    watermark: "none",
-    headerDivider: "accent-bar",
-    footerStyle: "bar",
-    decorative: "corner-gradient",
-  },
-  {
-    id: "rose-professional",
-    name: "Rose Professional",
-    category: "modern",
-    accent: "#be123c",
-    accentSecondary: "#e11d48",
-    headerStyle: "centered",
-    fontSuggestion: "poppins-inter",
-    borderStyle: "none",
-    watermark: "none",
-    headerDivider: "thick-line",
-    footerStyle: "line",
-    decorative: "none",
-  },
+  // ── Forest Law ───────────────────────────────────────────────────────────
   {
     id: "forest-law",
     name: "Forest Law",
@@ -537,6 +501,7 @@ export const CONTRACT_TEMPLATES: ContractTemplate[] = [
     footerStyle: "line",
     decorative: "page-border",
   },
+  // ── Warm Parchment ───────────────────────────────────────────────────────
   {
     id: "warm-parchment",
     name: "Warm Parchment",
@@ -830,7 +795,7 @@ export function getDefaultClauses(contractType: ContractType): ContractClause[] 
           "(d) \"Probationary Period\" means the initial assessment period specified herein.\n" +
           "(e) \"Gross Salary\" means the total remuneration before statutory deductions.\n" +
           "(f) \"Net Salary\" means the amount payable after deduction of PAYE (Income Tax), NAPSA, and any other authorised deductions.\n\n" +
-          "This Employment Contract is made in compliance with the Employment Act, Chapter 268 of the Laws of Zambia, the Minimum Wages and Conditions of Employment Act (Chapter 276), and the National Pension Scheme Authority Act (No. 40 of 1996).",
+          "This Employment Contract is made in compliance with the Employment Code Act, 2019 (No. 3 of 2019), the Minimum Wages and Conditions of Employment Act (Chapter 276), and the National Pension Scheme Authority Act (No. 40 of 1996).",
           "definitions",
         ),
         makeClause(
@@ -876,20 +841,20 @@ export function getDefaultClauses(contractType: ContractType): ContractClause[] 
         makeClause(
           "Working Hours and Overtime",
           "The standard working hours shall be [X] hours per week, [Monday through Friday / Monday through Saturday], from [Start Time] to [End Time], with a one-hour lunch break.\n\n" +
-          "In accordance with Section 26 of the Employment Act (Chapter 268), working hours shall not exceed forty-eight (48) hours per week. Overtime work shall be voluntary and compensated at:\n" +
+          "In accordance with Section 39 of the Employment Code Act, 2019 (No. 3 of 2019), working hours shall not exceed forty-eight (48) hours per week. Overtime work shall be voluntary and compensated at:\n" +
           "(a) Weekdays: 1.5 times the normal hourly rate;\n" +
           "(b) Saturdays: 1.5 times the normal hourly rate;\n" +
           "(c) Sundays and Public Holidays: 2 times the normal hourly rate.\n\n" +
-          "Overtime shall not exceed forty-eight (48) hours in any four-week period (Section 26A of the Employment Act).",
+          "Overtime shall not exceed forty-eight (48) hours in any four-week period (Section 40 of the Employment Code Act, 2019).",
           "general",
         ),
         makeClause(
           "Leave Entitlements",
           "The Employee shall be entitled to the following leave:\n\n" +
-          "(a) Annual Leave: Twenty-four (24) working days per year (Section 34, Employment Act). Leave shall accrue from the Commencement Date and may be taken after completion of the probationary period.\n" +
-          "(b) Sick Leave: Twenty-six (26) working days per year at full pay, upon production of a medical certificate (Section 36, Employment Act).\n" +
-          "(c) Maternity Leave: One hundred and twenty (120) days with ninety (90) days at full pay (Section 36A, Employment Act).\n" +
-          "(d) Paternity Leave: Five (5) working days at full pay (Section 36B, Employment Act).\n" +
+          "(a) Annual Leave: Twenty-four (24) working days per year (Section 42, Employment Code Act 2019). Leave shall accrue from the Commencement Date and may be taken after completion of the probationary period.\n" +
+          "(b) Sick Leave: Twenty-six (26) working days per year at full pay, upon production of a medical certificate (Section 44, Employment Code Act 2019).\n" +
+          "(c) Maternity Leave: Fourteen (14) weeks with the first seven (7) weeks at full pay (Section 46, Employment Code Act 2019).\n" +
+          "(d) Paternity Leave: Five (5) working days at full pay (Section 47, Employment Code Act 2019).\n" +
           "(e) Compassionate Leave: [X] days per annum for bereavement of immediate family members.\n" +
           "(f) Public Holidays: As gazetted by the Government of the Republic of Zambia.\n\n" +
           "Unused annual leave may not be carried over beyond six (6) months into the following year unless agreed in writing.",
@@ -902,15 +867,15 @@ export function getDefaultClauses(contractType: ContractType): ContractClause[] 
           "Termination and Notice Period",
           "After confirmation of employment:\n\n" +
           "(a) Either party may terminate this contract by giving [1/2/3] month(s)' written notice, or the Employer may pay salary in lieu of notice.\n" +
-          "(b) The minimum statutory notice period is one (1) month for monthly-paid employees, fourteen (14) days for fortnightly-paid employees, or one pay period otherwise (Section 44, Employment Act).\n\n" +
+          "(b) The minimum statutory notice period is one (1) month for monthly-paid employees, fourteen (14) days for fortnightly-paid employees, or one pay period otherwise (Section 53, Employment Code Act 2019).\n\n" +
           "Summary Dismissal: The Employer may dismiss the Employee without notice for gross misconduct, including but not limited to:\n" +
           "(a) Fraud, theft, dishonesty, or criminal conduct;\n" +
           "(b) Serious negligence causing damage to the Employer;\n" +
           "(c) Gross insubordination or refusal to obey lawful instructions;\n" +
           "(d) Intoxication at work;\n" +
           "(e) Breach of confidentiality.\n\n" +
-          "The Employee shall be given the opportunity to be heard before any disciplinary action is taken, in accordance with the principles of natural justice and the Employment Act.\n\n" +
-          "Redundancy: In the event of redundancy, the Employee shall be entitled to severance pay of not less than two (2) months' basic pay per completed year of service, in accordance with Section 53 of the Employment Act.",
+          "The Employee shall be given the opportunity to be heard before any disciplinary action is taken, in accordance with the principles of natural justice and Section 52 of the Employment Code Act, 2019 (which requires the Employer to provide valid reasons for termination).\n\n" +
+          "Redundancy: In the event of redundancy, the Employee shall be entitled to severance pay of not less than twenty-five percent (25%) of basic pay for each completed year of service, in accordance with Section 54 of the Employment Code Act, 2019. Additionally, for contracts of two (2) or more years, the Employee shall be entitled to gratuity as per Section 73.",
           "termination",
         ),
         makeClause(
@@ -924,12 +889,12 @@ export function getDefaultClauses(contractType: ContractType): ContractClause[] 
         ),
         makeClause(
           "Dispute Resolution",
-          "Any dispute arising from this Employment Contract shall first be addressed through the Employer's internal grievance procedure. If the dispute is not resolved within fourteen (14) days, either party may refer the matter to the Labour Commissioner for conciliation under the Employment Act, Chapter 268 (Section 63). If conciliation fails, the matter may be referred to the Industrial Relations Court.",
+          "Any dispute arising from this Employment Contract shall first be addressed through the Employer's internal grievance procedure. If the dispute is not resolved within fourteen (14) days, either party may refer the matter to the Labour Commissioner for conciliation under the Employment Code Act, 2019 (No. 3 of 2019). If conciliation fails, the matter may be referred to the Industrial Relations Court under the Industrial and Labour Relations Act (Chapter 269).",
           "dispute-resolution",
         ),
         makeClause(
           "Governing Law",
-          "This Employment Contract shall be governed by and construed in accordance with the Laws of the Republic of Zambia, including the Employment Act (Chapter 268), the Minimum Wages and Conditions of Employment Act (Chapter 276), the National Pension Scheme Authority Act (No. 40 of 1996), the Occupational Health and Safety Act (No. 16 of 2025), the Workers' Compensation Act (Chapter 271), the Income Tax Act (Chapter 323), and the Constitution of Zambia (Amendment) Act, 2016.",
+          "This Employment Contract shall be governed by and construed in accordance with the Laws of the Republic of Zambia, including the Employment Code Act, 2019 (No. 3 of 2019), the Industrial and Labour Relations Act (Chapter 269), the Minimum Wages and Conditions of Employment Act (Chapter 276), the National Pension Scheme Authority Act (No. 40 of 1996), the Occupational Health and Safety Act (No. 16 of 2025), the Workers' Compensation Act (Chapter 271), the Income Tax Act (Chapter 323), and the Constitution of Zambia (Amendment) Act, 2016.",
           "general",
         ),
         COMMON_CLAUSES.entireAgreement(),
@@ -945,7 +910,7 @@ export function getDefaultClauses(contractType: ContractType): ContractClause[] 
           "(d) \"Deliverables\" means all outputs, work product, designs, code, reports, and materials produced under this Agreement.\n" +
           "(e) \"Project Fee\" means the total compensation payable to the Contractor.\n" +
           "(f) \"Effective Date\" means the date of execution of this Agreement by both parties.\n\n" +
-          "This Agreement establishes an independent contractor relationship and is not an employment contract. The Contractor is not entitled to benefits under the Employment Act (Chapter 268), the Minimum Wages and Conditions of Employment Act (Chapter 276), or the NAPSA Act. This Agreement is governed by the general law of contract in the Republic of Zambia.",
+          "This Agreement establishes an independent contractor relationship and is not an employment contract. The Contractor is not entitled to benefits under the Employment Code Act, 2019 (No. 3 of 2019), the Minimum Wages and Conditions of Employment Act (Chapter 276), or the NAPSA Act. This Agreement is governed by the general law of contract in the Republic of Zambia.",
           "definitions",
         ),
         makeClause(
@@ -987,7 +952,7 @@ export function getDefaultClauses(contractType: ContractType): ContractClause[] 
           "(b) Be solely responsible for all personal taxes, insurance, health cover, and pension arrangements;\n" +
           "(c) Have no authority to bind the Client or enter into obligations on the Client's behalf;\n" +
           "(d) Not represent themselves as an employee of the Client.\n\n" +
-          "This clause is critical to distinguish this engagement from an employment relationship under the Employment Act (Chapter 268). Both parties confirm that the substance of this arrangement is a genuine independent contractor engagement.",
+          "This clause is critical to distinguish this engagement from an employment relationship under the Employment Code Act, 2019 (No. 3 of 2019). Both parties confirm that the substance of this arrangement is a genuine independent contractor engagement.",
           "general",
         ),
         makeClause(
@@ -1022,7 +987,7 @@ export function getDefaultClauses(contractType: ContractType): ContractClause[] 
         ),
         makeClause(
           "Governing Law",
-          "This Freelance Agreement shall be governed by and construed in accordance with the Laws of the Republic of Zambia, including the Income Tax Act (Chapter 323), the Copyright and Performance Rights Act (No. 44 of 1994), and the Arbitration Act (No. 19 of 2000). For the avoidance of doubt, this Agreement does not create an employment relationship and the Employment Act (Chapter 268) does not apply.",
+          "This Freelance Agreement shall be governed by and construed in accordance with the Laws of the Republic of Zambia, including the Income Tax Act (Chapter 323), the Copyright and Performance Rights Act (No. 44 of 1994), and the Arbitration Act (No. 19 of 2000). For the avoidance of doubt, this Agreement does not create an employment relationship and the Employment Code Act, 2019 (No. 3 of 2019) does not apply.",
           "general",
         ),
         COMMON_CLAUSES.entireAgreement(),
@@ -1524,7 +1489,7 @@ export function getDefaultClauses(contractType: ContractType): ContractClause[] 
           "(d) \"Deliverables\" means all reports, analyses, recommendations, and work product produced under this Agreement.\n" +
           "(e) \"Fee\" means the compensation payable to the Consultant.\n" +
           "(f) \"Term\" means the duration of this Agreement as specified herein.\n\n" +
-          "This Agreement establishes an independent consulting engagement. The Consultant is not an employee of the Client for purposes of the Employment Act (Chapter 268). This Agreement is governed by the Laws of the Republic of Zambia.",
+          "This Agreement establishes an independent consulting engagement. The Consultant is not an employee of the Client for purposes of the Employment Code Act, 2019 (No. 3 of 2019). This Agreement is governed by the Laws of the Republic of Zambia.",
           "definitions",
         ),
         makeClause(
@@ -2407,7 +2372,7 @@ export function getDefaultClauses(contractType: ContractType): ContractClause[] 
           "The Contractor shall:\n" +
           "(a) Appoint a qualified Safety Officer for the duration of the Works;\n" +
           "(b) Maintain an accident register and report all incidents;\n" +
-          "(c) Not employ child labour (Employment Act, Chapter 268, Section 17A);\n" +
+          "(c) Not employ child labour (Employment Code Act, 2019, Section 25);\n" +
           "(d) Pay workers at least the minimum wage (Minimum Wages and Conditions of Employment Act, Chapter 276).",
           "general",
         ),
@@ -2469,9 +2434,9 @@ export function getDefaultPreamble(contractType: ContractType, partyAName: strin
     case "nda":
       return `This Non-Disclosure Agreement is entered into for the purpose of preventing the unauthorised disclosure of Confidential Information as defined below. ${a} and ${b} agree to the following terms regarding the protection of confidential and proprietary information, subject to the Laws of the Republic of Zambia, including the Copyright and Performance Rights Act (No. 44 of 1994), the Patents Act (Chapter 400), and the Trade Marks Act (Chapter 401) insofar as they relate to intellectual property protection.`;
     case "employment-contract":
-      return `This Employment Contract is entered into between ${a} (hereinafter referred to as the "Employer") and ${b} (hereinafter referred to as the "Employee"), setting forth the terms and conditions of employment. Both parties acknowledge and agree that this contract is governed by the Employment Act, Chapter 268 of the Laws of Zambia, the Minimum Wages and Conditions of Employment Act (Chapter 276), and all other applicable labour legislation of the Republic of Zambia.`;
+      return `This Employment Contract is entered into between ${a} (hereinafter referred to as the "Employer") and ${b} (hereinafter referred to as the "Employee"), setting forth the terms and conditions of employment. Both parties acknowledge and agree that this contract is governed by the Employment Code Act, 2019 (No. 3 of 2019), the Minimum Wages and Conditions of Employment Act (Chapter 276), and all other applicable labour legislation of the Republic of Zambia.`;
     case "freelance-agreement":
-      return `This Freelance Agreement is entered into between ${a} (hereinafter referred to as the "Client") and ${b} (hereinafter referred to as the "Freelancer"), for the provision of independent professional services on the terms set out herein. The Freelancer is engaged as an independent contractor and not as an employee; accordingly, the Employment Act (Chapter 268) does not apply. This Agreement is governed by the general law of contract of the Republic of Zambia.`;
+      return `This Freelance Agreement is entered into between ${a} (hereinafter referred to as the "Client") and ${b} (hereinafter referred to as the "Freelancer"), for the provision of independent professional services on the terms set out herein. The Freelancer is engaged as an independent contractor and not as an employee; accordingly, the Employment Code Act, 2019 (No. 3 of 2019) does not apply. This Agreement is governed by the general law of contract of the Republic of Zambia.`;
     case "partnership-agreement":
       return `This Partnership Agreement is entered into by ${a} and ${b} who desire to form a partnership and agree upon the terms and conditions governing its operations, management, and dissolution, in accordance with the Partnership Act (Chapter 119 of the Laws of Zambia) and subject to registration requirements under the Patents and Companies Registration Agency (PACRA).`;
     case "lease-agreement":

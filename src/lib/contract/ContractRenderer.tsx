@@ -223,7 +223,7 @@ function PageFooter({
             paddingTop: "6px",
             display: "flex",
             justifyContent: "space-between",
-            fontSize: "9px",
+            fontSize: "11px",
             color: "#94a3b8",
           }}
         >
@@ -237,7 +237,7 @@ function PageFooter({
         <div
           style={{
             textAlign: form.style.pageNumberPosition === "bottom-center" ? "center" : "right",
-            fontSize: "9px",
+            fontSize: "11px",
             color: "#94a3b8",
           }}
         >
@@ -250,7 +250,7 @@ function PageFooter({
         <div
           style={{
             textAlign: "center",
-            fontSize: "8px",
+            fontSize: "10px",
             color: "#94a3b8",
             marginTop: "6px",
             fontStyle: "italic",
@@ -302,7 +302,7 @@ function buildContentBlocks(
             backgroundColor: `${accent}10`,
             border: `1px solid ${accent}30`,
             borderRadius: "4px",
-            fontSize: "10px",
+            fontSize: "12px",
             fontWeight: 700,
             letterSpacing: "3px",
             textTransform: "uppercase",
@@ -331,13 +331,13 @@ function buildContentBlocks(
               marginBottom: "24px",
             }}
           >
-            <h1 style={{ fontSize: "24px", fontWeight: 800, fontFamily: `'${fonts.heading}', sans-serif`, letterSpacing: "1px", textTransform: "uppercase", margin: 0 }}>
+            <h1 style={{ fontSize: "28px", fontWeight: 800, fontFamily: `'${fonts.heading}', sans-serif`, letterSpacing: "1px", textTransform: "uppercase", margin: 0 }}>
               {form.documentInfo.title || config.defaultTitle}
             </h1>
             {form.documentInfo.subtitle && (
-              <p style={{ fontSize: "13px", opacity: 0.85, marginTop: "4px", margin: 0 }}>{form.documentInfo.subtitle}</p>
+              <p style={{ fontSize: "15px", opacity: 0.85, marginTop: "4px", margin: 0 }}>{form.documentInfo.subtitle}</p>
             )}
-            <div style={{ display: "flex", gap: "20px", marginTop: "10px", fontSize: "11px", opacity: 0.75 }}>
+            <div style={{ display: "flex", gap: "20px", marginTop: "10px", fontSize: "13px", opacity: 0.75 }}>
               {form.documentInfo.referenceNumber && <span>Ref: {form.documentInfo.referenceNumber}</span>}
               {form.documentInfo.effectiveDate && <span>Date: {form.documentInfo.effectiveDate}</span>}
             </div>
@@ -346,14 +346,14 @@ function buildContentBlocks(
       case "centered":
         return (
           <div style={{ textAlign: "center", marginBottom: "24px" }}>
-            <h1 style={{ fontSize: "26px", fontWeight: 800, fontFamily: `'${fonts.heading}', serif`, letterSpacing: "2px", textTransform: "uppercase", color: accent, margin: 0 }}>
+            <h1 style={{ fontSize: "30px", fontWeight: 800, fontFamily: `'${fonts.heading}', serif`, letterSpacing: "2px", textTransform: "uppercase", color: accent, margin: 0 }}>
               {form.documentInfo.title || config.defaultTitle}
             </h1>
             {form.documentInfo.subtitle && (
-              <p style={{ fontSize: "13px", color: "#64748b", margin: "6px 0 0 0" }}>{form.documentInfo.subtitle}</p>
+              <p style={{ fontSize: "15px", color: "#64748b", margin: "6px 0 0 0" }}>{form.documentInfo.subtitle}</p>
             )}
             <HeaderDivider tpl={tpl} />
-            <div style={{ display: "flex", justifyContent: "center", gap: "24px", marginTop: "10px", fontSize: "11px", color: "#64748b" }}>
+            <div style={{ display: "flex", justifyContent: "center", gap: "24px", marginTop: "10px", fontSize: "13px", color: "#64748b" }}>
               {form.documentInfo.referenceNumber && <span>Ref: {form.documentInfo.referenceNumber}</span>}
               {form.documentInfo.effectiveDate && <span>Effective: {form.documentInfo.effectiveDate}</span>}
               {form.documentInfo.expiryDate && <span>Expires: {form.documentInfo.expiryDate}</span>}
@@ -363,14 +363,14 @@ function buildContentBlocks(
       case "left-aligned":
         return (
           <div style={{ marginBottom: "24px" }}>
-            <h1 style={{ fontSize: "24px", fontWeight: 700, fontFamily: `'${fonts.heading}', sans-serif`, color: accent, margin: 0 }}>
+            <h1 style={{ fontSize: "28px", fontWeight: 700, fontFamily: `'${fonts.heading}', sans-serif`, color: accent, margin: 0 }}>
               {form.documentInfo.title || config.defaultTitle}
             </h1>
             {form.documentInfo.subtitle && (
-              <p style={{ fontSize: "13px", color: "#64748b", margin: "4px 0 0 0" }}>{form.documentInfo.subtitle}</p>
+              <p style={{ fontSize: "15px", color: "#64748b", margin: "4px 0 0 0" }}>{form.documentInfo.subtitle}</p>
             )}
             <HeaderDivider tpl={tpl} />
-            <div style={{ display: "flex", gap: "20px", marginTop: "10px", fontSize: "11px", color: "#64748b" }}>
+            <div style={{ display: "flex", gap: "20px", marginTop: "10px", fontSize: "13px", color: "#64748b" }}>
               {form.documentInfo.referenceNumber && <span>Ref: {form.documentInfo.referenceNumber}</span>}
               {form.documentInfo.effectiveDate && <span>Effective: {form.documentInfo.effectiveDate}</span>}
             </div>
@@ -379,11 +379,11 @@ function buildContentBlocks(
       default: // minimal
         return (
           <div style={{ marginBottom: "20px" }}>
-            <h1 style={{ fontSize: "20px", fontWeight: 600, fontFamily: `'${fonts.heading}', sans-serif`, color: "#1e293b", margin: 0 }}>
+            <h1 style={{ fontSize: "24px", fontWeight: 600, fontFamily: `'${fonts.heading}', sans-serif`, color: "#1e293b", margin: 0 }}>
               {form.documentInfo.title || config.defaultTitle}
             </h1>
             <div style={{ height: "1px", backgroundColor: "#e2e8f0", marginTop: "8px" }} />
-            <div style={{ display: "flex", gap: "16px", marginTop: "8px", fontSize: "10px", color: "#94a3b8" }}>
+            <div style={{ display: "flex", gap: "16px", marginTop: "8px", fontSize: "12px", color: "#94a3b8" }}>
               {form.documentInfo.referenceNumber && <span>Ref: {form.documentInfo.referenceNumber}</span>}
               {form.documentInfo.effectiveDate && <span>{form.documentInfo.effectiveDate}</span>}
             </div>
@@ -403,16 +403,16 @@ function buildContentBlocks(
         <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
           {/* Party A */}
           <div style={{ flex: "1 1 45%", minWidth: "200px" }}>
-            <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "6px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "6px" }}>
               {form.partyA.role || config.partyARole}
             </div>
-            <div style={{ fontSize: "14px", fontWeight: 700, color: "#1e293b" }}>
+            <div style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b" }}>
               {form.partyA.name || `[${config.partyARole} Name]`}
             </div>
-            {form.partyA.address && <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>{form.partyA.address}</div>}
-            {form.partyA.city && <div style={{ fontSize: "11px", color: "#64748b" }}>{form.partyA.city}, {form.partyA.country}</div>}
+            {form.partyA.address && <div style={{ fontSize: "13px", color: "#64748b", marginTop: "2px" }}>{form.partyA.address}</div>}
+            {form.partyA.city && <div style={{ fontSize: "13px", color: "#64748b" }}>{form.partyA.city}, {form.partyA.country}</div>}
             {form.partyA.representative && (
-              <div style={{ fontSize: "11px", color: "#475569", marginTop: "4px" }}>
+              <div style={{ fontSize: "13px", color: "#475569", marginTop: "4px" }}>
                 Rep: {form.partyA.representative}
                 {form.partyA.representativeTitle && <span style={{ color: "#94a3b8" }}> ({form.partyA.representativeTitle})</span>}
               </div>
@@ -420,20 +420,20 @@ function buildContentBlocks(
           </div>
           {/* AND */}
           <div style={{ display: "flex", alignItems: "center", padding: "0 4px" }}>
-            <span style={{ fontSize: "10px", fontWeight: 600, color: "#94a3b8", letterSpacing: "1px" }}>AND</span>
+            <span style={{ fontSize: "12px", fontWeight: 600, color: "#94a3b8", letterSpacing: "1px" }}>AND</span>
           </div>
           {/* Party B */}
           <div style={{ flex: "1 1 45%", minWidth: "200px" }}>
-            <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "6px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "6px" }}>
               {form.partyB.role || config.partyBRole}
             </div>
-            <div style={{ fontSize: "14px", fontWeight: 700, color: "#1e293b" }}>
+            <div style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b" }}>
               {form.partyB.name || `[${config.partyBRole} Name]`}
             </div>
-            {form.partyB.address && <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>{form.partyB.address}</div>}
-            {form.partyB.city && <div style={{ fontSize: "11px", color: "#64748b" }}>{form.partyB.city}, {form.partyB.country}</div>}
+            {form.partyB.address && <div style={{ fontSize: "13px", color: "#64748b", marginTop: "2px" }}>{form.partyB.address}</div>}
+            {form.partyB.city && <div style={{ fontSize: "13px", color: "#64748b" }}>{form.partyB.city}, {form.partyB.country}</div>}
             {form.partyB.representative && (
-              <div style={{ fontSize: "11px", color: "#475569", marginTop: "4px" }}>
+              <div style={{ fontSize: "13px", color: "#475569", marginTop: "4px" }}>
                 Rep: {form.partyB.representative}
                 {form.partyB.representativeTitle && <span style={{ color: "#94a3b8" }}> ({form.partyB.representativeTitle})</span>}
               </div>
@@ -458,10 +458,10 @@ function buildContentBlocks(
       section: "preamble",
       element: (
         <div style={{ marginBottom: "20px" }}>
-          <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "8px" }}>
+          <div style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "8px" }}>
             Preamble
           </div>
-          <p style={{ fontSize: "12px", lineHeight: 1.7, color: "#475569", textAlign: "justify", margin: 0 }}>
+          <p style={{ fontSize: "14px", lineHeight: 1.7, color: "#475569", textAlign: "justify", margin: 0 }}>
             {form.documentInfo.preambleText}
           </p>
         </div>
@@ -476,17 +476,17 @@ function buildContentBlocks(
       section: "toc",
       element: (
         <div style={{ marginBottom: "24px", padding: "12px 16px", backgroundColor: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "4px" }}>
-          <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "8px" }}>
+          <div style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "8px" }}>
             Table of Contents
           </div>
           {enabledClauses.map((clause, i) => (
-            <div key={clause.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "3px 0", fontSize: "11px" }}>
+            <div key={clause.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "3px 0", fontSize: "13px" }}>
               <span style={{ color: "#1e293b" }}>
                 <span style={{ fontWeight: 600, color: accent, marginRight: "6px" }}>{i + 1}.</span>
                 {clause.title}
               </span>
               <span style={{ flex: 1, borderBottom: "1px dotted #cbd5e1", margin: "0 8px", minWidth: "20px" }} />
-              <span style={{ color: "#94a3b8", fontSize: "10px" }}>{i + 1}</span>
+              <span style={{ color: "#94a3b8", fontSize: "12px" }}>{i + 1}</span>
             </div>
           ))}
         </div>
@@ -503,7 +503,7 @@ function buildContentBlocks(
         <div style={{ marginBottom: "20px" }}>
           <h3
             style={{
-              fontSize: "14px",
+              fontSize: "16px",
               fontWeight: 700,
               fontFamily: `'${fonts.heading}', sans-serif`,
               color: "#1e293b",
@@ -513,7 +513,7 @@ function buildContentBlocks(
             <span style={{ color: accent, marginRight: "8px" }}>{i + 1}.</span>
             {clause.title}
           </h3>
-          <p style={{ fontSize: "12px", lineHeight: 1.7, color: "#475569", textAlign: "justify", margin: 0, paddingLeft: "20px" }}>
+          <p style={{ fontSize: "14px", lineHeight: 1.7, color: "#475569", textAlign: "justify", margin: 0, paddingLeft: "20px" }}>
             {clause.content}
           </p>
         </div>
@@ -528,52 +528,52 @@ function buildContentBlocks(
     breakBefore: enabledClauses.length > 0,
     element: (
       <div>
-        <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "12px", textAlign: "center" }}>
+        <div style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: accent, marginBottom: "12px", textAlign: "center" }}>
           IN WITNESS WHEREOF
         </div>
-        <p style={{ fontSize: "11px", color: "#64748b", textAlign: "center", margin: "0 0 30px 0" }}>
+        <p style={{ fontSize: "13px", color: "#64748b", textAlign: "center", margin: "0 0 30px 0" }}>
           The parties have executed this Agreement as of the Effective Date first written above.
         </p>
         <div style={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
           {/* Party A Signature */}
           <div style={{ flex: "1 1 45%", minWidth: "200px" }}>
-            <div style={{ fontSize: "11px", fontWeight: 600, color: "#1e293b", marginBottom: "20px" }}>
+            <div style={{ fontSize: "13px", fontWeight: 600, color: "#1e293b", marginBottom: "20px" }}>
               For and on behalf of {form.partyA.name || `[${config.partyARole}]`}:
             </div>
             <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #1e293b" : "1px solid #1e293b", width: "220px", marginBottom: "4px" }} />
-            <div style={{ fontSize: "10px", color: "#64748b" }}>Signature</div>
+            <div style={{ fontSize: "12px", color: "#64748b" }}>Signature</div>
             <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #cbd5e1" : "1px solid #cbd5e1", width: "220px", marginTop: "16px", marginBottom: "4px" }} />
-            <div style={{ fontSize: "10px", color: "#64748b" }}>Name & Title</div>
+            <div style={{ fontSize: "12px", color: "#64748b" }}>Name & Title</div>
             {form.signatureConfig.showDate && (
               <>
                 <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #cbd5e1" : "1px solid #cbd5e1", width: "140px", marginTop: "16px", marginBottom: "4px" }} />
-                <div style={{ fontSize: "10px", color: "#64748b" }}>Date</div>
+                <div style={{ fontSize: "12px", color: "#64748b" }}>Date</div>
               </>
             )}
             {form.signatureConfig.showSeal && (
               <div style={{ width: "80px", height: "80px", border: "2px dashed #cbd5e1", borderRadius: "50%", marginTop: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ fontSize: "8px", color: "#94a3b8", textTransform: "uppercase" }}>Seal</span>
+                <span style={{ fontSize: "10px", color: "#94a3b8", textTransform: "uppercase" }}>Seal</span>
               </div>
             )}
           </div>
           {/* Party B Signature */}
           <div style={{ flex: "1 1 45%", minWidth: "200px" }}>
-            <div style={{ fontSize: "11px", fontWeight: 600, color: "#1e293b", marginBottom: "20px" }}>
+            <div style={{ fontSize: "13px", fontWeight: 600, color: "#1e293b", marginBottom: "20px" }}>
               For and on behalf of {form.partyB.name || `[${config.partyBRole}]`}:
             </div>
             <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #1e293b" : "1px solid #1e293b", width: "220px", marginBottom: "4px" }} />
-            <div style={{ fontSize: "10px", color: "#64748b" }}>Signature</div>
+            <div style={{ fontSize: "12px", color: "#64748b" }}>Signature</div>
             <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #cbd5e1" : "1px solid #cbd5e1", width: "220px", marginTop: "16px", marginBottom: "4px" }} />
-            <div style={{ fontSize: "10px", color: "#64748b" }}>Name & Title</div>
+            <div style={{ fontSize: "12px", color: "#64748b" }}>Name & Title</div>
             {form.signatureConfig.showDate && (
               <>
                 <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #cbd5e1" : "1px solid #cbd5e1", width: "140px", marginTop: "16px", marginBottom: "4px" }} />
-                <div style={{ fontSize: "10px", color: "#64748b" }}>Date</div>
+                <div style={{ fontSize: "12px", color: "#64748b" }}>Date</div>
               </>
             )}
             {form.signatureConfig.showSeal && (
               <div style={{ width: "80px", height: "80px", border: "2px dashed #cbd5e1", borderRadius: "50%", marginTop: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ fontSize: "8px", color: "#94a3b8", textTransform: "uppercase" }}>Seal</span>
+                <span style={{ fontSize: "10px", color: "#94a3b8", textTransform: "uppercase" }}>Seal</span>
               </div>
             )}
           </div>
@@ -589,19 +589,19 @@ function buildContentBlocks(
       section: "witnesses",
       element: (
         <div style={{ marginTop: "36px" }}>
-          <div style={{ fontSize: "11px", fontWeight: 700, color: "#1e293b", marginBottom: "16px", textTransform: "uppercase", letterSpacing: "1px" }}>
+          <div style={{ fontSize: "13px", fontWeight: 700, color: "#1e293b", marginBottom: "16px", textTransform: "uppercase", letterSpacing: "1px" }}>
             Witness{form.signatureConfig.witnessCount > 1 ? "es" : ""}
           </div>
           <div style={{ display: "flex", gap: "40px", flexWrap: "wrap" }}>
             {Array.from({ length: form.signatureConfig.witnessCount }, (_, i) => (
               <div key={i} style={{ flex: "1 1 45%", minWidth: "200px" }}>
-                <div style={{ fontSize: "10px", color: "#64748b", marginBottom: "16px" }}>Witness {i + 1}</div>
+                <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "16px" }}>Witness {i + 1}</div>
                 <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #1e293b" : "1px solid #1e293b", width: "200px", marginBottom: "4px" }} />
-                <div style={{ fontSize: "10px", color: "#64748b" }}>Signature</div>
+                <div style={{ fontSize: "12px", color: "#64748b" }}>Signature</div>
                 <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #cbd5e1" : "1px solid #cbd5e1", width: "200px", marginTop: "12px", marginBottom: "4px" }} />
-                <div style={{ fontSize: "10px", color: "#64748b" }}>Full Name</div>
+                <div style={{ fontSize: "12px", color: "#64748b" }}>Full Name</div>
                 <div style={{ borderBottom: form.signatureConfig.lineStyle === "dotted" ? "2px dotted #cbd5e1" : "1px solid #cbd5e1", width: "200px", marginTop: "12px", marginBottom: "4px" }} />
-                <div style={{ fontSize: "10px", color: "#64748b" }}>ID/NRC Number</div>
+                <div style={{ fontSize: "12px", color: "#64748b" }}>ID/NRC Number</div>
               </div>
             ))}
           </div>
@@ -788,7 +788,7 @@ export default function ContractRenderer({
   // Common font styles for measurement and page rendering
   const fontStyles: React.CSSProperties = {
     fontFamily: `'${fonts.body}', 'Inter', sans-serif`,
-    fontSize: "12px",
+    fontSize: "14px",
     lineHeight: 1.6,
     color: "#1e293b",
   };

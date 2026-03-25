@@ -1,6 +1,6 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅
+## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅
 
 ---
 
@@ -13,7 +13,49 @@
 
 ---
 
-## Current Work: Zambian Law-Compliant Contract Templates — COMPLETE ✅
+## Current Work: ZambiaLII Cross-Reference + Legal Accuracy Overhaul — COMPLETE ✅
+
+### Session 123 — Employment Code Act 2019 Correction + Template Overhaul + Print Fonts
+
+#### ZambiaLII Research
+- [x] **Scraped** ZambiaLII.org — 723 legislation documents indexed, 10 pages + targeted searches
+- [x] **CRITICAL DISCOVERY** — Employment Code Act, 2019 (Act No. 3 of 2019) REPLACES Employment Act Cap. 268
+- [x] **Confirmed** Sale of Goods Act 1893 (Cap. 388) still in force
+
+#### Legal Reference Updated (`zambian-legal-reference.ts`)
+- [x] **Replaced** Employment Act Cap. 268 → Employment Code Act, 2019
+- [x] **Removed** Employment (Amendment) Act 2015 (subsumed)
+- [x] **Added 9 new Acts** — Industrial & Labour Relations Act Cap. 269, Data Protection Act 2021, Misrepresentation Act Cap. 69, Law Reform (Frustrated Contracts) Act Cap. 73, Hire Purchase Act Cap. 399, Credit Reporting Act 2018, Movable Property (Security Interests) Act 2016, Estate Agents Act 2000
+- [x] **Updated** NCC Act with 2020 amendment, ZAMBIA_LEGAL_NOTES severance corrected (25% of basic pay per year), gratuity added (s.73)
+
+#### Schema Corrections (`schema.ts`)
+- [x] **All 19 Employment Act references** replaced with Employment Code Act 2019 (verified 0 old refs remain)
+- [x] **Section remapping** — s.26→s.39 (hours), s.26A→s.40 (overtime), s.34→s.42 (leave), s.36→s.44 (sick), s.36A→s.46 (maternity 14 weeks), s.36B→s.47 (paternity), s.44→s.53 (notice), s.47→s.52 (termination), s.53→s.54 (severance), s.73 (gratuity), s.17A→s.25 (child labour)
+- [x] **Preambles** updated for employment, freelance, consulting contracts
+- [x] **Dispute resolution** now references Industrial Relations Court
+
+#### Template Overhaul (`schema.ts`)
+- [x] **Removed 5** invoice-style templates: executive-gold, bold-slate, creative-violet, rose-professional, deep-navy
+- [x] **Added 2** proper legal templates: standard-legal (new DEFAULT), government-formal
+- [x] **9 templates** now: standard-legal, legal-classic, government-formal, corporate-blue, modern-minimal, corporate-green, elegant-gray, forest-law, warm-parchment
+- [x] **Chiko manifest** template enum updated to match
+
+#### Print Font Standardization (`ContractRenderer.tsx`)
+- [x] **~50 inline font sizes** increased for print readability
+- [x] Body 12→14px, titles 24-26→28-30px, subtitles 13→15px, clause headings 14→16px
+- [x] Party names 14→16px, addresses 11→13px, all metadata 11→13px
+- [x] Signatures, witnesses, TOC, preamble, disclaimer — all increased
+
+#### Verification
+- [x] **Chiko AI** — 16 types, 9 templates, 13 categories, 17 actions all correct
+- [x] **TypeScript** — 0 errors (`npx tsc --noEmit`)
+
+**Key Zambian Acts now referenced (updated):**
+Employment Code Act, 2019 (Act No. 3 of 2019), Industrial & Labour Relations Act Cap. 269, Data Protection Act 2021, Rent Act Cap. 206, Landlord & Tenant Act Cap. 190, Lands Act 1995, Sale of Goods Act Cap. 388, Companies Act 2017, Partnership Act Cap. 119, NCC Act No. 13/2003 (amended 2020), Occupational Health and Safety Act No. 16/2025, Workers' Compensation Act Cap. 271, Arbitration Act No. 19/2000, CCPA No. 24/2010, Banking & Financial Services Act No. 7/2017, Money Lenders Act Cap. 398, RTSA Act No. 13/2002, Property Transfer Tax Act Cap. 340, Stamp Duty Act Cap. 339, Income Tax Act Cap. 323, VAT Act Cap. 331, Environmental Management Act No. 12/2011, EIZ Act Cap. 432, Public Procurement Act No. 8/2020, Copyright & Performance Rights Act No. 44/1994, Patents Act Cap. 400, Trade Marks Act Cap. 401, Misrepresentation Act Cap. 69, Law Reform (Frustrated Contracts) Act Cap. 73, Hire Purchase Act Cap. 399, Credit Reporting Act 2018, Movable Property (Security Interests) Act 2016, Estate Agents Act 2000
+
+---
+
+## Previous Work: Zambian Law-Compliant Contract Templates — COMPLETE ✅
 
 ### Session 122 — All 16 Contract Types Enhanced
 - [x] **Researched** Zambian Parliament website (parliament.gov.zm) — 48 pages of Acts

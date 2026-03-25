@@ -1,55 +1,55 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Session 122 — Zambian Law-Compliant Contract Templates — COMPLETE ✅
+**Phase:** Session 123 — ZambiaLII Cross-Reference, Employment Code Act 2019, Template Overhaul, Print Fonts — COMPLETE ✅
 
-### Session 122: All 16 Contract Types Enhanced with Zambian Law Compliance
+### Session 123: Legal Accuracy Overhaul + Template Cleanup + Print Standardization
 
-#### Research & Reference
-- Researched Zambian Parliament website (parliament.gov.zm) — 48 pages of Acts spanning 1914–2025
-- Created `src/lib/contract/zambian-legal-reference.ts` (~400 lines) — comprehensive legal citation database covering 30+ Acts of Parliament
-- Key Acts: Employment Act Cap. 268, Rent Act Cap. 206, Landlord & Tenant Act Cap. 190, Lands Act 1995, Sale of Goods Act Cap. 388, Companies Act 2017, Partnership Act Cap. 119, NCC Act No. 13/2003, Arbitration Act No. 19/2000, and 20+ more
+#### 1. ZambiaLII.org Research
+- Scraped 10 pages of legislation from ZambiaLII.org — 723 indexed documents
+- Targeted searches for Sale of Goods Act and Employment Code Act
+- **CRITICAL DISCOVERY:** Employment Code Act, 2019 (Act No. 3 of 2019) **REPLACES** the old Employment Act Cap. 268 — confirmed via court judgments on ZambiaLII
+- Sale of Goods Act 1893 (Cap. 388) confirmed still in force
 
-#### New Contract Type Added
-- **Tenancy Agreement** — 16th contract type added to CONTRACT_TYPES, CONTRACT_TYPE_CONFIGS, getDefaultClauses (17 clauses), getDefaultPreamble, and Chiko AI manifest enum lists
+#### 2. Legal Reference Updated (`zambian-legal-reference.ts`)
+- Replaced Employment Act Cap. 268 → Employment Code Act, 2019 (Act No. 3 of 2019)
+- Removed Employment (Amendment) Act 2015 entry (subsumed by 2019 Act)
+- Added 9 new Acts: Industrial & Labour Relations Act Cap. 269, Data Protection Act 2021, Misrepresentation Act Cap. 69, Law Reform (Frustrated Contracts) Act Cap. 73, Hire Purchase Act Cap. 399, Credit Reporting Act 2018, Movable Property (Security Interests) Act 2016, Estate Agents Act 2000
+- Updated NCC Act with 2020 amendment reference
+- Corrected ZAMBIA_LEGAL_NOTES: severance from "2 months' basic" to "25% of basic pay per year" (s.54), added mandatory gratuity for 2+ year contracts (s.73)
+- Source header updated to include ZambiaLII
 
-#### All 16 Contract Types Enhanced (getDefaultClauses)
-Each type now has comprehensive Definitions clause citing applicable Zambian Acts, specific law references throughout, dispute resolution with appropriate tribunal/court, and governing law clause listing all applicable legislation:
-1. **service-agreement** — 11 clauses (Sale of Goods Act, VAT Act, Patents/Copyright/Trade Marks Acts)
-2. **nda** — 11 clauses (IP Acts, remedies including injunctive relief)
-3. **employment-contract** — 13 clauses (Employment Act, NAPSA, PAYE, Minimum Wages Act)
-4. **freelance-agreement** — 11 clauses (independent contractor distinction, Employment Act exclusion)
-5. **partnership-agreement** — 12 clauses (Partnership Act Cap. 119, PACRA registration)
-6. **lease-agreement** — 16 clauses (Landlord & Tenant Act Cap. 190, Lands Tribunal)
-7. **tenancy-agreement** — 17 clauses (Rent Act Cap. 206, landlord/tenant obligations)
-8. **sales-agreement** — 11 clauses (Sale of Goods Act, ZABS, CCPA)
-9. **consulting-agreement** — 11 clauses (WHT, non-solicitation, IP)
-10. **motor-vehicle-sale** — 11 clauses (RTSA Act, Road Traffic Act)
-11. **property-sale-agreement** — 11 clauses (Lands Act, PTT 5%, State Consent)
-12. **loan-agreement** — 12 clauses (Money Lenders Act, Banking Act, Corporate Insolvency Act)
-13. **shareholders-agreement** — 13 clauses (Companies Act 2017, Securities Act, deadlock resolution)
-14. **supply-agreement** — 13 clauses (Standards Act, ZABS, Public Procurement Act)
-15. **mou** — 11 clauses (binding/non-binding distinction, IP provisions)
-16. **construction-contract** — 14 clauses (NCC Act, OSHA, Workers' Compensation, EIZ, retention, defects liability, liquidated damages)
+#### 3. Schema Employment Code Act 2019 Corrections (`schema.ts`)
+- All 19 Employment Act Cap. 268 references replaced with Employment Code Act, 2019
+- Section number mappings: s.26→s.39 (hours), s.26A→s.40 (overtime), s.34→s.42 (leave), s.36→s.44 (sick), s.36A→s.46 (maternity, now 14 weeks not 120 days), s.36B→s.47 (paternity 5 days), s.44→s.53 (notice), s.47→s.52 (termination reasons), s.53→s.54 (severance 25%), added s.73 (gratuity), s.17A→s.25 (child labour)
+- All preambles updated (employment, freelance, consulting)
+- Dispute resolution now references Industrial Relations Court
+- Verified: 0 old references remaining (grep confirmed)
 
-#### Preambles Enhanced
-All 16 contract types now have preambles citing applicable Zambian legislation (previously only 3 had citations).
+#### 4. Template Audit & Overhaul (`schema.ts`)
+- **Removed 5 unsuitable templates** (invoice-style): executive-gold, bold-slate, creative-violet, rose-professional, deep-navy
+- **Added 2 proper legal templates:** standard-legal (new DEFAULT — black, serif, centered, page-border), government-formal (very formal, dark, serif, thick divider)
+- **9 templates now:** standard-legal, legal-classic, government-formal, corporate-blue, modern-minimal, corporate-green, elegant-gray, forest-law, warm-parchment
+- Chiko manifest template enum updated to match
 
-#### COMMON_CLAUSES Helpers Enhanced
-- Added ZMW definition, WHT/VAT references to payment clause
-- Added Arbitration Act reference to dispute resolution
-- Added IP Act citations to intellectual property clause
-- Added force majeure notice requirement
-- Enhanced governing law with arbitration reference
-- Added fraud/negligence carve-out to liability limitation
+#### 5. Print Font Size Standardization (`ContractRenderer.tsx`)
+- All font sizes increased ~2px for print-standard legal documents
+- Base body: 12→14px, titles: 24-26→28-30px, subtitles: 13→15px
+- Parties: role labels 9→11, names 14→16, addresses 11→13
+- Clauses: heading 14→16, body 12→14
+- Signatures: all labels increased, seal 8→10
+- TOC, preamble, witnesses, footer, disclaimer — all increased
+- ~50 inline style instances updated
 
-#### Other Fixes
-- Fixed 5 TypeScript errors: `"ip"` → `"intellectual-property"` clause category
-- Removed unreachable dead code block after construction-contract return
+#### 6. Chiko AI Verification
+- All 16 contract types in manifest enum ✅
+- All 9 templates in manifest enum ✅
+- All 13 clause categories covered ✅
+- 17 core actions fully mapped ✅
+- Minor: undo/redo not exposed (not critical for AI)
 
 #### Build Status
-- TypeScript: 0 errors in schema.ts (verified)
-- Pre-existing lint warnings in other files unchanged
+- TypeScript: 0 errors (verified via `npx tsc --noEmit`)
 
 ---
 

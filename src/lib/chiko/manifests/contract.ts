@@ -256,9 +256,9 @@ export function createContractManifest(options?: ContractManifestOptions): Chiko
             template: {
               type: "string",
               enum: [
-                "corporate-blue", "legal-classic", "modern-minimal", "executive-gold",
-                "corporate-green", "bold-slate", "elegant-gray", "creative-violet",
-                "deep-navy", "rose-professional", "forest-law", "warm-parchment",
+                "standard-legal", "legal-classic", "government-formal",
+                "corporate-blue", "modern-minimal", "corporate-green",
+                "elegant-gray", "forest-law", "warm-parchment",
               ],
               description: "Visual template preset",
             },
