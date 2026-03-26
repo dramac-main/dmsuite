@@ -30,6 +30,8 @@ import {
   IconArrowRight,
   IconTrash,
 } from "@/components/icons";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
+import { MicButton, VoiceRecordingOverlay } from "./VoiceInput";
 import type { ChikoFileAttachment } from "@/stores/chiko";
 import type { ExtractedFileData } from "@/lib/chiko/extractors";
 import {
@@ -438,6 +440,25 @@ export function ChikoAssistant() {
   const [autoContinueCount, setAutoContinueCount] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Voice Input ──────────────────────────────────────────
+  const voice = useVoiceInput({
+    onTranscript: (text) => {
+      setInputDraft(text);
+      // Auto-resize textarea to fit transcript
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.style.height = "auto";
+          inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 100)}px`;
+        }
+      }, 0);
+    },
+    onInterim: (text) => {
+      // Show real-time transcript in input as preview
+      setInputDraft(text);
+    },
+  });
+  const isVoiceActive = voice.state === "listening" || voice.state === "polishing";
   const routerRef = useRef(router);
   routerRef.current = router;
 
@@ -2137,7 +2158,23 @@ export function ChikoAssistant() {
                   ))}
                 </div>
               )}
-              <div className="flex items-end gap-2 rounded-xl border border-gray-700/50 bg-gray-800/40 px-3 py-2 transition-colors focus-within:border-primary-500/40 focus-within:ring-1 focus-within:ring-primary-500/20">
+              {/* ── Voice Recording Overlay ── */}
+              <div className="relative">
+                <VoiceRecordingOverlay
+                  state={voice.state}
+                  interimText={voice.interimText}
+                  volumeLevel={voice.volumeLevel}
+                  errorMessage={voice.errorMessage}
+                  onStop={voice.stopListening}
+                  onCancel={voice.cancel}
+                />
+              </div>
+              <div className={cn(
+                "flex items-end gap-2 rounded-xl border px-3 py-2 transition-colors",
+                isVoiceActive
+                  ? "border-primary-500/40 bg-primary-500/5 ring-1 ring-primary-500/20"
+                  : "border-gray-700/50 bg-gray-800/40 focus-within:border-primary-500/40 focus-within:ring-1 focus-within:ring-primary-500/20"
+              )}>
                 {/* ── Hidden file input ──────────────── */}
                 <input
                   ref={fileInputRef}
@@ -2150,7 +2187,7 @@ export function ChikoAssistant() {
                 {/* ── Attachment button ──────────────── */}
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isGenerating}
+                  disabled={isGenerating || isVoiceActive}
                   className="mb-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded text-gray-500 transition-colors hover:text-primary-400 disabled:opacity-30"
                   aria-label="Attach file"
                   title="Attach a file (PDF, DOCX, XLSX, Image)"
@@ -2169,19 +2206,35 @@ export function ChikoAssistant() {
                     e.target.style.height = `${Math.min(e.target.scrollHeight, 100)}px`;
                   }}
                   onKeyDown={handleKeyDown}
-                  placeholder="Ask anything... (/help for commands)"
-                  disabled={isGenerating}
+                  placeholder={isVoiceActive ? "Speak now..." : "Ask anything... (/help for commands)"}
+                  disabled={isGenerating || isVoiceActive}
                   rows={1}
-                  className="max-h-25 flex-1 resize-none bg-transparent text-sm text-white placeholder-gray-500 outline-none disabled:opacity-50"
+                  className={cn(
+                    "max-h-25 flex-1 resize-none bg-transparent text-sm placeholder-gray-500 outline-none disabled:opacity-50",
+                    isVoiceActive ? "text-primary-300" : "text-white"
+                  )}
                   aria-label="Message Chiko"
                   style={{ fontSize: "16px" }}
                   enterKeyHint="send"
                   autoComplete="off"
                   autoCorrect="off"
                 />
+                {/* ── Mic button ───────────────────────── */}
+                <MicButton
+                  isSupported={voice.isSupported}
+                  isListening={voice.state === "listening"}
+                  isDisabled={isGenerating || websiteScanning}
+                  onClick={() => {
+                    if (voice.state === "listening") {
+                      voice.stopListening();
+                    } else {
+                      voice.startListening();
+                    }
+                  }}
+                />
                 <button
                   onClick={() => sendMessage()}
-                  disabled={(!inputDraft.trim() && !attachments.some((a) => a.status === "ready")) || isGenerating || websiteScanning}
+                  disabled={(!inputDraft.trim() && !attachments.some((a) => a.status === "ready")) || isGenerating || websiteScanning || isVoiceActive}
                   className={cn(
                     "mb-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all",
                     "bg-primary-500 text-gray-950",
@@ -2196,7 +2249,7 @@ export function ChikoAssistant() {
               <div className="mt-1.5 flex items-center justify-between px-1">
                 <span className="text-[10px] text-gray-600">
                   <span className="hidden sm:inline">Ctrl+. to toggle · </span>
-                  Shift+Enter for newline
+                  {voice.isSupported ? "Mic or type" : "Shift+Enter for newline"}
                 </span>
                 <span className="text-[10px] text-gray-600">
                   Powered by AI ✨

@@ -1,6 +1,55 @@
 # DMSuite — Active Context
 
 ## Current Focus
+**Phase:** Resume UX Revamp (Contract-Pattern Parity) — COMPLETE ✅
+
+### Session 131: Resume Editor UX Revamp — Match Agreements & Contracts Tool
+
+#### Problem
+1. **Landing-on-Generate Bug** — Every revisit landed on Step 6 (generation), auto-triggering AI and burning tokens. Wizard store `onRehydrateStorage` clamped step 7→6 unconditionally.
+2. **Accordion UX** — Editor used accordion panels (Sections/Design), inconsistent with Contract Designer's proven flat-tab system.
+3. **Redundant AI Chat** — AIChatBar floating on canvas was redundant with Chiko assistant.
+
+#### Solution: Full Contract-Pattern Alignment
+
+##### Wizard Rehydration Fix (`resume-cv-wizard.ts`):
+- `onRehydrateStorage` now checks `localStorage.getItem("dmsuite-resume")` for existing editor data
+- If resume data exists with a populated name → stays on step 7 (editor)
+- If stuck on step 6 with existing data → redirects to step 7
+- Falls back to step 5 (Brief) instead of step 6 if no data exists
+- Prevents re-generation and token waste on every return visit
+
+##### New 4-Tab System (replacing 2-accordion-tab layout):
+- **`tabs/ResumeContactTab.tsx`** (~170 lines) — Personal info (name, headline, email, phone, location, LinkedIn, website) + professional summary. Flat form layout mirroring Contract's Parties tab.
+- **`tabs/ResumeSectionsTab.tsx`** (~350 lines) — Toggle-based section list mirroring Contract's Clauses tab. Each section: grip handle, visibility toggle switch, title, category badge, item count, expand chevron. Inline editing on expand. SectionRow + SummaryInlineEditor components.
+- **`tabs/ResumeStyleTab.tsx`** (~310 lines) — Template strip (horizontal scrollable thumbnails), accent color grid, font pairing list, font scale buttons. Flat layout matching Contract's Style tab.
+- **`tabs/ResumeFormatTab.tsx`** (~190 lines) — Page size (print/web groups), section spacing, margins (marginPreset), line spacing, export info. Matching Contract's Print tab.
+
+##### StepEditor.tsx Rewrite:
+- Tabs: `["sections", "design"]` → `["contact", "sections", "style", "format"]` with matching icons
+- Default tab: "contact" (was "sections")
+- AIChatBar removed from canvas preview area
+- Ctrl+K keyboard shortcut removed (was for AI chat focus)
+- handleAIRevision dead code removed (was only called by AIChatBar)
+- Layer click routing: "basics" → contact tab, others → sections tab
+- All preserved: preview canvas, zoom, page nav, template strip, layers panel, export, DiffOverlay, Chiko manifest, undo/redo
+
+#### Schema Compatibility Fixes:
+- `margins` → `marginPreset` (field name fix in FormatTab)
+- Margin values: "normal" → "standard" (matches schema enum)
+- Line spacing values: "relaxed" → "loose" (matches schema enum)
+- Removed unused `Sections` type import from SectionsTab
+- Removed unused `ActionButton` import from StepEditor
+- Removed unused `IconEye`/`IconEyeOff` from SectionsTab
+
+#### Validation:
+- [x] TypeScript: 0 errors (`npx tsc --noEmit` clean)
+- [x] All lint warnings resolved
+- [x] Schema field names verified against `src/lib/resume/schema.ts`
+
+---
+
+## Previous Focus
 **Phase:** Resume Dashboard Parity — COMPLETE ✅
 
 ### Session 129: Resume 3-Panel Layout + Layers Panel

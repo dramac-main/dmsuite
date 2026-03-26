@@ -1,9 +1,11 @@
 // =============================================================================
 // DMSuite — Resume Step 7: Full-Screen Editor
 // Architecture mirrors ContractDesignerWorkspace.tsx exactly:
-//   Editor sidebar (tabbed: Sections | Design) + Preview canvas + Layers panel
+//   Editor sidebar (tabbed: Contact | Sections | Style | Format)
+//   + Preview canvas + Layers panel
 // Mobile: bottom toggle bar (Edit / Preview / Export)
 // Desktop: editor panel + preview canvas + layers panel (3-panel layout)
+// NO redundant AI chat on canvas — Chiko handles all AI interactions.
 // =============================================================================
 
 "use client";
@@ -18,11 +20,12 @@ import { createResumeManifest } from "@/lib/chiko/manifests/resume";
 import { PAGE_DIMENSIONS } from "@/lib/resume/schema";
 import { TEMPLATES } from "@/lib/resume/templates/templates";
 import TemplateRenderer, { RESUME_PAGE_GAP } from "@/lib/resume/templates/TemplateRenderer";
-import EditorSectionsPanel from "./editor/EditorSectionsPanel";
-import EditorDesignPanel from "./editor/EditorDesignPanel";
+import ResumeContactTab from "./tabs/ResumeContactTab";
+import ResumeSectionsTab from "./tabs/ResumeSectionsTab";
+import ResumeStyleTab from "./tabs/ResumeStyleTab";
+import ResumeFormatTab from "./tabs/ResumeFormatTab";
 import ResumeLayers from "./ResumeLayers";
 import DiffOverlay from "./editor/DiffOverlay";
-import AIChatBar from "./editor/AIChatBar";
 import ExportDropdown, { type ExportFormat } from "./editor/ExportDropdown";
 import type { PendingDiffState } from "./editor/EditorPreviewPanel";
 import { FONT_PAIRINGS } from "@/lib/resume/schema";
@@ -33,29 +36,39 @@ import {
   IconButton,
   ConfirmDialog,
   Icons,
+  SIcon,
 } from "@/components/workspaces/shared/WorkspaceUIKit";
 
 // =============================================================================
-// Editor tab definitions — mirror Contract workspace pattern
+// Editor tab definitions — mirrors Contract workspace 4-tab pattern
 // =============================================================================
 
 const TAB_ICONS = {
+  contact: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" />
+    </svg>
+  ),
   sections: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
       <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
     </svg>
   ),
-  design: (
+  style: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="13.5" cy="6.5" r="2.5" /><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="12" r="2.5" /><circle cx="13.5" cy="17.5" r="2.5" />
     </svg>
   ),
+  format: <SIcon d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z" />,
 };
 
 const EDITOR_TABS = [
+  { key: "contact", label: "Contact", icon: TAB_ICONS.contact },
   { key: "sections", label: "Sections", icon: TAB_ICONS.sections },
-  { key: "design", label: "Design", icon: TAB_ICONS.design },
+  { key: "style", label: "Style", icon: TAB_ICONS.style },
+  { key: "format", label: "Format", icon: TAB_ICONS.format },
 ] as const;
 
 type EditorTabKey = (typeof EDITOR_TABS)[number]["key"];
@@ -80,7 +93,7 @@ export default function StepEditor() {
   const printAreaRef = useRef<HTMLDivElement>(null);
 
   // Active editor tab
-  const [activeTab, setActiveTab] = useState<EditorTabKey>("sections");
+  const [activeTab, setActiveTab] = useState<EditorTabKey>("contact");
   // Mobile view mode
   const [mobileView, setMobileView] = useState<"editor" | "preview">("editor");
   // Zoom
@@ -164,9 +177,13 @@ export default function StepEditor() {
 
   // ── Layer/canvas click → open corresponding editor section (contract pattern) ──
   const handleLayerOpenSection = useCallback((section: string) => {
-    // All resume sections map to the "sections" tab
-    setActiveTab("sections");
-    setActiveSectionKey(section);
+    // "basics" (header/contact) maps to contact tab; everything else to sections tab
+    if (section === "basics") {
+      setActiveTab("contact");
+    } else {
+      setActiveTab("sections");
+      setActiveSectionKey(section);
+    }
     setMobileView("editor");
     // Clear after a short delay so the user can click again on the same section
     setTimeout(() => setActiveSectionKey(null), 300);
@@ -210,82 +227,6 @@ export default function StepEditor() {
     const page = Math.min(totalPages, Math.floor(el.scrollTop / pageStep) + 1);
     setCurrentPage(page);
   }, [totalPages, pageStep]);
-
-  // ── Keyboard shortcut: Ctrl+K → focus AI chat bar ──
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault();
-        const chatInput = document.querySelector<HTMLInputElement>("[data-chat-input]");
-        chatInput?.focus();
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  // ── Handle AI revision (ChatGPT-style chat bar) ──
-  const handleAIRevision = useCallback(async (instruction: string) => {
-    try {
-      const { performAIRevision } = await import("@/lib/resume/ai-revision-engine");
-      const wizardState = useResumeCVWizard.getState();
-      const currentResume = useResumeEditor.getState().resume;
-
-      const context: import("@/lib/resume/ai-revision-engine").RevisionContext = {
-        scope: "full",
-        contentFidelityMode: wizardState.brief.contentFidelityMode,
-        wizardData: {
-          personal: {
-            name: wizardState.personal.name,
-            email: wizardState.personal.email,
-            phone: wizardState.personal.phone,
-            location: wizardState.personal.location,
-            linkedin: wizardState.personal.linkedin,
-            website: wizardState.personal.website,
-          },
-          experiences: wizardState.experiences.map((exp) => ({
-            company: exp.company,
-            position: exp.position,
-            startDate: exp.startDate,
-            endDate: exp.endDate,
-            isCurrent: exp.isCurrent,
-            description: exp.description,
-          })),
-          education: wizardState.education.map((edu) => ({
-            institution: edu.institution,
-            degree: edu.degree,
-            field: edu.field,
-            graduationYear: edu.graduationYear,
-          })),
-          skills: wizardState.skills,
-          brief: {
-            description: wizardState.brief.description,
-            style: wizardState.brief.style,
-            contentFidelityMode: wizardState.brief.contentFidelityMode,
-            jobDescription: wizardState.brief.jobDescription,
-          },
-        },
-        targetRole: wizardState.targetRole.jobTitle,
-        jobDescription: wizardState.brief.jobDescription || undefined,
-      };
-
-      const result = await performAIRevision(instruction, currentResume, context);
-
-      if (result.success && result.updatedResumeData) {
-        const snapshot = structuredClone(currentResume);
-        setResume(result.updatedResumeData);
-        setPendingDiff({
-          originalResume: snapshot,
-          patches: result.patches,
-          rejectedPatches: result.rejectedPatches,
-          warnings: result.warnings,
-          summary: result.summary,
-        });
-      }
-    } catch {
-      // Silent fail — user will see no diff
-    }
-  }, [setResume]);
 
   const handleAcceptDiff = useCallback(() => {
     setPendingDiff(null);
@@ -368,8 +309,10 @@ export default function StepEditor() {
   // ── Tab content ──
   const tabContent = (
     <div className="flex-1 overflow-y-auto scrollbar-thin">
-      {activeTab === "sections" && <EditorSectionsPanel activeSectionKey={activeSectionKey} />}
-      {activeTab === "design" && <EditorDesignPanel />}
+      {activeTab === "contact" && <ResumeContactTab />}
+      {activeTab === "sections" && <ResumeSectionsTab activeSectionKey={activeSectionKey} />}
+      {activeTab === "style" && <ResumeStyleTab />}
+      {activeTab === "format" && <ResumeFormatTab />}
 
       {/* Start Over — always at the bottom */}
       <div className="p-4 pb-8">
@@ -608,12 +551,8 @@ export default function StepEditor() {
             mobileView === "preview" ? "flex" : "hidden"
           } lg:flex flex-1 overflow-hidden`}
         >
-          <div className="flex-1 flex flex-col overflow-hidden relative">
+          <div className="flex-1 flex flex-col overflow-hidden">
             {previewPanel}
-            {/* Floating AI chat bar — inside preview area */}
-            <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-40 w-full max-w-xl px-4">
-              <AIChatBar onExecute={handleAIRevision} />
-            </div>
           </div>
           {/* Layers panel (right side, contract pattern) */}
           <div className="hidden lg:flex">

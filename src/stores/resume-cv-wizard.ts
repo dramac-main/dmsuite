@@ -405,9 +405,51 @@ export const useResumeCVWizard = create<ResumeCVWizardState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        // Clamp step back to 6 if it was on 7 (editor step is not persistable)
+        // If user was on editor (step 7), check if resume data already exists
+        // in the resume-editor store (persisted in localStorage). If yes, stay
+        // on step 7 — do NOT clamp to step 6 which would re-trigger generation
+        // and burn tokens unnecessarily.
         if (state.currentStep === 7) {
-          state.currentStep = 6 as WizardStep;
+          try {
+            const raw = typeof window !== "undefined"
+              ? localStorage.getItem("dmsuite-resume")
+              : null;
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              const resume = parsed?.state?.resume;
+              // Check if meaningful data exists (name populated = was generated)
+              if (resume?.basics?.name && resume.basics.name.trim().length > 0) {
+                // Keep on step 7 — resume data is already there
+                state.highestCompletedStep = 7 as WizardStep;
+                return;
+              }
+            }
+          } catch {
+            // Parsing failed — fall through to clamp
+          }
+          // No resume data exists — clamp to step 5 (Brief) instead of 6
+          // so the user can review preferences before re-generating
+          state.currentStep = 5 as WizardStep;
+        }
+        // Also handle if somehow stuck on step 6 with existing data
+        if (state.currentStep === 6) {
+          try {
+            const raw = typeof window !== "undefined"
+              ? localStorage.getItem("dmsuite-resume")
+              : null;
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              const resume = parsed?.state?.resume;
+              if (resume?.basics?.name && resume.basics.name.trim().length > 0) {
+                // Resume exists — jump to editor
+                state.currentStep = 7 as WizardStep;
+                state.highestCompletedStep = 7 as WizardStep;
+                return;
+              }
+            }
+          } catch {
+            // Ignore
+          }
         }
         // Ensure highestCompletedStep is valid
         if (state.highestCompletedStep > 7) {

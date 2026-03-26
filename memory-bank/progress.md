@@ -1,6 +1,6 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅
+## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅
 
 ---
 
@@ -13,27 +13,29 @@
 
 ---
 
-## Current Work: Resume 3-Panel + Layers Panel — COMPLETE ✅
+## Current Work: Resume UX Revamp — COMPLETE ✅
 
-### Session 129 — Resume Dashboard Parity with Contract Designer
+### Session 131 — Resume Editor Revamp to Match Contract Designer UX
 
 #### Problem
-- Resume/CV editor was missing Layers panel entirely
-- No click-to-edit on canvas, no hover highlighting
-- Inconsistent layout vs Contract Designer (2 vs 3 panels)
+- Every revisit to Resume/CV tool landed on Step 6 (generation), auto-triggering AI and burning tokens
+- 2-tab accordion layout inconsistent with Contract Designer's proven flat-tab system  
+- AIChatBar on canvas redundant with Chiko assistant
 
-#### Solution: Full Contract-Pattern Parity
-- [x] Created `ResumeLayers.tsx` — Figma-style layer tree panel (useLayers hook, LayerRow, eye toggles, hover→highlight)
-- [x] StepEditor.tsx rewritten: 3-panel layout (editor + preview + layers), DOM annotation for `data-resume-section`, click-to-edit, hover highlighting
-- [x] EditorSectionsPanel.tsx: `activeSectionKey` prop for external section activation
-- [x] CSS: `[data-resume-section]` hover outlines + `.resume-layer-highlight` class
-- [x] Preview scroll handler wired for page tracking
+#### Solution: Full Contract-Pattern Alignment
+- [x] Fixed wizard store rehydration (`resume-cv-wizard.ts`) — checks localStorage for existing resume data before clamping steps
+- [x] Created 4 new tab components: ResumeContactTab, ResumeSectionsTab, ResumeStyleTab, ResumeFormatTab
+- [x] Rewrote StepEditor.tsx: 4 tabs (Contact/Sections/Style/Format) replacing 2 accordion tabs (Sections/Design)
+- [x] Removed AIChatBar from canvas preview area
+- [x] Removed Ctrl+K shortcut and handleAIRevision dead code
+- [x] Updated layer click routing: "basics"→contact tab, others→sections tab
+- [x] Fixed schema field mismatches: `margins`→`marginPreset`, "normal"→"standard", "relaxed"→"loose"
 - [x] TypeScript: 0 errors
-- [x] Production build: passes (56s, 36 pages)
+- [x] All lint warnings resolved
 
 ---
 
-## Previous Work: Milestone-Based Progress Tracking — COMPLETE ✅
+## Previous Work: Chiko Voice Input — COMPLETE ✅
 
 ### Session 128 — Active Projects Progress Redesign
 
