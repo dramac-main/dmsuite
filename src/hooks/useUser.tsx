@@ -89,6 +89,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const userIdRef = useRef<string | null>(null);
   const cancelledRef = useRef(false);
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
+  const realtimeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Bump to re-run bootstrap
   const [bootKey, setBootKey] = useState(0);
 
@@ -130,7 +131,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
           (payload) => {
             if (!cancelledRef.current) {
               const newRow = payload.new as UserProfile;
-              setProfile((prev) => (prev ? { ...prev, ...newRow } : newRow));
+              // Debounce realtime updates to avoid cascading re-renders
+              if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
+              realtimeDebounceRef.current = setTimeout(() => {
+                if (!cancelledRef.current) {
+                  setProfile((prev) => (prev ? { ...prev, ...newRow } : newRow));
+                }
+              }, 150);
             }
           }
         )
@@ -210,6 +217,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelledRef.current = true;
       clearTimeout(hardTimer);
+      if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
       subscription.unsubscribe();
       unsubscribeRealtime();
     };

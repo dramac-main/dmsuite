@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getIcon } from "@/components/icons";
 import { useAnalyticsStore } from "@/stores/analytics";
 import { useProjectStore } from "@/stores/projects";
@@ -30,9 +30,17 @@ export default function StatsBar() {
   useEffect(() => setMounted(true), []);
 
   const { profile } = useUser();
-  const totalOpens = useAnalyticsStore((s) => s.getTotalOpens());
-  const totalHours = useAnalyticsStore((s) => s.getTotalHours());
-  const topTools = useAnalyticsStore((s) => s.getTopTools(1));
+  /* Select the raw record — stable reference unless data actually changes.
+     Computing derived values in selectors that return new arrays/objects
+     breaks zustand v5 Object.is equality and causes infinite re-renders. */
+  const toolUsage = useAnalyticsStore((s) => s.toolUsage);
+  const { totalOpens, totalHours, topToolId } = useMemo(() => {
+    const entries = Object.entries(toolUsage);
+    const opens = entries.reduce((sum, [, u]) => sum + u.opens, 0);
+    const hours = Math.round((entries.reduce((sum, [, u]) => sum + u.totalSeconds, 0) / 3600) * 10) / 10;
+    const top = entries.sort(([, a], [, b]) => b.opens - a.opens)[0];
+    return { totalOpens: opens, totalHours: hours, topToolId: top?.[0] ?? null };
+  }, [toolUsage]);
   const projectCount = useProjectStore((s) => s.projects.length);
   const exportCount = useExportHistoryStore((s) => s.exports.length);
 
@@ -69,8 +77,8 @@ export default function StatsBar() {
           hint:
             totalOpens > 0
               ? `${totalOpens} sessions` +
-                (topTools[0]
-                  ? ` · Top: ${topTools[0].toolId.replace(/-/g, " ")}`
+                (topToolId
+                  ? ` · Top: ${topToolId.replace(/-/g, " ")}`
                   : "")
               : "No sessions yet",
           hintType: totalOpens > 0 ? "up" : "neutral",

@@ -29,7 +29,9 @@ export function CommandPalette() {
   const listRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  const { recentTools, favoriteTools, addRecentTool } = usePreferencesStore();
+  const recentTools = usePreferencesStore((s) => s.recentTools);
+  const favoriteTools = usePreferencesStore((s) => s.favoriteTools);
+  const addRecentTool = usePreferencesStore((s) => s.addRecentTool);
   const { toggleTheme } = useTheme();
 
   // ── Keyboard shortcut: Cmd/Ctrl + K ──────────────────────

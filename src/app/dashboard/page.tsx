@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useMemo, useEffect } from "react";
+import { Suspense, useState, useMemo, useEffect, useRef } from "react";
 import { toolCategories } from "@/data/tools";
 import Sidebar from "@/components/dashboard/Sidebar";
 import TopBar from "@/components/dashboard/TopBar";
@@ -45,16 +45,19 @@ export default function DashboardPage() {
   const [sortBy, setSortBy] = useState<SortOption>("default");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
 
-  // Welcome notification for first-time visitors
+  // Welcome notification — fire once on mount if store is empty
+  const hasNotifiedRef = useRef(false);
   useEffect(() => {
+    if (hasNotifiedRef.current) return;
     if (notifications.length === 0) {
+      hasNotifiedRef.current = true;
       notify.info(
         "Welcome to DMSuite!",
         "Your AI-powered creative suite is ready. Explore 116+ tools for design, business documents, and marketing.",
         "/dashboard",
       );
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [notifications.length]);
 
   const filteredCategories = useMemo(() => {
     return toolCategories
