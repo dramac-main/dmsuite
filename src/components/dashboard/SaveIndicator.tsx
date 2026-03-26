@@ -16,17 +16,20 @@ export default function SaveIndicator() {
   const [state, setState] = useState<"idle" | "saving" | "saved">("saved");
   const [dirty, setDirty] = useState(false);
   const lastActivity = useRef(Date.now());
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Track dirty state
+  // Track dirty state — debounced so only the LAST dirty event triggers a save
   const triggerDirty = useCallback(() => {
     setDirty(true);
     lastActivity.current = Date.now();
     setState("saving");
+    // Clear any pending auto-save to avoid overlapping saves
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     // Auto-save after 1.5s of inactivity
-    const t = setTimeout(() => {
+    autoSaveTimer.current = setTimeout(() => {
       window.dispatchEvent(new CustomEvent("workspace:save"));
+      autoSaveTimer.current = null;
     }, 1500);
-    return () => clearTimeout(t);
   }, []);
 
   // Manual save
@@ -60,6 +63,7 @@ export default function SaveIndicator() {
     window.addEventListener("keydown", keyHandler);
 
     return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
       window.removeEventListener("workspace:dirty", dirtyHandler);
       window.removeEventListener("workspace:saved", savedHandler);
       window.removeEventListener("keydown", keyHandler);

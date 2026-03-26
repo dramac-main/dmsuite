@@ -59,11 +59,16 @@ export function useProjectData({
   const [isLoading, setIsLoading] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const loadedProjectRef = useRef<string | null>(null);
+  /** Guard: suppresses workspace:save events during project transitions */
+  const isTransitioningRef = useRef(false);
   const updateProject = useProjectStore((s) => s.updateProject);
 
   // Save current workspace data to IndexedDB
   const saveToProject = useCallback(async () => {
     if (!projectId) return;
+    // Don't save during project transitions — the store may still hold
+    // old project data while the new project is being loaded/reset.
+    if (isTransitioningRef.current) return;
     const adapter = getOrCreateAdapter(toolId);
 
     try {
@@ -84,12 +89,13 @@ export function useProjectData({
     const adapter = getOrCreateAdapter(toolId);
 
     try {
+      isTransitioningRef.current = true;
       setIsLoading(true);
 
       // Try loading from IndexedDB first
       let snapshot = await loadProjectData(projectId);
 
-      // If no data, attempt legacy migration
+      // If no data, attempt legacy migration (only runs once per tool)
       if (!snapshot) {
         const migrated = await migrateLegacyData(projectId, toolId);
         if (migrated) {
@@ -107,14 +113,18 @@ export function useProjectData({
 
       // No existing data — ensure store is reset for fresh project
       adapter.resetStore();
+      // Track that we've loaded (even with no data) to prevent re-triggers
+      loadedProjectRef.current = projectId;
       setIsLoaded(true);
       return false;
     } catch (err) {
       console.warn("[ProjectData] Load failed:", err);
+      loadedProjectRef.current = projectId;
       setIsLoaded(true);
       return false;
     } finally {
       setIsLoading(false);
+      isTransitioningRef.current = false;
     }
   }, [projectId, toolId, updateProject]);
 

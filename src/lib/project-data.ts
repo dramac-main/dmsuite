@@ -195,13 +195,23 @@ const LEGACY_STORE_KEYS: Record<string, string> = {
 
 /**
  * Migrate legacy global localStorage data into a project's IndexedDB slot.
- * Only migrates if the project has no existing data and legacy data exists.
+ * Only migrates ONCE per tool (the first project gets the legacy data).
+ * Subsequent projects are always fresh. This prevents the Zustand persist
+ * middleware's live localStorage data from being copied into new projects.
  * Returns true if migration occurred.
  */
 export async function migrateLegacyData(
   projectId: string,
   toolId: string
 ): Promise<boolean> {
+  // Only migrate once per tool — persist middleware keeps writing to the same
+  // localStorage key, so subsequent reads would return the *current* project's
+  // data, not genuine legacy data.
+  const migrationFlag = `_dmsuite_migrated_${toolId}`;
+  if (typeof localStorage !== "undefined" && localStorage.getItem(migrationFlag)) {
+    return false;
+  }
+
   // Check if project already has data
   const existing = await loadProjectData(projectId);
   if (existing) return false;
@@ -221,6 +231,8 @@ export async function migrateLegacyData(
     if (!data || typeof data !== "object") return false;
 
     await saveProjectData(projectId, toolId, data as Record<string, unknown>);
+    // Mark migration as done for this tool so it never runs again
+    localStorage.setItem(migrationFlag, new Date().toISOString());
     return true;
   } catch {
     return false;
