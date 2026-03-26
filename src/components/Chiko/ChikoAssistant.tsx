@@ -442,9 +442,11 @@ export function ChikoAssistant() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Voice Input ──────────────────────────────────────────
+  const [voiceLocked, setVoiceLocked] = useState(false);
   const voice = useVoiceInput({
     onTranscript: (text) => {
       setInputDraft(text);
+      setVoiceLocked(false);
       // Auto-resize textarea to fit transcript
       setTimeout(() => {
         if (inputRef.current) {
@@ -2165,8 +2167,10 @@ export function ChikoAssistant() {
                   interimText={voice.interimText}
                   volumeLevel={voice.volumeLevel}
                   errorMessage={voice.errorMessage}
+                  isLocked={voiceLocked}
                   onStop={voice.stopListening}
-                  onCancel={voice.cancel}
+                  onCancel={() => { voice.cancel(); setVoiceLocked(false); }}
+                  onLock={() => setVoiceLocked(true)}
                 />
               </div>
               <div className={cn(
@@ -2223,11 +2227,22 @@ export function ChikoAssistant() {
                 <MicButton
                   isSupported={voice.isSupported}
                   isListening={voice.state === "listening"}
+                  isLocked={voiceLocked}
                   isDisabled={isGenerating || websiteScanning}
-                  onClick={() => {
+                  onHoldStart={() => {
+                    setVoiceLocked(false);
+                    voice.startListening();
+                  }}
+                  onHoldEnd={() => {
+                    if (!voiceLocked) voice.stopListening();
+                  }}
+                  onTapToggle={() => {
                     if (voice.state === "listening") {
                       voice.stopListening();
+                      setVoiceLocked(false);
                     } else {
+                      // Quick tap = start in locked mode (hands-free)
+                      setVoiceLocked(true);
                       voice.startListening();
                     }
                   }}
@@ -2249,7 +2264,7 @@ export function ChikoAssistant() {
               <div className="mt-1.5 flex items-center justify-between px-1">
                 <span className="text-[10px] text-gray-600">
                   <span className="hidden sm:inline">Ctrl+. to toggle · </span>
-                  {voice.isSupported ? "Mic or type" : "Shift+Enter for newline"}
+                  {voice.isSupported ? "Hold mic to speak · tap to lock" : "Shift+Enter for newline"}
                 </span>
                 <span className="text-[10px] text-gray-600">
                   Powered by AI ✨
