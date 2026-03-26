@@ -5,17 +5,14 @@ import { createPortal } from "react-dom";
 
 interface HelpTooltipProps {
   text: string;
-  /** Position relative to the trigger */
+  /** Preferred position — auto-flips if tooltip would go off-screen */
   position?: "top" | "bottom" | "left" | "right";
 }
 
-/**
- * Contextual help tooltip — renders a small "?" icon button that shows
- * an explanatory tooltip on hover/focus.
- */
-export default function HelpTooltip({ text, position = "top" }: HelpTooltipProps) {
+export default function HelpTooltip({ text, position = "bottom" }: HelpTooltipProps) {
   const [show, setShow] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [resolvedPosition, setResolvedPosition] = useState(position);
   const ref = useRef<HTMLButtonElement>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -24,9 +21,21 @@ export default function HelpTooltip({ text, position = "top" }: HelpTooltipProps
   const updatePos = () => {
     if (!ref.current) return;
     const r = ref.current.getBoundingClientRect();
-    const gap = 6;
+    const gap = 8;
+    const tooltipH = 60; // estimate
+    const tooltipW = 224; // max-w-56 = 224px
+
+    // Smart positioning: check if preferred position would clip viewport
+    let finalPos = position;
+    if (position === "top" && r.top - tooltipH - gap < 0) finalPos = "bottom";
+    if (position === "bottom" && r.bottom + tooltipH + gap > window.innerHeight) finalPos = "top";
+    if (position === "left" && r.left - tooltipW - gap < 0) finalPos = "right";
+    if (position === "right" && r.right + tooltipW + gap > window.innerWidth) finalPos = "left";
+
+    setResolvedPosition(finalPos);
+
     let top = 0, left = 0;
-    switch (position) {
+    switch (finalPos) {
       case "top":
         top = r.top - gap;
         left = r.left + r.width / 2;
@@ -44,6 +53,14 @@ export default function HelpTooltip({ text, position = "top" }: HelpTooltipProps
         left = r.right + gap;
         break;
     }
+
+    // Clamp horizontal so tooltip doesn't go off-screen
+    if (finalPos === "top" || finalPos === "bottom") {
+      const halfW = tooltipW / 2;
+      if (left - halfW < 8) left = halfW + 8;
+      if (left + halfW > window.innerWidth - 8) left = window.innerWidth - halfW - 8;
+    }
+
     setPos({ top, left });
   };
 
@@ -54,7 +71,7 @@ export default function HelpTooltip({ text, position = "top" }: HelpTooltipProps
     bottom: "translate(-50%, 0)",
     left: "translate(-100%, -50%)",
     right: "translate(0, -50%)",
-  }[position];
+  }[resolvedPosition];
 
   return (
     <>

@@ -90,7 +90,7 @@ function validateContract(): { issues: ValidationIssue[]; ready: boolean } {
 
   // --- Date checks ---
   if (!form.documentInfo.effectiveDate) {
-    const hasCover = form.style.showCoverPage && (form.style.coverDesign ?? "classic") !== "none";
+    const hasCover = form.style.showCoverPage && (form.style.coverDesign ?? "none") !== "none";
     if (hasCover) {
       issues.push({ severity: "warning", field: "documentInfo.effectiveDate", message: "No effective date set — cover page will have no date" });
     } else {
@@ -405,8 +405,8 @@ export function createContractManifest(options?: ContractManifestOptions): Chiko
             },
             coverDesign: {
               type: "string",
-              enum: ["none", "classic", "corporate", "dark-executive", "accent-split", "bold-frame", "minimal-line"],
-              description: "Cover page design style. 'none' = no cover. 'classic' = pure formal legal (BETWEEN/AND/DATED). 'corporate' = gray bg, centered logo, bold/light title, dark footer bar. 'dark-executive' = navy bg, accent-colored title, 3 vertical edge stripes. 'accent-split' = white/navy vertical split with accent highlight bar. 'bold-frame' = thick accent border frame, logo top-right, accent title. 'minimal-line' = left accent strip, dark title, clean layout.",
+              enum: ["none", "classic", "corporate", "dark-executive", "accent-split", "bold-frame", "minimal-line", "modern-centered", "procurement-circle", "geometric-modern", "bordered-formal"],
+              description: "Cover page design style. 'none' = no cover. 'classic' = formal legal (BETWEEN/AND/DATED). 'corporate' = charcoal bg, accent logo center, white title, accent footer. 'dark-executive' = navy bg, accent title, 3 vertical stripes. 'accent-split' = white/navy split with accent highlight bar. 'bold-frame' = thick accent border frame, logo top-right. 'minimal-line' = left accent strip, dark title, clean layout. 'modern-centered' = white bg, black logo top-center, centered serif title, accent line. 'procurement-circle' = dark navy bg, circle logo, white+accent title. 'geometric-modern' = angular navy shape, circle logo top-right. 'bordered-formal' = cream bg, thin accent border, centered classic layout.",
             },
             fillableFields: {
               type: "boolean",

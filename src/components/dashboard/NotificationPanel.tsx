@@ -66,7 +66,9 @@ function timeAgo(ts: number): string {
  */
 export default function NotificationPanel() {
   const [open, setOpen] = useState(false);
+  const [pulse, setPulse] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const prevCountRef = useRef(0);
   const router = useRouter();
 
   const notifications = useNotificationStore((s) => s.notifications);
@@ -75,6 +77,16 @@ export default function NotificationPanel() {
   const removeNotification = useNotificationStore((s) => s.removeNotification);
   const clearAll = useNotificationStore((s) => s.clearAll);
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  // Pulse the bell icon briefly when a new notification arrives
+  useEffect(() => {
+    if (notifications.length > prevCountRef.current && prevCountRef.current > 0) {
+      setPulse(true);
+      const t = setTimeout(() => setPulse(false), 1200);
+      return () => clearTimeout(t);
+    }
+    prevCountRef.current = notifications.length;
+  }, [notifications.length]);
 
   // Close on outside click
   useEffect(() => {
@@ -101,7 +113,7 @@ export default function NotificationPanel() {
       {/* Bell button */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className={cn(interactive.iconButton, "relative")}
+        className={cn(interactive.iconButton, "relative", pulse && "animate-bounce")}
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
       >
         <IconBell className="size-5" />

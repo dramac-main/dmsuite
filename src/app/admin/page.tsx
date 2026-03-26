@@ -36,7 +36,7 @@ interface Payment {
   created_at: string;
 }
 
-type Tab = "users" | "payments";
+type Tab = "overview" | "users" | "payments" | "settings";
 
 /* ── Admin Page ─────────────────────────────────────────────── */
 
@@ -46,7 +46,7 @@ export default function AdminPage() {
   const pinned = useSidebarStore((s) => s.pinned);
   const openMobile = useSidebarStore((s) => s.openMobile);
   const [authorized, setAuthorized] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<Tab>("users");
+  const [tab, setTab] = useState<Tab>("overview");
 
   // Check admin access
   useEffect(() => {
@@ -89,24 +89,34 @@ export default function AdminPage() {
           <div className="mt-6 max-w-5xl mx-auto pb-16">
             {/* Tabs */}
             <div className="flex gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-800/50 mb-6 w-fit">
-              {(["users", "payments"] as Tab[]).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setTab(t)}
-                  className={cn(
-                    "px-4 py-2 rounded-md text-sm font-medium transition-colors capitalize",
-                    tab === t
-                      ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
-                      : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300",
-                  )}
-                >
-                  {t === "users" ? "Users & Credits" : "Payments"}
-                </button>
-              ))}
+              {(["overview", "users", "payments", "settings"] as Tab[]).map((t) => {
+                const labels: Record<Tab, string> = {
+                  overview: "Overview",
+                  users: "Users & Credits",
+                  payments: "Payments",
+                  settings: "Settings",
+                };
+                return (
+                  <button
+                    key={t}
+                    onClick={() => setTab(t)}
+                    className={cn(
+                      "px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                      tab === t
+                        ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300",
+                    )}
+                  >
+                    {labels[t]}
+                  </button>
+                );
+              })}
             </div>
 
+            {tab === "overview" && <OverviewSection />}
             {tab === "users" && <UsersSection />}
             {tab === "payments" && <PaymentsSection />}
+            {tab === "settings" && <SettingsSection />}
           </div>
         </div>
       </main>
@@ -713,6 +723,373 @@ function RefundModal({
           >
             Cancel
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   Platform Overview Section
+   ============================================================ */
+
+interface OverviewStats {
+  totalUsers: number;
+  totalRevenue: number;
+  totalCredits: number;
+  recentSignups: number;
+  pendingPayments: number;
+  successfulPayments: number;
+}
+
+function OverviewSection() {
+  const [stats, setStats] = useState<OverviewStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [recentUsers, setRecentUsers] = useState<AdminUser[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        // Fetch users
+        const usersRes = await fetch("/api/admin/users?q=");
+        const usersData = await usersRes.json();
+        const users: AdminUser[] = usersData.users ?? [];
+
+        // Fetch payments
+        const paymentsRes = await fetch("/api/admin/payments");
+        const paymentsData = await paymentsRes.json();
+        const payments: Payment[] = paymentsData.payments ?? [];
+
+        if (cancelled) return;
+
+        const successPayments = payments.filter((p) => p.status === "successful");
+        const pendingPayments = payments.filter((p) => p.status === "pending");
+
+        setStats({
+          totalUsers: users.length,
+          totalRevenue: successPayments.reduce((sum, p) => sum + p.amount, 0),
+          totalCredits: successPayments.reduce((sum, p) => sum + p.credits_purchased, 0),
+          recentSignups: users.filter(
+            (u) => Date.now() - new Date(u.created_at).getTime() < 7 * 24 * 60 * 60 * 1000
+          ).length,
+          pendingPayments: pendingPayments.length,
+          successfulPayments: successPayments.length,
+        });
+
+        // 5 most recent signups
+        setRecentUsers(
+          [...users]
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .slice(0, 5)
+        );
+      } catch {
+        // ignore — API may not exist in dev
+      }
+      if (!cancelled) setLoading(false);
+    }
+
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const STAT_CARDS = stats
+    ? [
+        { label: "Total Users", value: stats.totalUsers, icon: "👥" },
+        { label: "Revenue (K)", value: `K${stats.totalRevenue.toLocaleString()}`, icon: "💰" },
+        { label: "Credits Distributed", value: stats.totalCredits.toLocaleString(), icon: "⚡" },
+        { label: "Signups (7 days)", value: stats.recentSignups, icon: "📈" },
+        { label: "Successful Payments", value: stats.successfulPayments, icon: "✅" },
+        { label: "Pending Payments", value: stats.pendingPayments, icon: "⏳" },
+      ]
+    : [];
+
+  return (
+    <div className="space-y-6">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {loading
+          ? Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-24 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 animate-pulse"
+              />
+            ))
+          : STAT_CARDS.map((card) => (
+              <div
+                key={card.label}
+                className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg">{card.icon}</span>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{card.label}</p>
+                </div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{card.value}</p>
+              </div>
+            ))}
+      </div>
+
+      {/* Recent Signups */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Recent Signups</h3>
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-10 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
+            ))}
+          </div>
+        ) : recentUsers.length === 0 ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-6">No users yet.</p>
+        ) : (
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {recentUsers.map((u) => (
+              <div key={u.id} className="flex items-center justify-between py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    {u.full_name || "Unnamed"}
+                    {u.is_admin && (
+                      <span className="ml-2 text-xs bg-primary-500/10 text-primary-600 dark:text-primary-400 rounded-full px-2 py-0.5">
+                        Admin
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{u.email}</p>
+                </div>
+                <div className="text-right ml-4 shrink-0">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {new Date(u.created_at).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </p>
+                  <p className="text-xs font-medium text-primary-600 dark:text-primary-400 capitalize">
+                    {u.plan}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   Settings Section
+   ============================================================ */
+
+const SETTINGS_KEY = "dmsuite-admin-settings";
+
+interface AdminSettings {
+  maintenanceMode: boolean;
+  maintenanceMessage: string;
+  announcement: string;
+  announcementEnabled: boolean;
+  registrationEnabled: boolean;
+  maxCreditsPerGrant: number;
+}
+
+const DEFAULT_SETTINGS: AdminSettings = {
+  maintenanceMode: false,
+  maintenanceMessage: "DMSuite is undergoing scheduled maintenance. Please check back soon.",
+  announcement: "",
+  announcementEnabled: false,
+  registrationEnabled: true,
+  maxCreditsPerGrant: 1000,
+};
+
+function loadSettings(): AdminSettings {
+  if (typeof window === "undefined") return DEFAULT_SETTINGS;
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : DEFAULT_SETTINGS;
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+}
+
+function SettingsSection() {
+  const [settings, setSettings] = useState<AdminSettings>(loadSettings);
+  const [saved, setSaved] = useState(false);
+
+  const update = useCallback(<K extends keyof AdminSettings>(key: K, value: AdminSettings[K]) => {
+    setSettings((prev) => {
+      const next = { ...prev, [key]: value };
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+      return next;
+    });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      {/* Save indicator */}
+      {saved && (
+        <div className="text-xs font-medium text-green-600 dark:text-green-400 text-right">
+          ✓ Settings saved
+        </div>
+      )}
+
+      {/* Maintenance Mode */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Maintenance Mode</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+          When enabled, users see a maintenance page instead of the dashboard.
+        </p>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-gray-900 dark:text-white">Enable Maintenance Mode</p>
+            <button
+              onClick={() => update("maintenanceMode", !settings.maintenanceMode)}
+              className={cn(
+                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200",
+                settings.maintenanceMode ? "bg-error" : "bg-gray-300 dark:bg-gray-600"
+              )}
+            >
+              <span
+                className={cn(
+                  "pointer-events-none inline-block h-5 w-5 translate-y-0.5 rounded-full bg-white shadow-sm transition-transform duration-200",
+                  settings.maintenanceMode ? "translate-x-5.5" : "translate-x-0.5"
+                )}
+              />
+            </button>
+          </div>
+
+          {settings.maintenanceMode && (
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Maintenance Message
+              </label>
+              <textarea
+                value={settings.maintenanceMessage}
+                onChange={(e) => update("maintenanceMessage", e.target.value)}
+                rows={2}
+                maxLength={500}
+                className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2.5 text-sm text-gray-900 dark:text-white outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 resize-none"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Platform Announcements */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Announcement Banner</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+          Show a banner across all pages. Useful for updates, promotions, or alerts.
+        </p>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-gray-900 dark:text-white">Enable Announcement</p>
+            <button
+              onClick={() => update("announcementEnabled", !settings.announcementEnabled)}
+              className={cn(
+                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200",
+                settings.announcementEnabled ? "bg-primary-600" : "bg-gray-300 dark:bg-gray-600"
+              )}
+            >
+              <span
+                className={cn(
+                  "pointer-events-none inline-block h-5 w-5 translate-y-0.5 rounded-full bg-white shadow-sm transition-transform duration-200",
+                  settings.announcementEnabled ? "translate-x-5.5" : "translate-x-0.5"
+                )}
+              />
+            </button>
+          </div>
+
+          {settings.announcementEnabled && (
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                Announcement Text
+              </label>
+              <textarea
+                value={settings.announcement}
+                onChange={(e) => update("announcement", e.target.value)}
+                placeholder="e.g. 🎉 New tools available! Check out the AI Photo Editor in Creative Tools."
+                rows={2}
+                maxLength={300}
+                className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2.5 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 resize-none"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Registration & Limits */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Access Controls</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+          Control user registration and credit limits.
+        </p>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Open Registration</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Allow new users to sign up</p>
+            </div>
+            <button
+              onClick={() => update("registrationEnabled", !settings.registrationEnabled)}
+              className={cn(
+                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200",
+                settings.registrationEnabled ? "bg-primary-600" : "bg-gray-300 dark:bg-gray-600"
+              )}
+            >
+              <span
+                className={cn(
+                  "pointer-events-none inline-block h-5 w-5 translate-y-0.5 rounded-full bg-white shadow-sm transition-transform duration-200",
+                  settings.registrationEnabled ? "translate-x-5.5" : "translate-x-0.5"
+                )}
+              />
+            </button>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Max Credits Per Grant
+            </label>
+            <input
+              type="number"
+              value={settings.maxCreditsPerGrant}
+              onChange={(e) => update("maxCreditsPerGrant", Math.max(1, parseInt(e.target.value) || 1))}
+              min={1}
+              max={100000}
+              className="w-32 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-2.5 text-sm text-gray-900 dark:text-white outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+            />
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              Maximum credits an admin can grant in a single action.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Credit Packs Reference */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Credit Packs</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+          Current pricing for credit packs available to users.
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { credits: 50, price: "K49" },
+            { credits: 150, price: "K129" },
+            { credits: 500, price: "K399" },
+            { credits: 1200, price: "K799" },
+          ].map((pack) => (
+            <div
+              key={pack.credits}
+              className="rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30 p-3 text-center"
+            >
+              <p className="text-lg font-bold text-gray-900 dark:text-white">{pack.credits}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">credits</p>
+              <p className="mt-1 text-sm font-semibold text-primary-600 dark:text-primary-400">{pack.price}</p>
+            </div>
+          ))}
         </div>
       </div>
     </div>

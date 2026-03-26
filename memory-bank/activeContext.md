@@ -1,6 +1,56 @@
 # DMSuite — Active Context
 
 ## Current Focus
+**Phase:** Platform Infrastructure Hardening — COMPLETE ✅
+
+### Session 126: Platform Quality & Settings Expansion
+
+#### Task 1: HelpTooltip Popup Fix (prior session)
+- Default position "bottom", smart auto-flip with viewport collision detection
+
+#### Task 2: SaveIndicator Manual Save (prior session)
+- Three-event architecture: workspace:dirty → dirty state + 1.5s auto-save timer → workspace:save
+- Manual save button with floppy disk SVG, Ctrl+S/Cmd+S shortcut
+
+#### Task 3: Workspace Event Wiring (prior session)
+- Tool workspace page auto-creates projects after 5s dwell, workspace:dirty → touchProject, workspace:save → progress increment
+
+#### Task 4: Notification System Battle-Test
+- Wired `notify.*` calls into 7 files:
+  - CreditPurchaseModal (5 points: API error, network error, timeout, success, declined)
+  - Auth login (welcome back), Auth signup (welcome)
+  - Dashboard (first-visit welcome)
+  - NotificationPanel bell pulse animation on new notifications
+- Notification types: info, success, warning, credit, update, tool
+- Added mute support: `getNotificationMutes()` / `setNotificationMutes()` in notifications.ts
+- Each `notify.*` helper now checks `isMuted(type)` before dispatching
+
+#### Task 5: User Account Settings Expansion
+- **3 new sections** added to `/account`:
+  - **AppearanceSection** — Dark/light theme toggle (uses `useTheme`), tool descriptions toggle (uses `usePreferencesStore`)
+  - **NotificationPreferencesSection** — Per-type muting toggles for all 6 notification types, wired to `setNotificationMutes()`
+  - **DataManagementSection** — Export all data as JSON download, clear buttons for notifications/exports/preferences/projects
+- Section order: Profile → Password → Appearance → Notifications → Credits → Data → Danger Zone
+
+#### Task 6: Admin Panel Expansion
+- **2 new tabs** added to `/admin`:
+  - **"Overview" tab** (default) — 6 stat cards (total users, revenue, credits distributed, 7-day signups, successful/pending payments), recent signups list. Fetches from existing `/api/admin/users` and `/api/admin/payments` endpoints.
+  - **"Settings" tab** — Maintenance mode toggle + message, Announcement banner toggle + text, Open registration toggle, Max credits per grant limit, Credit packs reference display
+  - Settings stored in `localStorage` as `dmsuite-admin-settings`
+- Tab order: Overview | Users & Credits | Payments | Settings
+
+#### Task 7: ActiveProjects Fix
+- Project creation + tracking was already wired in Task 3
+- Fixed light-mode styling on project cards (was dark-only)
+- Project flow: 5s dwell → auto-create project → workspace:dirty → touchProject → workspace:save → progress +5%
+
+#### TypeScript
+- 0 errors — validated via `tsc --noEmit` (exit code 0)
+
+---
+
+## Previous Focus
+**Phase:** Resume Editor UI Rework — Contract Pattern Migration — COMPLETE ✅
 **Phase:** UX Enhancement Masterplan — ALL 4 PHASES COMPLETE ✅
 
 ### 35-Item UX Masterplan — Summary

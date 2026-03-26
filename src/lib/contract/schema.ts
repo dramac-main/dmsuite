@@ -335,6 +335,10 @@ export const coverDesignIds = [
   "accent-split",
   "bold-frame",
   "minimal-line",
+  "modern-centered",
+  "procurement-circle",
+  "geometric-modern",
+  "bordered-formal",
 ] as const;
 export type CoverDesignId = (typeof coverDesignIds)[number];
 
@@ -342,7 +346,6 @@ export interface CoverDesignConfig {
   id: CoverDesignId;
   name: string;
   description: string;
-  preview: "none" | "classic" | "corporate" | "dark" | "split" | "frame" | "line";
 }
 
 export const COVER_DESIGNS: CoverDesignConfig[] = [
@@ -350,43 +353,56 @@ export const COVER_DESIGNS: CoverDesignConfig[] = [
     id: "none",
     name: "No Cover",
     description: "Start directly with contract body",
-    preview: "none",
   },
   {
     id: "classic",
-    name: "Classic Legal",
+    name: "Tenancy Formal",
     description: "Pure formal legal: BETWEEN / AND / DATED",
-    preview: "classic",
-  },
-  {
-    id: "corporate",
-    name: "Corporate",
-    description: "Gray bg, logo, bold title, dark footer bar",
-    preview: "corporate",
   },
   {
     id: "dark-executive",
-    name: "Dark Executive",
-    description: "Navy bg, accent title, edge stripes",
-    preview: "dark",
+    name: "LLC Membership",
+    description: "Navy bg, accent logo & title, 3 vertical stripes",
   },
   {
-    id: "accent-split",
-    name: "Accent Split",
-    description: "White/navy split with highlight bar",
-    preview: "split",
+    id: "modern-centered",
+    name: "Operating Clean",
+    description: "White bg, centered serif title, accent stripe",
   },
   {
-    id: "bold-frame",
-    name: "Bold Frame",
-    description: "Thick accent border frame, logo top-right",
-    preview: "frame",
+    id: "procurement-circle",
+    name: "Procurement",
+    description: "Dark navy bg, circle logo, bold white + accent title",
+  },
+  {
+    id: "corporate",
+    name: "Construction Bold",
+    description: "Charcoal bg, centered logo, accent horizontal bar",
   },
   {
     id: "minimal-line",
-    name: "Minimal Line",
-    description: "Left accent strip, dark title, clean",
-    preview: "line",
+    name: "Contract Classic",
+    description: "Off-white bg, accent left bar, logo top-right",
+  },
+  {
+    id: "geometric-modern",
+    name: "Flat Rental",
+    description: "Angular navy shape, circle logo, modern geometric",
+  },
+  {
+    id: "accent-split",
+    name: "Office Lease",
+    description: "White/navy split, italic title, accent highlight bar",
+  },
+  {
+    id: "bordered-formal",
+    name: "Bordered Formal",
+    description: "Cream bg, thin inset border, centered layout",
+  },
+  {
+    id: "bold-frame",
+    name: "Consulting Frame",
+    description: "White bg, thick accent frame, logo top-right",
   },
 ];
 
@@ -397,8 +413,8 @@ export const styleConfigSchema = z.object({
   headerStyle: z.enum(["banner", "centered", "left-aligned", "minimal"]).default("banner"),
   pageNumbering: z.boolean().default(true),
   pageNumberPosition: z.enum(["bottom-center", "bottom-right"]).default("bottom-center"),
-  showCoverPage: z.boolean().default(true),
-  coverDesign: z.enum(coverDesignIds).default("classic"),
+  showCoverPage: z.boolean().default(false),
+  coverDesign: z.enum(coverDesignIds).default("none"),
   fillableFields: z.boolean().default(false),
 });
 
@@ -2595,8 +2611,8 @@ export function createDefaultContractForm(contractType: ContractType = "service-
       headerStyle: "banner",
       pageNumbering: true,
       pageNumberPosition: "bottom-center",
-      showCoverPage: true,
-      coverDesign: "classic",
+      showCoverPage: false,
+      coverDesign: "none",
       fillableFields: false,
     },
     printConfig: {

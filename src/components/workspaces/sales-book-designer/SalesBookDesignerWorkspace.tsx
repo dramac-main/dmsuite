@@ -108,6 +108,14 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
     if (initialPageSize) updatePrint({ pageSize: initialPageSize });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Dispatch workspace:dirty on form changes so SaveIndicator + projects track activity
+  const formRef = useRef(form);
+  useEffect(() => {
+    if (formRef.current === form) return; // skip initial mount
+    formRef.current = form;
+    window.dispatchEvent(new CustomEvent("workspace:dirty"));
+  }, [form]);
+
   // Highlight elements on canvas when hovering a layer
   useEffect(() => {
     const container = printAreaRef.current;

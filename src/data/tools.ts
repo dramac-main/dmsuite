@@ -2579,21 +2579,11 @@ export function getToolCountByStatus(status: ToolStatus): number {
   );
 }
 
-/** Get tools that support part-editing */
-export function getPartEditTools(): FlatTool[] {
-  return getAllToolsFlat().filter((t) => t.supportsPartEdit);
-}
-
 /** Get tools by AI provider */
 export function getToolsByProvider(provider: AIProvider): FlatTool[] {
   return getAllToolsFlat().filter(
     (t) => t.aiProviders && t.aiProviders.includes(provider)
   );
-}
-
-/** Get print-ready tools */
-export function getPrintReadyTools(): FlatTool[] {
-  return getAllToolsFlat().filter((t) => t.printReady);
 }
 
 /** Flat list of all tools with category info */
@@ -2624,47 +2614,6 @@ export function searchTools(query: string): FlatTool[] {
       tool.categoryName.toLowerCase().includes(q)
   );
 }
-
-// ── Hub stats data ──────────────────────────────────────────
-
-export interface HubStat {
-  label: string;
-  value: string;
-  icon: string;
-  change?: string;
-  changeType?: "up" | "down" | "neutral";
-}
-
-export const hubStats: HubStat[] = [
-  {
-    label: "Total Tools",
-    value: totalToolCount.toString(),
-    icon: "grid",
-    change: `${getToolCountByStatus("ready")} ready`,
-    changeType: "up",
-  },
-  {
-    label: "Part-Edit Ready",
-    value: getPartEditTools().length.toString(),
-    icon: "penTool",
-    change: "Edit without redo",
-    changeType: "up",
-  },
-  {
-    label: "AI Providers",
-    value: "8",
-    icon: "zap",
-    change: "Claude, Luma, Runway +5",
-    changeType: "up",
-  },
-  {
-    label: "Print Ready",
-    value: getPrintReadyTools().length.toString(),
-    icon: "fileText",
-    change: "A3→A6, Letter, DL",
-    changeType: "up",
-  },
-];
 
 // ── Quick access / featured tools ───────────────────────────
 

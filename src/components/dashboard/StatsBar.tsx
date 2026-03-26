@@ -1,44 +1,70 @@
 "use client";
 
-import { hubStats } from "@/data/tools";
 import { getIcon } from "@/components/icons";
 import { useAnalyticsStore } from "@/stores/analytics";
 import { usePreferencesStore } from "@/stores/preferences";
+import { useProjectStore } from "@/stores/projects";
+import { useExportHistoryStore } from "@/stores/export-history";
+import { useUser } from "@/hooks/useUser";
+
+interface StatCard {
+  label: string;
+  value: string;
+  icon: string;
+  hint: string;
+  hintType: "up" | "neutral";
+}
 
 export default function StatsBar() {
+  const { profile } = useUser();
   const totalOpens = useAnalyticsStore((s) => s.getTotalOpens());
   const totalHours = useAnalyticsStore((s) => s.getTotalHours());
+  const topTools = useAnalyticsStore((s) => s.getTopTools(1));
   const favCount = usePreferencesStore((s) => s.favoriteTools.length);
+  const projectCount = useProjectStore((s) => s.projects.length);
+  const exportCount = useExportHistoryStore((s) => s.exports.length);
 
-  // Merge static hub stats with dynamic analytics
-  const dynamicStats = [
-    ...hubStats,
-    ...(totalOpens > 0
-      ? [
-          {
-            label: "Sessions",
-            value: totalOpens.toString(),
-            icon: "clock" as const,
-            change: `${totalHours}h total time`,
-            changeType: "up" as const,
-          },
-        ]
-      : []),
-    ...(favCount > 0
-      ? [
-          {
-            label: "Favorites",
-            value: favCount.toString(),
-            icon: "star" as const,
-            change: "Quick access",
-            changeType: "up" as const,
-          },
-        ]
-      : []),
+  const credits = profile?.credits ?? 0;
+  const plan = profile?.plan ?? "free";
+
+  const stats: StatCard[] = [
+    {
+      label: "Credits",
+      value: credits.toLocaleString(),
+      icon: "zap",
+      hint: `${plan.charAt(0).toUpperCase() + plan.slice(1)} plan`,
+      hintType: "up",
+    },
+    {
+      label: "Projects",
+      value: projectCount.toString(),
+      icon: "folder",
+      hint: projectCount === 0 ? "Start a project" : "In progress",
+      hintType: projectCount === 0 ? "neutral" : "up",
+    },
+    {
+      label: "Exports",
+      value: exportCount.toString(),
+      icon: "download",
+      hint: exportCount === 0 ? "Nothing yet" : "Files created",
+      hintType: exportCount === 0 ? "neutral" : "up",
+    },
+    {
+      label: "Activity",
+      value: totalOpens > 0 ? `${totalHours}h` : "—",
+      icon: "clock",
+      hint:
+        totalOpens > 0
+          ? `${totalOpens} sessions` +
+            (topTools[0] ? ` · Top: ${topTools[0].toolId.replace(/-/g, " ")}` : "")
+          : "No sessions yet",
+      hintType: totalOpens > 0 ? "up" : "neutral",
+    },
   ];
+
   return (
     <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
-      {dynamicStats.map((stat) => {
+      {stats.map((stat) => {
         const Icon = getIcon(stat.icon);
         return (
           <div
@@ -72,21 +98,15 @@ export default function StatsBar() {
               {stat.label}
             </p>
 
-            {/* Change indicator */}
-            {stat.change && (
-              <div className="flex items-center gap-1.5 mt-2">
-                <span
-                  className={`inline-block size-1.5 rounded-full ${
-                    stat.changeType === "up"
-                      ? "bg-success"
-                      : stat.changeType === "down"
-                        ? "bg-error"
-                        : "bg-gray-400"
-                  }`}
-                />
-                <span className="text-xs text-gray-400">{stat.change}</span>
-              </div>
-            )}
+            {/* Hint */}
+            <div className="flex items-center gap-1.5 mt-2">
+              <span
+                className={`inline-block size-1.5 rounded-full ${
+                  stat.hintType === "up" ? "bg-success" : "bg-gray-400"
+                }`}
+              />
+              <span className="text-xs text-gray-400 truncate">{stat.hint}</span>
+            </div>
           </div>
         );
       })}

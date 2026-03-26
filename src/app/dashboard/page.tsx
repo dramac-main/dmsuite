@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useMemo } from "react";
+import { Suspense, useState, useMemo, useEffect } from "react";
 import { toolCategories } from "@/data/tools";
 import Sidebar from "@/components/dashboard/Sidebar";
 import TopBar from "@/components/dashboard/TopBar";
@@ -20,6 +20,7 @@ import SessionContinuity from "@/components/dashboard/SessionContinuity";
 import { Skeleton } from "@/components/ui";
 import { useSidebarStore } from "@/stores/sidebar";
 import { usePreferencesStore } from "@/stores/preferences";
+import { useNotificationStore, notify } from "@/stores/notifications";
 import { sidebar as sidebarConfig, surfaces, layout } from "@/lib/design-system";
 import { cn } from "@/lib/utils";
 
@@ -40,8 +41,20 @@ export default function DashboardPage() {
   const pinned = useSidebarStore((s) => s.pinned);
   const openMobile = useSidebarStore((s) => s.openMobile);
   const hiddenSections = usePreferencesStore((s) => s.hiddenSections);
+  const notifications = useNotificationStore((s) => s.notifications);
   const [sortBy, setSortBy] = useState<SortOption>("default");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
+
+  // Welcome notification for first-time visitors
+  useEffect(() => {
+    if (notifications.length === 0) {
+      notify.info(
+        "Welcome to DMSuite!",
+        "Your AI-powered creative suite is ready. Explore 116+ tools for design, business documents, and marketing.",
+        "/dashboard",
+      );
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredCategories = useMemo(() => {
     return toolCategories

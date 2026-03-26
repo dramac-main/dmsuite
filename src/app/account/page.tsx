@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import { createClient } from "@/lib/supabase/client";
@@ -9,6 +9,16 @@ import TopBar from "@/components/dashboard/TopBar";
 import { useSidebarStore } from "@/stores/sidebar";
 import { sidebar as sidebarConfig, surfaces, layout } from "@/lib/design-system";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/components/ThemeProvider";
+import { usePreferencesStore } from "@/stores/preferences";
+import {
+  useNotificationStore,
+  getNotificationMutes,
+  setNotificationMutes,
+  type NotificationType,
+} from "@/stores/notifications";
+import { useExportHistoryStore } from "@/stores/export-history";
+import { useProjectStore } from "@/stores/projects";
 
 /* ── Types ──────────────────────────────────────────────────── */
 
@@ -59,7 +69,10 @@ export default function AccountPage() {
           <div className="mt-6 max-w-3xl mx-auto space-y-8 pb-16">
             <ProfileSection user={user} profile={profile} />
             <PasswordSection />
+            <AppearanceSection />
+            <NotificationPreferencesSection />
             <CreditHistorySection />
+            <DataManagementSection />
             <DangerZone signOut={signOut} />
           </div>
         </div>
@@ -298,6 +311,281 @@ function PasswordSection() {
             "Update Password"
           )}
         </button>
+      </div>
+    </section>
+  );
+}
+
+/* ============================================================
+   Appearance Section
+   ============================================================ */
+
+function AppearanceSection() {
+  const { theme, toggleTheme } = useTheme();
+  const showDescriptions = usePreferencesStore((s) => s.showDescriptions);
+  const toggleDescriptions = usePreferencesStore((s) => s.toggleDescriptions);
+
+  return (
+    <section className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6">
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Appearance</h2>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+        Customize how DMSuite looks and feels.
+      </p>
+
+      <div className="space-y-5">
+        {/* Theme toggle */}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">Theme</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Switch between dark and light mode.
+            </p>
+          </div>
+          <button
+            onClick={toggleTheme}
+            className="relative inline-flex h-9 w-35 items-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 p-0.5 transition-colors"
+          >
+            <span
+              className={cn(
+                "absolute h-8 w-17 rounded-md bg-white dark:bg-gray-700 shadow-sm transition-transform duration-200",
+                theme === "light" ? "translate-x-0" : "translate-x-17"
+              )}
+            />
+            <span
+              className={cn(
+                "relative z-10 flex-1 text-center text-xs font-medium transition-colors",
+                theme === "light"
+                  ? "text-gray-900 dark:text-white"
+                  : "text-gray-500 dark:text-gray-400"
+              )}
+            >
+              ☀️ Light
+            </span>
+            <span
+              className={cn(
+                "relative z-10 flex-1 text-center text-xs font-medium transition-colors",
+                theme === "dark"
+                  ? "text-gray-900 dark:text-white"
+                  : "text-gray-500 dark:text-gray-400"
+              )}
+            >
+              🌙 Dark
+            </span>
+          </button>
+        </div>
+
+        {/* Show descriptions toggle */}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">Tool Descriptions</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Show tool descriptions on dashboard cards.
+            </p>
+          </div>
+          <button
+            onClick={toggleDescriptions}
+            className={cn(
+              "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200",
+              showDescriptions ? "bg-primary-600" : "bg-gray-300 dark:bg-gray-600"
+            )}
+          >
+            <span
+              className={cn(
+                "pointer-events-none inline-block h-5 w-5 translate-y-0.5 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200",
+                showDescriptions ? "translate-x-5.5" : "translate-x-0.5"
+              )}
+            />
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ============================================================
+   Notification Preferences Section
+   ============================================================ */
+
+const NOTIFICATION_TYPES: { type: NotificationType; label: string; description: string }[] = [
+  { type: "info", label: "General Info", description: "Welcome messages and tips" },
+  { type: "success", label: "Success", description: "Login confirmations, saves, completions" },
+  { type: "warning", label: "Warnings", description: "Payment issues, errors, timeouts" },
+  { type: "credit", label: "Credits", description: "Credit purchases and balance updates" },
+  { type: "update", label: "Updates", description: "Platform updates and new features" },
+  { type: "tool", label: "Tool Activity", description: "Tool opens, exports, generation results" },
+];
+
+function NotificationPreferencesSection() {
+  const [mutes, setMutes] = useState<NotificationType[]>([]);
+
+  useEffect(() => {
+    setMutes(getNotificationMutes());
+  }, []);
+
+  const toggleType = useCallback((type: NotificationType) => {
+    setMutes((prev) => {
+      const next = prev.includes(type)
+        ? prev.filter((t) => t !== type)
+        : [...prev, type];
+      setNotificationMutes(next);
+      return next;
+    });
+  }, []);
+
+  return (
+    <section className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6">
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+        Notification Preferences
+      </h2>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+        Control which in-app notifications you receive.
+      </p>
+
+      <div className="space-y-4">
+        {NOTIFICATION_TYPES.map(({ type, label, description }) => {
+          const enabled = !mutes.includes(type);
+          return (
+            <div key={type} className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{label}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{description}</p>
+              </div>
+              <button
+                onClick={() => toggleType(type)}
+                className={cn(
+                  "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200",
+                  enabled ? "bg-primary-600" : "bg-gray-300 dark:bg-gray-600"
+                )}
+              >
+                <span
+                  className={cn(
+                    "pointer-events-none inline-block h-5 w-5 translate-y-0.5 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200",
+                    enabled ? "translate-x-5.5" : "translate-x-0.5"
+                  )}
+                />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+/* ============================================================
+   Data Management Section
+   ============================================================ */
+
+function DataManagementSection() {
+  const clearNotifications = useNotificationStore((s) => s.clearAll);
+  const clearExports = useExportHistoryStore((s) => s.clearAll);
+  const clearPrefs = usePreferencesStore((s) => s.clearAll);
+  const projects = useProjectStore((s) => s.projects);
+  const removeProject = useProjectStore((s) => s.removeProject);
+  const [exported, setExported] = useState(false);
+  const [cleared, setCleared] = useState<string | null>(null);
+
+  const handleExportData = useCallback(() => {
+    const data = {
+      exportedAt: new Date().toISOString(),
+      preferences: localStorage.getItem("dmsuite-preferences"),
+      notifications: localStorage.getItem("dmsuite-notifications"),
+      projects: localStorage.getItem("dmsuite-projects"),
+      exportHistory: localStorage.getItem("dmsuite-export-history"),
+      theme: localStorage.getItem("dmsuite-theme"),
+      notificationMutes: localStorage.getItem("dmsuite-notification-mutes"),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `dmsuite-data-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExported(true);
+    setTimeout(() => setExported(false), 2000);
+  }, []);
+
+  const handleClear = useCallback(
+    (key: string, action: () => void) => {
+      action();
+      setCleared(key);
+      setTimeout(() => setCleared(null), 2000);
+    },
+    []
+  );
+
+  const CLEAR_OPTIONS = [
+    {
+      key: "notifications",
+      label: "Notification History",
+      description: "Clear all in-app notifications",
+      action: clearNotifications,
+    },
+    {
+      key: "exports",
+      label: "Export History",
+      description: "Clear download and export records",
+      action: clearExports,
+    },
+    {
+      key: "preferences",
+      label: "Dashboard Preferences",
+      description: "Reset favorites, recent tools, layout",
+      action: clearPrefs,
+    },
+    {
+      key: "projects",
+      label: "All Projects",
+      description: `Remove all ${projects.length} saved projects`,
+      action: () => projects.forEach((p) => removeProject(p.id)),
+    },
+  ];
+
+  return (
+    <section className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6">
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+        Data &amp; Privacy
+      </h2>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+        Export your data or clear local storage. These actions only affect data stored in your browser.
+      </p>
+
+      {/* Export */}
+      <div className="mb-6">
+        <button
+          onClick={handleExportData}
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-white transition-colors"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          {exported ? "Downloaded!" : "Export All Data as JSON"}
+        </button>
+        <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+          Downloads preferences, notifications, projects, and export history.
+        </p>
+      </div>
+
+      {/* Clear options */}
+      <div className="space-y-3">
+        {CLEAR_OPTIONS.map((opt) => (
+          <div
+            key={opt.key}
+            className="flex items-center justify-between rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30 p-3"
+          >
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{opt.label}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{opt.description}</p>
+            </div>
+            <button
+              onClick={() => handleClear(opt.key, opt.action)}
+              className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-300 dark:hover:border-red-800 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+            >
+              {cleared === opt.key ? "Cleared!" : "Clear"}
+            </button>
+          </div>
+        ))}
       </div>
     </section>
   );

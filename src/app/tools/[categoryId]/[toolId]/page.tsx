@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { toolCategories } from "@/data/tools";
@@ -15,6 +15,8 @@ import { getIcon, IconArrowRight, IconChevronLeft, IconSparkles, IconZap, IconMe
 import { useSidebarStore } from "@/stores/sidebar";
 import { usePreferencesStore } from "@/stores/preferences";
 import { useAnalyticsStore } from "@/stores/analytics";
+import { useProjectStore } from "@/stores/projects";
+import { notify } from "@/stores/notifications";
 import { sidebar as sidebarConfig, surfaces, layout, interactive } from "@/lib/design-system";
 import { cn } from "@/lib/utils";
 import NotificationPanel from "@/components/dashboard/NotificationPanel";
@@ -159,19 +161,97 @@ export default function ToolWorkspacePage() {
   const setLastVisited = usePreferencesStore((s) => s.setLastVisited);
   const trackOpen = useAnalyticsStore((s) => s.trackOpen);
   const trackTime = useAnalyticsStore((s) => s.trackTime);
+  const addProject = useProjectStore((s) => s.addProject);
+  const touchProject = useProjectStore((s) => s.touchProject);
+  const projects = useProjectStore((s) => s.projects);
+  const updateProject = useProjectStore((s) => s.updateProject);
+  const projectIdRef = useRef<string | null>(null);
+  const hasNotifiedRef = useRef(false);
 
-  // Track tool usage on mount + time spent
+  // Find or create project for this tool session
+  const getOrCreateProject = useCallback(() => {
+    if (projectIdRef.current) return projectIdRef.current;
+    // Check for existing project for this tool
+    const existing = projects.find((p) => p.toolId === toolId);
+    if (existing) {
+      projectIdRef.current = existing.id;
+      touchProject(existing.id);
+      return existing.id;
+    }
+    return null;
+  }, [projects, toolId, touchProject]);
+
+  // Track tool usage on mount + time spent + project handling
   useEffect(() => {
     if (!toolId) return;
     addRecentTool(toolId);
     trackOpen(toolId);
     if (categoryId) setLastVisited(categoryId, toolId);
+
     const start = Date.now();
+
+    // If user stays >5s on a workspace tool, create/touch a project
+    const projectTimer = setTimeout(() => {
+      const pid = getOrCreateProject();
+      if (!pid) {
+        // Find tool name for project
+        const cat = toolCategories.find((c) => c.id === categoryId);
+        const t = cat?.tools.find((t) => t.id === toolId);
+        if (t) {
+          const newId = addProject(toolId, t.name + " Project");
+          projectIdRef.current = newId;
+        }
+      }
+    }, 5000);
+
+    // Listen for workspace:dirty to track activity and notify save
+    const dirtyHandler = () => {
+      const pid = projectIdRef.current;
+      if (pid) touchProject(pid);
+    };
+
+    // Listen for workspace:save to update project progress
+    const saveHandler = () => {
+      const pid = projectIdRef.current;
+      if (pid) {
+        const proj = useProjectStore.getState().projects.find((p) => p.id === pid);
+        if (proj && proj.progress < 100) {
+          // Increment progress by 5% on each save, max 95% (100 = user marks complete)
+          updateProject(pid, { progress: Math.min(95, proj.progress + 5) });
+        }
+      }
+      // Confirm saved
+      window.dispatchEvent(new CustomEvent("workspace:saved"));
+    };
+
+    window.addEventListener("workspace:dirty", dirtyHandler);
+    window.addEventListener("workspace:save", saveHandler);
+
     return () => {
+      clearTimeout(projectTimer);
+      window.removeEventListener("workspace:dirty", dirtyHandler);
+      window.removeEventListener("workspace:save", saveHandler);
       const elapsed = Math.round((Date.now() - start) / 1000);
       if (elapsed > 2) trackTime(toolId, elapsed);
     };
-  }, [toolId, categoryId, addRecentTool, setLastVisited, trackOpen, trackTime]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toolId, categoryId]);
+
+  // First-visit notification for the tool
+  useEffect(() => {
+    if (hasNotifiedRef.current) return;
+    hasNotifiedRef.current = true;
+    const cat = toolCategories.find((c) => c.id === categoryId);
+    const t = cat?.tools.find((t) => t.id === toolId);
+    if (t && workspaceComponents[toolId]) {
+      notify.tool(
+        `${t.name} opened`,
+        "Your workspace is ready. Changes auto-save as you work.",
+        undefined,
+        t.icon,
+      );
+    }
+  }, [toolId, categoryId]);
 
   // Find the category and tool
   const category = toolCategories.find((c) => c.id === categoryId);

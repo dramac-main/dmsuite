@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { notify } from "@/stores/notifications";
 
 export default function LoginPage() {
   return (
@@ -40,6 +41,7 @@ function LoginForm() {
       return;
     }
 
+    notify.success("Welcome back!", "You're signed in to DMSuite. Let's create something amazing.", "/dashboard");
     router.push(nextPath);
     router.refresh();
   };

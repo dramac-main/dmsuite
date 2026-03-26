@@ -73,7 +73,7 @@ export default function ActiveProjects() {
           return (
             <div
               key={p.id}
-              className="group relative rounded-xl border border-white/5 bg-white/5 backdrop-blur-sm p-4 hover:border-primary-500/30 hover:bg-white/8 transition-all"
+              className="group relative rounded-xl border border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-white/5 backdrop-blur-sm p-4 hover:border-primary-500/30 hover:bg-gray-100 dark:hover:bg-white/8 transition-all"
             >
               {/* Remove button */}
               <button
@@ -97,10 +97,10 @@ export default function ActiveProjects() {
 
               <div className="flex items-center gap-2.5 mb-3">
                 <div className="size-8 rounded-lg bg-primary-500/10 flex items-center justify-center shrink-0">
-                  <Icon className="size-4 text-primary-400" />
+                  <Icon className="size-4 text-primary-500 dark:text-primary-400" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-sm font-semibold text-gray-100 truncate">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
                     {p.name}
                   </h3>
                   <p className="text-[10px] text-gray-500">{p.tool.name}</p>
@@ -115,7 +115,7 @@ export default function ActiveProjects() {
                     {p.progress}%
                   </span>
                 </div>
-                <div className="h-1 rounded-full bg-gray-700/50 overflow-hidden">
+                <div className="h-1 rounded-full bg-gray-200 dark:bg-gray-700/50 overflow-hidden">
                   <div
                     className="h-full rounded-full bg-primary-500 transition-all"
                     style={{ width: `${p.progress}%` }}
@@ -129,7 +129,7 @@ export default function ActiveProjects() {
                 </span>
                 <Link
                   href={`/tools/${p.tool.categoryId}/${p.toolId}`}
-                  className="text-[10px] text-primary-400 hover:text-primary-300 font-medium transition-colors"
+                  className="text-[10px] text-primary-500 dark:text-primary-400 hover:text-primary-400 dark:hover:text-primary-300 font-medium transition-colors"
                 >
                   Continue →
                 </Link>

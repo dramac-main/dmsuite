@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useUser } from "@/hooks/useUser";
 import { cn } from "@/lib/utils";
 import { CREDIT_PACKS as PACKS_DATA } from "@/data/credit-costs";
+import { notify } from "@/stores/notifications";
 
 /* ── Credit Packs ──────────────────────────────────────────── */
 
@@ -207,6 +208,7 @@ export default function CreditPurchaseModal({ onClose }: { onClose: () => void }
       if (!res.ok) {
         setError(data.error || "Payment failed");
         setStep("enter-phone");
+        notify.warning("Payment Error", data.error || "Payment could not be initiated. Please try again.");
         return;
       }
 
@@ -216,6 +218,7 @@ export default function CreditPurchaseModal({ onClose }: { onClose: () => void }
     } catch {
       setError("Network error — please try again");
       setStep("enter-phone");
+      notify.warning("Network Error", "Could not reach payment server. Check your connection and try again.");
     }
   };
 
@@ -237,6 +240,7 @@ export default function CreditPurchaseModal({ onClose }: { onClose: () => void }
         setError("Payment timed out. Check your mobile money app and contact support if charged.");
         setStep("failed");
         setPolling(false);
+        notify.warning("Payment Timeout", "No confirmation received. Check your mobile money app or contact support.", "/dashboard");
         return;
       }
 
@@ -250,6 +254,7 @@ export default function CreditPurchaseModal({ onClose }: { onClose: () => void }
           if (!mountedRef.current) return;
           setStep("success");
           setPolling(false);
+          notify.credit("Credits Added!", `${selectedPack?.credits.toLocaleString() ?? ""} credits have been added to your account.`, "/dashboard");
           return;
         }
 
@@ -257,6 +262,7 @@ export default function CreditPurchaseModal({ onClose }: { onClose: () => void }
           setError("Payment was declined. Please try again.");
           setStep("failed");
           setPolling(false);
+          notify.warning("Payment Declined", "Your mobile money payment was declined. Please try again or use a different number.");
           return;
         }
 

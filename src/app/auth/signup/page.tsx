@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { notify } from "@/stores/notifications";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -65,6 +66,7 @@ export default function SignUpPage() {
       return;
     }
 
+    notify.success("Welcome to DMSuite!", "Your account is created. Check your email to verify, then start creating.", "/dashboard");
     setSuccess(true);
     setLoading(false);
   };

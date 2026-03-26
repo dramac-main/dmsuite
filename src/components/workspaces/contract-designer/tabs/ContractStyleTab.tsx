@@ -209,11 +209,11 @@ export default function ContractStyleTab() {
         icon={icons.cover}
         isOpen={openSections.cover}
         onToggle={() => toggle("cover")}
-        badge={COVER_DESIGNS.find((d) => d.id === (form.style.coverDesign ?? "classic"))?.name}
+        badge={COVER_DESIGNS.find((d) => d.id === (form.style.coverDesign ?? "none"))?.name}
       >
         <div className="grid grid-cols-2 gap-2">
           {COVER_DESIGNS.map((design) => {
-            const selected = (form.style.coverDesign ?? "classic") === design.id;
+            const selected = (form.style.coverDesign ?? "none") === design.id;
             const accent = form.style.accentColor || "#1e40af";
             return (
               <button
@@ -233,7 +233,7 @@ export default function ContractStyleTab() {
               >
                 {/* Cover mini preview */}
                 <div className="w-full h-16 rounded-lg mb-1.5 overflow-hidden relative bg-white">
-                  {design.preview === "none" && (
+                  {design.id === "none" && (
                     <div className="w-full h-full flex items-center justify-center">
                       <div className="flex flex-col gap-1.5 items-center">
                         {[70, 55, 40].map((w, i) => (
@@ -243,7 +243,7 @@ export default function ContractStyleTab() {
                     </div>
                   )}
                   {/* Classic: White, black text, formal BETWEEN/AND, date bottom */}
-                  {design.preview === "classic" && (
+                  {design.id === "classic" && (
                     <div style={{ height: "100%", padding: "5px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
                       <div style={{ height: "3px", width: "55%", backgroundColor: "#000000", borderRadius: "1px" }} />
                       <div style={{ fontSize: "4px", color: "#000000", fontWeight: 700, lineHeight: 1, marginTop: "2px" }}>BETWEEN</div>
@@ -254,23 +254,19 @@ export default function ContractStyleTab() {
                       <div style={{ height: "2px", width: "45%", backgroundColor: "#000000", borderRadius: "1px", alignSelf: "flex-start" }} />
                     </div>
                   )}
-                  {/* Corporate: Gray bg, inner border, logo top-center, title, dark footer bar */}
-                  {design.preview === "corporate" && (
-                    <div style={{ height: "100%", backgroundColor: "#ededed", position: "relative" }}>
-                      <div style={{ position: "absolute", inset: "2px", border: "0.5px solid #c0c0c0", pointerEvents: "none" }} />
-                      <div style={{ position: "absolute", top: "4px", left: "50%", transform: "translateX(-50)", width: "8px", height: "8px", border: "0.5px solid #999" }} />
-                      <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -55%)", display: "flex", flexDirection: "column", alignItems: "center", gap: "1px" }}>
-                        <div style={{ height: "3px", width: "36px", backgroundColor: "#1a1a1a", borderRadius: "1px" }} />
-                        <div style={{ height: "2px", width: "28px", backgroundColor: "#888888", borderRadius: "1px" }} />
-                        <div style={{ width: "24px", height: "0.5px", backgroundColor: "#333", marginTop: "2px" }} />
+                  {/* Corporate: Charcoal bg, accent logo center, white title */}
+                  {design.id === "corporate" && (
+                    <div style={{ height: "100%", backgroundColor: "#2d2d2d", position: "relative" }}>
+                      <div style={{ position: "absolute", top: "4px", left: "50%", transform: "translateX(-50%)", width: "10px", height: "10px", backgroundColor: accent, borderRadius: "1px" }} />
+                      <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -40%)", display: "flex", flexDirection: "column", alignItems: "center", gap: "1.5px" }}>
+                        <div style={{ height: "3px", width: "36px", backgroundColor: "#ffffff", borderRadius: "1px" }} />
+                        <div style={{ height: "2px", width: "28px", backgroundColor: "#cccccc", borderRadius: "1px" }} />
                       </div>
-                      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "6px", backgroundColor: "#333333" }} />
-                      <div style={{ position: "absolute", bottom: "8px", left: "4px", width: "3px", height: "3px", backgroundColor: "#888" }} />
-                      <div style={{ position: "absolute", bottom: "8px", right: "4px", width: "3px", height: "3px", backgroundColor: "#888" }} />
+                      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "5px", backgroundColor: accent }} />
                     </div>
                   )}
                   {/* Dark Executive: Navy bg, accent logo box top-left, accent title, 3 stripes right */}
-                  {design.preview === "dark" && (
+                  {design.id === "dark-executive" && (
                     <div style={{ backgroundColor: "#1b2a4a", height: "100%", position: "relative", padding: "5px 8px" }}>
                       <div style={{ width: "8px", height: "8px", border: `0.5px solid ${accent}`, marginBottom: "8px" }} />
                       <div style={{ position: "absolute", top: "50%", left: "8px", transform: "translateY(-50%)" }}>
@@ -291,7 +287,7 @@ export default function ContractStyleTab() {
                     </div>
                   )}
                   {/* Accent Split: White left ~32%, navy right ~68%, highlight bar */}
-                  {design.preview === "split" && (
+                  {design.id === "accent-split" && (
                     <div style={{ height: "100%", display: "flex", position: "relative" }}>
                       <div style={{ width: "32%", backgroundColor: "#ffffff", flexShrink: 0 }} />
                       <div style={{ flex: 1, backgroundColor: "#1b2a4a" }}>
@@ -306,7 +302,7 @@ export default function ContractStyleTab() {
                     </div>
                   )}
                   {/* Bold Frame: White bg, thick accent border, accent logo top-right, accent title */}
-                  {design.preview === "frame" && (
+                  {design.id === "bold-frame" && (
                     <div style={{ height: "100%", position: "relative" }}>
                       <div style={{ position: "absolute", inset: "3px", border: `2px solid ${accent}` }} />
                       <div style={{ position: "absolute", top: "6px", right: "6px", width: "7px", height: "7px", backgroundColor: accent }} />
@@ -320,7 +316,7 @@ export default function ContractStyleTab() {
                     </div>
                   )}
                   {/* Minimal Line: Left dual-tone strip, dark logo top-right, bold dark title, accent rules bottom */}
-                  {design.preview === "line" && (
+                  {design.id === "minimal-line" && (
                     <div style={{ height: "100%", position: "relative" }}>
                       <div style={{ position: "absolute", top: 0, left: 0, bottom: "30%", width: "3px", backgroundColor: accent, opacity: 0.75 }} />
                       <div style={{ position: "absolute", top: "70%", left: 0, bottom: 0, width: "3px", backgroundColor: "#1e2d4f" }} />
@@ -334,6 +330,54 @@ export default function ContractStyleTab() {
                         <div style={{ height: "1.5px", width: "18px", backgroundColor: "#6b7280", borderRadius: "1px" }} />
                         <div style={{ height: "1px", width: "10px", backgroundColor: accent }} />
                       </div>
+                    </div>
+                  )}
+                  {/* Modern Centered: White bg, black logo box top, centered lines, accent bar bottom-right */}
+                  {design.id === "modern-centered" && (
+                    <div style={{ height: "100%", position: "relative", padding: "5px 8px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      <div style={{ width: "10px", height: "10px", backgroundColor: "#000000", borderRadius: "1px", marginBottom: "4px" }} />
+                      <div style={{ height: "3px", width: "50px", backgroundColor: "#1a1a1a", borderRadius: "1px", marginBottom: "2px" }} />
+                      <div style={{ height: "2px", width: "36px", backgroundColor: "#888", borderRadius: "1px" }} />
+                      <div style={{ flex: 1 }} />
+                      <div style={{ position: "absolute", bottom: "3px", right: "6px", width: "18px", height: "3px", backgroundColor: accent, borderRadius: "1px" }} />
+                    </div>
+                  )}
+                  {/* Procurement Circle: Dark navy bg, circle top-left, white+accent title lines, stripes right */}
+                  {design.id === "procurement-circle" && (
+                    <div style={{ backgroundColor: "#0f1b3d", height: "100%", position: "relative", padding: "5px 8px" }}>
+                      <div style={{ width: "10px", height: "10px", borderRadius: "50%", border: `1px solid ${accent}`, marginBottom: "6px" }} />
+                      <div style={{ position: "absolute", top: "50%", left: "8px", transform: "translateY(-50%)" }}>
+                        <div style={{ height: "3px", width: "36px", backgroundColor: "#ffffff", borderRadius: "1px", marginBottom: "2px" }} />
+                        <div style={{ height: "2px", width: "28px", backgroundColor: accent, borderRadius: "1px" }} />
+                      </div>
+                      {[0, 1, 2].map((i) => (
+                        <div key={i} style={{ position: "absolute", top: "4px", bottom: "4px", right: `${4 + i * 3}px`, width: "1px", backgroundColor: accent, opacity: 0.5 }} />
+                      ))}
+                    </div>
+                  )}
+                  {/* Geometric Modern: Angular navy shape, circle logo top-right */}
+                  {design.id === "geometric-modern" && (
+                    <div style={{ height: "100%", position: "relative", backgroundColor: "#f0f0f0" }}>
+                      <svg viewBox="0 0 80 64" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} preserveAspectRatio="none">
+                        <polygon points="0,16 50,0 50,64 0,64" fill="#1b2a4a" />
+                      </svg>
+                      <div style={{ position: "absolute", top: "4px", right: "6px", width: "10px", height: "10px", borderRadius: "50%", border: "1px solid #1b2a4a" }} />
+                      <div style={{ position: "absolute", bottom: "6px", left: "6px", display: "flex", flexDirection: "column", gap: "1.5px" }}>
+                        <div style={{ height: "2.5px", width: "28px", backgroundColor: "#ffffff", borderRadius: "1px" }} />
+                        <div style={{ height: "2px", width: "20px", backgroundColor: accent, borderRadius: "1px" }} />
+                      </div>
+                    </div>
+                  )}
+                  {/* Bordered Formal: Cream bg, thin accent border, centered logo+lines */}
+                  {design.id === "bordered-formal" && (
+                    <div style={{ height: "100%", backgroundColor: "#faf8f4", position: "relative" }}>
+                      <div style={{ position: "absolute", inset: "3px", border: `1px solid ${accent}`, opacity: 0.6 }} />
+                      <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+                        <div style={{ width: "8px", height: "8px", border: "0.5px solid #333", borderRadius: "1px" }} />
+                        <div style={{ height: "2.5px", width: "32px", backgroundColor: "#333", borderRadius: "1px" }} />
+                        <div style={{ height: "2px", width: "24px", backgroundColor: "#999", borderRadius: "1px" }} />
+                      </div>
+                      <div style={{ position: "absolute", bottom: "4px", left: "50%", transform: "translateX(-50%)", width: "20px", height: "0.5px", backgroundColor: accent }} />
                     </div>
                   )}
                 </div>

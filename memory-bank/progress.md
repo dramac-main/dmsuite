@@ -1,6 +1,6 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅
+## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅
 
 ---
 
@@ -13,7 +13,68 @@
 
 ---
 
-## Current Work: Contract Production Hardening — COMPLETE ✅
+## Current Work: Platform Infrastructure Hardening — COMPLETE ✅
+
+### Session 126 — Platform Quality, Settings, Admin Expansion
+
+#### Notification System (Battle-Tested)
+- [x] CreditPurchaseModal: 5 notification dispatch points (API error, network, timeout, success, declined)
+- [x] Auth login + signup: welcome notifications
+- [x] Dashboard: first-visit welcome notification
+- [x] NotificationPanel: bell pulse animation
+- [x] Notification muting: `getNotificationMutes()` / `setNotificationMutes()` + `isMuted()` check in all `notify.*` helpers
+
+#### User Account Settings (Expanded)
+- [x] AppearanceSection: theme toggle + tool descriptions toggle
+- [x] NotificationPreferencesSection: per-type muting for all 6 notification types
+- [x] DataManagementSection: export all data as JSON, clear notifications/exports/preferences/projects
+
+#### Admin Panel (Expanded)
+- [x] Overview tab: 6 stat cards + recent signups list (fetches from existing APIs)
+- [x] Settings tab: maintenance mode, announcements, registration toggle, credit grant limit, credit packs reference
+
+#### ActiveProjects (Fixed)
+- [x] Light-mode styling fixes (was dark-only)
+- [x] Project creation + tracking fully wired via workspace events
+
+#### workspace:dirty Dispatching
+- [x] SalesBookDesignerWorkspace: form change tracking → workspace:dirty
+- [x] ContractDesignerWorkspace: form change tracking → workspace:dirty
+
+#### TypeScript
+- [x] 0 errors — validated via `tsc --noEmit`
+
+---
+
+## Previous Work: Resume Editor Contract-Pattern Rework — COMPLETE ✅
+
+### Session 125 — Resume Editor UI Rework to Match Contract Workspace
+
+#### StepEditor.tsx Rewrite
+- [x] **Replaced** react-resizable-panels 3-panel layout → Contract-style fixed sidebar + preview canvas
+- [x] **Added** EditorTabNav (Sections | Design tabs) in sidebar
+- [x] **Added** WorkspaceHeader with undo/redo from shared WorkspaceUIKit
+- [x] **Added** Wondershare/Acrobat page nav bar (dots ≤8 pages, text >8, prev/next, scroll-sync)
+- [x] **Added** Template quick-switch strip in preview toolbar
+- [x] **Added** Zoom controls (±, reset, percentage display)
+- [x] **Added** Mobile BottomBar (Edit/Preview/Export)
+- [x] **Added** Print handler with @page CSS + data-resume-page selectors
+- [x] **Preserved** AI revision handler, diff overlay, export, Chiko manifest, Ctrl+K, AIChatBar
+
+#### TemplateRenderer.tsx Enhancements
+- [x] **Added** RESUME_PAGE_GAP export, pageGap prop, onPageCount callback
+- [x] **Changed** page spacing from individual mb-8 to flex container gap
+
+#### Chiko Manifest Enhancement (23 actions total)
+- [x] **Added** updateSummary, renameSectionTitle, moveSectionToColumn, updatePageSettings
+
+#### Validation & Deployment
+- [x] TypeScript 0 errors
+- [x] Committed `9b1d011` and pushed to origin/main
+
+---
+
+## Previous Work: Contract Cover Design Picker — COMPLETE ✅
 
 ### Session 123 (continued) — Pre-Print Validation, Fillable Fields, Production Audit
 
