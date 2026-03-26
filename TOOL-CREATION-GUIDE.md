@@ -93,11 +93,25 @@ src/
 │   │   └── {ToolName}{Custom}Tab.tsx    # Tool-specific tabs as needed
 │   └── editor/                          # Sub-components for complex editing panels
 │       └── {ToolName}EditorPanel.tsx
-├── stores/{tool-id}-editor.ts           # Zustand store (persist + temporal + immer)
+├── stores/{tool-id}-editor.ts           # Zustand store (temporal + persist + immer)
 ├── lib/{tool-id}/                       # Business logic, schemas, utilities
 │   ├── schema.ts                        # Zod schemas, TypeScript types, defaults
 │   └── export.ts                        # Export handlers (PDF, DOCX, etc.)
 └── lib/chiko/manifests/{tool-id}.ts     # Chiko AI action manifest
+```
+
+### Shared Infrastructure Files (Already Exist — Import, Don't Recreate)
+
+```
+src/
+├── lib/
+│   ├── workspace-events.ts              # Typed event constants + dispatch helpers
+│   └── workspace-constants.ts           # Zoom limits, page thresholds, milestone counts
+├── styles/
+│   └── workspace-canvas.css             # Section highlighting CSS for all tool canvases
+└── components/workspaces/shared/
+    ├── WorkspaceUIKit.tsx               # Re-exports all shared UI components
+    └── WorkspaceErrorBoundary.tsx       # React error boundary for workspace panels
 ```
 
 ### Naming Conventions
@@ -318,6 +332,7 @@ Every tool workspace MUST use these shared components for UI consistency. Never 
 | `InfoBadge` | Small badge: variants `"default"`, `"primary"`, `"muted"` |
 | `AdvancedToggle` | Progressive disclosure: chevron + "Advanced" label |
 | `SelectionCard` | Template/option picker card with selected state + checkmark |
+| `WorkspaceErrorBoundary` | React error boundary for workspace tab content — catches runtime errors with retry UI |
 
 ### Styling Constants (Follow These Exactly)
 
@@ -407,8 +422,8 @@ function createDefault{ToolName}Form(): {ToolName}FormData {
 // ━━━ Store ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export const use{ToolName}Editor = create<{ToolName}EditorState>()(
-  persist(
-    temporal(
+  temporal(
+    persist(
       immer<{ToolName}EditorState>((set) => ({
         form: createDefault{ToolName}Form(),
 
@@ -436,40 +451,68 @@ export const use{ToolName}Editor = create<{ToolName}EditorState>()(
           set((state) => {
             state.form = data;
           }),
-      }))
+      })),
+      {
+        name: "dmsuite-{tool-id}",
+        storage: createJSONStorage(() => localStorage),
+        partialize: (s) => ({ form: s.form }),  // Only persist form data
+      }
     ),
     {
-      name: "dmsuite-{tool-id}",
-      storage: createJSONStorage(() => localStorage),
+      partialize: (s) => ({ form: s.form }),  // Only track form changes for undo
     }
   )
 );
 ```
 
+### Middleware Stacking Order (CRITICAL)
+
+The correct order is **`temporal(persist(immer(...)))`**:
+
+| Wrapper | Position | Reason |
+|---------|----------|--------|
+| `temporal` | **Outermost** | Undo history is NOT persisted to localStorage |
+| `persist` | **Middle** | Only form data is serialized to localStorage |
+| `immer` | **Innermost** | Enables `state.form.x = y` draft mutations |
+```
+
 ### Accent Color Lock Pattern
 
-When a tool supports accent color + templates, implement the lock pattern to prevent template-switch from overriding user-chosen colors:
+When a tool supports accent color + templates, implement the lock pattern **inside the Zustand state** (NOT as a module-level variable) to prevent template-switch from overriding user-chosen colors:
 
 ```typescript
-let _accentLocked = false;
+// In state interface:
+interface {ToolName}EditorState {
+  form: {ToolName}FormData;
+  accentColorLocked: boolean;  // Lives in Zustand state, NOT module-level
+  // ... actions
+}
+
+// In store:
+accentColorLocked: false,
 
 setAccentColor: (color) => set((state) => {
   state.form.style.accentColor = color;
-  _accentLocked = true;  // User explicitly chose this color
+  state.accentColorLocked = true;  // User explicitly chose this color
 }),
 
 setTemplate: (template) => set((state) => {
   state.form.style.template = template;
-  if (!_accentLocked) {
+  if (!state.accentColorLocked) {
     state.form.style.accentColor = templateDefaults[template].accent;
   }
 }),
 
 resetForm: () => set((state) => {
   state.form = createDefaultForm();
-  _accentLocked = false;  // Unlock on reset
+  state.accentColorLocked = false;  // Unlock on reset
 }),
+
+// In persist partialize — include accentColorLocked so it survives page refresh:
+partialize: (s) => ({ form: s.form, accentColorLocked: s.accentColorLocked }),
 ```
+
+> **Why not module-level `let`?** Module-level variables are invisible to Zustand's persist and temporal middleware. They reset on page navigation in Next.js, can desync across hot reloads, and cannot be restored by undo/redo.
 
 ### Temporal Store Access (Undo/Redo)
 
@@ -511,12 +554,18 @@ type EditorTabKey = (typeof EDITOR_TABS)[number]["key"];
 
 ### Tab Content Rendering
 
+Wrap tab content in `WorkspaceErrorBoundary` to catch runtime errors without crashing the entire workspace:
+
 ```tsx
+import { WorkspaceErrorBoundary } from "@/components/workspaces/shared/WorkspaceUIKit";
+
 <div className="flex-1 overflow-y-auto scrollbar-thin">
-  {activeTab === "content" && <{ToolName}ContentTab />}
-  {activeTab === "details" && <{ToolName}DetailsTab />}
-  {activeTab === "style"   && <{ToolName}StyleTab />}
-  {activeTab === "format"  && <{ToolName}FormatTab />}
+  <WorkspaceErrorBoundary>
+    {activeTab === "content" && <{ToolName}ContentTab />}
+    {activeTab === "details" && <{ToolName}DetailsTab />}
+    {activeTab === "style"   && <{ToolName}StyleTab />}
+    {activeTab === "format"  && <{ToolName}FormatTab />}
+  </WorkspaceErrorBoundary>
 
   {/* Start Over button — always at bottom of every tab */}
   <div className="p-4 border-t border-gray-800/30">
@@ -563,10 +612,10 @@ The center panel renders the tool's output in a paginated, zoom-controlled previ
   <div className="flex items-center gap-2 px-3 h-10 border-b border-gray-800/40 bg-gray-900/30">
     {/* Zoom controls */}
     <div className="flex items-center gap-1">
-      <IconButton onClick={() => setZoom(z => Math.max(30, z - 10))} icon={Icons.zoomOut} />
+      <IconButton onClick={zoomOut} icon={Icons.zoomOut} />
       <span className="text-[10px] text-gray-500 font-mono w-9 text-center">{zoom}%</span>
-      <IconButton onClick={() => setZoom(z => Math.min(200, z + 10))} icon={Icons.zoomIn} />
-      <button onClick={() => setZoom(100)} className="text-[9px] text-gray-600 hover:text-gray-400 px-1.5">
+      <IconButton onClick={zoomIn} icon={Icons.zoomIn} />
+      <button onClick={zoomReset} className="text-[9px] text-gray-600 hover:text-gray-400 px-1.5">
         Reset
       </button>
     </div>
@@ -602,7 +651,7 @@ The center panel renders the tool's output in a paginated, zoom-controlled previ
   {pageCount > 1 && (
     <div className="flex items-center justify-center gap-2 h-8 border-t border-gray-800/40 bg-gray-900/30">
       <IconButton onClick={() => goToPage(currentPage - 1)} disabled={currentPage <= 1} />
-      {pageCount <= 8 ? (
+      {pageCount <= PAGE_DOTS_THRESHOLD ? (
         /* Dot indicators */
         <div className="flex gap-1.5">
           {Array.from({ length: pageCount }, (_, i) => (
@@ -630,17 +679,28 @@ The center panel renders the tool's output in a paginated, zoom-controlled previ
 
 ### Zoom Rules
 
-- Range: 30% minimum, 200% maximum
-- Default: 100%
-- Step: 10% per click
-- Reset button returns to 100%
+Import constants from `@/lib/workspace-constants` — never hardcode these values:
+
+```typescript
+import { ZOOM_MIN, ZOOM_MAX, ZOOM_STEP, ZOOM_DEFAULT, PAGE_DOTS_THRESHOLD } from "@/lib/workspace-constants";
+
+const [zoom, setZoom] = useState(ZOOM_DEFAULT);
+const zoomIn = () => setZoom(z => Math.min(ZOOM_MAX, z + ZOOM_STEP));
+const zoomOut = () => setZoom(z => Math.max(ZOOM_MIN, z - ZOOM_STEP));
+const zoomReset = () => setZoom(ZOOM_DEFAULT);
+```
+
+- Range: `ZOOM_MIN` (30%) to `ZOOM_MAX` (200%)
+- Default: `ZOOM_DEFAULT` (100%)
+- Step: `ZOOM_STEP` (10%) per click
+- Reset button returns to `ZOOM_DEFAULT`
 - Applied via CSS `transform: scale(zoom/100)` with `transformOrigin: "top center"`
 - Value display: `text-[10px] font-mono text-gray-500`
 
 ### Page Navigation Rules
 
-- For ≤8 pages: dot indicators (`w-2 h-2 rounded-full`)
-- For >8 pages: text counter `"Page {n} / {total}"`
+- For ≤`PAGE_DOTS_THRESHOLD` (8) pages: dot indicators (`w-2 h-2 rounded-full`)
+- For >`PAGE_DOTS_THRESHOLD` pages: text counter `"Page {n} / {total}"`
 - Smooth scroll: `el.scrollTo({ top: (page - 1) * pageStep, behavior: "smooth" })`
 - `pageStep = pageHeight + PAGE_GAP` (usually `PAGE_GAP = 16`)
 - Scroll tracking: `onScroll` handler calculates `Math.round(scrollTop / pageStep) + 1`
@@ -785,11 +845,21 @@ In the Renderer component, add `data-{tool-prefix}-section` attributes to every 
 <div data-ct-section="clause-1" className="...">Clause 1</div>
 ```
 
-### CSS Highlight Rules (Add as `<style>` JSX in workspace)
+### CSS Highlight Rules (Shared Stylesheet)
 
-Use this exact pattern — change only the prefix (`ct` → your tool prefix):
+All section highlighting CSS lives in **`src/styles/workspace-canvas.css`** — import it in your workspace component instead of adding inline `<style>` blocks:
+
+```typescript
+import "@/styles/workspace-canvas.css";
+```
+
+To add highlighting for a new tool, append a new block to `workspace-canvas.css` following this pattern (change only the prefix):
 
 ```css
+/* ---------------------------------------------------------------------------
+   {Tool Name}
+   --------------------------------------------------------------------------- */
+
 .{tool-prefix}-canvas-root [data-{tool-prefix}-section] {
   transition: outline 0.15s ease, box-shadow 0.15s ease;
   outline: 2px solid transparent;
@@ -806,15 +876,9 @@ Use this exact pattern — change only the prefix (`ct` → your tool prefix):
   outline: 2px solid rgba(139, 92, 246, 0.6);
   box-shadow: 0 0 0 6px rgba(139, 92, 246, 0.1);
 }
-
-@media print {
-  [data-{tool-prefix}-section] {
-    outline: none !important;
-    box-shadow: none !important;
-    cursor: default !important;
-  }
-}
 ```
+
+The shared file already includes a consolidated `@media print` block that strips all highlighting prefixes. **Do NOT add inline `<style>` blocks** in workspace components — they cause duplication and make maintenance harder.
 
 ### Highlight Application (useEffect in workspace)
 
@@ -865,11 +929,13 @@ function handlePreviewClick(e: React.MouseEvent) {
 ### Zoom Implementation
 
 ```typescript
-const [zoom, setZoom] = useState(100);
+import { ZOOM_MIN, ZOOM_MAX, ZOOM_STEP, ZOOM_DEFAULT } from "@/lib/workspace-constants";
 
-const zoomIn = () => setZoom(z => Math.min(200, z + 10));
-const zoomOut = () => setZoom(z => Math.max(30, z - 10));
-const zoomReset = () => setZoom(100);
+const [zoom, setZoom] = useState(ZOOM_DEFAULT);
+
+const zoomIn = () => setZoom(z => Math.min(ZOOM_MAX, z + ZOOM_STEP));
+const zoomOut = () => setZoom(z => Math.max(ZOOM_MIN, z - ZOOM_STEP));
+const zoomReset = () => setZoom(ZOOM_DEFAULT);
 ```
 
 ### Page Navigation with Scroll Sync
@@ -1025,9 +1091,7 @@ useEffect(() => {
 ```typescript
 const handleExport = useCallback(() => {
   // Dispatch export milestone
-  window.dispatchEvent(new CustomEvent("workspace:progress", {
-    detail: { milestone: "exported" }
-  }));
+  dispatchProgress("exported");
 
   // Print implementation
   const printWindow = window.open("", "_blank");
@@ -1395,59 +1459,77 @@ Every workspace MUST dispatch these custom events for the tool page shell to tra
 
 ### Event Types
 
+Import typed helpers from `@/lib/workspace-events` — never use raw `window.dispatchEvent(new CustomEvent(...))` calls:
+
 ```typescript
+import { dispatchDirty, dispatchProgress } from "@/lib/workspace-events";
+import type { WorkspaceMilestone } from "@/lib/workspace-events";
+
 // 1. Mark work as dirty (triggers input/edited milestones automatically)
-window.dispatchEvent(new CustomEvent("workspace:dirty"));
+dispatchDirty();
 
-// 2. Report specific milestones or wizard progress
-window.dispatchEvent(new CustomEvent("workspace:progress", {
-  detail: {
-    milestone?: "input" | "content" | "edited" | "exported",  // Discrete milestone
-    progress?: number,  // 0-100 wizard progress percentage
-  }
-}));
+// 2. Report specific milestones
+dispatchProgress("input");
+dispatchProgress("content");
+dispatchProgress("edited");
+dispatchProgress("exported");
+```
 
-// 3. Confirm save (tool page echoes back as "workspace:saved")
-window.dispatchEvent(new CustomEvent("workspace:save"));
+The `WORKSPACE_EVENTS` constants object is also exported for listeners:
+
+```typescript
+import { WORKSPACE_EVENTS } from "@/lib/workspace-events";
+
+// Listening for events (in tool page shell):
+window.addEventListener(WORKSPACE_EVENTS.DIRTY, handler);
+window.addEventListener(WORKSPACE_EVENTS.PROGRESS, handler);
 ```
 
 ### When to Dispatch
 
-| Event | When |
-|-------|------|
-| `workspace:dirty` | Any form field change (attach to store subscriber or onChange handlers) |
-| `milestone: "input"` | User has entered meaningful data (title, name, key fields) |
-| `milestone: "content"` | AI has generated content OR user has created substantial content |
-| `milestone: "edited"` | User has made 3+ refinements after content exists |
-| `milestone: "exported"` | User successfully printed, downloaded, or exported |
-| `progress: N` | Wizard step changes (calculate percentage from step/totalSteps) |
+| Helper Call | When |
+|-------------|------|
+| `dispatchDirty()` | Any form field change (attach to store subscriber or onChange handlers) |
+| `dispatchProgress("input")` | User has entered meaningful data (title, name, key fields) |
+| `dispatchProgress("content")` | AI has generated content OR user has created substantial content |
+| `dispatchProgress("edited")` | User has made 3+ refinements after content exists |
+| `dispatchProgress("exported")` | User successfully printed, downloaded, or exported |
+| Raw `workspace:progress` with `{ progress: N }` | Wizard step changes (calculate percentage from step/totalSteps) |
 
 ### Implementation Pattern (Tab-Based Editor)
 
 ```typescript
+import { dispatchDirty, dispatchProgress } from "@/lib/workspace-events";
+import { MILESTONE_EDIT_THRESHOLD } from "@/lib/workspace-constants";
+
 // In workspace component, track form changes:
 useEffect(() => {
-  const milestones: string[] = [];
-
   // Input milestone: key fields filled
   if (form.title.length > 0 || form.clientName.length > 0) {
-    milestones.push("input");
+    dispatchProgress("input");
   }
 
   // Content milestone: substantial content exists
   if (form.items.length > 0 || form.sections.some(s => s.content.length > 0)) {
-    milestones.push("content");
+    dispatchProgress("content");
   }
-
-  milestones.forEach(m =>
-    window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: m } }))
-  );
 }, [form.title, form.clientName, form.items.length]);
+
+// Track edit count for "edited" milestone:
+const editCountRef = useRef(0);
+useEffect(() => {
+  editCountRef.current++;
+  if (editCountRef.current >= MILESTONE_EDIT_THRESHOLD) {
+    dispatchProgress("edited");
+  }
+}, [form]);
 ```
 
 ### Implementation Pattern (Wizard-Based Tool)
 
 ```typescript
+import { dispatchProgress } from "@/lib/workspace-events";
+
 useEffect(() => {
   const stepProgress = Math.round((currentStep / totalSteps) * 80);
   window.dispatchEvent(new CustomEvent("workspace:progress", {
@@ -1455,14 +1537,10 @@ useEffect(() => {
   }));
 
   if (currentStep >= 2) {
-    window.dispatchEvent(new CustomEvent("workspace:progress", {
-      detail: { milestone: "input" }
-    }));
+    dispatchProgress("input");
   }
   if (currentStep >= totalSteps) {
-    window.dispatchEvent(new CustomEvent("workspace:progress", {
-      detail: { milestone: "content" }
-    }));
+    dispatchProgress("content");
   }
 }, [currentStep]);
 ```
