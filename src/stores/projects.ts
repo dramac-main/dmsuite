@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { deleteProjectData, duplicateProjectData } from "@/lib/project-data";
 
 /* ── Milestone-based progress tracking ──────────────────────── */
 
@@ -30,16 +31,26 @@ export interface Project {
   progress: number;
   /** Completed milestone stages — drives the progress calculation */
   milestones: Milestone[];
+  /** Whether this project has data saved in IndexedDB */
+  hasData?: boolean;
 }
 
 interface ProjectState {
   projects: Project[];
+  /** Create a new project. Returns project ID. */
   addProject: (toolId: string, name: string) => string;
-  updateProject: (id: string, patch: Partial<Pick<Project, "name" | "progress">>) => void;
+  updateProject: (id: string, patch: Partial<Pick<Project, "name" | "progress" | "hasData">>) => void;
+  /** Rename a project (convenience wrapper) */
+  renameProject: (id: string, name: string) => void;
   /** Add a milestone and recompute progress. No-op if already present. */
   addMilestone: (id: string, milestone: Milestone) => void;
+  /** Remove project metadata + IndexedDB data */
   removeProject: (id: string) => void;
   touchProject: (id: string) => void;
+  /** Duplicate a project's metadata (caller must also duplicate IndexedDB data) */
+  duplicateProject: (id: string, newName: string) => string | null;
+  /** Get all projects for a given tool */
+  getProjectsForTool: (toolId: string) => Project[];
 }
 
 let counter = 0;
@@ -49,8 +60,9 @@ function uid() {
 
 export const useProjectStore = create<ProjectState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       projects: [],
+
       addProject: (toolId, name) => {
         const id = uid();
         const milestones: Milestone[] = ["opened"];
@@ -64,18 +76,28 @@ export const useProjectStore = create<ProjectState>()(
               updatedAt: Date.now(),
               progress: computeProgress(milestones),
               milestones,
+              hasData: false,
             },
             ...s.projects,
-          ].slice(0, 50),
+          ].slice(0, 200), // Increased limit for multi-project support
         }));
         return id;
       },
+
       updateProject: (id, patch) =>
         set((s) => ({
           projects: s.projects.map((p) =>
             p.id === id ? { ...p, ...patch, updatedAt: Date.now() } : p
           ),
         })),
+
+      renameProject: (id, name) =>
+        set((s) => ({
+          projects: s.projects.map((p) =>
+            p.id === id ? { ...p, name, updatedAt: Date.now() } : p
+          ),
+        })),
+
       addMilestone: (id, milestone) =>
         set((s) => ({
           projects: s.projects.map((p) => {
@@ -85,14 +107,54 @@ export const useProjectStore = create<ProjectState>()(
             return { ...p, milestones, progress: computeProgress(milestones), updatedAt: Date.now() };
           }),
         })),
-      removeProject: (id) =>
-        set((s) => ({ projects: s.projects.filter((p) => p.id !== id) })),
+
+      removeProject: (id) => {
+        set((s) => ({ projects: s.projects.filter((p) => p.id !== id) }));
+        // Also clean up IndexedDB data (fire and forget)
+        deleteProjectData(id).catch(() => {});
+      },
+
       touchProject: (id) =>
         set((s) => ({
           projects: s.projects.map((p) =>
             p.id === id ? { ...p, updatedAt: Date.now() } : p
           ),
         })),
+
+      duplicateProject: (id, newName) => {
+        const source = get().projects.find((p) => p.id === id);
+        if (!source) return null;
+        const newId = uid();
+        set((s) => ({
+          projects: [
+            {
+              id: newId,
+              toolId: source.toolId,
+              name: newName,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              progress: source.progress,
+              milestones: [...source.milestones],
+              hasData: false, // Will be set true after data duplication
+            },
+            ...s.projects,
+          ].slice(0, 200),
+        }));
+        // Duplicate IndexedDB data async
+        duplicateProjectData(id, newId).then((ok) => {
+          if (ok) {
+            set((s) => ({
+              projects: s.projects.map((p) =>
+                p.id === newId ? { ...p, hasData: true } : p
+              ),
+            }));
+          }
+        }).catch(() => {});
+        return newId;
+      },
+
+      getProjectsForTool: (toolId) =>
+        get().projects.filter((p) => p.toolId === toolId),
     }),
     {
       name: "dmsuite-projects",

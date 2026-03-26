@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { useProjectStore, type Project, type Milestone } from "@/stores/projects";
 import { getAllToolsFlat, type FlatTool } from "@/data/tools";
 import { getIcon, IconFolder } from "@/components/icons";
 import EmptyState from "@/components/dashboard/EmptyState";
+import { deleteProjectData } from "@/lib/project-data";
 
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
@@ -49,6 +50,11 @@ function latestMilestoneLabel(milestones?: Milestone[]): string {
 export default function ActiveProjects() {
   const projects = useProjectStore((s) => s.projects);
   const removeProject = useProjectStore((s) => s.removeProject);
+  const renameProject = useProjectStore((s) => s.renameProject);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   const enriched = useMemo(() => {
     if (projects.length === 0) return [];
@@ -59,6 +65,31 @@ export default function ActiveProjects() {
       .map((p) => ({ ...p, tool: lookup.get(p.toolId) }))
       .filter((p): p is Project & { tool: FlatTool } => !!p.tool);
   }, [projects]);
+
+  // Focus input when editing starts
+  useEffect(() => {
+    if (editingId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingId]);
+
+  const handleStartRename = (p: Project) => {
+    setEditingId(p.id);
+    setEditName(p.name);
+  };
+
+  const handleFinishRename = () => {
+    if (editingId && editName.trim()) {
+      renameProject(editingId, editName.trim());
+    }
+    setEditingId(null);
+  };
+
+  const handleDelete = (id: string) => {
+    removeProject(id);
+    deleteProjectData(id).catch(() => {});
+  };
 
   if (enriched.length === 0) {
     return (
@@ -104,7 +135,7 @@ export default function ActiveProjects() {
             >
               {/* Remove button */}
               <button
-                onClick={() => removeProject(p.id)}
+                onClick={() => handleDelete(p.id)}
                 className="absolute top-2 right-2 size-6 rounded-lg flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all"
                 aria-label="Remove project"
               >
@@ -127,9 +158,29 @@ export default function ActiveProjects() {
                   <Icon className="size-4 text-primary-500 dark:text-primary-400" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                    {p.name}
-                  </h3>
+                  {editingId === p.id ? (
+                    <input
+                      ref={editInputRef}
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      onBlur={handleFinishRename}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleFinishRename();
+                        if (e.key === "Escape") setEditingId(null);
+                      }}
+                      className="w-full text-sm font-semibold bg-white dark:bg-gray-800 border border-primary-500/50 rounded-md px-1.5 py-0.5 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500/30"
+                      maxLength={60}
+                    />
+                  ) : (
+                    <h3
+                      className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate cursor-pointer hover:text-primary-500 transition-colors"
+                      onClick={() => handleStartRename(p)}
+                      title="Click to rename"
+                    >
+                      {p.name}
+                    </h3>
+                  )}
                   <p className="text-[10px] text-gray-500">{p.tool.name}</p>
                 </div>
               </div>
@@ -157,7 +208,7 @@ export default function ActiveProjects() {
                   {timeAgo(p.updatedAt)}
                 </span>
                 <Link
-                  href={`/tools/${p.tool.categoryId}/${p.toolId}`}
+                  href={`/tools/${p.tool.categoryId}/${p.toolId}?project=${p.id}`}
                   className="text-[10px] text-primary-500 dark:text-primary-400 hover:text-primary-400 dark:hover:text-primary-300 font-medium transition-colors"
                 >
                   Continue →

@@ -1,63 +1,39 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅
+## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅ — Resume Controls & Multi-Page A4 Fix ✅
 
 ---
 
-## Current Work: Credits & Profile Loading Fix — COMPLETE ✅
+## Current Work: Resume Controls & Multi-Page A4 Fix — COMPLETE ✅
 
-### Session 132 — Cache-First Profile Loading Architecture
+### Session 133 — Resume Format/Style Controls + Multi-Page Rendering
 
 #### Problem
-- CreditBalance and UserMenu showed persistent "Retry" error state
-- 500-1600ms loading skeleton waterfall: getUser→fetchProfile→subscribeRealtime
-- INITIAL_SESSION event was ignored (skipped the one instant data source)
-- No profile cache — every visit re-fetched from Supabase DB
-- Any transient timeout triggered error state
+- Format/Style tab controls generated CSS vars that no template CSS consumed
+- Default format was Letter instead of A4 (Zambian market)
+- Sidebar sections missed in page break detection (`.sidebar-section` not in selectors)
+- Accent color control ineffective (20 templates each use different CSS variable names)
+- Templates 11 & 13 used hardcoded hex colors with no CSS variables
 
-#### Solution: Cache-First, Background-Validate
-- [x] Added localStorage profile cache (5-min TTL, userId-scoped, clears on sign out)
-- [x] Removed bootstrap() waterfall — replaced with INITIAL_SESSION as primary bootstrap (~5ms vs 300-800ms)
-- [x] Background getUser() JWT validation in parallel (security, never blocks UI)
-- [x] Profile shows from cache instantly on return visits (0ms loading)
-- [x] Error state only on total network failure + no cache (was: any timeout)
-- [x] CreditBalance: `loading && !profile` guard — cached data shows through
-- [x] UserMenu: `(error || !user) && !profile` guard — cached data shows through
-- [x] Realtime updates write back to cache for next visit
+#### Solution: Dynamic CSS Override System
+- [x] Added `.sidebar-section` to SECTION_SELECTORS and break-inside CSS rules
+- [x] Created dynamicCSS useMemo (~120 lines) generating per-template accent variable overrides
+- [x] Added direct CSS property overrides for hardcoded templates 11 (swiss-typographic) & 13 (brutalist-mono)
+- [x] Added section spacing overrides (compact: 10px, relaxed: 28px)
+- [x] Added line spacing overrides (tight: 1.3, loose: 1.8)
+- [x] Added font scale overrides (compact: 0.9em, spacious: 1.1em)
+- [x] Added margin preset overrides (narrow: 28px, wide: 56px padding)
+- [x] Injected `<style>{dynamicCSS}</style>` into render output
+- [x] Changed default page format from "letter" to "a4" (3 locations in schema.ts)
+- [x] Verified layers panel toggle flow is solid (3-layer check)
 - [x] TypeScript: 0 errors
 - [x] Production build: all pages pass
 
 ---
 
-## Previous Work: Resume UX Revamp — COMPLETE ✅
+## Previous Work: Credits & Profile Loading Fix — COMPLETE ✅
 
-### Session 131 — Resume Editor Revamp to Match Contract Designer UX
-
-#### Problem
-- Every revisit to Resume/CV tool landed on Step 6 (generation), auto-triggering AI and burning tokens
-- 2-tab accordion layout inconsistent with Contract Designer's proven flat-tab system  
-- AIChatBar on canvas redundant with Chiko assistant
-
-#### Solution: Full Contract-Pattern Alignment
-- [x] Fixed wizard store rehydration (`resume-cv-wizard.ts`) — checks localStorage for existing resume data before clamping steps
-- [x] Created 4 new tab components: ResumeContactTab, ResumeSectionsTab, ResumeStyleTab, ResumeFormatTab
-- [x] Rewrote StepEditor.tsx: 4 tabs (Contact/Sections/Style/Format) replacing 2 accordion tabs (Sections/Design)
-- [x] Removed AIChatBar from canvas preview area
-- [x] Removed Ctrl+K shortcut and handleAIRevision dead code
-- [x] Updated layer click routing: "basics"→contact tab, others→sections tab
-- [x] Fixed schema field mismatches: `margins`→`marginPreset`, "normal"→"standard", "relaxed"→"loose"
-- [x] TypeScript: 0 errors
-- [x] All lint warnings resolved
-
----
-
-## Previous Work: Chiko Voice Input — COMPLETE ✅
-
-### Session 128 — Active Projects Progress Redesign
-
-#### Problem
-- Progress used arbitrary +5% per `workspace:save` event
-- Only 3/97 workspaces dispatched events, so most projects stayed at 0%
+### Session 132 — Cache-First Profile Loading Architecture
 - No export tracking — print/download didn't affect progress
 - Progress was "just guessing" — completely disconnected from actual work
 

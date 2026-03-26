@@ -470,6 +470,21 @@ export default function TemplateRenderer({
       [data-template="medical-clean"]      { --teal: ${accentColor}; --dark-teal: ${accentColor}; --light-teal: ${accentLight}; }
       [data-template="neon-glass"]         { --neon-blue: ${accentColor}; }
       [data-template="corporate-stripe"]   { --accent: ${accentColor}; }
+
+      /* Templates 11 & 13: hardcoded colors — override individual selectors */
+      [data-template="swiss-typographic"] .top-rule { background: ${accentColor} !important; }
+      [data-template="swiss-typographic"] .role { color: ${accentColor} !important; }
+      [data-template="swiss-typographic"] .contact-item svg { fill: ${accentColor} !important; }
+      [data-template="swiss-typographic"] .section-title { color: ${accentColor} !important; }
+      [data-template="swiss-typographic"] .exp-company { color: ${accentColor} !important; }
+      [data-template="swiss-typographic"] .sb-title { color: ${accentColor} !important; }
+      [data-template="swiss-typographic"] .skill-item::before { color: ${accentColor} !important; }
+
+      [data-template="brutalist-mono"] .role { color: ${accentColor} !important; }
+      [data-template="brutalist-mono"] .hc-line span { color: ${accentColor} !important; }
+      [data-template="brutalist-mono"] .summary { border-left-color: ${accentColor} !important; }
+      [data-template="brutalist-mono"] .exp-company { color: ${accentColor} !important; }
+      [data-template="brutalist-mono"] .skill-tag { color: ${accentColor} !important; }
     `);
 
     // --- Section spacing override ---

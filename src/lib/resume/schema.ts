@@ -338,12 +338,12 @@ export const metadataSchema = z.object({
     value: z.string().default(""),
   }).default({ enabled: false, value: "" }),
   page: z.object({
-    format: pageFormatSchema.default("letter"),
+    format: pageFormatSchema.default("a4"),
     marginPreset: marginPresetSchema.default("standard"),
     sectionSpacing: sectionSpacingSchema.default("standard"),
     lineSpacing: lineSpacingSchema.default("normal"),
   }).default({
-    format: "letter",
+    format: "a4",
     marginPreset: "standard",
     sectionSpacing: "standard",
     lineSpacing: "normal",
@@ -411,7 +411,7 @@ export const resumeDataSchema = z.object({
       ],
     },
     css: { enabled: false, value: "" },
-    page: { format: "letter", marginPreset: "standard", sectionSpacing: "standard", lineSpacing: "normal" },
+    page: { format: "a4", marginPreset: "standard", sectionSpacing: "standard", lineSpacing: "normal" },
     design: {
       primaryColor: "rgba(37, 99, 235, 1)",
       backgroundColor: "rgba(255, 255, 255, 1)",

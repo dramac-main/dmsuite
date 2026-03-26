@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { toolCategories } from "@/data/tools";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
 import TopBar from "@/components/dashboard/TopBar";
 import CreditBalance from "@/components/dashboard/CreditBalance";
 import UserMenu from "@/components/dashboard/UserMenu";
 import ThemeSwitch from "@/components/ThemeSwitch";
 import { bgOpacity10 } from "@/lib/colors";
-import { getIcon, IconArrowRight, IconChevronLeft, IconSparkles, IconZap, IconMenu } from "@/components/icons";
+import { getIcon, IconArrowRight, IconChevronLeft, IconSparkles, IconZap, IconMenu, IconFolder } from "@/components/icons";
 import { useSidebarStore } from "@/stores/sidebar";
 import { usePreferencesStore } from "@/stores/preferences";
 import { useAnalyticsStore } from "@/stores/analytics";
@@ -22,6 +22,8 @@ import { cn } from "@/lib/utils";
 import NotificationPanel from "@/components/dashboard/NotificationPanel";
 import SaveIndicator from "@/components/dashboard/SaveIndicator";
 import SimilarTools from "@/components/dashboard/SimilarTools";
+import ProjectPickerModal from "@/components/dashboard/ProjectPickerModal";
+import { useProjectData } from "@/hooks/useProjectData";
 
 /* ── Dynamically imported workspace components ──────────────── */
 const workspaceComponents: Record<string, React.ComponentType> = {
@@ -153,6 +155,8 @@ const workspaceComponents: Record<string, React.ComponentType> = {
 
 export default function ToolWorkspacePage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const categoryId = params.categoryId as string;
   const toolId = params.toolId as string;
   const pinned = useSidebarStore((s) => s.pinned);
@@ -163,6 +167,7 @@ export default function ToolWorkspacePage() {
   const trackTime = useAnalyticsStore((s) => s.trackTime);
   const addProject = useProjectStore((s) => s.addProject);
   const touchProject = useProjectStore((s) => s.touchProject);
+  const renameProject = useProjectStore((s) => s.renameProject);
   const projects = useProjectStore((s) => s.projects);
   const updateProject = useProjectStore((s) => s.updateProject);
   const addMilestone = useProjectStore((s) => s.addMilestone);
@@ -170,18 +175,87 @@ export default function ToolWorkspacePage() {
   const hasNotifiedRef = useRef(false);
   const dirtyCountRef = useRef(0);
 
+  // ── Project management state ──
+  const urlProjectId = searchParams.get("project");
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(urlProjectId);
+  const [showProjectPicker, setShowProjectPicker] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editNameValue, setEditNameValue] = useState("");
+  const editNameRef = useRef<HTMLInputElement>(null);
+
+  // Use project data hook for IndexedDB persistence
+  const { isLoading: projectDataLoading } = useProjectData({
+    toolId,
+    projectId: activeProjectId,
+  });
+
+  // Get current project from store
+  const currentProject = projects.find((p) => p.id === activeProjectId);
+
+  // Determine if this tool has existing projects
+  const toolProjects = projects.filter((p) => p.toolId === toolId);
+  const hasExistingProjects = toolProjects.length > 0;
+
+  // Navigate to a project (updates URL)
+  const navigateToProject = useCallback((projectId: string) => {
+    setActiveProjectId(projectId);
+    projectIdRef.current = projectId;
+    setShowProjectPicker(false);
+    // Update URL without full navigation
+    const url = new URL(window.location.href);
+    url.searchParams.set("project", projectId);
+    router.replace(url.pathname + url.search, { scroll: false });
+  }, [router]);
+
+  // Create a new project and navigate to it
+  const handleCreateNewProject = useCallback(() => {
+    const cat = toolCategories.find((c) => c.id === categoryId);
+    const t = cat?.tools.find((t) => t.id === toolId);
+    const name = t ? `${t.name} Project` : "Untitled Project";
+    const newId = addProject(toolId, name);
+    navigateToProject(newId);
+  }, [addProject, toolId, categoryId, navigateToProject]);
+
+  // Handle project selection from picker
+  const handleSelectProject = useCallback((projectId: string) => {
+    touchProject(projectId);
+    navigateToProject(projectId);
+  }, [touchProject, navigateToProject]);
+
+  // ── Project resolution on mount ──
+  // If URL has project ID → use it. If tool has existing projects but no URL param → show picker.
+  // If tool has no projects → auto-create after dwell.
+  useEffect(() => {
+    if (!toolId) return;
+    const WorkspaceComponent = workspaceComponents[toolId];
+    if (!WorkspaceComponent) return; // Non-workspace tools don't need project management
+
+    if (urlProjectId) {
+      // URL has a project ID — validate it exists
+      const exists = projects.some((p) => p.id === urlProjectId);
+      if (exists) {
+        setActiveProjectId(urlProjectId);
+        projectIdRef.current = urlProjectId;
+        touchProject(urlProjectId);
+      } else {
+        // Invalid project ID in URL — show picker or create
+        if (hasExistingProjects) {
+          setShowProjectPicker(true);
+        }
+      }
+    } else if (hasExistingProjects) {
+      // No project in URL but tool has projects — show picker
+      setShowProjectPicker(true);
+    }
+    // No projects and no URL param — will auto-create after dwell below
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toolId]);
+
   // Find or create project for this tool session
   const getOrCreateProject = useCallback(() => {
     if (projectIdRef.current) return projectIdRef.current;
-    // Check for existing project for this tool
-    const existing = projects.find((p) => p.toolId === toolId);
-    if (existing) {
-      projectIdRef.current = existing.id;
-      touchProject(existing.id);
-      return existing.id;
-    }
     return null;
-  }, [projects, toolId, touchProject]);
+  }, []);
 
   // Track tool usage on mount + time spent + project handling
   useEffect(() => {
@@ -193,16 +267,16 @@ export default function ToolWorkspacePage() {
     const start = Date.now();
     dirtyCountRef.current = 0;
 
-    // If user stays >5s on a workspace tool, create/touch a project
+    // If user stays >5s on a workspace tool without a project, create one
     const projectTimer = setTimeout(() => {
       const pid = getOrCreateProject();
-      if (!pid) {
-        // Find tool name for project
+      if (!pid && !showProjectPicker) {
+        // No project yet and picker not showing — auto-create
         const cat = toolCategories.find((c) => c.id === categoryId);
         const t = cat?.tools.find((t) => t.id === toolId);
-        if (t) {
+        if (t && workspaceComponents[toolId]) {
           const newId = addProject(toolId, t.name + " Project");
-          projectIdRef.current = newId;
+          navigateToProject(newId);
         }
       }
     }, 5000);
@@ -278,6 +352,21 @@ export default function ToolWorkspacePage() {
     }
   }, [toolId, categoryId]);
 
+  // ── Inline project rename ──
+  const handleStartRename = () => {
+    if (!currentProject) return;
+    setEditNameValue(currentProject.name);
+    setIsEditingName(true);
+    setTimeout(() => editNameRef.current?.select(), 0);
+  };
+
+  const handleFinishRename = () => {
+    if (activeProjectId && editNameValue.trim()) {
+      renameProject(activeProjectId, editNameValue.trim());
+    }
+    setIsEditingName(false);
+  };
+
   // Find the category and tool
   const category = toolCategories.find((c) => c.id === categoryId);
   const tool = category?.tools.find((t) => t.id === toolId);
@@ -311,6 +400,27 @@ export default function ToolWorkspacePage() {
     return (
       <div className={cn("h-dvh overflow-hidden", surfaces.page, "transition-colors")}>
         <Sidebar />
+
+        {/* Project picker modal */}
+        {showProjectPicker && (
+          <ProjectPickerModal
+            toolId={toolId}
+            toolName={tool.name}
+            toolIcon={ToolIcon}
+            onSelect={handleSelectProject}
+            onCreateNew={handleCreateNewProject}
+            onClose={() => {
+              setShowProjectPicker(false);
+              // If no project selected, load most recent
+              if (!activeProjectId && toolProjects.length > 0) {
+                handleSelectProject(toolProjects[0].id);
+              } else if (!activeProjectId) {
+                handleCreateNewProject();
+              }
+            }}
+          />
+        )}
+
         <main
           className={cn(
             "h-dvh flex flex-col overflow-hidden",
@@ -350,9 +460,37 @@ export default function ToolWorkspacePage() {
                   <div className={`size-6 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
                     <ToolIcon className={`size-3.5 ${category.textColorClass}`} />
                   </div>
-                  <span className="text-[13px] font-semibold text-gray-900 dark:text-white truncate max-w-48 sm:max-w-none">
-                    {tool.name}
-                  </span>
+                  {/* Project name — editable inline */}
+                  {isEditingName ? (
+                    <input
+                      ref={editNameRef}
+                      type="text"
+                      value={editNameValue}
+                      onChange={(e) => setEditNameValue(e.target.value)}
+                      onBlur={handleFinishRename}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleFinishRename();
+                        if (e.key === "Escape") setIsEditingName(false);
+                      }}
+                      className="text-[13px] font-semibold bg-white dark:bg-gray-800 border border-primary-500/50 rounded-md px-1.5 py-0.5 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500/30 max-w-48 sm:max-w-64"
+                      maxLength={60}
+                    />
+                  ) : (
+                    <button
+                      onClick={handleStartRename}
+                      className="group/name flex items-center gap-1 min-w-0"
+                      title="Click to rename project"
+                    >
+                      <span className="text-[13px] font-semibold text-gray-900 dark:text-white truncate max-w-48 sm:max-w-none">
+                        {currentProject?.name || tool.name}
+                      </span>
+                      {currentProject && (
+                        <svg className="size-3 text-gray-400 opacity-0 group-hover/name:opacity-100 transition-opacity shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17 3a2.85 2.85 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
                   <span className={`hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide bg-${statusColor}/15 text-${statusColor}`}>
                     <span className={`size-1 rounded-full bg-${statusColor}`} />
                     {statusLabel}
@@ -363,6 +501,20 @@ export default function ToolWorkspacePage() {
 
             {/* Right: utilities */}
             <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+              {/* Project switcher button */}
+              {toolProjects.length > 0 && (
+                <button
+                  onClick={() => setShowProjectPicker(true)}
+                  className="hidden sm:inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-medium text-gray-500 hover:text-primary-500 hover:bg-primary-500/10 transition-colors"
+                  title="Switch project"
+                >
+                  <IconFolder className="size-3.5" />
+                  <span className="hidden lg:inline">Projects</span>
+                  <span className="text-[10px] px-1 py-0.5 rounded bg-gray-100 dark:bg-white/5 text-gray-400 font-mono">
+                    {toolProjects.length}
+                  </span>
+                </button>
+              )}
               <SaveIndicator />
               <span className="hidden sm:inline-flex"><CreditBalance /></span>
               <span className="hidden sm:inline-flex"><ThemeSwitch /></span>
@@ -371,10 +523,22 @@ export default function ToolWorkspacePage() {
             </div>
           </header>
 
+          {/* ── Loading state while project data loads ── */}
+          {projectDataLoading && (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="size-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+                <p className="text-xs text-gray-500">Loading project...</p>
+              </div>
+            </div>
+          )}
+
           {/* ── Full-height workspace ── */}
-          <div className="flex-1 overflow-hidden">
-            <WorkspaceComponent />
-          </div>
+          {!projectDataLoading && (
+            <div className="flex-1 overflow-hidden">
+              <WorkspaceComponent />
+            </div>
+          )}
         </main>
       </div>
     );

@@ -1,63 +1,66 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Credits & Profile Loading Fix — COMPLETE ✅
+**Phase:** Resume & CV Builder Controls & Multi-Page Fix — COMPLETE ✅
 
-### Session 132: Cache-First Profile Loading Architecture
+### Session 133: Resume Controls + Multi-Page A4 Rendering Fix
 
 #### Problem
-1. **Persistent "Retry" error state** — CreditBalance and UserMenu frequently showed error buttons instead of actual data
-2. **500-1600ms loading skeleton** — Every page visit triggered a waterfall: `getUser()` (300-800ms) → `fetchProfile()` (200-500ms) → `subscribeRealtime()`
-3. **INITIAL_SESSION event was IGNORED** — The one event that provides instant cached session data (~5ms, no network) was being skipped
-4. **No profile cache** — Every navigation re-fetched profile from Supabase DB
-5. **Error on any transient failure** — Any timeout or glitch showed error state with no fallback
+1. **Format/Style tab controls didn't work** — computeCSSVariables() generated CSS vars no template CSS consumed (templates use hardcoded px values and template-specific CSS variable names)
+2. **Default page format was Letter** — Zambian market needs A4 (794×1123 vs 816×1056)
+3. **Sidebar sections missed in page break detection** — `SECTION_SELECTORS` only had `.section, .resume-section` but 2-column templates use `.sidebar-section`
+4. **Accent color control ineffective** — Each of 20 templates uses completely different CSS variable names for accent color
+5. **Templates 11-13 use hardcoded hex colors** — No CSS variables at all (swiss-typographic=#E63946, brutalist-mono=#00FF88)
 
-#### Solution: Cache-First, Background-Validate Architecture
+#### Solution: Dynamic CSS Override System
 
-##### `useUser.tsx` — Complete Rewrite:
-- **Profile cache layer** — `readCachedProfile()` / `writeCachedProfile()` / `clearCachedProfile()` using localStorage with 5-minute TTL
-- **Phase 1 (0ms):** Synchronous cache read at effect start → cached profile displayed instantly
-- **Phase 2 (~5-10ms):** `INITIAL_SESSION` from `onAuthStateChange` provides cached session user from cookies — no network call
-- **Phase 3 (background):** Parallel fresh profile fetch + `getUser()` JWT validation — never blocks UI
-- **Phase 4 (live):** Realtime Postgres subscription writes back to cache for next visit
-- **Removed:** `bootstrap()` function with sequential `getUser()` → `fetchProfile()` waterfall
-- **Error strategy:** `error=true` ONLY when all attempts fail AND no cached data exists
-- **Cache invalidation:** Wrong-user cache detected via userId match, cleared on sign out
-- **Realtime sync:** Cache updated on every realtime profile change
+##### `TemplateRenderer.tsx`:
+- **SECTION_SELECTORS** — Added `.sidebar-section` for sidebar break detection in 2-column templates
+- **break-inside CSS** — Added `.sidebar-section` to page-break avoidance rules
+- **dynamicCSS useMemo** — New ~120-line CSS override system that injects:
+  - Per-template accent color variable overrides (17 templates via CSS vars)
+  - Direct property overrides for templates 11 & 13 (hardcoded colors: `.top-rule`, `.role`, `.section-title`, `.skill-tag`, etc.)
+  - Section spacing (compact: 10px / relaxed: 28px)
+  - Line spacing (tight: 1.3 / loose: 1.8)
+  - Font scale (compact: 0.9em / spacious: 1.1em on all text elements)
+  - Margin preset (narrow: 28px / wide: 56px padding overrides)
+- Injected `<style>{dynamicCSS}</style>` into render output after static style block
 
-##### `CreditBalance.tsx`:
-- `if (loading)` → `if (loading && !profile)` — cached data shows through loading state
-- `if (error)` → `if (error && !profile)` — cached data suppresses error button
+##### `schema.ts`:
+- Changed default page format from `"letter"` to `"a4"` (3 locations)
 
-##### `UserMenu.tsx`:
-- `if (loading)` → `if (loading && !profile)` — cached data shows through loading state
-- `if (error || !user)` → `if ((error || !user) && !profile)` — cached data suppresses error button
-- Added `if (!user) return null` guard for brief ~10ms transitional state
+##### Verified End-to-End:
+- Layers panel toggle flow is solid (3-layer check: hasVisibleItems → allSectionsLayout → shouldShow + vis())
+- TypeScript: 0 errors
+- Production build: success
 
-#### Performance Impact:
-- **Return visitors:** 0ms loading (instant from cache) — was 500-1600ms
-- **First visit:** ~200-500ms (profile fetch only, no getUser waterfall) — was 500-1600ms
-- **Error state:** Only on total network failure WITH no cache — was on any transient timeout
-
-#### Validation:
-- [x] TypeScript: 0 errors (`npx tsc --noEmit` clean)
-- [x] Production build: all pages compiled successfully
-- [x] All consumer components backward-compatible (account, admin pages work unchanged)
+#### Template Accent Variable Map (reference):
+| Template | Variable(s) |
+|----------|-------------|
+| modern-minimalist | --accent, --accent-light |
+| corporate-executive | --gold, --gold-light |
+| creative-bold | --hot-pink |
+| elegant-sidebar | --accent, --accent-glow |
+| infographic | --teal, --teal-light |
+| dark-professional | --neon-cyan |
+| gradient-creative | --purple |
+| classic-corporate | --blue-accent, --blue-light |
+| artistic-portfolio | --coral, --coral-light |
+| tech-modern | --green, --green-dim |
+| swiss-typographic | HARDCODED → direct selector overrides |
+| newspaper-editorial | Monochrome (no accent) |
+| brutalist-mono | HARDCODED → direct selector overrides |
+| pastel-soft | --lavender |
+| split-duotone | --coral |
+| architecture-blueprint | --blue |
+| retro-vintage | --gold |
+| medical-clean | --teal, --dark-teal, --light-teal |
+| neon-glass | --neon-blue |
+| corporate-stripe | --accent |
 
 ---
 
 ## Previous Focus
-**Phase:** Resume UX Revamp (Contract-Pattern Parity) — COMPLETE ✅
-- AIChatBar removed from canvas preview area
-- Ctrl+K keyboard shortcut removed (was for AI chat focus)
-- handleAIRevision dead code removed (was only called by AIChatBar)
-- Layer click routing: "basics" → contact tab, others → sections tab
-- All preserved: preview canvas, zoom, page nav, template strip, layers panel, export, DiffOverlay, Chiko manifest, undo/redo
-
-#### Schema Compatibility Fixes:
-- `margins` → `marginPreset` (field name fix in FormatTab)
-- Margin values: "normal" → "standard" (matches schema enum)
-- Line spacing values: "relaxed" → "loose" (matches schema enum)
 - Removed unused `Sections` type import from SectionsTab
 - Removed unused `ActionButton` import from StepEditor
 - Removed unused `IconEye`/`IconEyeOff` from SectionsTab

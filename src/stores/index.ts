@@ -15,7 +15,7 @@ export type { Toast, ToastType } from "./toast";
 export { useNotificationStore, notify } from "./notifications";
 export type { Notification, NotificationType } from "./notifications";
 export { useProjectStore } from "./projects";
-export type { Project } from "./projects";
+export type { Project, Milestone } from "./projects";
 export { useAnalyticsStore } from "./analytics";
 export { useExportHistoryStore } from "./export-history";
 export type { ExportEntry } from "./export-history";
