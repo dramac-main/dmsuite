@@ -313,11 +313,18 @@ function uniformBreaks(total: number, page0: number, cont: number): number[] {
 // TemplateRenderer — main orchestrator
 // ---------------------------------------------------------------------------
 
+/** Gap between pages in px — matches ContractRenderer convention */
+export const RESUME_PAGE_GAP = 16;
+
 interface TemplateRendererProps {
   resume: ResumeData;
   className?: string;
   showOverflowWarning?: boolean;
   id?: string;
+  /** Override gap between rendered pages (default 16px) */
+  pageGap?: number;
+  /** Fires whenever the computed page count changes */
+  onPageCount?: (count: number) => void;
 }
 
 export default function TemplateRenderer({
@@ -325,6 +332,8 @@ export default function TemplateRenderer({
   className,
   showOverflowWarning = true,
   id,
+  pageGap,
+  onPageCount,
 }: TemplateRendererProps) {
   const templateId = resume.metadata.template;
   const TemplateComponent = useMemo(
@@ -428,6 +437,11 @@ export default function TemplateRenderer({
   const measureRef = useRef<HTMLDivElement>(null);
   const [pageBreaks, setPageBreaks] = useState<number[]>([0]);
   const pageCount = pageBreaks.length;
+
+  // Notify parent when page count changes
+  useEffect(() => {
+    onPageCount?.(pageCount);
+  }, [pageCount, onPageCount]);
 
   // ── Re-measure after web fonts load ──
   const [fontGen, setFontGen] = useState(0);
@@ -568,6 +582,7 @@ export default function TemplateRenderer({
       </div>
 
       {/* Visible pages — viewport windows into the full content */}
+      <div data-resume-pages="" style={{ display: 'flex', flexDirection: 'column', gap: `${pageGap ?? RESUME_PAGE_GAP}px` }}>
       {Array.from({ length: pageCount }, (_, i) => (
         <ResumePage
           key={i}
@@ -585,6 +600,7 @@ export default function TemplateRenderer({
           showOverflowWarning={showOverflowWarning && i === pageCount - 1}
         />
       ))}
+      </div>
     </div>
   );
 }
@@ -701,7 +717,7 @@ function ResumePage({
   };
 
   return (
-    <div className="relative mb-8">
+    <div className="relative">
       <div
         ref={pageRef}
         data-resume-page={pageIndex}

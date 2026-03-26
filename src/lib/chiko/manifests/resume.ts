@@ -235,6 +235,59 @@ export function createResumeManifest(options?: ResumeManifestOptions): ChikoActi
         category: "Read",
       },
       {
+        name: "updateSummary",
+        description: "Update the professional summary / profile text of the resume",
+        parameters: {
+          type: "object",
+          properties: {
+            content: { type: "string", description: "New summary text (supports plain text or light markdown)" },
+          },
+          required: ["content"],
+        },
+        category: "Content",
+      },
+      {
+        name: "renameSectionTitle",
+        description: "Rename a section's display title (e.g. rename 'Experience' to 'Work History')",
+        parameters: {
+          type: "object",
+          properties: {
+            sectionKey: { type: "string", description: "Section key (experience, education, skills, etc.)" },
+            title: { type: "string", description: "New display title" },
+          },
+          required: ["sectionKey", "title"],
+        },
+        category: "Content",
+      },
+      {
+        name: "moveSectionToColumn",
+        description: "Move a section to a specific column (main or sidebar). Only affects multi-column templates.",
+        parameters: {
+          type: "object",
+          properties: {
+            sectionKey: { type: "string", description: "Section key to move" },
+            column: { type: "string", enum: ["main", "sidebar"], description: "Target column" },
+            pageIndex: { type: "number", description: "Zero-based page index (default 0)" },
+          },
+          required: ["sectionKey", "column"],
+        },
+        category: "Layout",
+      },
+      {
+        name: "updatePageSettings",
+        description: "Update page layout settings: format, margins, section spacing, line spacing. Only include fields to change.",
+        parameters: {
+          type: "object",
+          properties: {
+            format: { type: "string", enum: ["a4", "letter", "a5", "b5"], description: "Paper size" },
+            marginPreset: { type: "string", enum: ["narrow", "standard", "wide"], description: "Margin preset" },
+            sectionSpacing: { type: "string", enum: ["compact", "standard", "relaxed"], description: "Spacing between sections" },
+            lineSpacing: { type: "string", enum: ["tight", "normal", "loose"], description: "Line height" },
+          },
+        },
+        category: "Design",
+      },
+      {
         name: "exportDocument",
         description:
           "Export the current resume as the specified format: pdf, docx, txt, json, clipboard, or print",
@@ -393,6 +446,37 @@ export function createResumeManifest(options?: ResumeManifestOptions): ChikoActi
             }
             handler(format);
             return { success: true, message: `Exported resume as ${format}.` };
+          }
+
+          case "updateSummary": {
+            store.updateResume((draft) => {
+              const summary = draft.sections.summary as { content?: string };
+              if (summary) summary.content = params.content as string;
+            });
+            return { success: true, message: "Summary updated" };
+          }
+
+          case "renameSectionTitle":
+            store.renameSectionTitle(params.sectionKey as string, params.title as string);
+            return { success: true, message: `Section "${params.sectionKey}" renamed to "${params.title}"` };
+
+          case "moveSectionToColumn":
+            store.moveSectionToColumn(
+              params.sectionKey as string,
+              params.column as "main" | "sidebar",
+              (params.pageIndex as number) ?? 0,
+            );
+            return { success: true, message: `Section "${params.sectionKey}" moved to ${params.column} column` };
+
+          case "updatePageSettings": {
+            const changes: string[] = [];
+            store.updateResume((draft) => {
+              if (params.format) { draft.metadata.page.format = params.format as "a4" | "letter" | "a5" | "b5"; changes.push(`format → ${params.format}`); }
+              if (params.marginPreset) { draft.metadata.page.marginPreset = params.marginPreset as "narrow" | "standard" | "wide"; changes.push(`margins → ${params.marginPreset}`); }
+              if (params.sectionSpacing) { draft.metadata.page.sectionSpacing = params.sectionSpacing as "compact" | "standard" | "relaxed"; changes.push(`section spacing → ${params.sectionSpacing}`); }
+              if (params.lineSpacing) { draft.metadata.page.lineSpacing = params.lineSpacing as "tight" | "normal" | "loose"; changes.push(`line spacing → ${params.lineSpacing}`); }
+            });
+            return { success: true, message: `Page settings updated: ${changes.join(", ")}` };
           }
 
           default:
