@@ -1,11 +1,11 @@
-/* ============================================================
-   DMSuite — AI Tool Categories & Tools Registry
-   ────────────────────────────────────────────────────────────
-   250+ AI-powered tools across 8 categories — everything a
+﻿/* ============================================================
+   DMSuite Ã¢â‚¬â€ AI Tool Categories & Tools Registry
+   Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+   250+ AI-powered tools across 8 categories Ã¢â‚¬â€ everything a
    designer/creative agency needs to drop any client's jaw.
    ============================================================ */
 
-// ── Types ───────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Types Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 export type ToolStatus = "ready" | "beta" | "coming-soon";
 
@@ -61,12 +61,12 @@ export type PrintSize =
   | "custom";
 
 /**
- * Development status — tracks whether a tool has been personally
+ * Development status Ã¢â‚¬â€ tracks whether a tool has been personally
  * built, tested, and verified to produce correct output.
  *
- * - `complete`  — Fully built, QA'd, produces correct output
- * - `scaffold`  — Has workspace UI code but NOT reviewed/polished
- * - `no-ui`     — Registered in tools.ts but no workspace component
+ * - `complete`  Ã¢â‚¬â€ Fully built, QA'd, produces correct output
+ * - `scaffold`  Ã¢â‚¬â€ Has workspace UI code but NOT reviewed/polished
+ * - `no-ui`     Ã¢â‚¬â€ Registered in tools.ts but no workspace component
  */
 export type DevStatus = "complete" | "scaffold" | "no-ui";
 
@@ -77,7 +77,7 @@ export interface Tool {
   icon: string;
   status: ToolStatus;
   tags: string[];
-  /** Development readiness — see TOOL-STATUS.md for full tracker */
+  /** Development readiness Ã¢â‚¬â€ see TOOL-STATUS.md for full tracker */
   devStatus?: DevStatus;
   /** AI providers this tool uses */
   aiProviders?: AIProvider[];
@@ -102,7 +102,7 @@ export interface ToolCategory {
   tools: Tool[];
 }
 
-// ── Status badge config ─────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Status badge config Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 export const statusConfig: Record<
   ToolStatus,
@@ -128,12 +128,12 @@ export const statusConfig: Record<
   },
 };
 
-// ── All Tool Categories ─────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ All Tool Categories Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 export const toolCategories: ToolCategory[] = [
-  // ════════════════════════════════════════════════════════════
-  // 🎨  1.  DESIGN STUDIO
-  // ════════════════════════════════════════════════════════════
+  // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+  // Ã°Å¸Å½Â¨  1.  DESIGN STUDIO
+  // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
   {
     id: "design",
     name: "Design Studio",
@@ -144,14 +144,14 @@ export const toolCategories: ToolCategory[] = [
     textColorClass: "text-primary-500",
     ringColorClass: "ring-primary-500/30",
     tools: [
-      // ── Branding & Identity ─────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Branding & Identity Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "logo-generator",
         name: "Logo Generator",
         description:
-          "Generate professional logos — wordmarks, icon marks, emblems, lettermarks, and combo marks with brand-ready exports",
+          "Generate professional logos Ã¢â‚¬â€ wordmarks, icon marks, emblems, lettermarks, and combo marks with brand-ready exports",
         icon: "sparkles",
-        status: "ready",
+        status: "coming-soon",
         tags: ["logo", "branding", "identity", "wordmark", "emblem"],
         aiProviders: ["claude", "stable-diffusion", "flux"],
         outputs: ["svg", "png", "pdf", "eps", "ai"],
@@ -173,9 +173,9 @@ export const toolCategories: ToolCategory[] = [
         id: "brand-identity",
         name: "Brand Identity Kit",
         description:
-          "Generate complete brand identities — color palettes, font systems, patterns, tone of voice, and style guides",
+          "Generate complete brand identities Ã¢â‚¬â€ color palettes, font systems, patterns, tone of voice, and style guides",
         icon: "layers",
-        status: "ready",
+        status: "coming-soon",
         tags: ["branding", "identity", "style guide", "brand book"],
         aiProviders: ["claude", "stable-diffusion"],
         outputs: ["pdf", "png", "svg"],
@@ -195,14 +195,14 @@ export const toolCategories: ToolCategory[] = [
         printReady: true,
         printSizes: ["A4", "letter"],
       },
-      // ── Business Stationery ─────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Business Stationery Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "business-card",
         name: "Business Card Designer",
         description:
           "Design professional business cards with smart layouts, QR codes, and print-ready output (standard, square, folded)",
         icon: "card",
-        status: "ready",
+        status: "coming-soon",
         tags: ["business card", "print", "branding", "stationery"],
         outputs: ["pdf", "png", "svg", "ai"],
         printReady: true,
@@ -214,7 +214,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create branded letterheads for official correspondence with matching continuation pages",
         icon: "fileText",
-        status: "ready",
+        status: "coming-soon",
         tags: ["letterhead", "stationery", "branding", "corporate"],
         outputs: ["pdf", "docx", "png"],
         printReady: true,
@@ -225,9 +225,9 @@ export const toolCategories: ToolCategory[] = [
         id: "envelope",
         name: "Envelope Designer",
         description:
-          "Design branded envelopes — DL, C5, C4, #10, and custom sizes with window placement",
+          "Design branded envelopes Ã¢â‚¬â€ DL, C5, C4, #10, and custom sizes with window placement",
         icon: "mail",
-        status: "ready",
+        status: "coming-soon",
         tags: ["envelope", "stationery", "mail", "print"],
         outputs: ["pdf", "png", "ai"],
         printReady: true,
@@ -257,14 +257,14 @@ export const toolCategories: ToolCategory[] = [
         outputs: ["svg", "png", "pdf", "ai"],
         supportsPartEdit: true,
       },
-      // ── Social Media Design ─────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Social Media Design Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "social-media-post",
         name: "Social Media Post Designer",
         description:
           "Design eye-catching posts for Instagram, Facebook, LinkedIn, X, Pinterest, and Threads",
         icon: "share",
-        status: "ready",
+        status: "coming-soon",
         tags: ["social media", "post", "instagram", "facebook", "linkedin"],
         aiProviders: ["claude", "stable-diffusion"],
         outputs: ["png", "jpg", "webp"],
@@ -314,14 +314,14 @@ export const toolCategories: ToolCategory[] = [
         outputs: ["png", "jpg"],
         supportsPartEdit: true,
       },
-      // ── Advertising & Marketing Collateral ──────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Advertising & Marketing Collateral Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "banner-ad",
         name: "Banner & Display Ad Creator",
         description:
           "Design web banners, Google Display ads, retargeting ads, and responsive HTML5 ads in all IAB sizes",
         icon: "layout",
-        status: "ready",
+        status: "coming-soon",
         tags: ["banner", "ad", "display", "web", "IAB", "Google Ads"],
         outputs: ["png", "jpg", "html", "gif"],
         supportsPartEdit: true,
@@ -332,7 +332,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create striking posters for events, concerts, promotions, and campaigns in any size",
         icon: "image",
-        status: "ready",
+        status: "coming-soon",
         tags: ["poster", "print", "event", "campaign", "large format"],
         outputs: ["pdf", "png", "jpg", "tiff"],
         printReady: true,
@@ -345,7 +345,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design single and double-sided flyers, leaflets, and handouts for print distribution",
         icon: "fileText",
-        status: "ready",
+        status: "coming-soon",
         tags: ["flyer", "leaflet", "print", "handout", "A5", "DL"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -358,7 +358,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create bi-fold, tri-fold, z-fold, and gate-fold brochures with professional layouts",
         icon: "bookOpen",
-        status: "ready",
+        status: "coming-soon",
         tags: ["brochure", "print", "fold", "bi-fold", "tri-fold"],
         outputs: ["pdf", "png", "ai"],
         printReady: true,
@@ -369,7 +369,7 @@ export const toolCategories: ToolCategory[] = [
         id: "rack-card",
         name: "Rack Card Designer",
         description:
-          "Design standard 4×9 inch rack cards for hotels, tourism, real estate, and retail",
+          "Design standard 4Ãƒâ€”9 inch rack cards for hotels, tourism, real estate, and retail",
         icon: "fileText",
         status: "coming-soon",
         tags: ["rack card", "tourism", "hotel", "real estate", "print"],
@@ -389,14 +389,14 @@ export const toolCategories: ToolCategory[] = [
         printReady: true,
         supportsPartEdit: true,
       },
-      // ── Print & Publication ─────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Print & Publication Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "infographic",
         name: "Infographic Maker",
         description:
           "Build data-driven infographics with smart data visualizations, charts, icons, and flow diagrams",
         icon: "chart",
-        status: "ready",
+        status: "coming-soon",
         tags: ["infographic", "data", "visualization", "chart"],
         aiProviders: ["claude"],
         outputs: ["png", "pdf", "svg"],
@@ -439,14 +439,14 @@ export const toolCategories: ToolCategory[] = [
         printReady: true,
         supportsPartEdit: true,
       },
-      // ── Image & Photo Tools ─────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Image & Photo Tools Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "icon-illustration",
         name: "Icon & Illustration Generator",
         description:
           "Generate custom icons, spot illustrations, and vector graphics in any style with AI",
         icon: "penTool",
-        status: "ready",
+        status: "coming-soon",
         tags: ["icon", "illustration", "vector", "custom", "flat", "3d"],
         aiProviders: ["stable-diffusion", "flux"],
         outputs: ["svg", "png", "ai"],
@@ -458,7 +458,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Remove, replace, and composite backgrounds from any image with pixel-perfect edge detection",
         icon: "scissors",
-        status: "ready",
+        status: "coming-soon",
         tags: ["background", "remove", "cutout", "composite"],
         aiProviders: ["built-in"],
         outputs: ["png", "webp"],
@@ -469,7 +469,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Enhance image quality, upscale to 4K/8K, fix lighting/colors, and restore old photos",
         icon: "zap",
-        status: "ready",
+        status: "coming-soon",
         tags: ["enhance", "upscale", "quality", "resolution", "4K", "8K"],
         aiProviders: ["stable-diffusion"],
         outputs: ["png", "jpg", "tiff"],
@@ -478,9 +478,9 @@ export const toolCategories: ToolCategory[] = [
         id: "photo-retoucher",
         name: "Photo Retoucher",
         description:
-          "Professional photo retouching — skin smoothing, lighting correction, color grading, object removal",
+          "Professional photo retouching Ã¢â‚¬â€ skin smoothing, lighting correction, color grading, object removal",
         icon: "wand",
-        status: "ready",
+        status: "coming-soon",
         tags: ["retouch", "photo", "correction", "beauty"],
         aiProviders: ["stable-diffusion"],
         outputs: ["png", "jpg", "tiff"],
@@ -490,9 +490,9 @@ export const toolCategories: ToolCategory[] = [
         id: "ai-image-generator",
         name: "AI Image Generator",
         description:
-          "Generate photorealistic or artistic images from text prompts — product shots, scenes, concepts",
+          "Generate photorealistic or artistic images from text prompts Ã¢â‚¬â€ product shots, scenes, concepts",
         icon: "sparkles",
-        status: "ready",
+        status: "coming-soon",
         tags: ["AI", "image", "generate", "text-to-image", "concept"],
         aiProviders: ["stable-diffusion", "flux"],
         outputs: ["png", "jpg", "webp"],
@@ -502,7 +502,7 @@ export const toolCategories: ToolCategory[] = [
         id: "image-inpainting",
         name: "AI Image Editor (Inpainting)",
         description:
-          "Edit specific parts of an image with AI — change objects, extend scenes, fix details while keeping everything else consistent",
+          "Edit specific parts of an image with AI Ã¢â‚¬â€ change objects, extend scenes, fix details while keeping everything else consistent",
         icon: "penTool",
         status: "coming-soon",
         tags: ["inpainting", "edit", "part-edit", "consistency", "AI"],
@@ -510,14 +510,14 @@ export const toolCategories: ToolCategory[] = [
         outputs: ["png", "jpg"],
         supportsPartEdit: true,
       },
-      // ── Product & Packaging ─────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Product & Packaging Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "mockup-generator",
         name: "Mockup Generator",
         description:
-          "Place designs on realistic mockups — t-shirts, mugs, screens, packaging, signage, vehicles, and more",
+          "Place designs on realistic mockups Ã¢â‚¬â€ t-shirts, mugs, screens, packaging, signage, vehicles, and more",
         icon: "monitor",
-        status: "ready",
+        status: "coming-soon",
         tags: ["mockup", "product", "presentation", "realistic"],
         aiProviders: ["stable-diffusion"],
         outputs: ["png", "jpg", "psd"],
@@ -527,9 +527,9 @@ export const toolCategories: ToolCategory[] = [
         id: "packaging-design",
         name: "Packaging Designer",
         description:
-          "Design product packaging — boxes, bags, bottles, cans, pouches, and custom dielines with 3D preview",
+          "Design product packaging Ã¢â‚¬â€ boxes, bags, bottles, cans, pouches, and custom dielines with 3D preview",
         icon: "box",
-        status: "ready",
+        status: "coming-soon",
         tags: ["packaging", "box", "label", "dieline", "3D"],
         outputs: ["pdf", "ai", "svg", "png"],
         printReady: true,
@@ -553,20 +553,20 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create custom stickers, decals, badges, and die-cut shapes for products and branding",
         icon: "tag",
-        status: "ready",
+        status: "coming-soon",
         tags: ["sticker", "decal", "badge", "die-cut"],
         outputs: ["pdf", "png", "svg"],
         printReady: true,
         supportsPartEdit: true,
       },
-      // ── Environmental & Signage ─────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Environmental & Signage Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "signage",
         name: "Signage & Large Format",
         description:
           "Design signage, billboards, pull-up banners, A-frames, and large format prints",
         icon: "maximize",
-        status: "ready",
+        status: "coming-soon",
         tags: ["signage", "billboard", "large format", "pull-up", "A-frame"],
         outputs: ["pdf", "tiff", "png"],
         printReady: true,
@@ -579,7 +579,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design vehicle wraps for cars, vans, trucks, and buses with template overlays",
         icon: "truck",
-        status: "beta",
+        status: "coming-soon",
         tags: ["vehicle wrap", "car", "van", "truck", "fleet"],
         outputs: ["pdf", "ai", "png"],
         printReady: true,
@@ -603,20 +603,20 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design trade show booths, exhibition stands, backdrop walls, and popup displays",
         icon: "layout",
-        status: "beta",
+        status: "coming-soon",
         tags: ["exhibition", "trade show", "booth", "backdrop", "popup"],
         outputs: ["pdf", "png", "ai"],
         printReady: true,
         supportsPartEdit: true,
       },
-      // ── Apparel & Merchandise ───────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Apparel & Merchandise Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "tshirt-merch",
         name: "T-Shirt & Apparel Designer",
         description:
           "Create print-ready designs for t-shirts, hoodies, caps, totebags, and all merchandise",
         icon: "shirt",
-        status: "ready",
+        status: "coming-soon",
         tags: ["t-shirt", "merchandise", "apparel", "hoodie", "print-on-demand"],
         outputs: ["png", "svg", "pdf", "psd"],
         printReady: true,
@@ -628,12 +628,12 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design corporate uniforms, workwear, and sports team kits with logo placement",
         icon: "shirt",
-        status: "beta",
+        status: "coming-soon",
         tags: ["uniform", "workwear", "corporate", "sports kit"],
         outputs: ["png", "pdf"],
         supportsPartEdit: true,
       },
-      // ── Utility Design Tools ────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Utility Design Tools Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "pattern-texture",
         name: "Pattern & Texture Generator",
@@ -652,7 +652,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate harmonious palettes from images, moods, keywords, or industry with WCAG contrast checks",
         icon: "droplet",
-        status: "ready",
+        status: "coming-soon",
         tags: ["color", "palette", "harmony", "WCAG", "accessibility"],
         outputs: ["png", "json", "svg"],
       },
@@ -682,9 +682,9 @@ export const toolCategories: ToolCategory[] = [
     ],
   },
 
-  // ════════════════════════════════════════════════════════════
-  // 📄  2.  DOCUMENT & PRINT STUDIO
-  // ════════════════════════════════════════════════════════════
+  // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+  // Ã°Å¸â€œâ€ž  2.  DOCUMENT & PRINT STUDIO
+  // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
   {
     id: "documents",
     name: "Document & Print Studio",
@@ -695,14 +695,14 @@ export const toolCategories: ToolCategory[] = [
     textColorClass: "text-secondary-500",
     ringColorClass: "ring-secondary-500/30",
     tools: [
-      // ── Sales Books & Catalogs ──────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Sales Books & Catalogs Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "product-catalog",
         name: "Product Catalog Designer",
         description:
           "Multi-page product catalogs with smart image layouts, pricing tables, and order forms",
         icon: "grid",
-        status: "ready",
+        status: "coming-soon",
         tags: ["catalog", "product", "multi-page", "pricing"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -715,7 +715,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design fashion lookbooks, product lookbooks, and portfolio books with editorial layouts",
         icon: "image",
-        status: "ready",
+        status: "coming-soon",
         tags: ["lookbook", "fashion", "portfolio", "editorial"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -728,7 +728,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create beautiful price lists, rate cards, and service menus with branded layouts",
         icon: "tag",
-        status: "ready",
+        status: "coming-soon",
         tags: ["price list", "rate card", "pricing", "service menu"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -741,21 +741,21 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create wholesale line sheets with product photos, SKUs, pricing, and order details",
         icon: "grid",
-        status: "ready",
+        status: "coming-soon",
         tags: ["line sheet", "wholesale", "B2B", "product"],
         outputs: ["pdf", "xlsx"],
         printReady: true,
         printSizes: ["A4", "letter"],
         supportsPartEdit: true,
       },
-      // ── Corporate Documents ─────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Corporate Documents Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "company-profile",
         name: "Company Profile Designer",
         description:
           "Create stunning multi-page company profiles that showcase your brand story, team, and services",
         icon: "building",
-        status: "ready",
+        status: "coming-soon",
         tags: ["company profile", "corporate", "branding", "about us"],
         aiProviders: ["claude"],
         outputs: ["pdf", "pptx"],
@@ -769,7 +769,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate winning proposals and pitch decks with data-driven layouts and compelling narratives",
         icon: "presentation",
-        status: "ready",
+        status: "coming-soon",
         tags: ["proposal", "pitch", "deck", "presentation", "RFP"],
         aiProviders: ["claude"],
         outputs: ["pdf", "pptx"],
@@ -781,7 +781,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design stunning slide presentations with AI-generated layouts, data viz, and speaker notes",
         icon: "presentation",
-        status: "ready",
+        status: "coming-soon",
         tags: ["presentation", "slides", "keynote", "powerpoint", "google slides"],
         aiProviders: ["claude"],
         outputs: ["pdf", "pptx", "png"],
@@ -793,7 +793,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create annual reports, financial reports, ESG reports, and board packs with charts and data",
         icon: "chart",
-        status: "ready",
+        status: "coming-soon",
         tags: ["report", "annual", "financial", "ESG", "board pack"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -807,14 +807,14 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design printed newsletters, bulletins, and internal communications in A4/letter format",
         icon: "newspaper",
-        status: "ready",
+        status: "coming-soon",
         tags: ["newsletter", "print", "bulletin", "internal comms"],
         outputs: ["pdf", "png"],
         printReady: true,
         printSizes: ["A4", "letter"],
         supportsPartEdit: true,
       },
-      // ── Financial Documents ─────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Financial Documents Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "invoice-designer",
         name: "Invoice Book Designer",
@@ -846,7 +846,7 @@ export const toolCategories: ToolCategory[] = [
         id: "receipt-designer",
         name: "Receipt Book Designer",
         description:
-          "Design blank receipt book forms — 3 per page, serial numbered, with cut lines for physical printing",
+          "Design blank receipt book forms Ã¢â‚¬â€ 3 per page, serial numbered, with cut lines for physical printing",
         icon: "receipt",
         status: "ready",
         devStatus: "complete",
@@ -898,7 +898,7 @@ export const toolCategories: ToolCategory[] = [
         id: "proforma-invoice",
         name: "Proforma Invoice Book Designer",
         description:
-          "Design blank proforma invoice forms for customs, budgeting, and advance payments — print-ready with serial numbering",
+          "Design blank proforma invoice forms for customs, budgeting, and advance payments Ã¢â‚¬â€ print-ready with serial numbering",
         icon: "file-clock",
         status: "ready",
         devStatus: "complete",
@@ -914,11 +914,12 @@ export const toolCategories: ToolCategory[] = [
           "Create account statements showing transaction history, balances, and aging summaries",
         icon: "chart",
         status: "ready",
+        devStatus: "complete",
         tags: ["statement", "account", "aging", "balance"],
         outputs: ["pdf", "xlsx"],
         supportsPartEdit: true,
       },
-      // ── Legal & HR Documents ────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Legal & HR Documents Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "contract-template",
         name: "Contract & Agreement Creator",
@@ -938,7 +939,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "AI-powered business plan generator with executive summary, market analysis, and financial projections",
         icon: "target",
-        status: "ready",
+        status: "coming-soon",
         tags: ["business plan", "strategy", "projections", "startup"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -950,7 +951,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Build comprehensive employee handbooks with policies, procedures, and company culture sections",
         icon: "bookOpen",
-        status: "ready",
+        status: "coming-soon",
         tags: ["employee handbook", "HR", "policies", "onboarding"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -962,20 +963,20 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create compelling job descriptions, role profiles, and hiring posts with inclusive language",
         icon: "users",
-        status: "ready",
+        status: "coming-soon",
         tags: ["job description", "hiring", "recruitment", "HR"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
         supportsPartEdit: true,
       },
-      // ── Certificates & Awards ───────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Certificates & Awards Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "certificate",
         name: "Certificate Designer",
         description:
           "Design certificates of achievement, completion, appreciation, and training with ornamental borders",
         icon: "award",
-        status: "ready",
+        status: "coming-soon",
         tags: ["certificate", "award", "achievement", "diploma"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -988,7 +989,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design formal diplomas, accreditations, and professional designation certificates",
         icon: "award",
-        status: "ready",
+        status: "coming-soon",
         tags: ["diploma", "accreditation", "formal", "education"],
         outputs: ["pdf", "png", "tiff"],
         printReady: true,
@@ -1000,20 +1001,20 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design gift vouchers, discount coupons, loyalty cards, and promotional offers",
         icon: "tag",
-        status: "ready",
+        status: "coming-soon",
         tags: ["gift voucher", "coupon", "loyalty", "discount", "promo"],
         outputs: ["pdf", "png"],
         printReady: true,
         supportsPartEdit: true,
       },
-      // ── Specialized Business Documents ──────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Specialized Business Documents Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "menu-designer",
         name: "Menu Designer",
         description:
           "Create restaurant menus, cafe menus, bar menus, wine lists, and food truck menus",
         icon: "utensils",
-        status: "ready",
+        status: "coming-soon",
         tags: ["menu", "restaurant", "food", "cafe", "wine list"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -1026,7 +1027,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design property listing sheets, feature sheets, open house flyers, and market reports",
         icon: "home",
-        status: "ready",
+        status: "coming-soon",
         tags: ["real estate", "listing", "property", "feature sheet"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -1039,7 +1040,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design event programs, conference agendas, wedding programs, and ceremony booklets",
         icon: "calendar",
-        status: "ready",
+        status: "coming-soon",
         tags: ["event program", "agenda", "conference", "wedding"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -1052,7 +1053,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design event tickets, admission passes, raffle tickets, and VIP passes with barcodes/QR",
         icon: "creditCard",
-        status: "ready",
+        status: "coming-soon",
         tags: ["ticket", "pass", "event", "VIP", "barcode"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -1064,7 +1065,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design employee ID badges, event passes, conference badges, and lanyards with photo areas",
         icon: "creditCard",
-        status: "ready",
+        status: "coming-soon",
         tags: ["ID badge", "lanyard", "pass", "event", "employee"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -1076,21 +1077,21 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create branded desk, wall, and pocket calendars with custom imagery and events",
         icon: "calendar",
-        status: "ready",
+        status: "coming-soon",
         tags: ["calendar", "desk", "wall", "pocket", "print"],
         outputs: ["pdf", "png"],
         printReady: true,
         printSizes: ["A3", "A4", "A5"],
         supportsPartEdit: true,
       },
-      // ── Educational & Training ──────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Educational & Training Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "training-manual",
         name: "Training Manual Creator",
         description:
           "Build training manuals, SOPs, onboarding guides, and instruction booklets with step-by-step layouts",
         icon: "bookOpen",
-        status: "ready",
+        status: "coming-soon",
         tags: ["training", "manual", "SOP", "onboarding", "instruction"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -1104,7 +1105,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create product user guides, help docs, technical documentation, and quick-start guides",
         icon: "helpCircle",
-        status: "ready",
+        status: "coming-soon",
         tags: ["user guide", "documentation", "help", "technical"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx", "html"],
@@ -1116,20 +1117,20 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create fillable worksheets, forms, checklists, and planning templates for print or digital",
         icon: "clipboard",
-        status: "ready",
+        status: "coming-soon",
         tags: ["worksheet", "form", "checklist", "fillable", "template"],
         outputs: ["pdf", "docx"],
         printReady: true,
         supportsPartEdit: true,
       },
-      // ── Knowledge & Research ─────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Knowledge & Research Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "white-paper",
         name: "White Paper Generator",
         description:
           "Write and design professional white papers and research documents with citations",
         icon: "fileText",
-        status: "ready",
+        status: "coming-soon",
         tags: ["white paper", "research", "thought leadership", "academic"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -1141,7 +1142,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Build compelling case studies that showcase client results with before/after data visualizations",
         icon: "trendingUp",
-        status: "ready",
+        status: "coming-soon",
         tags: ["case study", "success story", "portfolio", "results"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx", "pptx"],
@@ -1153,7 +1154,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create media kits, press kits, and sponsorship packages for PR and partnerships",
         icon: "newspaper",
-        status: "ready",
+        status: "coming-soon",
         tags: ["media kit", "press", "PR", "sponsorship"],
         outputs: ["pdf", "pptx"],
         supportsPartEdit: true,
@@ -1164,13 +1165,13 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design and export eBooks, digital magazines, interactive PDFs, and EPUB publications",
         icon: "tablet",
-        status: "ready",
+        status: "coming-soon",
         tags: ["ebook", "digital", "publication", "magazine", "EPUB"],
         aiProviders: ["claude"],
         outputs: ["pdf", "html"],
         supportsPartEdit: true,
       },
-      // ── Personal Documents ──────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Personal Documents Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "resume-cv",
         name: "Resume & CV Builder",
@@ -1178,6 +1179,7 @@ export const toolCategories: ToolCategory[] = [
           "Build ATS-friendly resumes and beautiful CVs with AI optimization and multiple templates",
         icon: "user",
         status: "ready",
+        devStatus: "complete",
         tags: ["resume", "CV", "career", "ATS"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -1189,7 +1191,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate tailored cover letters that match job descriptions with keyword optimization",
         icon: "mail",
-        status: "ready",
+        status: "coming-soon",
         tags: ["cover letter", "job", "application", "career"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -1201,19 +1203,19 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create stunning design portfolios, photography portfolios, and creative portfolios for print or web",
         icon: "image",
-        status: "ready",
+        status: "coming-soon",
         tags: ["portfolio", "creative", "photography", "design"],
         outputs: ["pdf", "html", "png"],
         supportsPartEdit: true,
       },
-      // ── Invitations & Personal ──────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Invitations & Personal Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "invitation-designer",
         name: "Invitation Designer",
         description:
           "Design wedding invitations, party invites, corporate event invitations, and RSVPs",
         icon: "mail",
-        status: "ready",
+        status: "coming-soon",
         tags: ["invitation", "wedding", "party", "event", "RSVP"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -1226,7 +1228,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create greeting cards, thank-you cards, holiday cards, and folded cards with envelopes",
         icon: "mail",
-        status: "ready",
+        status: "coming-soon",
         tags: ["greeting card", "thank you", "holiday", "birthday"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -1236,9 +1238,9 @@ export const toolCategories: ToolCategory[] = [
     ],
   },
 
-  // ════════════════════════════════════════════════════════════
-  // 🎬  3.  VIDEO & MOTION STUDIO
-  // ════════════════════════════════════════════════════════════
+  // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+  // Ã°Å¸Å½Â¬  3.  VIDEO & MOTION STUDIO
+  // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
   {
     id: "video",
     name: "Video & Motion Studio",
@@ -1249,14 +1251,14 @@ export const toolCategories: ToolCategory[] = [
     textColorClass: "text-error",
     ringColorClass: "ring-error/30",
     tools: [
-      // ── Core Video Editing ──────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Core Video Editing Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "video-editor",
         name: "AI Video Editor",
         description:
           "Edit videos with AI-powered smart cuts, transitions, color grading, and timeline editing",
         icon: "film",
-        status: "ready",
+        status: "coming-soon",
         tags: ["video", "edit", "cut", "trim", "timeline"],
         aiProviders: ["built-in"],
         outputs: ["mp4", "webm", "mov"],
@@ -1283,14 +1285,14 @@ export const toolCategories: ToolCategory[] = [
         tags: ["merge", "join", "combine", "video"],
         outputs: ["mp4", "webm", "mov"],
       },
-      // ── Motion Graphics & Effects ───────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Motion Graphics & Effects Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "motion-graphics",
         name: "Motion Graphics Creator",
         description:
           "Create professional motion graphics for ads, intros, explainers, and social content",
         icon: "zap",
-        status: "ready",
+        status: "coming-soon",
         tags: ["motion", "graphics", "animation", "mograph"],
         aiProviders: ["luma"],
         outputs: ["mp4", "webm", "gif", "mov"],
@@ -1302,7 +1304,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate cinematic logo reveals, stingers, and animated brand intros with 3D effects, particles, and light",
         icon: "sparkles",
-        status: "ready",
+        status: "coming-soon",
         tags: ["logo", "reveal", "intro", "cinematic", "stinger"],
         aiProviders: ["luma", "runway"],
         outputs: ["mp4", "webm", "mov", "gif"],
@@ -1357,7 +1359,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Add particle systems, fire, smoke, sparks, rain, snow, dust, and environmental VFX",
         icon: "sparkles",
-        status: "beta",
+        status: "coming-soon",
         tags: ["particles", "VFX", "effects", "fire", "smoke"],
         outputs: ["mp4", "webm", "mov"],
         supportsPartEdit: true,
@@ -1368,20 +1370,20 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create 3D text animations, object reveals, and product spins with cinematic lighting",
         icon: "box",
-        status: "beta",
+        status: "coming-soon",
         tags: ["3D", "text", "animation", "object", "product spin"],
         aiProviders: ["luma"],
         outputs: ["mp4", "webm", "mov"],
         supportsPartEdit: true,
       },
-      // ── AI Video Generation ─────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ AI Video Generation Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "text-to-video",
         name: "Text-to-Video Generator",
         description:
-          "Turn text prompts into video clips with AI — commercials, scenes, B-roll, and concept videos",
+          "Turn text prompts into video clips with AI Ã¢â‚¬â€ commercials, scenes, B-roll, and concept videos",
         icon: "wand",
-        status: "ready",
+        status: "coming-soon",
         tags: ["text-to-video", "AI", "generative", "commercial"],
         aiProviders: ["luma", "runway"],
         outputs: ["mp4", "webm"],
@@ -1391,7 +1393,7 @@ export const toolCategories: ToolCategory[] = [
         id: "image-to-video",
         name: "Image-to-Video Animator",
         description:
-          "Bring still images to life with AI — camera motion, parallax, zoom, and cinematic movement",
+          "Bring still images to life with AI Ã¢â‚¬â€ camera motion, parallax, zoom, and cinematic movement",
         icon: "play",
         status: "coming-soon",
         tags: ["image-to-video", "animate", "parallax", "camera motion"],
@@ -1405,12 +1407,12 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate contextual B-roll footage from text descriptions to fill gaps in your videos",
         icon: "film",
-        status: "beta",
+        status: "coming-soon",
         tags: ["B-roll", "stock", "AI", "footage", "contextual"],
         aiProviders: ["luma", "runway"],
         outputs: ["mp4", "webm"],
       },
-      // ── Social & Marketing Video ────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Social & Marketing Video Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "social-video",
         name: "Social Media Video",
@@ -1478,14 +1480,14 @@ export const toolCategories: ToolCategory[] = [
         outputs: ["mp4", "gif"],
         supportsPartEdit: true,
       },
-      // ── Utility Video Tools ─────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Utility Video Tools Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "thumbnail-generator",
         name: "Thumbnail Generator",
         description:
           "Design click-worthy thumbnails for YouTube, courses, podcasts, and video content",
         icon: "image",
-        status: "ready",
+        status: "coming-soon",
         tags: ["thumbnail", "youtube", "click", "CTR"],
         outputs: ["png", "jpg"],
         supportsPartEdit: true,
@@ -1507,7 +1509,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Auto-generate accurate subtitles, captions, and SRT files with AI transcription in 50+ languages",
         icon: "subtitles",
-        status: "ready",
+        status: "coming-soon",
         tags: ["subtitle", "caption", "transcription", "SRT", "multilingual"],
         aiProviders: ["whisper"],
         outputs: ["mp4", "json"],
@@ -1518,7 +1520,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Write engaging video scripts for any platform with scene descriptions and shot lists",
         icon: "fileText",
-        status: "ready",
+        status: "coming-soon",
         tags: ["script", "writing", "video", "shot list"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -1529,7 +1531,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Convert video clips to optimized GIFs with frame control, speed, and loop settings",
         icon: "repeat",
-        status: "ready",
+        status: "coming-soon",
         tags: ["GIF", "convert", "video", "loop"],
         outputs: ["gif", "webp"],
       },
@@ -1571,7 +1573,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Remove and replace video backgrounds in real-time with AI chroma keying",
         icon: "scissors",
-        status: "beta",
+        status: "coming-soon",
         tags: ["background", "remove", "green screen", "chroma key"],
         aiProviders: ["built-in"],
         outputs: ["mp4", "webm"],
@@ -1582,16 +1584,16 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Compress videos, convert formats, adjust resolution and bitrate for optimal file size",
         icon: "zap",
-        status: "ready",
+        status: "coming-soon",
         tags: ["compress", "convert", "video", "format", "bitrate", "resolution"],
         outputs: ["mp4", "webm"],
       },
     ],
   },
 
-  // ════════════════════════════════════════════════════════════
-  // 🔊  4.  AUDIO & VOICE STUDIO
-  // ════════════════════════════════════════════════════════════
+  // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+  // Ã°Å¸â€Å   4.  AUDIO & VOICE STUDIO
+  // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
   {
     id: "audio",
     name: "Audio & Voice Studio",
@@ -1608,7 +1610,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Convert text to natural-sounding speech with 100+ voices, accents, and emotions",
         icon: "mic",
-        status: "ready",
+        status: "coming-soon",
         tags: ["TTS", "voice", "speech", "narration"],
         aiProviders: ["elevenlabs"],
         outputs: ["mp3", "wav"],
@@ -1619,7 +1621,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Clone voices for consistent branding, audiobooks, and content narration",
         icon: "mic",
-        status: "ready",
+        status: "coming-soon",
         tags: ["voice clone", "brand voice", "consistent", "narration"],
         aiProviders: ["elevenlabs"],
         outputs: ["mp3", "wav"],
@@ -1639,9 +1641,9 @@ export const toolCategories: ToolCategory[] = [
         id: "podcast-editor",
         name: "Podcast Editor",
         description:
-          "Edit podcasts with AI — remove filler words, level audio, add intros/outros, and master",
+          "Edit podcasts with AI Ã¢â‚¬â€ remove filler words, level audio, add intros/outros, and master",
         icon: "headphones",
-        status: "ready",
+        status: "coming-soon",
         tags: ["podcast", "edit", "filler removal", "mastering"],
         aiProviders: ["whisper", "built-in"],
         outputs: ["mp3", "wav"],
@@ -1653,7 +1655,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Transcribe audio and video to text with speaker detection, timestamps, and summaries",
         icon: "fileText",
-        status: "ready",
+        status: "coming-soon",
         tags: ["transcription", "speech-to-text", "speaker", "summary"],
         aiProviders: ["whisper"],
         outputs: ["json", "docx", "pdf"],
@@ -1664,7 +1666,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate royalty-free background music, jingles, and soundtracks from text prompts",
         icon: "music",
-        status: "ready",
+        status: "coming-soon",
         tags: ["music", "AI", "soundtrack", "jingle", "royalty-free"],
         aiProviders: ["suno"],
         outputs: ["mp3", "wav"],
@@ -1674,7 +1676,7 @@ export const toolCategories: ToolCategory[] = [
         id: "sound-effects",
         name: "Sound Effects Generator",
         description:
-          "Generate and browse sound effects — whooshes, impacts, UI sounds, nature, and ambience",
+          "Generate and browse sound effects Ã¢â‚¬â€ whooshes, impacts, UI sounds, nature, and ambience",
         icon: "zap",
         status: "coming-soon",
         tags: ["SFX", "sound effects", "foley", "ambience"],
@@ -1705,9 +1707,9 @@ export const toolCategories: ToolCategory[] = [
     ],
   },
 
-  // ════════════════════════════════════════════════════════════
-  // ✍️  5.  CONTENT CREATION
-  // ════════════════════════════════════════════════════════════
+  // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+  // Ã¢Å“ÂÃ¯Â¸Â  5.  CONTENT CREATION
+  // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
   {
     id: "content",
     name: "Content Creation",
@@ -1718,14 +1720,14 @@ export const toolCategories: ToolCategory[] = [
     textColorClass: "text-warning",
     ringColorClass: "ring-warning/30",
     tools: [
-      // ── Long-Form Writing ───────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Long-Form Writing Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "blog-writer",
         name: "Blog & Article Writer",
         description:
           "Write SEO-optimized blog posts, articles, and thought leadership pieces with AI-powered research",
         icon: "fileText",
-        status: "ready",
+        status: "coming-soon",
         tags: ["blog", "article", "SEO", "writing", "thought leadership"],
         aiProviders: ["claude"],
         outputs: ["html", "docx", "pdf"],
@@ -1735,7 +1737,7 @@ export const toolCategories: ToolCategory[] = [
         id: "website-copy",
         name: "Website Copywriter",
         description:
-          "Write complete website copy — homepages, about pages, services, FAQs, and more with SEO optimization",
+          "Write complete website copy Ã¢â‚¬â€ homepages, about pages, services, FAQs, and more with SEO optimization",
         icon: "globe",
         status: "coming-soon",
         tags: ["website", "copy", "web", "pages", "SEO"],
@@ -1749,7 +1751,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Write high-converting landing page copy with headlines, benefits, CTAs, and objection handling",
         icon: "layout",
-        status: "ready",
+        status: "coming-soon",
         tags: ["landing page", "copy", "conversion", "CTA", "objection"],
         aiProviders: ["claude"],
         outputs: ["html", "docx"],
@@ -1759,7 +1761,7 @@ export const toolCategories: ToolCategory[] = [
         id: "ebook-writer",
         name: "eBook Writer",
         description:
-          "Write complete eBooks chapter-by-chapter with AI — outlines, drafts, and final polished content",
+          "Write complete eBooks chapter-by-chapter with AI Ã¢â‚¬â€ outlines, drafts, and final polished content",
         icon: "bookOpen",
         status: "coming-soon",
         tags: ["ebook", "book", "chapter", "long-form", "writing"],
@@ -1767,14 +1769,14 @@ export const toolCategories: ToolCategory[] = [
         outputs: ["pdf", "docx"],
         supportsPartEdit: true,
       },
-      // ── Social & Short-Form ─────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Social & Short-Form Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "social-caption",
         name: "Social Media Caption Generator",
         description:
           "Generate engaging captions for all social platforms with hashtags, emojis, and CTAs",
         icon: "messageCircle",
-        status: "ready",
+        status: "coming-soon",
         tags: ["caption", "social media", "hashtag", "engagement"],
         aiProviders: ["claude"],
         outputs: ["json"],
@@ -1802,14 +1804,14 @@ export const toolCategories: ToolCategory[] = [
         aiProviders: ["claude"],
         outputs: ["json"],
       },
-      // ── Email & Outreach ────────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Email & Outreach Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "email-campaign",
         name: "Email Campaign Writer",
         description:
           "Write email sequences, newsletters, drip campaigns, and marketing emails with A/B variants",
         icon: "mail",
-        status: "ready",
+        status: "coming-soon",
         tags: ["email", "campaign", "newsletter", "marketing", "drip"],
         aiProviders: ["claude"],
         outputs: ["html", "docx"],
@@ -1827,14 +1829,14 @@ export const toolCategories: ToolCategory[] = [
         outputs: ["docx"],
         supportsPartEdit: true,
       },
-      // ── SEO & Optimization ──────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ SEO & Optimization Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "seo-optimizer",
         name: "SEO Content Optimizer",
         description:
           "Optimize content for search with keyword analysis, semantic clusters, and SERP insights",
         icon: "search",
-        status: "ready",
+        status: "coming-soon",
         tags: ["SEO", "keywords", "optimization", "SERP", "semantic"],
         aiProviders: ["claude"],
         outputs: ["html", "json"],
@@ -1850,7 +1852,7 @@ export const toolCategories: ToolCategory[] = [
         aiProviders: ["claude"],
         outputs: ["json", "html"],
       },
-      // ── Advertising Copy ────────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Advertising Copy Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "ad-copy",
         name: "Ad Copy Generator",
@@ -1869,7 +1871,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Write compelling product descriptions for e-commerce, catalogs, and Amazon listings",
         icon: "tag",
-        status: "ready",
+        status: "coming-soon",
         tags: ["product", "description", "e-commerce", "Amazon"],
         aiProviders: ["claude"],
         outputs: ["html", "docx"],
@@ -1886,14 +1888,14 @@ export const toolCategories: ToolCategory[] = [
         aiProviders: ["claude"],
         outputs: ["json"],
       },
-      // ── Planning & Strategy ─────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Planning & Strategy Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "content-calendar",
         name: "Content Calendar Planner",
         description:
           "Plan and schedule content across all platforms with AI suggestions and content pillars",
         icon: "calendar",
-        status: "ready",
+        status: "coming-soon",
         tags: ["calendar", "planning", "schedule", "content pillars"],
         aiProviders: ["claude"],
         outputs: ["json", "xlsx"],
@@ -1902,14 +1904,14 @@ export const toolCategories: ToolCategory[] = [
         id: "content-repurposer",
         name: "Content Repurposer",
         description:
-          "Transform one piece of content into 10+ formats — blog → threads, carousels, videos, emails",
+          "Transform one piece of content into 10+ formats Ã¢â‚¬â€ blog Ã¢â€ â€™ threads, carousels, videos, emails",
         icon: "repeat",
         status: "coming-soon",
         tags: ["repurpose", "transform", "multi-format", "recycle"],
         aiProviders: ["claude"],
         outputs: ["json", "docx"],
       },
-      // ── Professional Writing ────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Professional Writing Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "press-release",
         name: "Press Release Writer",
@@ -1993,9 +1995,9 @@ export const toolCategories: ToolCategory[] = [
     ],
   },
 
-  // ════════════════════════════════════════════════════════════
-  // 📊  6.  MARKETING & SALES
-  // ════════════════════════════════════════════════════════════
+  // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+  // Ã°Å¸â€œÅ   6.  MARKETING & SALES
+  // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
   {
     id: "marketing",
     name: "Marketing & Sales",
@@ -2006,7 +2008,7 @@ export const toolCategories: ToolCategory[] = [
     textColorClass: "text-wire-transfer",
     ringColorClass: "ring-wire-transfer/30",
     tools: [
-      // ── Strategy & Planning ─────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Strategy & Planning Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "marketing-strategy",
         name: "Marketing Strategy Planner",
@@ -2067,7 +2069,7 @@ export const toolCategories: ToolCategory[] = [
         outputs: ["pdf", "pptx"],
         supportsPartEdit: true,
       },
-      // ── Research & Analysis ─────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Research & Analysis Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "customer-persona",
         name: "Customer Persona Builder",
@@ -2084,7 +2086,7 @@ export const toolCategories: ToolCategory[] = [
         id: "competitor-analysis",
         name: "Competitor Analysis Tool",
         description:
-          "Analyze competitors — strengths, weaknesses, pricing, messaging, and strategic gaps",
+          "Analyze competitors Ã¢â‚¬â€ strengths, weaknesses, pricing, messaging, and strategic gaps",
         icon: "search",
         status: "coming-soon",
         tags: ["competitor", "analysis", "strategy", "SWOT"],
@@ -2116,14 +2118,14 @@ export const toolCategories: ToolCategory[] = [
         outputs: ["pdf", "pptx"],
         supportsPartEdit: true,
       },
-      // ── Sales Tools ─────────────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Sales Tools Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "sales-funnel",
         name: "Sales Funnel Designer",
         description:
           "Design and visualize sales funnels with conversion optimization tips and email sequences",
         icon: "filter",
-        status: "ready",
+        status: "coming-soon",
         tags: ["funnel", "sales", "conversion", "optimization"],
         aiProviders: ["claude"],
         outputs: ["pdf", "png"],
@@ -2133,9 +2135,9 @@ export const toolCategories: ToolCategory[] = [
         id: "lead-magnet",
         name: "Lead Magnet Creator",
         description:
-          "Create lead magnets — checklists, guides, templates, worksheets, and calculators",
+          "Create lead magnets Ã¢â‚¬â€ checklists, guides, templates, worksheets, and calculators",
         icon: "magnet",
-        status: "ready",
+        status: "coming-soon",
         tags: ["lead magnet", "checklist", "guide", "freebie"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
@@ -2165,7 +2167,7 @@ export const toolCategories: ToolCategory[] = [
         outputs: ["pdf", "docx"],
         supportsPartEdit: true,
       },
-      // ── Testing & Optimization ──────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Testing & Optimization Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "ab-test-copy",
         name: "A/B Test Copy Generator",
@@ -2183,13 +2185,13 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Build automated email sequences for welcome series, nurturing, onboarding, and win-back",
         icon: "mail",
-        status: "ready",
+        status: "coming-soon",
         tags: ["email", "sequence", "automation", "nurture", "drip"],
         aiProviders: ["claude"],
         outputs: ["html", "json"],
         supportsPartEdit: true,
       },
-      // ── Calculators & Analytics ─────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Calculators & Analytics Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "pricing-calculator",
         name: "Pricing Strategy Calculator",
@@ -2219,7 +2221,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Build marketing analytics reports with KPI dashboards, charts, and executive summaries",
         icon: "chart",
-        status: "ready",
+        status: "coming-soon",
         tags: ["analytics", "dashboard", "KPI", "report"],
         aiProviders: ["claude"],
         outputs: ["pdf", "pptx"],
@@ -2228,9 +2230,9 @@ export const toolCategories: ToolCategory[] = [
     ],
   },
 
-  // ════════════════════════════════════════════════════════════
-  // 🌐  7.  WEB & UI DESIGN
-  // ════════════════════════════════════════════════════════════
+  // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+  // Ã°Å¸Å’Â  7.  WEB & UI DESIGN
+  // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
   {
     id: "web",
     name: "Web & UI Design",
@@ -2245,7 +2247,7 @@ export const toolCategories: ToolCategory[] = [
         id: "website-builder",
         name: "AI Website Builder",
         description:
-          "Generate complete website designs from text descriptions — layouts, hero sections, and components",
+          "Generate complete website designs from text descriptions Ã¢â‚¬â€ layouts, hero sections, and components",
         icon: "globe",
         status: "coming-soon",
         tags: ["website", "builder", "design", "layout", "AI"],
@@ -2259,7 +2261,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate wireframes and low-fidelity prototypes from text descriptions or sketches",
         icon: "layout",
-        status: "ready",
+        status: "coming-soon",
         tags: ["wireframe", "prototype", "low-fi", "UX"],
         aiProviders: ["claude"],
         outputs: ["png", "svg", "pdf"],
@@ -2271,7 +2273,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design buttons, forms, cards, navigation bars, and UI elements with consistent styling",
         icon: "layout",
-        status: "ready",
+        status: "coming-soon",
         tags: ["UI", "component", "button", "form", "design system"],
         outputs: ["png", "svg", "html"],
         supportsPartEdit: true,
@@ -2293,7 +2295,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design responsive HTML email templates for newsletters, promotions, and transactional emails",
         icon: "mail",
-        status: "ready",
+        status: "coming-soon",
         tags: ["email", "template", "HTML", "responsive", "newsletter"],
         outputs: ["html", "png"],
         supportsPartEdit: true,
@@ -2344,9 +2346,9 @@ export const toolCategories: ToolCategory[] = [
         id: "svg-animator",
         name: "SVG Animation Studio",
         description:
-          "Create and animate SVG graphics — line draws, morphs, path animations, and micro-interactions",
+          "Create and animate SVG graphics Ã¢â‚¬â€ line draws, morphs, path animations, and micro-interactions",
         icon: "zap",
-        status: "beta",
+        status: "coming-soon",
         tags: ["SVG", "animation", "line draw", "morph", "micro-interaction"],
         outputs: ["svg", "html", "gif"],
         supportsPartEdit: true,
@@ -2354,9 +2356,9 @@ export const toolCategories: ToolCategory[] = [
     ],
   },
 
-  // ════════════════════════════════════════════════════════════
-  // 🔧  8.  UTILITIES & WORKFLOW
-  // ════════════════════════════════════════════════════════════
+  // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+  // Ã°Å¸â€Â§  8.  UTILITIES & WORKFLOW
+  // Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
   {
     id: "utilities",
     name: "Utilities & Workflow",
@@ -2367,14 +2369,14 @@ export const toolCategories: ToolCategory[] = [
     textColorClass: "text-gray-400",
     ringColorClass: "ring-gray-500/30",
     tools: [
-      // ── AI Assistant ────────────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ AI Assistant Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "ai-chat",
         name: "AI Chat Assistant",
         description:
           "Chat with Claude AI for brainstorming, creative direction, problem-solving, and any question",
         icon: "messageCircle",
-        status: "ready",
+        status: "coming-soon",
         tags: ["AI", "chat", "assistant", "brainstorm", "Claude"],
         aiProviders: ["claude"],
         outputs: ["json"],
@@ -2383,21 +2385,21 @@ export const toolCategories: ToolCategory[] = [
         id: "ai-image-chat",
         name: "AI Vision Analyzer",
         description:
-          "Upload images and get AI analysis — describe designs, suggest improvements, extract colors and fonts",
+          "Upload images and get AI analysis Ã¢â‚¬â€ describe designs, suggest improvements, extract colors and fonts",
         icon: "sparkles",
         status: "coming-soon",
         tags: ["AI", "vision", "image", "analyze", "describe"],
         aiProviders: ["claude"],
         outputs: ["json"],
       },
-      // ── File Tools ──────────────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ File Tools Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "file-converter",
         name: "File Format Converter",
         description:
-          "Convert between image, video, document, and audio formats — 100+ format combinations",
+          "Convert between image, video, document, and audio formats Ã¢â‚¬â€ 100+ format combinations",
         icon: "repeat",
-        status: "ready",
+        status: "coming-soon",
         tags: ["convert", "format", "file", "image", "video"],
         outputs: ["png", "jpg", "pdf", "mp4", "svg"],
       },
@@ -2407,7 +2409,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Resize, crop, compress, watermark, rename, and format-convert multiple images at once",
         icon: "layers",
-        status: "ready",
+        status: "coming-soon",
         tags: ["batch", "process", "resize", "compress", "watermark"],
         outputs: ["png", "jpg", "webp"],
       },
@@ -2415,7 +2417,7 @@ export const toolCategories: ToolCategory[] = [
         id: "image-compression",
         name: "Image Compressor",
         description:
-          "Compress images for web without visible quality loss — WebP, AVIF, and optimized PNG/JPG",
+          "Compress images for web without visible quality loss Ã¢â‚¬â€ WebP, AVIF, and optimized PNG/JPG",
         icon: "minimize",
         status: "coming-soon",
         tags: ["compress", "optimize", "web", "image", "WebP", "AVIF"],
@@ -2427,16 +2429,16 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Merge, split, compress, convert, protect, and sign PDFs with smart processing",
         icon: "fileText",
-        status: "ready",
+        status: "coming-soon",
         tags: ["PDF", "merge", "split", "compress", "sign"],
         outputs: ["pdf"],
       },
-      // ── Brand & Asset Management ────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Brand & Asset Management Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "brand-kit-manager",
         name: "Brand Kit Manager",
         description:
-          "Store and manage brand assets — logos, colors, fonts, guidelines, and templates in one place",
+          "Store and manage brand assets Ã¢â‚¬â€ logos, colors, fonts, guidelines, and templates in one place",
         icon: "briefcase",
         status: "coming-soon",
         tags: ["brand kit", "assets", "management", "guidelines"],
@@ -2460,7 +2462,7 @@ export const toolCategories: ToolCategory[] = [
         tags: ["style guide", "documentation", "brand", "usage"],
         outputs: ["pdf", "html"],
       },
-      // ── Project Management ──────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Project Management Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "project-manager",
         name: "Project Manager",
@@ -2499,14 +2501,14 @@ export const toolCategories: ToolCategory[] = [
         status: "coming-soon",
         tags: ["invoice", "payment", "tracking", "freelance"],
       },
-      // ── Design Utilities ────────────────────────────────────
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Design Utilities Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
         id: "qr-code",
         name: "QR Code Generator",
         description:
           "Generate branded QR codes with custom colors, logos, patterns, and trackable analytics",
         icon: "grid",
-        status: "ready",
+        status: "coming-soon",
         tags: ["QR code", "link", "scannable", "branded"],
         outputs: ["svg", "png", "pdf"],
       },
@@ -2514,7 +2516,7 @@ export const toolCategories: ToolCategory[] = [
         id: "barcode-generator",
         name: "Barcode Generator",
         description:
-          "Generate barcodes — UPC, EAN, Code 128, and Data Matrix for products and inventory",
+          "Generate barcodes Ã¢â‚¬â€ UPC, EAN, Code 128, and Data Matrix for products and inventory",
         icon: "grid",
         status: "coming-soon",
         tags: ["barcode", "UPC", "EAN", "product", "inventory"],
@@ -2563,7 +2565,7 @@ export const toolCategories: ToolCategory[] = [
   },
 ];
 
-// ── Derived helpers ─────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Derived helpers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 /** Total number of tools across all categories */
 export const totalToolCount = toolCategories.reduce(
@@ -2615,7 +2617,7 @@ export function searchTools(query: string): FlatTool[] {
   );
 }
 
-// ── Quick access / featured tools ───────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Quick access / featured tools Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 export const featuredToolIds: string[] = [
   "logo-generator",
@@ -2632,7 +2634,7 @@ export const featuredToolIds: string[] = [
   "music-generator",
 ];
 
-// ── Sidebar navigation for the AI suite ─────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Sidebar navigation for the AI suite Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 export interface SuiteNavItem {
   icon: string;

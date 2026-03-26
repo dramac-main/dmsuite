@@ -1,9 +1,11 @@
 # DMSuite — Tool Development Status Tracker
 
-> **Last updated:** 2026-03-25
-> **Total tools registered:** 200+
+> **Last updated:** 2026-03-26
+> **Total tools registered:** 195+
 > **Tools with workspace UI:** 97
-> **Tools fully complete:** 9
+> **Tools fully complete:** 11
+> **Tools available (ready):** 10
+> **Tools coming soon:** 185
 
 ---
 
@@ -38,7 +40,25 @@ All 9 route to `SalesBookDesignerWorkspace` with different `initialDocumentType`
 | 8 | `sales-book-a4` | Sales Book A4 | SalesBookWrappers → SalesBookA4Workspace | Pre-set A4 page size |
 | 9 | `sales-book-a5` | Sales Book A5 | SalesBookWrappers → SalesBookA5Workspace | Pre-set A5 page size |
 
-**Shared architecture:**
+### Statement of Account
+
+| # | Tool ID | Tool Name | Workspace | Notes |
+|---|---------|-----------|-----------|-------|
+| 10 | `statement-of-account` | Statement of Account | SalesBookWrappers → StatementOfAccountWorkspace | Transaction history, balances, aging summaries |
+
+### Contract & Agreement Creator
+
+| # | Tool ID | Tool Name | Workspace | Notes |
+|---|---------|-----------|-----------|-------|
+| 11 | `contract-template` | Contract & Agreement Creator | ContractDesignerWorkspace | 16 contract types, Zambian law citations, 8 visual templates, cover designs |
+
+### Resume / CV Builder
+
+| # | Tool ID | Tool Name | Workspace | Notes |
+|---|---------|-----------|-----------|-------|
+| 12 | `resume-cv` | Resume & CV Builder | ResumeCVWorkspaceV2 | 8-step wizard, multi-template, ATS optimization, 3-panel layout |
+
+**Shared architecture (Sales Book):**
 - Store: `useSalesBookEditor` (Zustand + Immer + Zundo undo)
 - Renderer: `BlankFormRenderer` (HTML → print pipeline)
 - Tabs: SalesFormTab, SalesBrandTab, SalesStyleTab, SalesPrintTab, SalesAdvancedTab
@@ -97,7 +117,7 @@ These have real workspace code (state management, canvas/editor, templates) but 
 | 19 | `company-profile` | Company Profile | CompanyProfileWorkspace | `SCAFFOLD` |
 | 20 | `business-plan` | Business Plan | BusinessPlanWorkspace | `SCAFFOLD` |
 | 21 | `diploma-designer` | Diploma Designer | DiplomaDesignerWorkspace | `SCAFFOLD` |
-| 22 | `statement-of-account` | Statement of Account | StatementOfAccountWorkspace | `SCAFFOLD` |
+| 22 | `statement-of-account` | Statement of Account | StatementOfAccountWorkspace | `COMPLETE` |
 | 23 | `newsletter-print` | Newsletter (Print) | NewsletterPrintWorkspace | `SCAFFOLD` |
 | 24 | `employee-handbook` | Employee Handbook | EmployeeHandbookWorkspace | `SCAFFOLD` |
 | 25 | `job-description` | Job Description | JobDescriptionWorkspace | `SCAFFOLD` |
@@ -118,7 +138,7 @@ These have real workspace code (state management, canvas/editor, templates) but 
 | 40 | `portfolio-builder` | Portfolio Builder | PortfolioBuilderWorkspace | `SCAFFOLD` |
 | 41 | `greeting-card` | Greeting Card | GreetingCardWorkspace | `SCAFFOLD` |
 | 42 | `presentation` | Presentation | PresentationWorkspace | `SCAFFOLD` |
-| 43 | `resume-cv` | Resume / CV | ResumeCVWorkspaceV2 | `SCAFFOLD` |
+| 43 | `resume-cv` | Resume / CV | ResumeCVWorkspaceV2 | `COMPLETE` |
 | 44 | `email-template` | Email Template | EmailTemplateWorkspace | `SCAFFOLD` |
 
 ### Video & Motion Studio
@@ -240,10 +260,12 @@ These are registered in `src/data/tools.ts` but have no workspace component in t
 
 | Status | Count | Description |
 |--------|-------|-------------|
-| **COMPLETE** | 9 | Sales Book Designer (all 7 doc types + A4/A5 variants) |
-| **SCAFFOLD** | 88 | Has workspace UI but untested/unpolished |
-| **NO-UI** | 100+ | Placeholder page only |
-| **TOTAL** | 200+ | Registered in tools.ts |
+| **COMPLETE** | 12 | Sales Books (9) + Statement of Account + Contract & Agreement + Resume/CV |
+| **SCAFFOLD** | 85 | Has workspace UI but untested/unpolished — all set to "coming-soon" |
+| **NO-UI** | 100+ | Placeholder page only — all set to "coming-soon" |
+| **READY** | 10 | Available to users (complete tools only) |
+| **COMING-SOON** | 185 | Grayed out in dashboard |
+| **TOTAL** | 195+ | Registered in tools.ts |
 
 ---
 
@@ -278,3 +300,4 @@ These already have substantial workspace code and would benefit most from a poli
 | 2026-07-24 | contract-template (Contract & Agreement Creator) | Zambian Law Enhancement: 16 contract types (added tenancy-agreement), all with comprehensive Zambian Act citations (30+ Acts), enhanced preambles, COMMON_CLAUSES with ZMW/WHT/VAT/Arbitration refs, created zambian-legal-reference.ts, fixed "ip" → "intellectual-property" TS errors, removed dead code | Drake |
 | 2026-03-25 | contract-template (Contract & Agreement Creator) | Cover Design Picker: 6 optional cover templates (classic/corporate/dark-executive/accent-split/bold-frame/minimal-line) + "none" option; visual mini-preview grid in Style tab; Chiko coverDesign param; 0 TS errors | Drake |
 | 2026-07-24 | resume-cv (Resume / CV) | Controls & Multi-Page Fix: Dynamic CSS override system (accent color per-template, section spacing, line spacing, font scale, margin presets), sidebar section break detection, A4 default, hardcoded accent overrides for templates 11 & 13, verified layers toggle | Drake |
+| 2026-03-26 | ALL tools | Bulk status update: 95 tools changed from ready/beta → coming-soon. Only 10 personally-worked tools remain as "ready": 7 sales books, statement-of-account, contract-template, resume-cv. Added devStatus: "complete" to resume-cv and statement-of-account. | Drake |
