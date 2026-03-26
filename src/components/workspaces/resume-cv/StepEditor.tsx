@@ -465,7 +465,10 @@ export default function StepEditor() {
 
       {/* Preview canvas — PDF viewer style (grey bg + page shadows) */}
       <div
+        ref={previewScrollRef}
         onClick={handlePreviewClick}
+        onScroll={handlePreviewScroll}
+        className="flex-1 overflow-y-auto scrollbar-thin"
         style={{ backgroundColor: "#374151" }}
       >
         {/* Diff overlay bar when revision is pending */}

@@ -372,9 +372,12 @@ function AccordionSection({
 // Main Panel Component
 // ---------------------------------------------------------------------------
 
-export default function EditorSectionsPanel({ onCollapse }: { onCollapse?: () => void }) {
+export default function EditorSectionsPanel({ onCollapse, activeSectionKey }: { onCollapse?: () => void; activeSectionKey?: string | null }) {
   // ── Exclusive accordion: only one section open at a time ──
   const [openSection, setOpenSection] = useState<string | null>(null);
+
+  // Allow parent to force-open a section (e.g., from layers panel click or canvas click-to-edit)
+  const effectiveOpen = activeSectionKey ?? openSection;
 
   const handleToggle = useCallback((key: string) => {
     setOpenSection((prev) => (prev === key ? null : key));
@@ -401,18 +404,18 @@ export default function EditorSectionsPanel({ onCollapse }: { onCollapse?: () =>
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
         {/* Basics */}
-        <AccordionSection sectionKey="basics" title="Contact Information" isOpen={openSection === "basics"} onToggle={handleToggle}>
+        <AccordionSection sectionKey="basics" title="Contact Information" isOpen={effectiveOpen === "basics"} onToggle={handleToggle}>
           <BasicsEditor />
         </AccordionSection>
 
         {/* Summary */}
-        <AccordionSection sectionKey="summary" title={SECTION_LABELS.summary} isOpen={openSection === "summary"} onToggle={handleToggle}>
+        <AccordionSection sectionKey="summary" title={SECTION_LABELS.summary} isOpen={effectiveOpen === "summary"} onToggle={handleToggle}>
           <SummaryEditor />
         </AccordionSection>
 
         {/* All built-in sections with items */}
         {BUILT_IN_SECTIONS.filter((k) => k !== "summary").map((key) => (
-          <AccordionSection key={key} sectionKey={key} title={SECTION_LABELS[key] || key} isOpen={openSection === key} onToggle={handleToggle}>
+          <AccordionSection key={key} sectionKey={key} title={SECTION_LABELS[key] || key} isOpen={effectiveOpen === key} onToggle={handleToggle}>
             <ListSectionEditor sectionKey={key} />
           </AccordionSection>
         ))}

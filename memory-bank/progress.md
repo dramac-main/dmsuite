@@ -1,6 +1,6 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅
+## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅
 
 ---
 
@@ -13,40 +13,53 @@
 
 ---
 
-## Current Work: Platform Infrastructure Hardening — COMPLETE ✅
+## Current Work: Resume 3-Panel + Layers Panel — COMPLETE ✅
 
-### Session 126 — Platform Quality, Settings, Admin Expansion
+### Session 129 — Resume Dashboard Parity with Contract Designer
 
-#### Notification System (Battle-Tested)
-- [x] CreditPurchaseModal: 5 notification dispatch points (API error, network, timeout, success, declined)
-- [x] Auth login + signup: welcome notifications
-- [x] Dashboard: first-visit welcome notification
-- [x] NotificationPanel: bell pulse animation
-- [x] Notification muting: `getNotificationMutes()` / `setNotificationMutes()` + `isMuted()` check in all `notify.*` helpers
+#### Problem
+- Resume/CV editor was missing Layers panel entirely
+- No click-to-edit on canvas, no hover highlighting
+- Inconsistent layout vs Contract Designer (2 vs 3 panels)
 
-#### User Account Settings (Expanded)
-- [x] AppearanceSection: theme toggle + tool descriptions toggle
-- [x] NotificationPreferencesSection: per-type muting for all 6 notification types
-- [x] DataManagementSection: export all data as JSON, clear notifications/exports/preferences/projects
-
-#### Admin Panel (Expanded)
-- [x] Overview tab: 6 stat cards + recent signups list (fetches from existing APIs)
-- [x] Settings tab: maintenance mode, announcements, registration toggle, credit grant limit, credit packs reference
-
-#### ActiveProjects (Fixed)
-- [x] Light-mode styling fixes (was dark-only)
-- [x] Project creation + tracking fully wired via workspace events
-
-#### workspace:dirty Dispatching
-- [x] SalesBookDesignerWorkspace: form change tracking → workspace:dirty
-- [x] ContractDesignerWorkspace: form change tracking → workspace:dirty
-
-#### TypeScript
-- [x] 0 errors — validated via `tsc --noEmit`
+#### Solution: Full Contract-Pattern Parity
+- [x] Created `ResumeLayers.tsx` — Figma-style layer tree panel (useLayers hook, LayerRow, eye toggles, hover→highlight)
+- [x] StepEditor.tsx rewritten: 3-panel layout (editor + preview + layers), DOM annotation for `data-resume-section`, click-to-edit, hover highlighting
+- [x] EditorSectionsPanel.tsx: `activeSectionKey` prop for external section activation
+- [x] CSS: `[data-resume-section]` hover outlines + `.resume-layer-highlight` class
+- [x] Preview scroll handler wired for page tracking
+- [x] TypeScript: 0 errors
+- [x] Production build: passes (56s, 36 pages)
 
 ---
 
-## Previous Work: Resume Editor Contract-Pattern Rework — COMPLETE ✅
+## Previous Work: Milestone-Based Progress Tracking — COMPLETE ✅
+
+### Session 128 — Active Projects Progress Redesign
+
+#### Problem
+- Progress used arbitrary +5% per `workspace:save` event
+- Only 3/97 workspaces dispatched events, so most projects stayed at 0%
+- No export tracking — print/download didn't affect progress
+- Progress was "just guessing" — completely disconnected from actual work
+
+#### Solution: Milestone System
+- [x] Project store redesigned: `milestones: Milestone[]` field + `addMilestone()` action + `computeProgress()` 
+- [x] 5 milestones: opened(10%) + input(20%) + content(40%) + edited(20%) + exported(10%) = 100%
+- [x] Persist migration for legacy projects without milestones (version 1)
+- [x] Tool page rewritten: listens for `workspace:progress` events + `workspace:dirty` fallback
+- [x] Contract Designer: input (title/parties), content (clauses), exported (print)
+- [x] Sales Book: input (company name), content (forms), exported (print)
+- [x] Resume CV: step-based progress (step/7 × 80%), input (step ≥2), content (step ≥7), edited (3+ changes), exported
+- [x] Business Card: step progress map (10→90%), input/content/exported at appropriate steps
+- [x] ActiveProjects UI: milestone labels, color-coded progress bar
+- [x] TypeScript: 0 errors — validated via `tsc --noEmit`
+- [x] Production build passes
+- [x] Committed `cd4f429`, pushed to origin/main
+
+---
+
+## Previous Work: Platform Infrastructure Hardening — COMPLETE ✅
 
 ### Session 125 — Resume Editor UI Rework to Match Contract Workspace
 

@@ -1,6 +1,100 @@
 # DMSuite — Active Context
 
 ## Current Focus
+**Phase:** Resume Dashboard Parity — COMPLETE ✅
+
+### Session 129: Resume 3-Panel Layout + Layers Panel
+
+#### Problem
+Resume/CV workspace looked completely different from the Contract Designer — missing the Layers panel entirely, no click-to-edit on canvas, no hover highlighting, only 2 tabs vs full layout. UX was inconsistent across tools.
+
+#### Solution: Contract-Pattern Parity
+Rebuilt the Resume editor to match the Contract Designer workspace architecture exactly:
+
+##### Files Created:
+- **`src/components/workspaces/resume-cv/ResumeLayers.tsx`** (NEW ~380 lines) — Figma-style layer tree panel matching ContractLayersPanel:
+  - `useLayers()` hook builds hierarchical tree from resume store (basics + 10 built-in sections + custom sections)
+  - `LayerRow` recursive component: expand/collapse arrows, visibility dots, eye toggles, section icons
+  - Hover → highlights section on canvas via `.resume-layer-highlight` class
+  - Click → opens corresponding editor section accordion
+  - Collapsed state (w-8 vertical tab) / Expanded state (w-56)
+
+##### Files Modified:
+- **`src/components/workspaces/resume-cv/StepEditor.tsx`** — Major rewrite:
+  - 3-panel layout: Editor sidebar (lg:w-80 xl:w-96) + Preview canvas (flex-1) + ResumeLayers (w-56)
+  - DOM annotation `useEffect`: scans rendered HTML for `.section`, `.sidebar-section`, `.resume-header` classes and adds `data-resume-section` attributes based on section title text matching
+  - Hover highlight `useEffect`: adds/removes `.resume-layer-highlight` class on canvas sections when layer is hovered
+  - `handleLayerOpenSection()`: maps layer click to editor tab + accordion section
+  - `handlePreviewClick()`: click-to-edit on canvas — reads `data-resume-section` from clicked element
+  - `onScroll={handlePreviewScroll}` wired to preview container for page tracking
+  - CSS: `[data-resume-section]` hover outlines + `.resume-layer-highlight` active highlighting
+  - Floating AIChatBar positioned inside preview area
+
+- **`src/components/workspaces/resume-cv/editor/EditorSectionsPanel.tsx`** — Added `activeSectionKey` prop:
+  - When layers panel or canvas click activates a section, this prop overrides the internal accordion open state
+  - `effectiveOpen = activeSectionKey ?? openSection` pattern
+
+##### Validation:
+- [x] TypeScript: 0 errors in all 3 modified files
+- [x] Next.js production build: compiled successfully in 56s, all 36 pages generated
+
+---
+
+### Session 128: Progress Tracking System Redesign
+
+#### Problem
+Progress tracking was arbitrary and inaccurate:
+- Used `+5% per workspace:save` event, completely disconnected from actual work
+- Only 3 of ~97 workspaces dispatched any events (Contract, Sales Book, Resume)
+- No export tracking — printing/downloading didn't affect progress
+- Max 95% via saves — 100% impossible through normal use
+
+#### Solution: Milestone-Based Progress Protocol
+Replaced the +5% increment system with a **milestone-based protocol** where progress is computed from concrete, verifiable milestones.
+
+##### 5 Milestones (sum to 100%):
+| Milestone | Weight | Signal |
+|-----------|--------|--------|
+| `opened` | 10% | Tool loaded, project created after 5s dwell |
+| `input` | 20% | User provided meaningful data (forms filled, details entered) |
+| `content` | 40% | Content generated or created (clauses, designs, AI output) |
+| `edited` | 20% | User refined the output (multiple edits after content exists) |
+| `exported` | 10% | User exported, printed, or downloaded |
+
+##### Two Progress Modes:
+1. **Milestone mode** (editor tools): `addMilestone(id, "content")` → recomputes from weights
+2. **Explicit mode** (wizard tools): `workspace:progress {progress: 55}` → direct percentage
+
+#### Files Changed (8 files)
+
+1. **`src/stores/projects.ts`** — Added `Milestone` type, `milestones: Milestone[]` to Project interface, `addMilestone()` action, `computeProgress()` function, persist migration for legacy projects (version 1)
+
+2. **`src/app/tools/[categoryId]/[toolId]/page.tsx`** — Replaced +5% save handler with milestone listeners. Now tracks `workspace:dirty` (→ input/edited milestones), `workspace:progress` (→ explicit milestones or wizard progress), `workspace:save` (→ just confirms saved, no progress change)
+
+3. **`src/components/workspaces/contract-designer/ContractDesignerWorkspace.tsx`** — Dispatches `input` (title/party names filled), `content` (clauses enabled), `exported` (print triggered)
+
+4. **`src/components/workspaces/sales-book-designer/SalesBookDesignerWorkspace.tsx`** — Dispatches `input` (company name filled), `content` (forms configured), `exported` (print triggered)
+
+5. **`src/components/workspaces/ResumeCVWorkspaceV2.tsx`** — Step-based progress: `(step/7)*80%` across 8 wizard steps, plus `input` (step ≥2) and `content` (step ≥7) milestones
+
+6. **`src/components/workspaces/resume-cv/StepEditor.tsx`** — Dispatches `edited` (3+ changes in editor), `exported` (print or export succeeds)
+
+7. **`src/components/workspaces/BusinessCardWorkspace.tsx`** — Progress map: step 1→10%, 2→25%, 3→40%, 4→55%, 5→70%, 6→90%, plus `input`/`content`/`exported` milestones at appropriate steps
+
+8. **`src/components/dashboard/ActiveProjects.tsx`** — Shows milestone labels (Started/Input provided/Content created/Refined/Complete) instead of "Progress", color-coded progress bar (gray→secondary→primary→success)
+
+#### How It Works for Each Tool Type:
+- **Wizard tools** (Resume, Business Card): Report exact progress on each step transition
+- **Editor tools** (Contract, Sales Book): Report milestones on content-existence checks + export
+- **Other workspaces**: Get `opened` (10%) on creation + `input` (20%) via `workspace:dirty` fallback + `edited` (20%) after 5+ dirty events
+- **Future tools**: Just dispatch `workspace:progress` events — system auto-tracks
+
+#### Commit
+- `cd4f429` pushed to origin/main
+
+---
+
+## Previous Focus
 **Phase:** Platform Infrastructure Hardening — COMPLETE ✅
 
 ### Session 126: Platform Quality & Settings Expansion
