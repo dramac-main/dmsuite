@@ -1,8 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { getIcon } from "@/components/icons";
 import { useAnalyticsStore } from "@/stores/analytics";
-import { usePreferencesStore } from "@/stores/preferences";
 import { useProjectStore } from "@/stores/projects";
 import { useExportHistoryStore } from "@/stores/export-history";
 import { useUser } from "@/hooks/useUser";
@@ -15,52 +15,68 @@ interface StatCard {
   hintType: "up" | "neutral";
 }
 
+/* SSR-safe defaults — must match what the server renders so hydration succeeds */
+const SSR_STATS: StatCard[] = [
+  { label: "Credits", value: "—", icon: "zap", hint: "Loading…", hintType: "neutral" },
+  { label: "Projects", value: "0", icon: "folder", hint: "Start a project", hintType: "neutral" },
+  { label: "Exports", value: "0", icon: "download", hint: "Nothing yet", hintType: "neutral" },
+  { label: "Activity", value: "—", icon: "clock", hint: "No sessions yet", hintType: "neutral" },
+];
+
 export default function StatsBar() {
+  /* Gate all store/hook reads behind a mounted flag so SSR and first
+     client render produce identical output (prevents React #418). */
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const { profile } = useUser();
   const totalOpens = useAnalyticsStore((s) => s.getTotalOpens());
   const totalHours = useAnalyticsStore((s) => s.getTotalHours());
   const topTools = useAnalyticsStore((s) => s.getTopTools(1));
-  const favCount = usePreferencesStore((s) => s.favoriteTools.length);
   const projectCount = useProjectStore((s) => s.projects.length);
   const exportCount = useExportHistoryStore((s) => s.exports.length);
 
   const credits = profile?.credits ?? 0;
   const plan = profile?.plan ?? "free";
 
-  const stats: StatCard[] = [
-    {
-      label: "Credits",
-      value: credits.toLocaleString(),
-      icon: "zap",
-      hint: `${plan.charAt(0).toUpperCase() + plan.slice(1)} plan`,
-      hintType: "up",
-    },
-    {
-      label: "Projects",
-      value: projectCount.toString(),
-      icon: "folder",
-      hint: projectCount === 0 ? "Start a project" : "In progress",
-      hintType: projectCount === 0 ? "neutral" : "up",
-    },
-    {
-      label: "Exports",
-      value: exportCount.toString(),
-      icon: "download",
-      hint: exportCount === 0 ? "Nothing yet" : "Files created",
-      hintType: exportCount === 0 ? "neutral" : "up",
-    },
-    {
-      label: "Activity",
-      value: totalOpens > 0 ? `${totalHours}h` : "—",
-      icon: "clock",
-      hint:
-        totalOpens > 0
-          ? `${totalOpens} sessions` +
-            (topTools[0] ? ` · Top: ${topTools[0].toolId.replace(/-/g, " ")}` : "")
-          : "No sessions yet",
-      hintType: totalOpens > 0 ? "up" : "neutral",
-    },
-  ];
+  const stats: StatCard[] = mounted
+    ? [
+        {
+          label: "Credits",
+          value: credits.toLocaleString(),
+          icon: "zap",
+          hint: `${plan.charAt(0).toUpperCase() + plan.slice(1)} plan`,
+          hintType: "up",
+        },
+        {
+          label: "Projects",
+          value: projectCount.toString(),
+          icon: "folder",
+          hint: projectCount === 0 ? "Start a project" : "In progress",
+          hintType: projectCount === 0 ? "neutral" : "up",
+        },
+        {
+          label: "Exports",
+          value: exportCount.toString(),
+          icon: "download",
+          hint: exportCount === 0 ? "Nothing yet" : "Files created",
+          hintType: exportCount === 0 ? "neutral" : "up",
+        },
+        {
+          label: "Activity",
+          value: totalOpens > 0 ? `${totalHours}h` : "—",
+          icon: "clock",
+          hint:
+            totalOpens > 0
+              ? `${totalOpens} sessions` +
+                (topTools[0]
+                  ? ` · Top: ${topTools[0].toolId.replace(/-/g, " ")}`
+                  : "")
+              : "No sessions yet",
+          hintType: totalOpens > 0 ? "up" : "neutral",
+        },
+      ]
+    : SSR_STATS;
 
   return (
     <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
