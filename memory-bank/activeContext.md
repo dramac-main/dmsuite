@@ -1,33 +1,53 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Resume UX Revamp (Contract-Pattern Parity) — COMPLETE ✅
+**Phase:** Credits & Profile Loading Fix — COMPLETE ✅
 
-### Session 131: Resume Editor UX Revamp — Match Agreements & Contracts Tool
+### Session 132: Cache-First Profile Loading Architecture
 
 #### Problem
-1. **Landing-on-Generate Bug** — Every revisit landed on Step 6 (generation), auto-triggering AI and burning tokens. Wizard store `onRehydrateStorage` clamped step 7→6 unconditionally.
-2. **Accordion UX** — Editor used accordion panels (Sections/Design), inconsistent with Contract Designer's proven flat-tab system.
-3. **Redundant AI Chat** — AIChatBar floating on canvas was redundant with Chiko assistant.
+1. **Persistent "Retry" error state** — CreditBalance and UserMenu frequently showed error buttons instead of actual data
+2. **500-1600ms loading skeleton** — Every page visit triggered a waterfall: `getUser()` (300-800ms) → `fetchProfile()` (200-500ms) → `subscribeRealtime()`
+3. **INITIAL_SESSION event was IGNORED** — The one event that provides instant cached session data (~5ms, no network) was being skipped
+4. **No profile cache** — Every navigation re-fetched profile from Supabase DB
+5. **Error on any transient failure** — Any timeout or glitch showed error state with no fallback
 
-#### Solution: Full Contract-Pattern Alignment
+#### Solution: Cache-First, Background-Validate Architecture
 
-##### Wizard Rehydration Fix (`resume-cv-wizard.ts`):
-- `onRehydrateStorage` now checks `localStorage.getItem("dmsuite-resume")` for existing editor data
-- If resume data exists with a populated name → stays on step 7 (editor)
-- If stuck on step 6 with existing data → redirects to step 7
-- Falls back to step 5 (Brief) instead of step 6 if no data exists
-- Prevents re-generation and token waste on every return visit
+##### `useUser.tsx` — Complete Rewrite:
+- **Profile cache layer** — `readCachedProfile()` / `writeCachedProfile()` / `clearCachedProfile()` using localStorage with 5-minute TTL
+- **Phase 1 (0ms):** Synchronous cache read at effect start → cached profile displayed instantly
+- **Phase 2 (~5-10ms):** `INITIAL_SESSION` from `onAuthStateChange` provides cached session user from cookies — no network call
+- **Phase 3 (background):** Parallel fresh profile fetch + `getUser()` JWT validation — never blocks UI
+- **Phase 4 (live):** Realtime Postgres subscription writes back to cache for next visit
+- **Removed:** `bootstrap()` function with sequential `getUser()` → `fetchProfile()` waterfall
+- **Error strategy:** `error=true` ONLY when all attempts fail AND no cached data exists
+- **Cache invalidation:** Wrong-user cache detected via userId match, cleared on sign out
+- **Realtime sync:** Cache updated on every realtime profile change
 
-##### New 4-Tab System (replacing 2-accordion-tab layout):
-- **`tabs/ResumeContactTab.tsx`** (~170 lines) — Personal info (name, headline, email, phone, location, LinkedIn, website) + professional summary. Flat form layout mirroring Contract's Parties tab.
-- **`tabs/ResumeSectionsTab.tsx`** (~350 lines) — Toggle-based section list mirroring Contract's Clauses tab. Each section: grip handle, visibility toggle switch, title, category badge, item count, expand chevron. Inline editing on expand. SectionRow + SummaryInlineEditor components.
-- **`tabs/ResumeStyleTab.tsx`** (~310 lines) — Template strip (horizontal scrollable thumbnails), accent color grid, font pairing list, font scale buttons. Flat layout matching Contract's Style tab.
-- **`tabs/ResumeFormatTab.tsx`** (~190 lines) — Page size (print/web groups), section spacing, margins (marginPreset), line spacing, export info. Matching Contract's Print tab.
+##### `CreditBalance.tsx`:
+- `if (loading)` → `if (loading && !profile)` — cached data shows through loading state
+- `if (error)` → `if (error && !profile)` — cached data suppresses error button
 
-##### StepEditor.tsx Rewrite:
-- Tabs: `["sections", "design"]` → `["contact", "sections", "style", "format"]` with matching icons
-- Default tab: "contact" (was "sections")
+##### `UserMenu.tsx`:
+- `if (loading)` → `if (loading && !profile)` — cached data shows through loading state
+- `if (error || !user)` → `if ((error || !user) && !profile)` — cached data suppresses error button
+- Added `if (!user) return null` guard for brief ~10ms transitional state
+
+#### Performance Impact:
+- **Return visitors:** 0ms loading (instant from cache) — was 500-1600ms
+- **First visit:** ~200-500ms (profile fetch only, no getUser waterfall) — was 500-1600ms
+- **Error state:** Only on total network failure WITH no cache — was on any transient timeout
+
+#### Validation:
+- [x] TypeScript: 0 errors (`npx tsc --noEmit` clean)
+- [x] Production build: all pages compiled successfully
+- [x] All consumer components backward-compatible (account, admin pages work unchanged)
+
+---
+
+## Previous Focus
+**Phase:** Resume UX Revamp (Contract-Pattern Parity) — COMPLETE ✅
 - AIChatBar removed from canvas preview area
 - Ctrl+K keyboard shortcut removed (was for AI chat focus)
 - handleAIRevision dead code removed (was only called by AIChatBar)

@@ -82,8 +82,8 @@ const BREAKABLE_ITEM_SELECTORS = [
   ".volunteer-item", ".reference-item", ".custom-item",
 ].join(",");
 
-/** CSS selectors for section-level containers */
-const SECTION_SELECTORS = ".section, .resume-section";
+/** CSS selectors for section-level containers (includes sidebar sections for 2-col templates) */
+const SECTION_SELECTORS = ".section, .resume-section, .sidebar-section";
 
 /** Check if a section has at least one visible (non-hidden) item */
 function hasVisibleItems(
@@ -433,6 +433,171 @@ export default function TemplateRenderer({
     };
   }, [resume]);
 
+  // ── Dynamic CSS overrides: make Format/Style tab controls actually work ──
+  // Template CSS uses hardcoded values, so we inject overrides based on user settings.
+  const dynamicCSS = useMemo(() => {
+    const parts: string[] = [];
+    const accentColor = resume.metadata.design.primaryColor;
+
+    // --- Accent color override (per-template CSS variable) ---
+    // Parse accent to extract rgba components for light variant
+    const rgbaMatch = accentColor.match(/rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)/);
+    const accentLight = rgbaMatch
+      ? `rgba(${rgbaMatch[1]}, ${rgbaMatch[2]}, ${rgbaMatch[3]}, 0.12)`
+      : accentColor;
+    const accentGlow = rgbaMatch
+      ? `rgba(${rgbaMatch[1]}, ${rgbaMatch[2]}, ${rgbaMatch[3]}, 0.25)`
+      : accentColor;
+    const accentDim = rgbaMatch
+      ? `rgba(${rgbaMatch[1]}, ${rgbaMatch[2]}, ${rgbaMatch[3]}, 0.6)`
+      : accentColor;
+
+    parts.push(`
+      [data-template="modern-minimalist"]  { --accent: ${accentColor}; --accent-light: ${accentLight}; }
+      [data-template="corporate-executive"]{ --gold: ${accentColor}; --gold-light: ${accentLight}; }
+      [data-template="creative-bold"]      { --hot-pink: ${accentColor}; }
+      [data-template="elegant-sidebar"]    { --accent: ${accentColor}; --accent-glow: ${accentGlow}; }
+      [data-template="infographic"]        { --teal: ${accentColor}; --teal-light: ${accentLight}; }
+      [data-template="dark-professional"]  { --neon-cyan: ${accentColor}; }
+      [data-template="gradient-creative"]  { --purple: ${accentColor}; }
+      [data-template="classic-corporate"]  { --blue-accent: ${accentColor}; --blue-light: ${accentLight}; }
+      [data-template="artistic-portfolio"] { --coral: ${accentColor}; --coral-light: ${accentLight}; }
+      [data-template="tech-modern"]        { --green: ${accentColor}; --green-dim: ${accentDim}; }
+      [data-template="pastel-soft"]        { --lavender: ${accentColor}; }
+      [data-template="split-duotone"]      { --coral: ${accentColor}; }
+      [data-template="architecture-blueprint"] { --blue: ${accentColor}; }
+      [data-template="retro-vintage"]      { --gold: ${accentColor}; }
+      [data-template="medical-clean"]      { --teal: ${accentColor}; --dark-teal: ${accentColor}; --light-teal: ${accentLight}; }
+      [data-template="neon-glass"]         { --neon-blue: ${accentColor}; }
+      [data-template="corporate-stripe"]   { --accent: ${accentColor}; }
+    `);
+
+    // --- Section spacing override ---
+    const spacing = resume.metadata.page.sectionSpacing;
+    if (spacing === "compact") {
+      parts.push(`
+        [data-template] .section,
+        [data-template] .sidebar-section,
+        [data-template] .resume-section { margin-bottom: 10px !important; }
+      `);
+    } else if (spacing === "relaxed") {
+      parts.push(`
+        [data-template] .section,
+        [data-template] .sidebar-section,
+        [data-template] .resume-section { margin-bottom: 28px !important; }
+      `);
+    }
+
+    // --- Line spacing override ---
+    const lineSpacing = resume.metadata.page.lineSpacing;
+    if (lineSpacing === "tight") {
+      parts.push(`
+        [data-template] { line-height: 1.3; }
+        [data-template] .summary,
+        [data-template] .exp-desc,
+        [data-template] .exp-desc li,
+        [data-template] .edu-desc,
+        [data-template] p { line-height: 1.3 !important; }
+        [data-template] .exp-item,
+        [data-template] .edu-item { margin-bottom: 8px !important; }
+      `);
+    } else if (lineSpacing === "loose") {
+      parts.push(`
+        [data-template] { line-height: 1.8; }
+        [data-template] .summary,
+        [data-template] .exp-desc,
+        [data-template] .exp-desc li,
+        [data-template] .edu-desc,
+        [data-template] p { line-height: 1.8 !important; }
+      `);
+    }
+
+    // --- Font scale override ---
+    // Templates use hardcoded px sizes, so we use CSS zoom on content for scale
+    const fontScale = resume.metadata.typography.fontScale;
+    if (fontScale === "compact") {
+      parts.push(`
+        [data-template] .section-title,
+        [data-template] .section-heading { font-size: 0.9em !important; }
+        [data-template] .summary,
+        [data-template] .exp-desc,
+        [data-template] .exp-desc li,
+        [data-template] .edu-desc,
+        [data-template] .skill-tag,
+        [data-template] .cert-name,
+        [data-template] .cert-org,
+        [data-template] .lang-name,
+        [data-template] .lang-level,
+        [data-template] .exp-company,
+        [data-template] .exp-role,
+        [data-template] .exp-date,
+        [data-template] .edu-degree,
+        [data-template] .edu-school,
+        [data-template] .edu-year,
+        [data-template] .contact-line,
+        [data-template] p { font-size: 0.9em !important; }
+        [data-template] .name { font-size: 0.88em !important; }
+        [data-template] .title { font-size: 0.9em !important; }
+      `);
+    } else if (fontScale === "spacious") {
+      parts.push(`
+        [data-template] .section-title,
+        [data-template] .section-heading { font-size: 1.1em !important; }
+        [data-template] .summary,
+        [data-template] .exp-desc,
+        [data-template] .exp-desc li,
+        [data-template] .edu-desc,
+        [data-template] .skill-tag,
+        [data-template] .cert-name,
+        [data-template] .cert-org,
+        [data-template] .lang-name,
+        [data-template] .lang-level,
+        [data-template] .exp-company,
+        [data-template] .exp-role,
+        [data-template] .exp-date,
+        [data-template] .edu-degree,
+        [data-template] .edu-school,
+        [data-template] .edu-year,
+        [data-template] .contact-line,
+        [data-template] p { font-size: 1.1em !important; }
+        [data-template] .name { font-size: 1.12em !important; }
+        [data-template] .title { font-size: 1.1em !important; }
+      `);
+    }
+
+    // --- Margin preset override (left/right internal padding) ---
+    const marginPreset = resume.metadata.page.marginPreset;
+    if (marginPreset === "narrow") {
+      parts.push(`
+        [data-template] .header { padding-left: 28px !important; padding-right: 28px !important; }
+        [data-template] .content,
+        [data-template] .body,
+        [data-template] .body-content,
+        [data-template] .resume-body { padding-left: 28px !important; padding-right: 28px !important; }
+        [data-template] .header-divider { margin-left: 28px !important; margin-right: 28px !important; }
+        [data-template] .banner { padding-left: 28px !important; padding-right: 28px !important; }
+      `);
+    } else if (marginPreset === "wide") {
+      parts.push(`
+        [data-template] .header { padding-left: 56px !important; padding-right: 56px !important; }
+        [data-template] .content,
+        [data-template] .body,
+        [data-template] .body-content,
+        [data-template] .resume-body { padding-left: 56px !important; padding-right: 56px !important; }
+        [data-template] .header-divider { margin-left: 56px !important; margin-right: 56px !important; }
+        [data-template] .banner { padding-left: 56px !important; padding-right: 56px !important; }
+      `);
+    }
+
+    return parts.join("\n");
+  }, [
+    resume.metadata.design.primaryColor,
+    resume.metadata.page.sectionSpacing,
+    resume.metadata.page.lineSpacing,
+    resume.metadata.page.marginPreset,
+    resume.metadata.typography.fontScale,
+  ]);
+
   // ── Measurement state ──
   const measureRef = useRef<HTMLDivElement>(null);
   const [pageBreaks, setPageBreaks] = useState<number[]>([0]);
@@ -544,7 +709,8 @@ export default function TemplateRenderer({
           overflow: visible !important;
         }
         [data-template] .section,
-        [data-template] .resume-section {
+        [data-template] .resume-section,
+        [data-template] .sidebar-section {
           break-inside: avoid;
           page-break-inside: avoid;
         }
@@ -566,6 +732,9 @@ export default function TemplateRenderer({
           page-break-inside: avoid;
         }
       `}</style>
+
+      {/* Dynamic CSS overrides — makes Format/Style tab controls affect templates */}
+      {dynamicCSS && <style>{dynamicCSS}</style>}
 
       {/* Hidden measurement container — renders ALL content with NO height clip */}
       <div

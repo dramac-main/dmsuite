@@ -31,13 +31,15 @@ export default function UserMenu() {
     return () => document.removeEventListener("keydown", handleKey);
   }, [open]);
 
-  if (loading) {
+  // Show skeleton only when loading AND no cached profile to display
+  if (loading && !profile) {
     return (
       <div className="h-9 w-9 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse" />
     );
   }
 
-  if (error || !user) {
+  // Show error only when all attempts failed AND no cached data to fall back on
+  if ((error || !user) && !profile) {
     return (
       <button
         onClick={retry}
@@ -51,6 +53,9 @@ export default function UserMenu() {
       </button>
     );
   }
+
+  // Brief transitional state: profile cached but user not yet set by INITIAL_SESSION
+  if (!user) return null;
 
   const initials = profile?.full_name
     ? profile.full_name

@@ -1,19 +1,35 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅
+## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅
 
 ---
 
-## Tool Development Tracker
-- **Location:** `TOOL-STATUS.md` (project root) — always check this before session work
-- **Code field:** `devStatus` on `Tool` interface in `src/data/tools.ts` (`"complete" | "scaffold" | "no-ui"`)
-- **Auto-update rule:** AI must update both `TOOL-STATUS.md` and `devStatus` in tools.ts when marking any tool complete
-- **Counts (2026-03-25):** 8 COMPLETE · ~88 SCAFFOLD · ~100+ NO-UI
-- **COMPLETE tools:** invoice-designer, quote-estimate, receipt-designer, purchase-order, delivery-note, credit-note, proforma-invoice, contract-template
+## Current Work: Credits & Profile Loading Fix — COMPLETE ✅
+
+### Session 132 — Cache-First Profile Loading Architecture
+
+#### Problem
+- CreditBalance and UserMenu showed persistent "Retry" error state
+- 500-1600ms loading skeleton waterfall: getUser→fetchProfile→subscribeRealtime
+- INITIAL_SESSION event was ignored (skipped the one instant data source)
+- No profile cache — every visit re-fetched from Supabase DB
+- Any transient timeout triggered error state
+
+#### Solution: Cache-First, Background-Validate
+- [x] Added localStorage profile cache (5-min TTL, userId-scoped, clears on sign out)
+- [x] Removed bootstrap() waterfall — replaced with INITIAL_SESSION as primary bootstrap (~5ms vs 300-800ms)
+- [x] Background getUser() JWT validation in parallel (security, never blocks UI)
+- [x] Profile shows from cache instantly on return visits (0ms loading)
+- [x] Error state only on total network failure + no cache (was: any timeout)
+- [x] CreditBalance: `loading && !profile` guard — cached data shows through
+- [x] UserMenu: `(error || !user) && !profile` guard — cached data shows through
+- [x] Realtime updates write back to cache for next visit
+- [x] TypeScript: 0 errors
+- [x] Production build: all pages pass
 
 ---
 
-## Current Work: Resume UX Revamp — COMPLETE ✅
+## Previous Work: Resume UX Revamp — COMPLETE ✅
 
 ### Session 131 — Resume Editor Revamp to Match Contract Designer UX
 

@@ -21,13 +21,15 @@ export default function CreditBalance() {
     return () => window.removeEventListener("dmsuite:open-credit-purchase", handler);
   }, []);
 
-  if (loading) {
+  // Show skeleton only when loading AND no cached profile to display
+  if (loading && !profile) {
     return (
       <div className="h-8 w-20 rounded-lg bg-gray-200 dark:bg-gray-800 animate-pulse" />
     );
   }
 
-  if (error) {
+  // Show error only when all attempts failed AND no cached data to fall back on
+  if (error && !profile) {
     return (
       <button
         onClick={retry}
