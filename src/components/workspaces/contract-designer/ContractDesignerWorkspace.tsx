@@ -14,6 +14,9 @@ import { useContractEditor, useContractUndo } from "@/stores/contract-editor";
 import { printHTML } from "@/lib/print";
 import { useChikoActions } from "@/hooks/useChikoActions";
 import { createContractManifest } from "@/lib/chiko/manifests/contract";
+import { dispatchDirty, dispatchProgress } from "@/lib/workspace-events";
+import { ZOOM_MIN, ZOOM_MAX, ZOOM_STEP, ZOOM_DEFAULT, PAGE_DOTS_THRESHOLD } from "@/lib/workspace-constants";
+import "@/styles/workspace-canvas.css";
 import {
   CONTRACT_TYPES,
   CONTRACT_TYPE_CONFIGS,
@@ -37,6 +40,7 @@ import {
   Icons,
   SIcon,
 } from "@/components/workspaces/shared/WorkspaceUIKit";
+import WorkspaceErrorBoundary from "@/components/workspaces/shared/WorkspaceErrorBoundary";
 
 // =============================================================================
 // Editor tab definitions
@@ -103,7 +107,7 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
   const [mobileView, setMobileView] = useState<"editor" | "preview">("editor");
 
   // Zoom
-  const [zoom, setZoom] = useState(100);
+  const [zoom, setZoom] = useState(ZOOM_DEFAULT);
 
   // Multi-page tracking
   const [totalPages, setTotalPages] = useState(1);
@@ -137,7 +141,7 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
   useEffect(() => {
     if (formRef.current === form) return;
     formRef.current = form;
-    window.dispatchEvent(new CustomEvent("workspace:dirty"));
+    dispatchDirty();
   }, [form]);
 
   // Dispatch milestone progress based on actual content state
@@ -153,9 +157,7 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
     const key = milestones.join(",");
     if (key !== prevMilestonesRef.current) {
       prevMilestonesRef.current = key;
-      milestones.forEach((m) =>
-        window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: m } }))
-      );
+      milestones.forEach((m) => dispatchProgress(m as "input" | "content"));
     }
   }, [form.documentInfo.title, form.partyA.name, form.partyB.name, enabledClauses]);
 
@@ -218,7 +220,7 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
         [data-contract-page]:last-child { page-break-after: auto; }
       </style></head><body>${printEl.innerHTML}</body></html>`;
     printHTML(html);
-    window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "exported" } }));
+    dispatchProgress("exported");
   }, [form.documentInfo.title, form.printConfig.pageSize, form.style.fontPairing]);
 
   // Keep Chiko's print ref in sync
@@ -278,11 +280,13 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
   // ── Tab Content ──
   const tabContent = (
     <div className="flex-1 overflow-y-auto scrollbar-thin">
-      {activeTab === "document" && <ContractDocumentTab />}
-      {activeTab === "parties" && <ContractPartiesTab />}
-      {activeTab === "clauses" && <ContractClausesTab />}
-      {activeTab === "style" && <ContractStyleTab />}
-      {activeTab === "print" && <ContractPrintTab />}
+      <WorkspaceErrorBoundary>
+        {activeTab === "document" && <ContractDocumentTab />}
+        {activeTab === "parties" && <ContractPartiesTab />}
+        {activeTab === "clauses" && <ContractClausesTab />}
+        {activeTab === "style" && <ContractStyleTab />}
+        {activeTab === "print" && <ContractPrintTab />}
+      </WorkspaceErrorBoundary>
 
       {/* Start Over — always at the bottom */}
       <div className="p-4 pb-8">
@@ -326,10 +330,10 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
       {/* Preview toolbar */}
       <div className="shrink-0 flex items-center justify-between h-10 px-3 border-b border-gray-800/40">
         <div className="flex items-center gap-1">
-          <IconButton onClick={() => setZoom((z) => Math.max(30, z - 10))} icon={Icons.zoomOut} tooltip="Zoom out" />
+          <IconButton onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z - ZOOM_STEP))} icon={Icons.zoomOut} tooltip="Zoom out" />
           <span className="text-[10px] text-gray-500 w-9 text-center font-mono tabular-nums">{zoom}%</span>
-          <IconButton onClick={() => setZoom((z) => Math.min(200, z + 10))} icon={Icons.zoomIn} tooltip="Zoom in" />
-          <button onClick={() => setZoom(100)} className="text-[10px] text-gray-600 hover:text-gray-400 px-1.5 py-0.5 rounded-md hover:bg-white/4 transition-colors">
+          <IconButton onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z + ZOOM_STEP))} icon={Icons.zoomIn} tooltip="Zoom in" />
+          <button onClick={() => setZoom(ZOOM_DEFAULT)} className="text-[10px] text-gray-600 hover:text-gray-400 px-1.5 py-0.5 rounded-md hover:bg-white/4 transition-colors">
             Reset
           </button>
         </div>
@@ -388,13 +392,6 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
         onClick={handlePreviewClick}
         style={{ backgroundColor: "#374151" }}
       >
-        <style>{`
-          .ct-canvas-root [data-ct-section] { transition: outline 0.15s ease, box-shadow 0.15s ease; outline: 2px solid transparent; border-radius: 2px; cursor: pointer; }
-          .ct-canvas-root [data-ct-section]:hover { outline: 2px solid rgba(139,92,246,0.4); box-shadow: 0 0 0 4px rgba(139,92,246,0.06); }
-          .ct-canvas-root [data-ct-section].ct-layer-highlight { outline: 2px solid rgba(139,92,246,0.6); box-shadow: 0 0 0 6px rgba(139,92,246,0.1); }
-          .ct-canvas-root [data-contract-page] { box-shadow: 0 4px 32px rgba(0,0,0,0.45); }
-          @media print { .ct-canvas-root [data-ct-section] { outline: none !important; box-shadow: none !important; cursor: default !important; } .ct-canvas-root [data-contract-page] { box-shadow: none !important; } }
-        `}</style>
         <div
           className="ct-canvas-root flex justify-center py-6 px-4"
           style={{ minHeight: "100%" }}
@@ -431,7 +428,7 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
         </button>
 
         {/* Page dots for ≤8 pages */}
-        {totalPages <= 8 ? (
+        {totalPages <= PAGE_DOTS_THRESHOLD ? (
           <div className="flex items-center gap-1">
             {Array.from({ length: totalPages }).map((_, i) => (
               <button

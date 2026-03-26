@@ -2652,7 +2652,7 @@ export const suiteNavGroups: SuiteNavGroup[] = [
     label: "MAIN",
     items: [
       { icon: "grid", label: "Dashboard", href: "/dashboard", active: true },
-      { icon: "briefcase", label: "Brand Kit", href: "/tools/design/brand-identity" },
+      { icon: "folder", label: "My Projects", href: "/projects" },
       { icon: "user", label: "Resume Builder", href: "/tools/documents/resume-cv" },
       { icon: "messageCircle", label: "AI Chat", href: "/tools/utilities/ai-chat" },
     ],

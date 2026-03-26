@@ -119,9 +119,17 @@ export default function ActiveProjects() {
             Active Projects
           </h2>
         </div>
-        <span className="text-xs text-gray-400">
-          {projects.length} project{projects.length !== 1 ? "s" : ""}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-400">
+            {projects.length} project{projects.length !== 1 ? "s" : ""}
+          </span>
+          <Link
+            href="/projects"
+            className="text-xs text-primary-500 dark:text-primary-400 hover:text-primary-400 dark:hover:text-primary-300 font-medium transition-colors"
+          >
+            View all →
+          </Link>
+        </div>
       </div>
 
       {/* Project cards grid */}

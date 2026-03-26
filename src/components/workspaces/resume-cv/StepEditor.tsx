@@ -17,6 +17,9 @@ import { useResumeCVWizard } from "@/stores/resume-cv-wizard";
 import { useChikoActions } from "@/hooks/useChikoActions";
 import { useGoogleFonts } from "@/hooks/useGoogleFonts";
 import { createResumeManifest } from "@/lib/chiko/manifests/resume";
+import { dispatchDirty, dispatchProgress } from "@/lib/workspace-events";
+import { ZOOM_MIN, ZOOM_MAX, ZOOM_STEP, ZOOM_DEFAULT, PAGE_DOTS_THRESHOLD, MILESTONE_EDIT_THRESHOLD } from "@/lib/workspace-constants";
+import "@/styles/workspace-canvas.css";
 import { PAGE_DIMENSIONS } from "@/lib/resume/schema";
 import { TEMPLATES } from "@/lib/resume/templates/templates";
 import TemplateRenderer, { RESUME_PAGE_GAP } from "@/lib/resume/templates/TemplateRenderer";
@@ -38,6 +41,7 @@ import {
   Icons,
   SIcon,
 } from "@/components/workspaces/shared/WorkspaceUIKit";
+import WorkspaceErrorBoundary from "@/components/workspaces/shared/WorkspaceErrorBoundary";
 
 // =============================================================================
 // Editor tab definitions — mirrors Contract workspace 4-tab pattern
@@ -97,7 +101,7 @@ export default function StepEditor() {
   // Mobile view mode
   const [mobileView, setMobileView] = useState<"editor" | "preview">("editor");
   // Zoom
-  const [zoom, setZoom] = useState(100);
+  const [zoom, setZoom] = useState(ZOOM_DEFAULT);
   // Multi-page tracking
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
@@ -126,10 +130,10 @@ export default function StepEditor() {
     if (resumeRef.current === resume) return;
     resumeRef.current = resume;
     editCountRef.current++;
-    window.dispatchEvent(new CustomEvent("workspace:dirty"));
+    dispatchDirty();
     // After a few edits in the editor, mark the "edited" milestone
-    if (editCountRef.current >= 3) {
-      window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "edited" } }));
+    if (editCountRef.current >= MILESTONE_EDIT_THRESHOLD) {
+      dispatchProgress("edited");
     }
   }, [resume]);
 
@@ -274,7 +278,7 @@ export default function StepEditor() {
           [data-resume-page]:last-child { page-break-after: auto; }
         </style></head><body>${printEl.innerHTML}</body></html>`;
       printHTML(html);
-      window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "exported" } }));
+      dispatchProgress("exported");
       return;
     }
     setIsExporting(true);
@@ -285,7 +289,7 @@ export default function StepEditor() {
         fileName: resume.basics.name || "resume",
       });
       if (result.success) {
-        window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "exported" } }));
+        dispatchProgress("exported");
       } else {
         console.error(`Export failed: ${result.error}`);
       }
@@ -309,10 +313,12 @@ export default function StepEditor() {
   // ── Tab content ──
   const tabContent = (
     <div className="flex-1 overflow-y-auto scrollbar-thin">
-      {activeTab === "contact" && <ResumeContactTab />}
-      {activeTab === "sections" && <ResumeSectionsTab activeSectionKey={activeSectionKey} />}
-      {activeTab === "style" && <ResumeStyleTab />}
-      {activeTab === "format" && <ResumeFormatTab />}
+      <WorkspaceErrorBoundary>
+        {activeTab === "contact" && <ResumeContactTab />}
+        {activeTab === "sections" && <ResumeSectionsTab activeSectionKey={activeSectionKey} />}
+        {activeTab === "style" && <ResumeStyleTab />}
+        {activeTab === "format" && <ResumeFormatTab />}
+      </WorkspaceErrorBoundary>
 
       {/* Start Over — always at the bottom */}
       <div className="p-4 pb-8">
@@ -356,10 +362,10 @@ export default function StepEditor() {
       {/* Preview toolbar — zoom + ATS + export */}
       <div className="shrink-0 flex items-center justify-between h-10 px-3 border-b border-gray-800/40">
         <div className="flex items-center gap-1">
-          <IconButton onClick={() => setZoom((z) => Math.max(30, z - 10))} icon={Icons.zoomOut} tooltip="Zoom out" />
+          <IconButton onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z - ZOOM_STEP))} icon={Icons.zoomOut} tooltip="Zoom out" />
           <span className="text-[10px] text-gray-500 w-9 text-center font-mono tabular-nums">{zoom}%</span>
-          <IconButton onClick={() => setZoom((z) => Math.min(200, z + 10))} icon={Icons.zoomIn} tooltip="Zoom in" />
-          <button onClick={() => setZoom(100)} className="text-[10px] text-gray-600 hover:text-gray-400 px-1.5 py-0.5 rounded-md hover:bg-white/4 transition-colors">
+          <IconButton onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z + ZOOM_STEP))} icon={Icons.zoomIn} tooltip="Zoom in" />
+          <button onClick={() => setZoom(ZOOM_DEFAULT)} className="text-[10px] text-gray-600 hover:text-gray-400 px-1.5 py-0.5 rounded-md hover:bg-white/4 transition-colors">
             Reset
           </button>
         </div>
@@ -427,13 +433,6 @@ export default function StepEditor() {
           />
         )}
 
-        <style>{`
-          .resume-canvas-root [data-resume-section] { transition: outline 0.15s ease, box-shadow 0.15s ease; outline: 2px solid transparent; border-radius: 2px; cursor: pointer; }
-          .resume-canvas-root [data-resume-section]:hover { outline: 2px solid rgba(139,92,246,0.4); box-shadow: 0 0 0 4px rgba(139,92,246,0.06); }
-          .resume-canvas-root [data-resume-section].resume-layer-highlight { outline: 2px solid rgba(139,92,246,0.6); box-shadow: 0 0 0 6px rgba(139,92,246,0.1); }
-          .resume-canvas-root [data-resume-page] { box-shadow: 0 4px 32px rgba(0,0,0,0.45); }
-          @media print { .resume-canvas-root [data-resume-section] { outline: none !important; box-shadow: none !important; cursor: default !important; } .resume-canvas-root [data-resume-page] { box-shadow: none !important; } }
-        `}</style>
 
         <div
           className="resume-canvas-root flex justify-center py-6 px-4"
@@ -474,7 +473,7 @@ export default function StepEditor() {
         </button>
 
         {/* Page dots for ≤8 pages */}
-        {totalPages <= 8 ? (
+        {totalPages <= PAGE_DOTS_THRESHOLD ? (
           <div className="flex items-center gap-1">
             {Array.from({ length: totalPages }).map((_, i) => (
               <button

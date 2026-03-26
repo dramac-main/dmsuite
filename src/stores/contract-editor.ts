@@ -24,15 +24,8 @@ import {
   createDefaultContractForm,
   convertContractType,
   getContractTemplate,
+  getDefaultClauses,
 } from "@/lib/contract/schema";
-
-// ---------------------------------------------------------------------------
-// Accent Color Lock
-// ---------------------------------------------------------------------------
-
-let _accentLocked = false;
-export function isContractAccentLocked(): boolean { return _accentLocked; }
-export function setContractAccentLock(v: boolean): void { _accentLocked = v; }
 
 // ---------------------------------------------------------------------------
 // Types
@@ -44,6 +37,10 @@ function uid(): string {
 
 export interface ContractEditorState {
   form: ContractFormData;
+
+  // Accent Color Lock — when user explicitly sets accent, preserve across template switches
+  accentColorLocked: boolean;
+  setAccentColorLocked: (locked: boolean) => void;
 
   // Document type
   setContractType: (type: ContractType) => void;
@@ -83,16 +80,18 @@ export interface ContractEditorState {
 // ---------------------------------------------------------------------------
 
 export const useContractEditor = create<ContractEditorState>()(
-  persist(
-    temporal(
+  temporal(
+    persist(
       immer<ContractEditorState>((set) => ({
         form: createDefaultContractForm(),
+        accentColorLocked: false,
+        setAccentColorLocked: (locked) => set((s) => { s.accentColorLocked = locked; }),
 
         // ── Contract Type ──
         setContractType: (type) =>
           set((s) => {
             s.form = createDefaultContractForm(type);
-            _accentLocked = false;
+            s.accentColorLocked = false;
           }),
 
         convertToType: (type) =>
@@ -109,7 +108,7 @@ export const useContractEditor = create<ContractEditorState>()(
         resetForm: (contractType) =>
           set((s) => {
             s.form = createDefaultContractForm(contractType ?? s.form.contractType);
-            _accentLocked = false;
+            s.accentColorLocked = false;
           }),
 
         // ── Document Info ──
@@ -170,7 +169,6 @@ export const useContractEditor = create<ContractEditorState>()(
 
         resetClauses: () =>
           set((s) => {
-            const { getDefaultClauses } = require("@/lib/contract/schema");
             s.form.clauses = getDefaultClauses(s.form.contractType);
           }),
 
@@ -184,10 +182,10 @@ export const useContractEditor = create<ContractEditorState>()(
         updateStyle: (patch) =>
           set((s) => {
             // If user sets accentColor explicitly, lock it
-            if (patch.accentColor) _accentLocked = true;
+            if (patch.accentColor) s.accentColorLocked = true;
 
             // If switching template, auto-sync accent unless locked
-            if (patch.template && !_accentLocked) {
+            if (patch.template && !s.accentColorLocked) {
               const tpl = getContractTemplate(patch.template);
               patch.accentColor = tpl.accent;
               patch.headerStyle = tpl.headerStyle;
@@ -203,13 +201,14 @@ export const useContractEditor = create<ContractEditorState>()(
           }),
       })),
       {
-        equality: (a, b) => equal(a, b),
-        limit: 50,
+        name: "dmsuite-contract",
+        version: 1,
       },
     ),
     {
-      name: "dmsuite-contract",
-      version: 1,
+      partialize: (state) => ({ form: state.form }),
+      equality: (a, b) => equal(a, b),
+      limit: 50,
     },
   ),
 );

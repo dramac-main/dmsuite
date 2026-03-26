@@ -1,0 +1,95 @@
+/* =============================================================================
+   DMSuite — Workspace Canvas Styles
+   Interactive section highlighting for tool preview canvases.
+   Extracted from inline <style> blocks in workspace components.
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   Sales Book Designer
+   --------------------------------------------------------------------------- */
+
+.sb-canvas-root [data-sb-section] {
+  transition: outline 0.15s ease, box-shadow 0.15s ease;
+  outline: 2px solid transparent;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.sb-canvas-root [data-sb-section]:hover {
+  outline: 2px solid rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.06);
+}
+
+.sb-canvas-root [data-sb-section].sb-layer-highlight {
+  outline: 2px solid rgba(139, 92, 246, 0.6);
+  box-shadow: 0 0 0 6px rgba(139, 92, 246, 0.1);
+}
+
+/* ---------------------------------------------------------------------------
+   Contract Designer
+   --------------------------------------------------------------------------- */
+
+.ct-canvas-root [data-ct-section] {
+  transition: outline 0.15s ease, box-shadow 0.15s ease;
+  outline: 2px solid transparent;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.ct-canvas-root [data-ct-section]:hover {
+  outline: 2px solid rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.06);
+}
+
+.ct-canvas-root [data-ct-section].ct-layer-highlight {
+  outline: 2px solid rgba(139, 92, 246, 0.6);
+  box-shadow: 0 0 0 6px rgba(139, 92, 246, 0.1);
+}
+
+.ct-canvas-root [data-contract-page] {
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.45);
+}
+
+/* ---------------------------------------------------------------------------
+   Resume / CV Builder
+   --------------------------------------------------------------------------- */
+
+.resume-canvas-root [data-resume-section] {
+  transition: outline 0.15s ease, box-shadow 0.15s ease;
+  outline: 2px solid transparent;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.resume-canvas-root [data-resume-section]:hover {
+  outline: 2px solid rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.06);
+}
+
+.resume-canvas-root [data-resume-section].resume-layer-highlight {
+  outline: 2px solid rgba(139, 92, 246, 0.6);
+  box-shadow: 0 0 0 6px rgba(139, 92, 246, 0.1);
+}
+
+.resume-canvas-root [data-resume-page] {
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.45);
+}
+
+/* ---------------------------------------------------------------------------
+   Print: hide all interactive outlines
+   --------------------------------------------------------------------------- */
+
+@media print {
+  .sb-canvas-root [data-sb-section],
+  .ct-canvas-root [data-ct-section],
+  .resume-canvas-root [data-resume-section] {
+    outline: none !important;
+    box-shadow: none !important;
+    cursor: default !important;
+  }
+
+  .ct-canvas-root [data-contract-page],
+  .resume-canvas-root [data-resume-page] {
+    box-shadow: none !important;
+  }
+}

@@ -1,67 +1,100 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Industry-Standard Project Saving System — COMPLETE ✅
+**Phase:** Architectural Audit Fixes — 3-Phase Remediation — IN PROGRESS
 
-### Session 134: Per-Project Data Persistence with IndexedDB
+### Session 135: Store + Workspace Architecture Fixes
 
 #### Problem
-The existing project system stored only metadata (name, progress, milestones) but NOT workspace data. Data lived in a single global localStorage key per tool type (e.g., `dmsuite-resume`, `dmsuite-contract`). This meant:
-1. **Only 1 active project per tool** — opening a different project overwrites the data
-2. **No project rename UI** — only auto-generated names
-3. **No multi-project support** — can't create multiple projects per tool
-4. **No project data snapshots** — can't resume specific projects
-5. **5-10MB localStorage limit** — insufficient for multiple project data blobs
+Architectural audit of 3 flagship tools (Sales Book, Contract, Resume) revealed systemic issues:
+1. **Global state anti-pattern**: `accentColorLocked` lived as module-level `let` variable — invisible to React, lost on HMR
+2. **Middleware stacking**: `persist(temporal(immer(...)))` persisted undo history to localStorage
+3. **Runtime require()**: Contract + Resume used `require()` for lazy loading (tree-shaking unfriendly)
+4. **Inline CSS duplication**: 3 workspaces had identical `<style>` blocks for canvas highlighting
+5. **No error boundaries**: Runtime errors in tab panels crash entire workspace
+6. **No ARIA labels**: Icon buttons lacked screen reader support
+7. **Magic numbers**: Zoom limits (30/200/10) duplicated across 3 files
+8. **Raw event strings**: `"workspace:dirty"` and `"workspace:progress"` used as raw strings
 
-#### Solution: IndexedDB + Store Adapter Architecture
+#### Solution: Phased Fix Implementation
 
-##### New Files Created:
-- **`src/lib/project-data.ts`** (~200 lines) — IndexedDB CRUD for per-project workspace data snapshots
-  - DB: `dmsuite-projects-db`, version 1, object store `project-data`
-  - Functions: `saveProjectData()`, `loadProjectData()`, `deleteProjectData()`, `listProjectDataByTool()`, `duplicateProjectData()`, `getStorageUsage()`, `clearToolData()`, `migrateLegacyData()`
-  - `ProjectSnapshot`: `{ projectId, toolId, data: Record<string,unknown>, savedAt, sizeBytes }`
-  - Legacy migration: `dmsuite-resume`→`resume-cv`, `dmsuite-contract`→`contract-template`, `dmsuite-invoice`→`invoice-designer`, `dmsuite-sales-book`→`sales-book`
+##### Phase 1: Foundation Fixes (COMPLETE)
+- **accentColorLocked → Zustand state** (sales-book-editor.ts, contract-editor.ts):
+  - Removed module-level `_accentLocked` variable + helper functions
+  - Added `accentColorLocked: boolean` + `setAccentColorLocked()` to store interface
+  - `updateStyle` reads from immer draft; `setForm`/`resetForm` reset to `false`
+  - Persist partializes: `{ form, accentColorLocked }`
 
-- **`src/lib/store-adapters.ts`** (~130 lines) — Centralized adapter factory registry
-  - Lazy `require()` imports — stores loaded only when adapter is first used
-  - Adapters for: `contract-template` (form), `invoice-designer`/`quote-estimate`/`receipt-designer`/`purchase-order`/`delivery-note`/`credit-note`/`proforma-invoice` (invoice), `resume-cv` (resume), `sales-book` (form)
-  - Generic fallback adapter for tools without dedicated stores
-  - `getOrCreateAdapter(toolId)` with caching
+- **Middleware reorder** (all 3 stores):
+  - Changed from `persist(temporal(immer(...)))` to `temporal(persist(immer(...)))`
+  - Temporal outermost = undo history NOT persisted to localStorage
+  - Each store has `partialize` for both persist (what to save) and temporal (what to track)
 
-- **`src/hooks/useProjectData.ts`** (~130 lines) — Bridge between project store and IndexedDB
-  - Auto-loads project data on projectId change
-  - Listens for `workspace:save` events to auto-persist to IndexedDB
-  - Returns: `{ isLoading, isLoaded, projectId, saveToProject, loadFromProject }`
+- **Static imports** (contract-editor.ts, resume-editor.ts):
+  - Replaced `require("@/lib/contract/schema")` with static `import { getDefaultClauses }`
+  - Replaced `require("@/lib/resume/templates/template-defs")` with static `import { getProTemplate }`
 
-- **`src/components/dashboard/ProjectPickerModal.tsx`** (~270 lines) — Full CRUD project picker
-  - Props: `toolId, toolName, toolIcon?: ComponentType, onSelect, onCreateNew, onClose`
-  - Features: inline rename, duplicate, delete with confirmation, progress bar, time ago
-  - Sorted by `updatedAt` descending
+- **Type-safe section accessor** (resume-editor.ts):
+  - Added `getSection()` helper centralizing `as unknown as Record<...>` cast
+  - All 6 section mutation methods now use `getSection()` instead of inline casts
 
-##### Modified Files:
-- **`src/stores/projects.ts`** — Added `hasData?: boolean` field, `renameProject()`, `duplicateProject()` (with IndexedDB duplication), `getProjectsForTool()`. Limit increased 50→200.
-- **`src/app/tools/[categoryId]/[toolId]/page.tsx`** — URL-based project routing (`?project={id}`), project picker integration, inline rename in workspace header, auto-create after 5s dwell
-- **`src/components/dashboard/ActiveProjects.tsx`** — Inline rename (click to edit), `?project={id}` in "Continue" links, IndexedDB cleanup on delete
-- **`src/stores/index.ts`** — Added `Milestone` re-export
+##### Phase 2: Shared Infrastructure (COMPLETE)
+- **`src/lib/workspace-events.ts`** (NEW ~30 lines):
+  - `WORKSPACE_EVENTS.DIRTY` / `WORKSPACE_EVENTS.PROGRESS` constants
+  - `dispatchDirty()` / `dispatchProgress(milestone)` typed helpers
+  - `WorkspaceMilestone` type: `"input" | "content" | "edited" | "exported"`
 
-#### Architecture Summary:
-```
-URL: /tools/{cat}/{tool}?project={id}
-  ↓
-Tool Page reads ?project param
-  ↓ (no param + existing projects → show ProjectPickerModal)
-  ↓ (no projects → auto-create after 5s)
-useProjectData(toolId, projectId)
-  ↓
-getOrCreateAdapter(toolId) → StoreAdapter { getSnapshot, restoreSnapshot, resetStore }
-  ↓                                         ↓
-IndexedDB load → restoreSnapshot()    workspace:save → getSnapshot() → IndexedDB save
-```
+- **`src/lib/workspace-constants.ts`** (NEW ~17 lines):
+  - `ZOOM_MIN = 30`, `ZOOM_MAX = 200`, `ZOOM_STEP = 10`, `ZOOM_DEFAULT = 100`
+  - `PAGE_DOTS_THRESHOLD = 8`, `MILESTONE_EDIT_THRESHOLD = 3`
+
+- **`src/styles/workspace-canvas.css`** (NEW ~95 lines):
+  - Extracted inline `<style>` blocks from all 3 workspaces
+  - Single file with `.sb-canvas-root`, `.ct-canvas-root`, `.resume-canvas-root` rules
+  - Consolidated `@media print` block
+
+- **`src/components/workspaces/shared/WorkspaceErrorBoundary.tsx`** (NEW ~65 lines):
+  - React class-based error boundary with retry button
+  - Console.error logging with component stack
+  - Re-exported from `WorkspaceUIKit.tsx`
+
+- **ARIA labels** (SalesUIKit.tsx):
+  - `IconButton`: Added `aria-label={tooltip}` prop
+  - `ConfirmDialog`: Added `role="dialog"`, `aria-modal`, `aria-labelledby`, `aria-describedby`
+
+##### Phase 3: Workspace Updates (COMPLETE)
+- **SalesBookDesignerWorkspace.tsx**:
+  - Imports `dispatchDirty`/`dispatchProgress`, `ZOOM_*` constants, CSS
+  - Removed inline `<style>` block
+  - Wrapped tab content in `WorkspaceErrorBoundary`
+
+- **ContractDesignerWorkspace.tsx**:
+  - Same pattern as above
+  - Uses `PAGE_DOTS_THRESHOLD` for page navigation dots
+
+- **StepEditor.tsx** (Resume):
+  - Same pattern as above
+  - Uses `MILESTONE_EDIT_THRESHOLD` for edited milestone
+  - Uses `PAGE_DOTS_THRESHOLD` for page navigation dots
+
+#### Files Modified (11):
+1. `src/stores/sales-book-editor.ts` — accentLocked→state, middleware reorder
+2. `src/stores/contract-editor.ts` — same + static import getDefaultClauses
+3. `src/stores/resume-editor.ts` — middleware reorder, static import, getSection helper, fixed missing `}`
+4. `src/lib/workspace-events.ts` — NEW: typed event constants + dispatch helpers
+5. `src/lib/workspace-constants.ts` — NEW: shared numeric constants
+6. `src/styles/workspace-canvas.css` — NEW: extracted canvas highlight CSS
+7. `src/components/workspaces/shared/WorkspaceErrorBoundary.tsx` — NEW: error boundary
+8. `src/components/workspaces/shared/WorkspaceUIKit.tsx` — Re-exports ErrorBoundary
+9. `src/components/workspaces/sales-book-designer/SalesUIKit.tsx` — ARIA labels
+10. `src/components/workspaces/sales-book-designer/SalesBookDesignerWorkspace.tsx` — constants, events, CSS, ErrorBoundary
+11. `src/components/workspaces/contract-designer/ContractDesignerWorkspace.tsx` — same
+12. `src/components/workspaces/resume-cv/StepEditor.tsx` — same + milestone constants
 
 #### Verification:
-- [x] TypeScript: 0 errors (`npx tsc --noEmit`)
-- [x] Dev server: compiles and runs without errors
-- [x] Subagent code audit: no bugs found across all 7 files
+- [x] TypeScript: 0 errors (`npx tsc --noEmit` clean)
+- [ ] Next.js production build (pending)
+- [ ] Committed and pushed (pending)
 
 ---
 

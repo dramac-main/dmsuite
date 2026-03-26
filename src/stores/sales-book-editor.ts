@@ -28,24 +28,17 @@ import type { CustomBlock, CustomBlockType } from "@/lib/sales-book/custom-block
 import { createDefaultBlock } from "@/lib/sales-book/custom-blocks";
 
 // ---------------------------------------------------------------------------
-// Accent Color Lock — once user/Chiko explicitly sets a color, preserve it
-// across template switches. Reset only on full form reset or data load.
-// ---------------------------------------------------------------------------
-
-let _accentLocked = false;
-
-/** Check if accent color is locked (user has explicitly customized it) */
-export function isSalesBookAccentLocked(): boolean { return _accentLocked; }
-
-/** Explicitly lock/unlock accent (used by tests or programmatic reset) */
-export function setSalesBookAccentLock(v: boolean): void { _accentLocked = v; }
-
-// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export interface SalesBookEditorState {
   form: SalesBookFormData;
+
+  // ── Accent Color Lock ──
+  // When user/Chiko explicitly sets a color, preserve it across template
+  // switches. Reset only on full form reset or data load.
+  accentColorLocked: boolean;
+  setAccentColorLocked: (locked: boolean) => void;
 
   // ── Document Type ──
   setDocumentType: (type: SalesDocumentType) => void;
@@ -88,10 +81,12 @@ export interface SalesBookEditorState {
 // ---------------------------------------------------------------------------
 
 export const useSalesBookEditor = create<SalesBookEditorState>()(
-  persist(
-    temporal(
+  temporal(
+    persist(
       immer((set) => ({
         form: createDefaultSalesBookForm(),
+        accentColorLocked: false,
+        setAccentColorLocked: (locked) => set((s) => { s.accentColorLocked = locked; }),
 
       // ── Document Type ──
       setDocumentType: (type) =>
@@ -105,19 +100,17 @@ export const useSalesBookEditor = create<SalesBookEditorState>()(
         }),
 
       // ── Top-level ──
-      setForm: (form) => {
-        _accentLocked = false; // fresh data load — reset lock
+      setForm: (form) =>
         set((s) => {
+          s.accentColorLocked = false;
           s.form = form;
-        });
-      },
+        }),
 
-      resetForm: (docType) => {
-        _accentLocked = false; // full reset — unlock
+      resetForm: (docType) =>
         set((s) => {
+          s.accentColorLocked = false;
           s.form = createDefaultSalesBookForm(docType ?? (s.form.documentType as SalesDocumentType));
-        });
-      },
+        }),
 
       // ── Company Branding ──
       updateBranding: (patch) =>
@@ -155,19 +148,18 @@ export const useSalesBookEditor = create<SalesBookEditorState>()(
         }),
 
       // ── Style ──
-      updateStyle: (patch) => {
-        // If caller explicitly provides accent color, lock it
-        if (patch.accentColor) _accentLocked = true;
+      updateStyle: (patch) =>
         set((s) => {
+          // If caller explicitly provides accent color, lock it
+          if (patch.accentColor) s.accentColorLocked = true;
           // When template changes, sync font but only sync accent if not locked
           if (patch.template && patch.template !== s.form.style.template) {
             const tpl = getTemplateConfig(patch.template);
-            if (!_accentLocked && !patch.accentColor) patch.accentColor = tpl.accent;
+            if (!s.accentColorLocked && !patch.accentColor) patch.accentColor = tpl.accent;
             if (!patch.fontPairing) patch.fontPairing = tpl.font;
           }
           Object.assign(s.form.style, patch);
-        });
-      },
+        }),
 
       // ── Brand Logos ──
       updateBrandLogos: (patch) =>
@@ -233,13 +225,14 @@ export const useSalesBookEditor = create<SalesBookEditorState>()(
         }),
     })),
     {
-      limit: 100,
-      equality: (a, b) => equal(a, b),
+      name: "dmsuite-sales-book",
+      partialize: (state) => ({ form: state.form, accentColorLocked: state.accentColorLocked }),
     },
   ),
   {
-    name: "dmsuite-sales-book",
     partialize: (state) => ({ form: state.form }),
+    equality: (a, b) => equal(a, b),
+    limit: 100,
   }),
 );
 

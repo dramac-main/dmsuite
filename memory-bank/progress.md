@@ -1,32 +1,32 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅ — Resume Controls & Multi-Page A4 Fix ✅ — **Project Saving System (IndexedDB + Store Adapters) ✅**
+## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅ — Resume Controls & Multi-Page A4 Fix ✅ — Project Saving System (IndexedDB + Store Adapters) ✅ — **Architectural Audit Fixes (3-Phase Remediation) ✅**
 
 ---
 
-## Current Work: Project Saving System — COMPLETE ✅
+## Current Work: Architectural Audit Fixes — COMPLETE ✅
 
-### Session 134 — Per-Project Data Persistence with IndexedDB
+### Session 135 — Store + Workspace Architecture Remediation
 
 #### Problem
-Only metadata saved per project; workspace data stored in single global localStorage key per tool type. No multi-project support, no rename UI, no data isolation.
+Audit of 3 flagship tools revealed systemic issues: global state anti-patterns, wrong middleware stacking, runtime require(), inline CSS duplication, missing error boundaries, no ARIA labels, magic numbers.
 
-#### Solution: IndexedDB + Store Adapter Architecture
-- [x] Created `src/lib/project-data.ts` — IndexedDB CRUD for project data snapshots
-- [x] Created `src/lib/store-adapters.ts` — Centralized adapter factory for snapshot/restore per tool
-- [x] Created `src/hooks/useProjectData.ts` — Auto-load/save bridge between projects and IndexedDB
-- [x] Created `src/components/dashboard/ProjectPickerModal.tsx` — Full CRUD project picker modal
-- [x] Enhanced `src/stores/projects.ts` — renameProject, duplicateProject, getProjectsForTool, hasData, 200 limit
-- [x] Updated `src/app/tools/[categoryId]/[toolId]/page.tsx` — URL-based project routing (?project=id), picker, inline rename
-- [x] Updated `src/components/dashboard/ActiveProjects.tsx` — Inline rename, project ID links, IndexedDB cleanup
-- [x] Store adapters for: contract, invoice (7 variants), resume, sales-book + generic fallback
-- [x] Legacy data migration from localStorage keys
+#### Solution: 3-Phase Fix
+- [x] Phase 1.1: accentColorLocked → Zustand state (sales-book + contract stores)
+- [x] Phase 1.2: Middleware reorder to `temporal(persist(immer(...)))` (all 3 stores)
+- [x] Phase 3.4: Static imports replacing runtime require() (contract + resume stores)
+- [x] Phase 3.1: Type-safe getSection() helper (resume store)
+- [x] Phase 1.4: Created workspace-events.ts with typed event constants
+- [x] Phase 2.3: Created workspace-constants.ts (zoom limits, thresholds)
+- [x] Phase 1.5: Extracted inline <style> to workspace-canvas.css
+- [x] Phase 2.1: Created WorkspaceErrorBoundary component
+- [x] Phase 2.2: Added ARIA labels to IconButton + ConfirmDialog
+- [x] Phase 2/3: Updated all 3 workspace components (events, constants, CSS, error boundaries)
 - [x] TypeScript: 0 errors
-- [x] Dev server: clean compilation
 
 ---
 
-## Previous Work: Credits & Profile Loading Fix — COMPLETE ✅
+## Previous Work: Project Saving System — COMPLETE ✅
 
 ### Session 132 — Cache-First Profile Loading Architecture
 - No export tracking — print/download didn't affect progress

@@ -33,3 +33,6 @@ export {
 
 // Re-export types
 export type { EditorTab } from "../sales-book-designer/SalesUIKit";
+
+// Shared workspace utilities
+export { default as WorkspaceErrorBoundary } from "./WorkspaceErrorBoundary";

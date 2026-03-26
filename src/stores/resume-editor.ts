@@ -12,6 +12,7 @@ import type { WritableDraft } from "immer";
 import isDeepEqual from "fast-deep-equal";
 import type { ResumeData, TemplateId } from "@/lib/resume/schema";
 import { createDefaultResumeData } from "@/lib/resume/schema";
+import { getProTemplate } from "@/lib/resume/templates/template-defs";
 
 // ---------------------------------------------------------------------------
 // AI Revision Types
@@ -86,6 +87,11 @@ function createSectionId(): string {
   return `custom-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
+/** Type-safe accessor for dynamic resume section keys */
+function getSection(sections: WritableDraft<ResumeData["sections"]>, key: string) {
+  return (sections as unknown as Record<string, { items?: unknown[]; hidden?: boolean; title?: string; content?: string } | undefined>)[key];
+}
+
 // ---------------------------------------------------------------------------
 // Store: temporal(immer(...))
 // ---------------------------------------------------------------------------
@@ -101,8 +107,8 @@ type TemporalResumeEditorStore = StoreApi<ResumeEditorState> & {
 };
 
 export const useResumeEditor = create<ResumeEditorState>()(
-  persist(
-    temporal(
+  temporal(
+    persist(
       immer((set) => ({
         // ---- Initial state ----
         resume: createDefaultResumeData(),
@@ -130,52 +136,38 @@ export const useResumeEditor = create<ResumeEditorState>()(
           state.resume.metadata.template = templateId;
 
           // For pro templates, also set the recommended font pairing and layout
-          // This uses a dynamic import pattern — the template defs are small
-          try {
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const { getProTemplate } = require("@/lib/resume/templates/template-defs");
-            const def = getProTemplate(templateId);
-            if (def) {
-              // Set the default font pairing for this template
-              state.resume.metadata.typography.fontPairing = def.defaultFontPairing;
-
-              // Update layout — set section distribution based on template defaults
-              const isTwoCol = def.isTwoColumn;
-              if (state.resume.metadata.layout.pages.length > 0) {
-                state.resume.metadata.layout.pages[0].fullWidth = !isTwoCol;
-                state.resume.metadata.layout.pages[0].main = [...def.mainSections];
-                state.resume.metadata.layout.pages[0].sidebar = [...def.sidebarSections];
-              }
-              // Set sidebar width as percentage
-              if (def.sidebarWidthPx > 0) {
-                state.resume.metadata.layout.sidebarWidth = Math.round((def.sidebarWidthPx / 794) * 100);
-              }
+          const def = getProTemplate(templateId);
+          if (def) {
+            state.resume.metadata.typography.fontPairing = def.defaultFontPairing;
+            const isTwoCol = def.isTwoColumn;
+            if (state.resume.metadata.layout.pages.length > 0) {
+              state.resume.metadata.layout.pages[0].fullWidth = !isTwoCol;
+              state.resume.metadata.layout.pages[0].main = [...def.mainSections];
+              state.resume.metadata.layout.pages[0].sidebar = [...def.sidebarSections];
             }
-          } catch {
-            // Ignore — non-pro template
+            if (def.sidebarWidthPx > 0) {
+              state.resume.metadata.layout.sidebarWidth = Math.round((def.sidebarWidthPx / 794) * 100);
+            }
           }
         }),
 
       // ---- Section items ----
       addSectionItem: (sectionKey, item) =>
         set((state) => {
-          const section = (state.resume.sections as unknown as Record<string, { items: unknown[] }>)[sectionKey];
-          if (section?.items) {
-            section.items.push(item);
-          }
+          const section = getSection(state.resume.sections, sectionKey);
+          if (section?.items) section.items.push(item);
         }),
 
       updateSectionItem: (sectionKey, itemIndex, data) =>
         set((state) => {
-          const section = (state.resume.sections as unknown as Record<string, { items: Record<string, unknown>[] }>)[sectionKey];
-          if (section?.items?.[itemIndex]) {
-            Object.assign(section.items[itemIndex], data);
-          }
+          const section = getSection(state.resume.sections, sectionKey);
+          const item = section?.items?.[itemIndex];
+          if (item && typeof item === "object") Object.assign(item, data);
         }),
 
       removeSectionItem: (sectionKey, itemIndex) =>
         set((state) => {
-          const section = (state.resume.sections as unknown as Record<string, { items: unknown[] }>)[sectionKey];
+          const section = getSection(state.resume.sections, sectionKey);
           if (section?.items && itemIndex >= 0 && itemIndex < section.items.length) {
             section.items.splice(itemIndex, 1);
           }
@@ -183,7 +175,7 @@ export const useResumeEditor = create<ResumeEditorState>()(
 
       reorderSectionItems: (sectionKey, fromIndex, toIndex) =>
         set((state) => {
-          const section = (state.resume.sections as unknown as Record<string, { items: unknown[] }>)[sectionKey];
+          const section = getSection(state.resume.sections, sectionKey);
           if (!section?.items) return;
           const [item] = section.items.splice(fromIndex, 1);
           section.items.splice(toIndex, 0, item);
@@ -191,18 +183,14 @@ export const useResumeEditor = create<ResumeEditorState>()(
 
       toggleSectionVisibility: (sectionKey) =>
         set((state) => {
-          const section = (state.resume.sections as unknown as Record<string, { hidden: boolean }>)[sectionKey];
-          if (section) {
-            section.hidden = !section.hidden;
-          }
+          const section = getSection(state.resume.sections, sectionKey);
+          if (section && section.hidden !== undefined) section.hidden = !section.hidden;
         }),
 
       renameSectionTitle: (sectionKey, title) =>
         set((state) => {
-          const section = (state.resume.sections as unknown as Record<string, { title: string }>)[sectionKey];
-          if (section) {
-            section.title = title;
-          }
+          const section = getSection(state.resume.sections, sectionKey);
+          if (section && section.title !== undefined) section.title = title;
         }),
 
       // ---- Custom sections ----
@@ -290,17 +278,14 @@ export const useResumeEditor = create<ResumeEditorState>()(
         }),
     })),
     {
-      // Temporal (zundo) options
-      partialize: (state) => ({
-        resume: state.resume,
-      }),
-      equality: (a, b) => isDeepEqual(a, b),
-      limit: 100,
-    }
+      name: "dmsuite-resume",
+      partialize: (state) => ({ resume: state.resume }),
+    },
   ),
   {
-    name: "dmsuite-resume",
     partialize: (state) => ({ resume: state.resume }),
+    equality: (a, b) => isDeepEqual(a, b),
+    limit: 100,
   }),
 );
 

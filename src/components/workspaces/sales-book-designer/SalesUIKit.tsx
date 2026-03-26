@@ -493,6 +493,7 @@ export function IconButton({
       {...props}
       disabled={disabled}
       title={tooltip}
+      aria-label={tooltip}
       className={`p-2 rounded-lg text-gray-500 hover:text-gray-200 hover:bg-white/6 active:bg-white/10 disabled:opacity-25 disabled:cursor-not-allowed transition-all ${className ?? ""}`}
     >
       {icon}
@@ -925,6 +926,10 @@ export function ConfirmDialog({
           onClick={onCancel}
         >
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-dialog-title"
+            aria-describedby={description ? "confirm-dialog-desc" : undefined}
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -932,9 +937,9 @@ export function ConfirmDialog({
             onClick={(e) => e.stopPropagation()}
             className="bg-gray-900 border border-gray-700/60 rounded-2xl p-5 w-full max-w-sm shadow-2xl"
           >
-            <h3 className="text-[15px] font-semibold text-gray-100">{title}</h3>
+            <h3 id="confirm-dialog-title" className="text-[15px] font-semibold text-gray-100">{title}</h3>
             {description && (
-              <p className="text-[13px] text-gray-400 mt-1.5">{description}</p>
+              <p id="confirm-dialog-desc" className="text-[13px] text-gray-400 mt-1.5">{description}</p>
             )}
             <div className="flex gap-2.5 mt-5">
               <button

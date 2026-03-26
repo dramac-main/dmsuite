@@ -13,6 +13,9 @@ import { useSalesBookEditor, useSalesBookUndo } from "@/stores/sales-book-editor
 import { printHTML } from "@/lib/print";
 import { useChikoActions } from "@/hooks/useChikoActions";
 import { createSalesBookManifest } from "@/lib/chiko/manifests/sales-book";
+import { dispatchDirty, dispatchProgress } from "@/lib/workspace-events";
+import { ZOOM_MIN, ZOOM_MAX, ZOOM_STEP, ZOOM_DEFAULT } from "@/lib/workspace-constants";
+import "@/styles/workspace-canvas.css";
 import {
   SALES_DOCUMENT_TYPES,
   DOCUMENT_TYPE_CONFIGS,
@@ -38,6 +41,7 @@ import {
   Icons,
   TabIcons,
 } from "./SalesUIKit";
+import WorkspaceErrorBoundary from "@/components/workspaces/shared/WorkspaceErrorBoundary";
 
 // =============================================================================
 // Editor tab definitions
@@ -83,7 +87,7 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
   const [mobileView, setMobileView] = useState<"editor" | "preview">("editor");
 
   // Zoom
-  const [zoom, setZoom] = useState(100);
+  const [zoom, setZoom] = useState(ZOOM_DEFAULT);
 
   // Convert dropdown
   const [showConvert, setShowConvert] = useState(false);
@@ -113,7 +117,7 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
   useEffect(() => {
     if (formRef.current === form) return; // skip initial mount
     formRef.current = form;
-    window.dispatchEvent(new CustomEvent("workspace:dirty"));
+    dispatchDirty();
   }, [form]);
 
   // Dispatch milestone progress based on actual content state
@@ -128,9 +132,7 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
     const key = milestones.join(",");
     if (key !== prevSBMilestonesRef.current) {
       prevSBMilestonesRef.current = key;
-      milestones.forEach((m) =>
-        window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: m } }))
-      );
+      milestones.forEach((m) => dispatchProgress(m as "input" | "content"));
     }
   }, [form.companyBranding.name, forms]);
 
@@ -175,7 +177,7 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
         [data-sales-book-page]:last-child { page-break-after: auto; }
       </style></head><body>${printEl.innerHTML}</body></html>`;
     printHTML(html);
-    window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "exported" } }));
+    dispatchProgress("exported");
   }, [config.title, form.printConfig.pageSize]);
   printRef.current = handlePrint;
 
@@ -207,11 +209,13 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
   // ── Tab Content ──
   const tabContent = (
     <div className="flex-1 overflow-y-auto scrollbar-thin">
-      {activeTab === "form" && <SalesFormTab />}
-      {activeTab === "brand" && <SalesBrandTab />}
-      {activeTab === "style" && <SalesStyleTab />}
-      {activeTab === "print" && <SalesPrintTab />}
-      {activeTab === "more" && <SalesAdvancedTab />}
+      <WorkspaceErrorBoundary>
+        {activeTab === "form" && <SalesFormTab />}
+        {activeTab === "brand" && <SalesBrandTab />}
+        {activeTab === "style" && <SalesStyleTab />}
+        {activeTab === "print" && <SalesPrintTab />}
+        {activeTab === "more" && <SalesAdvancedTab />}
+      </WorkspaceErrorBoundary>
 
       {/* Start Over — always at the bottom */}
       <div className="p-4 pb-8">
@@ -252,10 +256,10 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
       {/* Preview toolbar */}
       <div className="shrink-0 flex items-center justify-between h-10 px-3 border-b border-gray-800/40">
         <div className="flex items-center gap-1">
-          <IconButton onClick={() => setZoom((z) => Math.max(30, z - 10))} icon={Icons.zoomOut} tooltip="Zoom out" />
+          <IconButton onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z - ZOOM_STEP))} icon={Icons.zoomOut} tooltip="Zoom out" />
           <span className="text-[10px] text-gray-500 w-9 text-center font-mono tabular-nums">{zoom}%</span>
-          <IconButton onClick={() => setZoom((z) => Math.min(200, z + 10))} icon={Icons.zoomIn} tooltip="Zoom in" />
-          <button onClick={() => setZoom(100)} className="text-[10px] text-gray-600 hover:text-gray-400 px-1.5 py-0.5 rounded-md hover:bg-white/4 transition-colors">
+          <IconButton onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z + ZOOM_STEP))} icon={Icons.zoomIn} tooltip="Zoom in" />
+          <button onClick={() => setZoom(ZOOM_DEFAULT)} className="text-[10px] text-gray-600 hover:text-gray-400 px-1.5 py-0.5 rounded-md hover:bg-white/4 transition-colors">
             Reset
           </button>
         </div>
@@ -315,12 +319,6 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
           backgroundSize: "24px 24px",
         }}
       >
-        <style>{`
-          .sb-canvas-root [data-sb-section] { transition: outline 0.15s ease, box-shadow 0.15s ease; outline: 2px solid transparent; border-radius: 2px; cursor: pointer; }
-          .sb-canvas-root [data-sb-section]:hover { outline: 2px solid rgba(139,92,246,0.4); box-shadow: 0 0 0 4px rgba(139,92,246,0.06); }
-          .sb-canvas-root [data-sb-section].sb-layer-highlight { outline: 2px solid rgba(139,92,246,0.6); box-shadow: 0 0 0 6px rgba(139,92,246,0.1); }
-          @media print { .sb-canvas-root [data-sb-section] { outline: none !important; box-shadow: none !important; cursor: default !important; } }
-        `}</style>
         <div
           className="sb-canvas-root flex flex-col items-center py-6 px-4"
           style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
