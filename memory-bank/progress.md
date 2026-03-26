@@ -1,33 +1,28 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅ — Resume Controls & Multi-Page A4 Fix ✅
+## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅ — Resume Controls & Multi-Page A4 Fix ✅ — **Project Saving System (IndexedDB + Store Adapters) ✅**
 
 ---
 
-## Current Work: Resume Controls & Multi-Page A4 Fix — COMPLETE ✅
+## Current Work: Project Saving System — COMPLETE ✅
 
-### Session 133 — Resume Format/Style Controls + Multi-Page Rendering
+### Session 134 — Per-Project Data Persistence with IndexedDB
 
 #### Problem
-- Format/Style tab controls generated CSS vars that no template CSS consumed
-- Default format was Letter instead of A4 (Zambian market)
-- Sidebar sections missed in page break detection (`.sidebar-section` not in selectors)
-- Accent color control ineffective (20 templates each use different CSS variable names)
-- Templates 11 & 13 used hardcoded hex colors with no CSS variables
+Only metadata saved per project; workspace data stored in single global localStorage key per tool type. No multi-project support, no rename UI, no data isolation.
 
-#### Solution: Dynamic CSS Override System
-- [x] Added `.sidebar-section` to SECTION_SELECTORS and break-inside CSS rules
-- [x] Created dynamicCSS useMemo (~120 lines) generating per-template accent variable overrides
-- [x] Added direct CSS property overrides for hardcoded templates 11 (swiss-typographic) & 13 (brutalist-mono)
-- [x] Added section spacing overrides (compact: 10px, relaxed: 28px)
-- [x] Added line spacing overrides (tight: 1.3, loose: 1.8)
-- [x] Added font scale overrides (compact: 0.9em, spacious: 1.1em)
-- [x] Added margin preset overrides (narrow: 28px, wide: 56px padding)
-- [x] Injected `<style>{dynamicCSS}</style>` into render output
-- [x] Changed default page format from "letter" to "a4" (3 locations in schema.ts)
-- [x] Verified layers panel toggle flow is solid (3-layer check)
+#### Solution: IndexedDB + Store Adapter Architecture
+- [x] Created `src/lib/project-data.ts` — IndexedDB CRUD for project data snapshots
+- [x] Created `src/lib/store-adapters.ts` — Centralized adapter factory for snapshot/restore per tool
+- [x] Created `src/hooks/useProjectData.ts` — Auto-load/save bridge between projects and IndexedDB
+- [x] Created `src/components/dashboard/ProjectPickerModal.tsx` — Full CRUD project picker modal
+- [x] Enhanced `src/stores/projects.ts` — renameProject, duplicateProject, getProjectsForTool, hasData, 200 limit
+- [x] Updated `src/app/tools/[categoryId]/[toolId]/page.tsx` — URL-based project routing (?project=id), picker, inline rename
+- [x] Updated `src/components/dashboard/ActiveProjects.tsx` — Inline rename, project ID links, IndexedDB cleanup
+- [x] Store adapters for: contract, invoice (7 variants), resume, sales-book + generic fallback
+- [x] Legacy data migration from localStorage keys
 - [x] TypeScript: 0 errors
-- [x] Production build: all pages pass
+- [x] Dev server: clean compilation
 
 ---
 

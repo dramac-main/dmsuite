@@ -1,62 +1,78 @@
 # DMSuite — Active Context
 
 ## Current Focus
+**Phase:** Industry-Standard Project Saving System — COMPLETE ✅
+
+### Session 134: Per-Project Data Persistence with IndexedDB
+
+#### Problem
+The existing project system stored only metadata (name, progress, milestones) but NOT workspace data. Data lived in a single global localStorage key per tool type (e.g., `dmsuite-resume`, `dmsuite-contract`). This meant:
+1. **Only 1 active project per tool** — opening a different project overwrites the data
+2. **No project rename UI** — only auto-generated names
+3. **No multi-project support** — can't create multiple projects per tool
+4. **No project data snapshots** — can't resume specific projects
+5. **5-10MB localStorage limit** — insufficient for multiple project data blobs
+
+#### Solution: IndexedDB + Store Adapter Architecture
+
+##### New Files Created:
+- **`src/lib/project-data.ts`** (~200 lines) — IndexedDB CRUD for per-project workspace data snapshots
+  - DB: `dmsuite-projects-db`, version 1, object store `project-data`
+  - Functions: `saveProjectData()`, `loadProjectData()`, `deleteProjectData()`, `listProjectDataByTool()`, `duplicateProjectData()`, `getStorageUsage()`, `clearToolData()`, `migrateLegacyData()`
+  - `ProjectSnapshot`: `{ projectId, toolId, data: Record<string,unknown>, savedAt, sizeBytes }`
+  - Legacy migration: `dmsuite-resume`→`resume-cv`, `dmsuite-contract`→`contract-template`, `dmsuite-invoice`→`invoice-designer`, `dmsuite-sales-book`→`sales-book`
+
+- **`src/lib/store-adapters.ts`** (~130 lines) — Centralized adapter factory registry
+  - Lazy `require()` imports — stores loaded only when adapter is first used
+  - Adapters for: `contract-template` (form), `invoice-designer`/`quote-estimate`/`receipt-designer`/`purchase-order`/`delivery-note`/`credit-note`/`proforma-invoice` (invoice), `resume-cv` (resume), `sales-book` (form)
+  - Generic fallback adapter for tools without dedicated stores
+  - `getOrCreateAdapter(toolId)` with caching
+
+- **`src/hooks/useProjectData.ts`** (~130 lines) — Bridge between project store and IndexedDB
+  - Auto-loads project data on projectId change
+  - Listens for `workspace:save` events to auto-persist to IndexedDB
+  - Returns: `{ isLoading, isLoaded, projectId, saveToProject, loadFromProject }`
+
+- **`src/components/dashboard/ProjectPickerModal.tsx`** (~270 lines) — Full CRUD project picker
+  - Props: `toolId, toolName, toolIcon?: ComponentType, onSelect, onCreateNew, onClose`
+  - Features: inline rename, duplicate, delete with confirmation, progress bar, time ago
+  - Sorted by `updatedAt` descending
+
+##### Modified Files:
+- **`src/stores/projects.ts`** — Added `hasData?: boolean` field, `renameProject()`, `duplicateProject()` (with IndexedDB duplication), `getProjectsForTool()`. Limit increased 50→200.
+- **`src/app/tools/[categoryId]/[toolId]/page.tsx`** — URL-based project routing (`?project={id}`), project picker integration, inline rename in workspace header, auto-create after 5s dwell
+- **`src/components/dashboard/ActiveProjects.tsx`** — Inline rename (click to edit), `?project={id}` in "Continue" links, IndexedDB cleanup on delete
+- **`src/stores/index.ts`** — Added `Milestone` re-export
+
+#### Architecture Summary:
+```
+URL: /tools/{cat}/{tool}?project={id}
+  ↓
+Tool Page reads ?project param
+  ↓ (no param + existing projects → show ProjectPickerModal)
+  ↓ (no projects → auto-create after 5s)
+useProjectData(toolId, projectId)
+  ↓
+getOrCreateAdapter(toolId) → StoreAdapter { getSnapshot, restoreSnapshot, resetStore }
+  ↓                                         ↓
+IndexedDB load → restoreSnapshot()    workspace:save → getSnapshot() → IndexedDB save
+```
+
+#### Verification:
+- [x] TypeScript: 0 errors (`npx tsc --noEmit`)
+- [x] Dev server: compiles and runs without errors
+- [x] Subagent code audit: no bugs found across all 7 files
+
+---
+
+## Previous Focus
 **Phase:** Resume & CV Builder Controls & Multi-Page Fix — COMPLETE ✅
 
 ### Session 133: Resume Controls + Multi-Page A4 Rendering Fix
-
-#### Problem
-1. **Format/Style tab controls didn't work** — computeCSSVariables() generated CSS vars no template CSS consumed (templates use hardcoded px values and template-specific CSS variable names)
-2. **Default page format was Letter** — Zambian market needs A4 (794×1123 vs 816×1056)
-3. **Sidebar sections missed in page break detection** — `SECTION_SELECTORS` only had `.section, .resume-section` but 2-column templates use `.sidebar-section`
-4. **Accent color control ineffective** — Each of 20 templates uses completely different CSS variable names for accent color
-5. **Templates 11-13 use hardcoded hex colors** — No CSS variables at all (swiss-typographic=#E63946, brutalist-mono=#00FF88)
-
-#### Solution: Dynamic CSS Override System
-
-##### `TemplateRenderer.tsx`:
-- **SECTION_SELECTORS** — Added `.sidebar-section` for sidebar break detection in 2-column templates
-- **break-inside CSS** — Added `.sidebar-section` to page-break avoidance rules
-- **dynamicCSS useMemo** — New ~120-line CSS override system that injects:
-  - Per-template accent color variable overrides (17 templates via CSS vars)
-  - Direct property overrides for templates 11 & 13 (hardcoded colors: `.top-rule`, `.role`, `.section-title`, `.skill-tag`, etc.)
-  - Section spacing (compact: 10px / relaxed: 28px)
-  - Line spacing (tight: 1.3 / loose: 1.8)
-  - Font scale (compact: 0.9em / spacious: 1.1em on all text elements)
-  - Margin preset (narrow: 28px / wide: 56px padding overrides)
-- Injected `<style>{dynamicCSS}</style>` into render output after static style block
-
-##### `schema.ts`:
-- Changed default page format from `"letter"` to `"a4"` (3 locations)
-
-##### Verified End-to-End:
-- Layers panel toggle flow is solid (3-layer check: hasVisibleItems → allSectionsLayout → shouldShow + vis())
-- TypeScript: 0 errors
-- Production build: success
-
-#### Template Accent Variable Map (reference):
-| Template | Variable(s) |
-|----------|-------------|
-| modern-minimalist | --accent, --accent-light |
-| corporate-executive | --gold, --gold-light |
-| creative-bold | --hot-pink |
-| elegant-sidebar | --accent, --accent-glow |
-| infographic | --teal, --teal-light |
-| dark-professional | --neon-cyan |
-| gradient-creative | --purple |
-| classic-corporate | --blue-accent, --blue-light |
-| artistic-portfolio | --coral, --coral-light |
-| tech-modern | --green, --green-dim |
-| swiss-typographic | HARDCODED → direct selector overrides |
-| newspaper-editorial | Monochrome (no accent) |
-| brutalist-mono | HARDCODED → direct selector overrides |
-| pastel-soft | --lavender |
-| split-duotone | --coral |
-| architecture-blueprint | --blue |
-| retro-vintage | --gold |
-| medical-clean | --teal, --dark-teal, --light-teal |
-| neon-glass | --neon-blue |
-| corporate-stripe | --accent |
+- Dynamic CSS Override System for all 20 resume templates
+- Per-template accent color variable overrides
+- Default page format changed from Letter to A4
+- Section spacing/line spacing/font scale/margin overrides
 
 ---
 

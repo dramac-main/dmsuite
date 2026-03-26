@@ -401,6 +401,55 @@ DashboardPage
 - `/dashboard` → hub page with all 8 categories
 - `/dashboard#[categoryId]` → scroll to category section
 - `/tools/[categoryId]/[toolId]` → tool workspace
+- `/tools/[categoryId]/[toolId]?project={id}` → tool workspace with specific project loaded
+
+### 8b. Project Persistence Architecture (Session 134)
+```
+Per-Project Data Storage (IndexedDB + Store Adapters)
+
+src/lib/project-data.ts — IndexedDB CRUD Service
+  ├── DB: dmsuite-projects-db, version 1, store: project-data
+  ├── ProjectSnapshot: { projectId, toolId, data, savedAt, sizeBytes }
+  ├── saveProjectData(projectId, toolId, data) — upsert with size tracking
+  ├── loadProjectData(projectId) — retrieve snapshot
+  ├── deleteProjectData(projectId) — cleanup
+  ├── duplicateProjectData(sourceId, targetId) — copy snapshot
+  ├── listProjectDataByTool(toolId) — list all for picker
+  ├── migrateLegacyData(toolId) — one-time localStorage→IndexedDB migration
+  └── Legacy map: dmsuite-resume→resume-cv, dmsuite-contract→contract-template,
+      dmsuite-invoice→invoice-designer, dmsuite-sales-book→sales-book
+
+src/lib/store-adapters.ts — Centralized Adapter Factory
+  ├── StoreAdapter: { getSnapshot(), restoreSnapshot(data), resetStore() }
+  ├── getOrCreateAdapter(toolId) — cached factory with lazy require()
+  ├── Contract adapter: form ↔ useContractStore.setForm/resetForm
+  ├── Invoice adapters (7 variants): invoice ↔ useInvoiceStore.setInvoice/resetInvoice
+  ├── Resume adapter: resume ↔ useResumeStore.setResume/resetResume
+  ├── SalesBook adapter: form ↔ useSalesBookEditor.setForm/resetForm
+  └── Generic adapter: empty snapshot (fallback for tools without stores)
+
+src/hooks/useProjectData.ts — React Bridge Hook
+  ├── Uses getOrCreateAdapter(toolId) to get snapshot/restore functions
+  ├── Auto-loads from IndexedDB when projectId changes
+  ├── Listens for workspace:save → auto-persists to IndexedDB
+  ├── Returns: { isLoading, isLoaded, projectId, saveToProject, loadFromProject }
+  └── Calls migrateLegacyData(toolId) on first load
+
+src/stores/projects.ts — Enhanced Project Metadata Store
+  ├── renameProject(id, name) — inline rename
+  ├── duplicateProject(id, newName) — clones metadata + IndexedDB data
+  ├── getProjectsForTool(toolId) — filter helper
+  ├── hasData?: boolean — tracks if project has saved data
+  └── Project limit: 200 (was 50)
+
+Flow:
+  Tool page loads → read ?project param
+    ├── Has param → validate → useProjectData loads from IndexedDB → restoreSnapshot()
+    ├── No param + existing projects → show ProjectPickerModal
+    └── No projects → auto-create after 5s dwell time
+  
+  workspace:save fires → useProjectData → getSnapshot() → saveProjectData(IndexedDB)
+```
 
 ### 9. Theme System
 - `ThemeProvider` wraps entire app in layout.tsx

@@ -13,6 +13,7 @@ import {
   loadProjectData,
   migrateLegacyData,
 } from "@/lib/project-data";
+import { getOrCreateAdapter } from "@/lib/store-adapters";
 
 // ---------------------------------------------------------------------------
 // Store snapshot extractors & restorers — per-tool mapping
@@ -21,32 +22,12 @@ import {
 /**
  * Registry of get/set functions for each workspace tool's Zustand store.
  * This allows the project system to snapshot + restore any tool's state
- * without tight coupling. Each tool registers:
- *  - getSnapshot(): extracts the current workspace data
- *  - restoreSnapshot(data): loads saved data back into the store
- *  - resetStore(): clears the store for a fresh project
+ * without tight coupling.
  */
 export interface StoreAdapter {
   getSnapshot: () => Record<string, unknown>;
   restoreSnapshot: (data: Record<string, unknown>) => void;
   resetStore: () => void;
-}
-
-const _adapters: Record<string, StoreAdapter> = {};
-
-/** Register a store adapter for a tool. Called once per workspace mount. */
-export function registerStoreAdapter(toolId: string, adapter: StoreAdapter) {
-  _adapters[toolId] = adapter;
-}
-
-/** Unregister when workspace unmounts */
-export function unregisterStoreAdapter(toolId: string) {
-  delete _adapters[toolId];
-}
-
-/** Get the adapter for a tool (if registered) */
-export function getStoreAdapter(toolId: string): StoreAdapter | undefined {
-  return _adapters[toolId];
 }
 
 // ---------------------------------------------------------------------------
@@ -83,13 +64,15 @@ export function useProjectData({
   // Save current workspace data to IndexedDB
   const saveToProject = useCallback(async () => {
     if (!projectId) return;
-    const adapter = _adapters[toolId];
-    if (!adapter) return;
+    const adapter = getOrCreateAdapter(toolId);
 
     try {
       const snapshot = adapter.getSnapshot();
-      await saveProjectData(projectId, toolId, snapshot);
-      updateProject(projectId, { hasData: true });
+      // Only save if there's actual data
+      if (Object.keys(snapshot).length > 0) {
+        await saveProjectData(projectId, toolId, snapshot);
+        updateProject(projectId, { hasData: true });
+      }
     } catch (err) {
       console.warn("[ProjectData] Save failed:", err);
     }
@@ -98,8 +81,7 @@ export function useProjectData({
   // Load project data from IndexedDB and restore into workspace store
   const loadFromProject = useCallback(async (): Promise<boolean> => {
     if (!projectId) return false;
-    const adapter = _adapters[toolId];
-    if (!adapter) return false;
+    const adapter = getOrCreateAdapter(toolId);
 
     try {
       setIsLoading(true);
@@ -115,7 +97,7 @@ export function useProjectData({
         }
       }
 
-      if (snapshot?.data) {
+      if (snapshot?.data && Object.keys(snapshot.data).length > 0) {
         adapter.restoreSnapshot(snapshot.data);
         loadedProjectRef.current = projectId;
         updateProject(projectId, { hasData: true });
