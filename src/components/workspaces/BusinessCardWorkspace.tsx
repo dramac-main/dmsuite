@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useBusinessCardWizard, type WizardStep } from "@/stores/business-card-wizard";
 
@@ -71,6 +71,29 @@ function StepContent({ step }: { step: WizardStep }) {
 
 export default function BusinessCardWorkspace() {
   const { currentStep, stepDirection, resetWizard } = useBusinessCardWizard();
+
+  // Dispatch step-based progress: steps 1-4 = wizard (0→65%), step 5 = editor (65%), step 6 = export (90%)
+  const prevStepRef = useRef<number>(-1);
+  useEffect(() => {
+    if (currentStep === prevStepRef.current) return;
+    prevStepRef.current = currentStep;
+    // Steps 1-4 are wizard, step 5 = editor, step 6 = export
+    const progressMap: Record<number, number> = { 1: 10, 2: 25, 3: 40, 4: 55, 5: 70, 6: 90 };
+    const progress = progressMap[currentStep] ?? 0;
+    window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { progress } }));
+    // Input milestone once past step 2 (details filled)
+    if (currentStep >= 3) {
+      window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "input" } }));
+    }
+    // Content milestone when generation/editor is reached
+    if (currentStep >= 5) {
+      window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "content" } }));
+    }
+    // Export step = exported milestone
+    if (currentStep >= 6) {
+      window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "exported" } }));
+    }
+  }, [currentStep]);
 
   const handleStartOver = useCallback(() => {
     if (confirm("Start a new business card design? Your current progress will be cleared.")) {

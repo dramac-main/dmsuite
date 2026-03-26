@@ -165,8 +165,10 @@ export default function ToolWorkspacePage() {
   const touchProject = useProjectStore((s) => s.touchProject);
   const projects = useProjectStore((s) => s.projects);
   const updateProject = useProjectStore((s) => s.updateProject);
+  const addMilestone = useProjectStore((s) => s.addMilestone);
   const projectIdRef = useRef<string | null>(null);
   const hasNotifiedRef = useRef(false);
+  const dirtyCountRef = useRef(0);
 
   // Find or create project for this tool session
   const getOrCreateProject = useCallback(() => {
@@ -189,6 +191,7 @@ export default function ToolWorkspacePage() {
     if (categoryId) setLastVisited(categoryId, toolId);
 
     const start = Date.now();
+    dirtyCountRef.current = 0;
 
     // If user stays >5s on a workspace tool, create/touch a project
     const projectTimer = setTimeout(() => {
@@ -204,32 +207,54 @@ export default function ToolWorkspacePage() {
       }
     }, 5000);
 
-    // Listen for workspace:dirty to track activity and notify save
+    // ── Milestone-based progress tracking ──────────────────
+    // workspace:dirty → marks "input" on first fire, "edited" after content exists
     const dirtyHandler = () => {
       const pid = projectIdRef.current;
-      if (pid) touchProject(pid);
-    };
+      if (!pid) return;
+      dirtyCountRef.current++;
+      touchProject(pid);
 
-    // Listen for workspace:save to update project progress
-    const saveHandler = () => {
-      const pid = projectIdRef.current;
-      if (pid) {
+      if (dirtyCountRef.current === 1) {
+        // First edit signal → user has started providing input
+        addMilestone(pid, "input");
+      } else if (dirtyCountRef.current >= 5) {
+        // Multiple edits → user is refining (only counts if content already exists)
         const proj = useProjectStore.getState().projects.find((p) => p.id === pid);
-        if (proj && proj.progress < 100) {
-          // Increment progress by 5% on each save, max 95% (100 = user marks complete)
-          updateProject(pid, { progress: Math.min(95, proj.progress + 5) });
+        if (proj?.milestones?.includes("content")) {
+          addMilestone(pid, "edited");
         }
       }
-      // Confirm saved
+    };
+
+    // workspace:progress → explicit milestone or progress from workspace
+    const progressHandler = ((e: CustomEvent) => {
+      const pid = projectIdRef.current;
+      if (!pid) return;
+      const { milestone, progress: explicitProgress } = e.detail ?? {};
+
+      if (typeof explicitProgress === "number") {
+        // Wizard-based tools send exact progress (e.g. step/totalSteps)
+        updateProject(pid, { progress: Math.min(100, Math.max(0, Math.round(explicitProgress))) });
+      } else if (milestone) {
+        // Milestone-based progress (editor tools)
+        addMilestone(pid, milestone);
+      }
+    }) as EventListener;
+
+    // workspace:save → confirm saved (progress is tracked via milestones, not saves)
+    const saveHandler = () => {
       window.dispatchEvent(new CustomEvent("workspace:saved"));
     };
 
     window.addEventListener("workspace:dirty", dirtyHandler);
+    window.addEventListener("workspace:progress", progressHandler);
     window.addEventListener("workspace:save", saveHandler);
 
     return () => {
       clearTimeout(projectTimer);
       window.removeEventListener("workspace:dirty", dirtyHandler);
+      window.removeEventListener("workspace:progress", progressHandler);
       window.removeEventListener("workspace:save", saveHandler);
       const elapsed = Math.round((Date.now() - start) / 1000);
       if (elapsed > 2) trackTime(toolId, elapsed);

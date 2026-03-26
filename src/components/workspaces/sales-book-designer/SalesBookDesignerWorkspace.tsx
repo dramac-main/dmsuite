@@ -116,6 +116,24 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
     window.dispatchEvent(new CustomEvent("workspace:dirty"));
   }, [form]);
 
+  // Dispatch milestone progress based on actual content state
+  const prevSBMilestonesRef = useRef<string>("");
+  useEffect(() => {
+    const milestones: string[] = [];
+    // "input" — company branding has been filled
+    const hasInput = form.companyBranding.name.trim().length > 0;
+    if (hasInput) milestones.push("input");
+    // "content" — form has serial entries configured
+    if (forms > 0) milestones.push("content");
+    const key = milestones.join(",");
+    if (key !== prevSBMilestonesRef.current) {
+      prevSBMilestonesRef.current = key;
+      milestones.forEach((m) =>
+        window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: m } }))
+      );
+    }
+  }, [form.companyBranding.name, forms]);
+
   // Highlight elements on canvas when hovering a layer
   useEffect(() => {
     const container = printAreaRef.current;
@@ -157,6 +175,7 @@ export default function SalesBookDesignerWorkspace({ initialDocumentType, initia
         [data-sales-book-page]:last-child { page-break-after: auto; }
       </style></head><body>${printEl.innerHTML}</body></html>`;
     printHTML(html);
+    window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "exported" } }));
   }, [config.title, form.printConfig.pageSize]);
   printRef.current = handlePrint;
 

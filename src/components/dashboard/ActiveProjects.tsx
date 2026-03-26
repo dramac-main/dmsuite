@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { useProjectStore, type Project } from "@/stores/projects";
+import { useProjectStore, type Project, type Milestone } from "@/stores/projects";
 import { getAllToolsFlat, type FlatTool } from "@/data/tools";
 import { getIcon, IconFolder } from "@/components/icons";
 import EmptyState from "@/components/dashboard/EmptyState";
@@ -17,6 +17,33 @@ function timeAgo(ts: number): string {
   const d = Math.floor(h / 24);
   if (d < 7) return `${d}d ago`;
   return `${Math.floor(d / 7)}w ago`;
+}
+
+/** Human-readable label for the latest milestone reached */
+const MILESTONE_LABELS: Record<Milestone, string> = {
+  opened: "Started",
+  input: "Input provided",
+  content: "Content created",
+  edited: "Refined",
+  exported: "Complete",
+};
+
+/** Color classes for progress bar based on completion range */
+function progressBarColor(progress: number): string {
+  if (progress >= 100) return "bg-success";
+  if (progress >= 70) return "bg-primary-500";
+  if (progress >= 30) return "bg-secondary-500";
+  return "bg-gray-400 dark:bg-gray-500";
+}
+
+/** Get the latest milestone label */
+function latestMilestoneLabel(milestones?: Milestone[]): string {
+  if (!milestones || milestones.length === 0) return "Started";
+  const order: Milestone[] = ["exported", "edited", "content", "input", "opened"];
+  for (const m of order) {
+    if (milestones.includes(m)) return MILESTONE_LABELS[m];
+  }
+  return "Started";
 }
 
 export default function ActiveProjects() {
@@ -107,17 +134,19 @@ export default function ActiveProjects() {
                 </div>
               </div>
 
-              {/* Progress bar */}
+              {/* Progress bar with milestone label */}
               <div className="mb-2">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-gray-500">Progress</span>
+                  <span className="text-[10px] text-gray-500">
+                    {latestMilestoneLabel(p.milestones)}
+                  </span>
                   <span className="text-[10px] text-gray-400 font-mono">
                     {p.progress}%
                   </span>
                 </div>
                 <div className="h-1 rounded-full bg-gray-200 dark:bg-gray-700/50 overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-primary-500 transition-all"
+                    className={`h-full rounded-full ${progressBarColor(p.progress)} transition-all`}
                     style={{ width: `${p.progress}%` }}
                   />
                 </div>

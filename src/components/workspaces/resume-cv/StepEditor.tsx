@@ -1,9 +1,9 @@
 // =============================================================================
 // DMSuite — Resume Step 7: Full-Screen Editor
-// Architecture mirrors ContractDesignerWorkspace.tsx:
-//   Fixed editor sidebar (tabbed: Sections | Design) + Preview canvas + Page nav
+// Architecture mirrors ContractDesignerWorkspace.tsx exactly:
+//   Editor sidebar (tabbed: Sections | Design) + Preview canvas + Layers panel
 // Mobile: bottom toggle bar (Edit / Preview / Export)
-// Desktop: editor panel + preview canvas with page navigation
+// Desktop: editor panel + preview canvas + layers panel (3-panel layout)
 // =============================================================================
 
 "use client";
@@ -20,6 +20,7 @@ import { TEMPLATES } from "@/lib/resume/templates/templates";
 import TemplateRenderer, { RESUME_PAGE_GAP } from "@/lib/resume/templates/TemplateRenderer";
 import EditorSectionsPanel from "./editor/EditorSectionsPanel";
 import EditorDesignPanel from "./editor/EditorDesignPanel";
+import ResumeLayers from "./ResumeLayers";
 import DiffOverlay from "./editor/DiffOverlay";
 import AIChatBar from "./editor/AIChatBar";
 import ExportDropdown, { type ExportFormat } from "./editor/ExportDropdown";
@@ -91,6 +92,11 @@ export default function StepEditor() {
   const [pendingDiff, setPendingDiff] = useState<PendingDiffState | null>(null);
   // Start-over confirm dialog
   const [showStartOverDialog, setShowStartOverDialog] = useState(false);
+  // Layers panel (contract pattern)
+  const [layersCollapsed, setLayersCollapsed] = useState(false);
+  const [hoveredSection, setHoveredSection] = useState<string | null>(null);
+  // Section activated by layers/canvas click (propagated to EditorSectionsPanel)
+  const [activeSectionKey, setActiveSectionKey] = useState<string | null>(null);
 
   // ── Load Google Fonts for the active font pairing ──
   useGoogleFonts(resume.metadata.typography.fontPairing);
@@ -102,11 +108,78 @@ export default function StepEditor() {
 
   // Dispatch workspace:dirty on resume changes (SaveIndicator + project tracking)
   const resumeRef = useRef(resume);
+  const editCountRef = useRef(0);
   useEffect(() => {
     if (resumeRef.current === resume) return;
     resumeRef.current = resume;
+    editCountRef.current++;
     window.dispatchEvent(new CustomEvent("workspace:dirty"));
+    // After a few edits in the editor, mark the "edited" milestone
+    if (editCountRef.current >= 3) {
+      window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "edited" } }));
+    }
   }, [resume]);
+
+  // ── Annotate rendered DOM with data-resume-section attributes (for click-to-edit + hover) ──
+  useEffect(() => {
+    const container = printAreaRef.current;
+    if (!container) return;
+    // Map known section-title text to section keys
+    const titleToKey: Record<string, string> = {
+      "summary": "summary", "professional summary": "summary", "about me": "summary", "profile": "summary",
+      "experience": "experience", "work experience": "experience", "employment": "experience", "employment history": "experience",
+      "education": "education", "academic background": "education",
+      "skills": "skills", "technical skills": "skills", "core skills": "skills",
+      "certifications": "certifications", "certificates": "certifications",
+      "languages": "languages",
+      "volunteer": "volunteer", "volunteer experience": "volunteer",
+      "projects": "projects",
+      "awards": "awards", "honors": "awards", "honors & awards": "awards",
+      "references": "references",
+      "tools": "skills",
+    };
+    // Annotate .section and .sidebar-section elements based on their .section-title text
+    container.querySelectorAll(".section, .sidebar-section, .resume-section").forEach((el) => {
+      const titleEl = el.querySelector(".section-title");
+      if (!titleEl) return;
+      const text = titleEl.textContent?.trim().toLowerCase() || "";
+      const key = titleToKey[text];
+      if (key) (el as HTMLElement).setAttribute("data-resume-section", key);
+    });
+    // Also annotate the header element (contact info)
+    container.querySelectorAll(".header, .resume-header").forEach((el) => {
+      (el as HTMLElement).setAttribute("data-resume-section", "basics");
+    });
+  }, [resume]);
+
+  // ── Highlight canvas sections on layer hover (contract pattern) ──
+  useEffect(() => {
+    const container = printAreaRef.current;
+    if (!container) return;
+    container.querySelectorAll(".resume-layer-highlight").forEach((el) => el.classList.remove("resume-layer-highlight"));
+    if (hoveredSection && /^[a-z-]+$/.test(hoveredSection)) {
+      container.querySelectorAll(`[data-resume-section="${hoveredSection}"]`).forEach((el) => el.classList.add("resume-layer-highlight"));
+    }
+  }, [hoveredSection]);
+
+  // ── Layer/canvas click → open corresponding editor section (contract pattern) ──
+  const handleLayerOpenSection = useCallback((section: string) => {
+    // All resume sections map to the "sections" tab
+    setActiveTab("sections");
+    setActiveSectionKey(section);
+    setMobileView("editor");
+    // Clear after a short delay so the user can click again on the same section
+    setTimeout(() => setActiveSectionKey(null), 300);
+  }, []);
+
+  // ── Click-to-edit on preview canvas (contract pattern) ──
+  const handlePreviewClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = (e.target as HTMLElement).closest<HTMLElement>("[data-resume-section]");
+    if (!target) return;
+    const section = target.dataset.resumeSection;
+    if (!section) return;
+    handleLayerOpenSection(section);
+  }, [handleLayerOpenSection]);
 
   // ── Page count callback from TemplateRenderer ──
   const handlePageCount = useCallback((count: number) => {
@@ -260,6 +333,7 @@ export default function StepEditor() {
           [data-resume-page]:last-child { page-break-after: auto; }
         </style></head><body>${printEl.innerHTML}</body></html>`;
       printHTML(html);
+      window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "exported" } }));
       return;
     }
     setIsExporting(true);
@@ -269,7 +343,9 @@ export default function StepEditor() {
         resume,
         fileName: resume.basics.name || "resume",
       });
-      if (!result.success) {
+      if (result.success) {
+        window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "exported" } }));
+      } else {
         console.error(`Export failed: ${result.error}`);
       }
     } catch (err) {
@@ -292,7 +368,7 @@ export default function StepEditor() {
   // ── Tab content ──
   const tabContent = (
     <div className="flex-1 overflow-y-auto scrollbar-thin">
-      {activeTab === "sections" && <EditorSectionsPanel />}
+      {activeTab === "sections" && <EditorSectionsPanel activeSectionKey={activeSectionKey} />}
       {activeTab === "design" && <EditorDesignPanel />}
 
       {/* Start Over — always at the bottom */}
@@ -389,9 +465,7 @@ export default function StepEditor() {
 
       {/* Preview canvas — PDF viewer style (grey bg + page shadows) */}
       <div
-        ref={previewScrollRef}
-        className="flex-1 overflow-auto"
-        onScroll={handlePreviewScroll}
+        onClick={handlePreviewClick}
         style={{ backgroundColor: "#374151" }}
       >
         {/* Diff overlay bar when revision is pending */}
@@ -408,8 +482,11 @@ export default function StepEditor() {
         )}
 
         <style>{`
+          .resume-canvas-root [data-resume-section] { transition: outline 0.15s ease, box-shadow 0.15s ease; outline: 2px solid transparent; border-radius: 2px; cursor: pointer; }
+          .resume-canvas-root [data-resume-section]:hover { outline: 2px solid rgba(139,92,246,0.4); box-shadow: 0 0 0 4px rgba(139,92,246,0.06); }
+          .resume-canvas-root [data-resume-section].resume-layer-highlight { outline: 2px solid rgba(139,92,246,0.6); box-shadow: 0 0 0 6px rgba(139,92,246,0.1); }
           .resume-canvas-root [data-resume-page] { box-shadow: 0 4px 32px rgba(0,0,0,0.45); }
-          @media print { .resume-canvas-root [data-resume-page] { box-shadow: none !important; } }
+          @media print { .resume-canvas-root [data-resume-section] { outline: none !important; box-shadow: none !important; cursor: default !important; } .resume-canvas-root [data-resume-page] { box-shadow: none !important; } }
         `}</style>
 
         <div
@@ -492,7 +569,7 @@ export default function StepEditor() {
     </div>
   );
 
-  // ── Layout — matches Contract workspace ──
+  // ── Layout — matches Contract workspace exactly (3-panel: editor + preview + layers) ──
   return (
     <div className="flex flex-col h-full bg-gray-950 text-white overflow-hidden">
       {/* Mobile bottom action bar */}
@@ -522,19 +599,27 @@ export default function StepEditor() {
           {editorPanel}
         </div>
 
-        {/* Preview */}
+        {/* Preview + Layers (contract pattern) */}
         <div
           className={`${
             mobileView === "preview" ? "flex" : "hidden"
-          } lg:flex flex-1 overflow-hidden relative`}
+          } lg:flex flex-1 overflow-hidden`}
         >
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden relative">
             {previewPanel}
+            {/* Floating AI chat bar — inside preview area */}
+            <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-40 w-full max-w-xl px-4">
+              <AIChatBar onExecute={handleAIRevision} />
+            </div>
           </div>
-
-          {/* Floating AI chat bar — inside preview area */}
-          <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-40 w-full max-w-xl px-4">
-            <AIChatBar onExecute={handleAIRevision} />
+          {/* Layers panel (right side, contract pattern) */}
+          <div className="hidden lg:flex">
+            <ResumeLayers
+              onOpenSection={handleLayerOpenSection}
+              onHoverSection={setHoveredSection}
+              collapsed={layersCollapsed}
+              onToggleCollapse={() => setLayersCollapsed((p) => !p)}
+            />
           </div>
         </div>
       </div>

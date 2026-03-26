@@ -140,6 +140,25 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
     window.dispatchEvent(new CustomEvent("workspace:dirty"));
   }, [form]);
 
+  // Dispatch milestone progress based on actual content state
+  const prevMilestonesRef = useRef<string>("");
+  useEffect(() => {
+    const milestones: string[] = [];
+    // "input" — parties or document info filled
+    const hasInput = form.documentInfo.title.trim().length > 0 ||
+      form.partyA.name.trim().length > 0 || form.partyB.name.trim().length > 0;
+    if (hasInput) milestones.push("input");
+    // "content" — at least one enabled clause exists
+    if (enabledClauses > 0) milestones.push("content");
+    const key = milestones.join(",");
+    if (key !== prevMilestonesRef.current) {
+      prevMilestonesRef.current = key;
+      milestones.forEach((m) =>
+        window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: m } }))
+      );
+    }
+  }, [form.documentInfo.title, form.partyA.name, form.partyB.name, enabledClauses]);
+
   // Highlight elements on canvas when hovering a layer
   useEffect(() => {
     const container = printAreaRef.current;
@@ -199,6 +218,7 @@ export default function ContractDesignerWorkspace({ initialContractType }: Props
         [data-contract-page]:last-child { page-break-after: auto; }
       </style></head><body>${printEl.innerHTML}</body></html>`;
     printHTML(html);
+    window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "exported" } }));
   }, [form.documentInfo.title, form.printConfig.pageSize, form.style.fontPairing]);
 
   // Keep Chiko's print ref in sync

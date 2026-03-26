@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useResumeCVWizard, type WizardStep } from "@/stores/resume-cv-wizard";
 import WizardStepIndicator from "./resume-cv/WizardStepIndicator";
@@ -76,6 +76,26 @@ function StepContent({ step }: { step: WizardStep }) {
 
 export default function ResumeCVWorkspace() {
   const { currentStep, stepDirection, resetWizard } = useResumeCVWizard();
+
+  // Dispatch step-based progress: steps 0-6 = wizard (0→80%), step 7 = editor (80%)
+  const prevStepRef = useRef<number>(-1);
+  useEffect(() => {
+    if (currentStep === prevStepRef.current) return;
+    prevStepRef.current = currentStep;
+    // Steps 0-6 are wizard steps, step 7 is the editor
+    // Wizard progress: (step / 7) * 80, capped at 80% (editor adds remaining via milestones)
+    const wizardProgress = Math.round((Math.min(currentStep, 6) / 7) * 80);
+    const progress = currentStep >= 7 ? 80 : wizardProgress;
+    window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { progress } }));
+    // Input milestone once past step 1 (personal info)
+    if (currentStep >= 2) {
+      window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "input" } }));
+    }
+    // Content milestone when generation is reached or editor is open
+    if (currentStep >= 7) {
+      window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "content" } }));
+    }
+  }, [currentStep]);
 
   const handleStartOver = useCallback(() => {
     if (
