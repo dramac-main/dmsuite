@@ -1,62 +1,64 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Architectural Audit Fixes — 3-Phase Remediation — IN PROGRESS
+**Phase:** Certificate & Diploma Tool Build — COMPLETE ✅
 
-### Session 135: Store + Workspace Architecture Fixes
+### Session 136: Certificate Designer + Diploma & Accreditation Designer
 
-#### Problem
-Architectural audit of 3 flagship tools (Sales Book, Contract, Resume) revealed systemic issues:
-1. **Global state anti-pattern**: `accentColorLocked` lived as module-level `let` variable — invisible to React, lost on HMR
-2. **Middleware stacking**: `persist(temporal(immer(...)))` persisted undo history to localStorage
-3. **Runtime require()**: Contract + Resume used `require()` for lazy loading (tree-shaking unfriendly)
-4. **Inline CSS duplication**: 3 workspaces had identical `<style>` blocks for canvas highlighting
-5. **No error boundaries**: Runtime errors in tab panels crash entire workspace
-6. **No ARIA labels**: Icon buttons lacked screen reader support
-7. **Magic numbers**: Zoom limits (30/200/10) duplicated across 3 files
-8. **Raw event strings**: `"workspace:dirty"` and `"workspace:progress"` used as raw strings
+#### Summary
+Built two complete, production-ready tools from scratch:
 
-#### Solution: Phased Fix Implementation
+##### 1. Certificate Designer (`certificate`)
+- **Store:** `src/stores/certificate-editor.ts` — Zustand+Immer+Zundo, 10 certificate types, 10 templates, 8 font pairings, 11 border styles, 5 seal styles
+- **Renderer:** `src/components/workspaces/certificate-designer/CertificateRenderer.tsx` — Pure HTML/CSS, 6 page sizes, ornamental borders, corner decorations, seals, signature blocks
+- **Tabs:** Content, Details (signatories+seal), Style (template picker+accent color+border+font), Format (page size+orientation+margins+print tips)
+- **Layers:** Figma-style layer tree with hover-to-highlight, click-to-navigate, visibility toggle
+- **Workspace:** 3-panel layout (editor+preview+layers), mobile bottom bar, template quick-switch strip, zoom controls, print
+- **Chiko:** 16 AI actions including validation and export, withActivityLogging, prefillFromMemory
 
-##### Phase 1: Foundation Fixes (COMPLETE)
-- **accentColorLocked → Zustand state** (sales-book-editor.ts, contract-editor.ts):
-  - Removed module-level `_accentLocked` variable + helper functions
-  - Added `accentColorLocked: boolean` + `setAccentColorLocked()` to store interface
-  - `updateStyle` reads from immer draft; `setForm`/`resetForm` reset to `false`
-  - Persist partializes: `{ form, accentColorLocked }`
+##### 2. Diploma & Accreditation Designer (`diploma-designer`)
+- **Store:** `src/stores/diploma-editor.ts` — 8 diploma types, 10 templates, 8 honors levels, signatory roles, accreditation fields
+- **Renderer:** `src/components/workspaces/diploma-designer/DiplomaRenderer.tsx` — Institution header with motto, degree/field/honors, conferral text, institutional seal
+- **Tabs:** Content (6 sections), Details (signatories with roles, institutional seal), Style, Format
+- **Layers:** Figma-style layer tree adapted for diploma sections (institution, program, conferral, recipient, resolution, accreditation)
+- **Workspace:** Same 3-panel architecture as Certificate Designer
+- **Chiko:** 18 AI actions including validation, export, accreditation management
 
-- **Middleware reorder** (all 3 stores):
-  - Changed from `persist(temporal(immer(...)))` to `temporal(persist(immer(...)))`
-  - Temporal outermost = undo history NOT persisted to localStorage
-  - Each store has `partialize` for both persist (what to save) and temporal (what to track)
+#### Files Created (18 new):
+1. `src/stores/certificate-editor.ts`
+2. `src/components/workspaces/certificate-designer/CertificateRenderer.tsx`
+3. `src/components/workspaces/certificate-designer/tabs/CertificateContentTab.tsx`
+4. `src/components/workspaces/certificate-designer/tabs/CertificateDetailsTab.tsx`
+5. `src/components/workspaces/certificate-designer/tabs/CertificateStyleTab.tsx`
+6. `src/components/workspaces/certificate-designer/tabs/CertificateFormatTab.tsx`
+7. `src/components/workspaces/certificate-designer/CertificateLayersPanel.tsx`
+8. `src/components/workspaces/certificate-designer/CertificateDesignerWorkspace.tsx`
+9. `src/lib/chiko/manifests/certificate.ts`
+10. `src/stores/diploma-editor.ts`
+11. `src/components/workspaces/diploma-designer/DiplomaRenderer.tsx`
+12. `src/components/workspaces/diploma-designer/tabs/DiplomaContentTab.tsx`
+13. `src/components/workspaces/diploma-designer/tabs/DiplomaDetailsTab.tsx`
+14. `src/components/workspaces/diploma-designer/tabs/DiplomaStyleTab.tsx`
+15. `src/components/workspaces/diploma-designer/tabs/DiplomaFormatTab.tsx`
+16. `src/components/workspaces/diploma-designer/DiplomaLayersPanel.tsx`
+17. `src/components/workspaces/diploma-designer/DiplomaDesignerWorkspace.tsx`
+18. `src/lib/chiko/manifests/diploma.ts`
 
-- **Static imports** (contract-editor.ts, resume-editor.ts):
-  - Replaced `require("@/lib/contract/schema")` with static `import { getDefaultClauses }`
-  - Replaced `require("@/lib/resume/templates/template-defs")` with static `import { getProTemplate }`
+#### Files Modified (4):
+1. `src/app/tools/[categoryId]/[toolId]/page.tsx` — Updated dynamic imports to folder paths
+2. `src/data/tools.ts` — Status: coming-soon → ready, added devStatus: "complete", aiProviders: ["claude"]
+3. `src/styles/workspace-canvas.css` — Added `.cert-canvas-root` highlight rules + print reset
+4. `TOOL-STATUS.md` — Moved both tools to COMPLETE, updated change log
 
-- **Type-safe section accessor** (resume-editor.ts):
-  - Added `getSection()` helper centralizing `as unknown as Record<...>` cast
-  - All 6 section mutation methods now use `getSection()` instead of inline casts
+#### Verification:
+- [x] TypeScript: 0 errors (`npx tsc --noEmit` clean)
+- [ ] Next.js production build (pending)
+- [ ] Committed and pushed (pending)
 
-##### Phase 2: Shared Infrastructure (COMPLETE)
-- **`src/lib/workspace-events.ts`** (NEW ~30 lines):
-  - `WORKSPACE_EVENTS.DIRTY` / `WORKSPACE_EVENTS.PROGRESS` constants
-  - `dispatchDirty()` / `dispatchProgress(milestone)` typed helpers
-  - `WorkspaceMilestone` type: `"input" | "content" | "edited" | "exported"`
+---
 
-- **`src/lib/workspace-constants.ts`** (NEW ~17 lines):
-  - `ZOOM_MIN = 30`, `ZOOM_MAX = 200`, `ZOOM_STEP = 10`, `ZOOM_DEFAULT = 100`
-  - `PAGE_DOTS_THRESHOLD = 8`, `MILESTONE_EDIT_THRESHOLD = 3`
-
-- **`src/styles/workspace-canvas.css`** (NEW ~95 lines):
-  - Extracted inline `<style>` blocks from all 3 workspaces
-  - Single file with `.sb-canvas-root`, `.ct-canvas-root`, `.resume-canvas-root` rules
-  - Consolidated `@media print` block
-
-- **`src/components/workspaces/shared/WorkspaceErrorBoundary.tsx`** (NEW ~65 lines):
-  - React class-based error boundary with retry button
-  - Console.error logging with component stack
-  - Re-exported from `WorkspaceUIKit.tsx`
+## Previous Focus
+**Phase:** Architectural Audit Fixes — 3-Phase Remediation — COMPLETE ✅
 
 - **ARIA labels** (SalesUIKit.tsx):
   - `IconButton`: Added `aria-label={tooltip}` prop

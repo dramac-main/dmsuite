@@ -1,32 +1,39 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅ — Resume Controls & Multi-Page A4 Fix ✅ — Project Saving System (IndexedDB + Store Adapters) ✅ — **Architectural Audit Fixes (3-Phase Remediation) ✅**
+## Overall Status: 97/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅ — Resume Controls & Multi-Page A4 Fix ✅ — Project Saving System (IndexedDB + Store Adapters) ✅ — Architectural Audit Fixes (3-Phase Remediation) ✅ — **Certificate Designer + Diploma & Accreditation Designer ✅**
 
 ---
 
-## Current Work: Architectural Audit Fixes — COMPLETE ✅
+## Current Work: Certificate & Diploma Tool Build — COMPLETE ✅
 
-### Session 135 — Store + Workspace Architecture Remediation
+### Session 136 — Certificate Designer + Diploma & Accreditation Designer
 
-#### Problem
-Audit of 3 flagship tools revealed systemic issues: global state anti-patterns, wrong middleware stacking, runtime require(), inline CSS duplication, missing error boundaries, no ARIA labels, magic numbers.
+#### Certificate Designer (9 files)
+- [x] Zustand store: 10 cert types, 10 templates, 8 font pairings, 11 borders, 5 seals
+- [x] HTML/CSS renderer: ornamental borders, corner decorations, seals, signatures
+- [x] 4-tab editor: Content, Details, Style, Format
+- [x] Figma-style layers panel with hover highlight + click navigate
+- [x] 3-panel workspace: editor + preview + layers, mobile bottom bar
+- [x] Chiko AI manifest: 16 actions with validation + export
 
-#### Solution: 3-Phase Fix
-- [x] Phase 1.1: accentColorLocked → Zustand state (sales-book + contract stores)
-- [x] Phase 1.2: Middleware reorder to `temporal(persist(immer(...)))` (all 3 stores)
-- [x] Phase 3.4: Static imports replacing runtime require() (contract + resume stores)
-- [x] Phase 3.1: Type-safe getSection() helper (resume store)
-- [x] Phase 1.4: Created workspace-events.ts with typed event constants
-- [x] Phase 2.3: Created workspace-constants.ts (zoom limits, thresholds)
-- [x] Phase 1.5: Extracted inline <style> to workspace-canvas.css
-- [x] Phase 2.1: Created WorkspaceErrorBoundary component
-- [x] Phase 2.2: Added ARIA labels to IconButton + ConfirmDialog
-- [x] Phase 2/3: Updated all 3 workspace components (events, constants, CSS, error boundaries)
+#### Diploma & Accreditation Designer (9 files)
+- [x] Zustand store: 8 diploma types, 10 templates, 8 honors levels, signatory roles
+- [x] HTML/CSS renderer: institution header, degree/field/honors, conferral, seal
+- [x] 4-tab editor: Content (6 sections), Details, Style, Format
+- [x] Figma-style layers panel adapted for diploma sections
+- [x] 3-panel workspace matching Certificate pattern
+- [x] Chiko AI manifest: 18 actions with validation + export
+
+#### Integration
+- [x] Dynamic imports updated to folder-based paths
+- [x] tools.ts: status → ready, devStatus → complete, aiProviders → claude
+- [x] CSS highlight rules for `.cert-canvas-root`
+- [x] TOOL-STATUS.md updated (both in COMPLETE section)
 - [x] TypeScript: 0 errors
 
 ---
 
-## Previous Work: Project Saving System — COMPLETE ✅
+## Previous Work: Architectural Audit Fixes — COMPLETE ✅
 
 ### Session 132 — Cache-First Profile Loading Architecture
 - No export tracking — print/download didn't affect progress

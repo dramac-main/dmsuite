@@ -976,7 +976,9 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design certificates of achievement, completion, appreciation, and training with ornamental borders",
         icon: "award",
-        status: "coming-soon",
+        status: "ready",
+        devStatus: "complete",
+        aiProviders: ["claude"],
         tags: ["certificate", "award", "achievement", "diploma"],
         outputs: ["pdf", "png"],
         printReady: true,
@@ -989,7 +991,9 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Design formal diplomas, accreditations, and professional designation certificates",
         icon: "award",
-        status: "coming-soon",
+        status: "ready",
+        devStatus: "complete",
+        aiProviders: ["claude"],
         tags: ["diploma", "accreditation", "formal", "education"],
         outputs: ["pdf", "png", "tiff"],
         printReady: true,

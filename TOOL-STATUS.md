@@ -3,8 +3,8 @@
 > **Last updated:** 2026-03-26
 > **Total tools registered:** 195+
 > **Tools with workspace UI:** 97
-> **Tools fully complete:** 11
-> **Tools available (ready):** 10
+> **Tools fully complete:** 13
+> **Tools available (ready):** 12
 > **Tools coming soon:** 185
 
 ---
@@ -58,6 +58,18 @@ All 9 route to `SalesBookDesignerWorkspace` with different `initialDocumentType`
 |---|---------|-----------|-----------|-------|
 | 12 | `resume-cv` | Resume & CV Builder | ResumeCVWorkspaceV2 | 8-step wizard, multi-template, ATS optimization, 3-panel layout |
 
+### Certificate Designer
+
+| # | Tool ID | Tool Name | Workspace | Notes |
+|---|---------|-----------|-----------|-------|
+| 13 | `certificate` | Certificate Designer | certificate-designer/CertificateDesignerWorkspace | 10 certificate types, 10 templates, ornamental borders, seals, signatories, Chiko AI manifest, Figma-style layers, print-ready |
+
+### Diploma & Accreditation Designer
+
+| # | Tool ID | Tool Name | Workspace | Notes |
+|---|---------|-----------|-----------|-------|
+| 14 | `diploma-designer` | Diploma & Accreditation | diploma-designer/DiplomaDesignerWorkspace | 8 diploma types, 10 templates, honors system, accreditation, institutional seal, Chiko AI manifest, Figma-style layers, print-ready |
+
 **Shared architecture (Sales Book):**
 - Store: `useSalesBookEditor` (Zustand + Immer + Zundo undo)
 - Renderer: `BlankFormRenderer` (HTML → print pipeline)
@@ -99,7 +111,7 @@ These have real workspace code (state management, canvas/editor, templates) but 
 | 1 | `brochure` | Brochure Designer | BrochureDesignerWorkspace | `SCAFFOLD` |
 | 2 | `letterhead` | Letterhead | LetterheadDesignerWorkspace | `SCAFFOLD` |
 | 3 | `envelope` | Envelope | EnvelopeDesignerWorkspace | `SCAFFOLD` |
-| 4 | `certificate` | Certificate | CertificateDesignerWorkspace | `SCAFFOLD` |
+| 4 | `certificate` | Certificate | certificate-designer/CertificateDesignerWorkspace | `COMPLETE` |
 | 5 | `infographic` | Infographic | InfographicDesignerWorkspace | `SCAFFOLD` |
 | 6 | `menu-designer` | Menu Designer | MenuDesignerWorkspace | `SCAFFOLD` |
 | 7 | `packaging-design` | Packaging Design | PackagingDesignerWorkspace | `SCAFFOLD` |
@@ -116,7 +128,7 @@ These have real workspace code (state management, canvas/editor, templates) but 
 | 18 | `price-list` | Price List | PriceListWorkspace | `SCAFFOLD` |
 | 19 | `company-profile` | Company Profile | CompanyProfileWorkspace | `SCAFFOLD` |
 | 20 | `business-plan` | Business Plan | BusinessPlanWorkspace | `SCAFFOLD` |
-| 21 | `diploma-designer` | Diploma Designer | DiplomaDesignerWorkspace | `SCAFFOLD` |
+| 21 | `diploma-designer` | Diploma Designer | diploma-designer/DiplomaDesignerWorkspace | `COMPLETE` |
 | 22 | `statement-of-account` | Statement of Account | StatementOfAccountWorkspace | `COMPLETE` |
 | 23 | `newsletter-print` | Newsletter (Print) | NewsletterPrintWorkspace | `SCAFFOLD` |
 | 24 | `employee-handbook` | Employee Handbook | EmployeeHandbookWorkspace | `SCAFFOLD` |
@@ -301,3 +313,5 @@ These already have substantial workspace code and would benefit most from a poli
 | 2026-03-25 | contract-template (Contract & Agreement Creator) | Cover Design Picker: 6 optional cover templates (classic/corporate/dark-executive/accent-split/bold-frame/minimal-line) + "none" option; visual mini-preview grid in Style tab; Chiko coverDesign param; 0 TS errors | Drake |
 | 2026-07-24 | resume-cv (Resume / CV) | Controls & Multi-Page Fix: Dynamic CSS override system (accent color per-template, section spacing, line spacing, font scale, margin presets), sidebar section break detection, A4 default, hardcoded accent overrides for templates 11 & 13, verified layers toggle | Drake |
 | 2026-03-26 | ALL tools | Bulk status update: 95 tools changed from ready/beta → coming-soon. Only 10 personally-worked tools remain as "ready": 7 sales books, statement-of-account, contract-template, resume-cv. Added devStatus: "complete" to resume-cv and statement-of-account. | Drake |
+| 2026-03-26 | certificate (Certificate Designer) | Full build: Zustand+Immer+Zundo store, 10 certificate types, 10 visual templates, HTML/CSS renderer with ornamental borders/seals/signatures, 4-tab editor (Content/Details/Style/Format), Figma-style layers panel, Chiko AI manifest (16 actions), print-ready, 0 TS errors | Drake |
+| 2026-03-26 | diploma-designer (Diploma & Accreditation) | Full build: Zustand+Immer+Zundo store, 8 diploma types, 10 templates, honors system (8 levels), accreditation fields, HTML/CSS renderer with institutional seal, 4-tab editor, Figma-style layers, Chiko AI manifest (18 actions), print-ready, 0 TS errors | Drake |
