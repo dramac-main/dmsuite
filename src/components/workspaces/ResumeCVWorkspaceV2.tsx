@@ -92,13 +92,7 @@ export default function ResumeCVWorkspace() {
   const isUploadStep = currentStep === 0;
 
   return (
-    <div
-      className={
-        isEditorStep
-          ? "fixed inset-0 z-50 flex flex-col bg-gray-950 text-white overflow-hidden"
-          : "flex flex-col h-full bg-gray-950 text-white overflow-hidden"
-      }
-    >
+    <div className="flex flex-col h-full bg-gray-950 text-white overflow-hidden">
       {/* Top bar with step indicator — hidden on step 0 (upload) and step 7 (editor) */}
       {!isEditorStep && !isUploadStep && (
         <motion.header
@@ -120,13 +114,7 @@ export default function ResumeCVWorkspace() {
       )}
 
       {/* Step content with AnimatePresence */}
-      <div
-        className={
-          isEditorStep
-            ? "flex-1 overflow-hidden relative"
-            : "flex-1 overflow-y-auto relative"
-        }
-      >
+      <div className={isEditorStep ? "flex-1 overflow-hidden relative" : "flex-1 overflow-y-auto relative"}>
         <AnimatePresence mode="wait" custom={stepDirection}>
           <motion.div
             key={currentStep}

@@ -18,19 +18,19 @@ import { createResumeManifest } from "@/lib/chiko/manifests/resume";
 import { PAGE_DIMENSIONS } from "@/lib/resume/schema";
 import { TEMPLATES } from "@/lib/resume/templates/templates";
 import TemplateRenderer, { RESUME_PAGE_GAP } from "@/lib/resume/templates/TemplateRenderer";
-import type { TemplateId } from "@/lib/resume/schema";
 import EditorSectionsPanel from "./editor/EditorSectionsPanel";
 import EditorDesignPanel from "./editor/EditorDesignPanel";
 import DiffOverlay from "./editor/DiffOverlay";
 import AIChatBar from "./editor/AIChatBar";
 import ExportDropdown, { type ExportFormat } from "./editor/ExportDropdown";
 import type { PendingDiffState } from "./editor/EditorPreviewPanel";
+import { FONT_PAIRINGS } from "@/lib/resume/schema";
 import {
   EditorTabNav,
   BottomBar,
   WorkspaceHeader,
   IconButton,
-  ActionButton,
+  ConfirmDialog,
   Icons,
 } from "@/components/workspaces/shared/WorkspaceUIKit";
 
@@ -89,6 +89,8 @@ export default function StepEditor() {
   const [currentPage, setCurrentPage] = useState(1);
   // Diff overlay
   const [pendingDiff, setPendingDiff] = useState<PendingDiffState | null>(null);
+  // Start-over confirm dialog
+  const [showStartOverDialog, setShowStartOverDialog] = useState(false);
 
   // ── Load Google Fonts for the active font pairing ──
   useGoogleFonts(resume.metadata.typography.fontPairing);
@@ -97,6 +99,14 @@ export default function StepEditor() {
   const dims = PAGE_DIMENSIONS[resume.metadata.page.format];
   const pageH = dims.height;
   const pageStep = pageH + RESUME_PAGE_GAP;
+
+  // Dispatch workspace:dirty on resume changes (SaveIndicator + project tracking)
+  const resumeRef = useRef(resume);
+  useEffect(() => {
+    if (resumeRef.current === resume) return;
+    resumeRef.current = resume;
+    window.dispatchEvent(new CustomEvent("workspace:dirty"));
+  }, [resume]);
 
   // ── Page count callback from TemplateRenderer ──
   const handlePageCount = useCallback((count: number) => {
@@ -215,6 +225,20 @@ export default function StepEditor() {
     setPendingDiff(null);
   }, [pendingDiff, setResume]);
 
+  // ── Build Google Fonts URL for print ──
+  const buildPrintFontLink = useCallback(() => {
+    const pairing = FONT_PAIRINGS[resume.metadata.typography.fontPairing];
+    if (!pairing) return "";
+    const families = new Set<string>();
+    [pairing.heading, pairing.body].forEach((css) => {
+      const f = css.split(",")[0].trim().replace(/['"/]/g, "");
+      if (f && !/(Georgia|system-ui|sans-serif|serif|monospace|Inter)$/i.test(f)) families.add(f);
+    });
+    if (families.size === 0) return "";
+    const params = Array.from(families).map((f) => `family=${encodeURIComponent(f)}:wght@300;400;500;600;700`).join("&");
+    return `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?${params}&display=swap" />`;
+  }, [resume.metadata.typography.fontPairing]);
+
   // ── Export handler ──
   const handleExport = useCallback(async (format: ExportFormat) => {
     if (format === "print") {
@@ -222,8 +246,10 @@ export default function StepEditor() {
       if (!printEl) return;
       const { printHTML } = await import("@/lib/print");
       const pageSize = resume.metadata.page.format === "a4" ? "A4" : "letter";
+      const fontLink = buildPrintFontLink();
       const html = `<!DOCTYPE html><html><head>
         <title>${resume.basics.name || "Resume"}</title>
+        ${fontLink}
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           @page { size: ${pageSize} portrait; margin: 0; }
@@ -251,7 +277,7 @@ export default function StepEditor() {
     } finally {
       setIsExporting(false);
     }
-  }, [resume, setIsExporting]);
+  }, [resume, setIsExporting, buildPrintFontLink]);
 
   // Register Chiko resume manifest
   const exportRef = useRef<((format: string) => Promise<void>) | null>(null);
@@ -272,11 +298,7 @@ export default function StepEditor() {
       {/* Start Over — always at the bottom */}
       <div className="p-4 pb-8">
         <button
-          onClick={() => {
-            if (confirm("Start a new resume? Your current progress will be cleared.")) {
-              goToStep(0);
-            }
-          }}
+          onClick={() => setShowStartOverDialog(true)}
           className="w-full py-2 text-[11px] font-medium text-gray-600 hover:text-gray-400 border border-gray-800/50 hover:border-gray-700/60 rounded-xl transition-all active:scale-[0.98]"
         >
           Start Over
@@ -509,13 +531,24 @@ export default function StepEditor() {
           <div className="flex-1 flex flex-col overflow-hidden">
             {previewPanel}
           </div>
+
+          {/* Floating AI chat bar — inside preview area */}
+          <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-40 w-full max-w-xl px-4">
+            <AIChatBar onExecute={handleAIRevision} />
+          </div>
         </div>
       </div>
 
-      {/* Floating AI chat bar */}
-      <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-40 w-full max-w-xl px-4 lg:left-[calc(50%+10rem)] lg:max-w-lg">
-        <AIChatBar onExecute={handleAIRevision} />
-      </div>
+      {/* Confirm dialog for Start Over */}
+      <ConfirmDialog
+        open={showStartOverDialog}
+        title="Start Over?"
+        description="This will reset your resume and return to the upload step. You cannot undo this action."
+        confirmLabel="Reset Everything"
+        onConfirm={() => { setShowStartOverDialog(false); goToStep(0); }}
+        onCancel={() => setShowStartOverDialog(false)}
+        variant="danger"
+      />
     </div>
   );
 }
