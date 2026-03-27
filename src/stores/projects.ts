@@ -55,7 +55,7 @@ interface ProjectState {
 
 let counter = 0;
 function uid() {
-  return `proj-${Date.now()}-${++counter}`;
+  return `proj-${Date.now()}-${++counter}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
 export const useProjectStore = create<ProjectState>()(

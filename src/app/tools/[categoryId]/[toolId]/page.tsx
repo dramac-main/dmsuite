@@ -250,9 +250,17 @@ export default function ToolWorkspacePage() {
         projectIdRef.current = urlProjectId;
         touchProject(urlProjectId);
       } else {
-        // Invalid project ID in URL — show picker or create
+        // Invalid project ID in URL — show picker or auto-create
         if (hasExistingProjects) {
           setShowProjectPicker(true);
+        } else {
+          // Invalid URL and no projects exist — create fresh immediately
+          const cat = toolCategories.find((c) => c.id === categoryId);
+          const t = cat?.tools.find((t) => t.id === toolId);
+          if (t) {
+            const newId = addProject(toolId, `${t.name} Project`);
+            navigateToProject(newId);
+          }
         }
       }
     } else if (hasExistingProjects) {
@@ -270,13 +278,7 @@ export default function ToolWorkspacePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toolId]);
 
-  // Find or create project for this tool session
-  const getOrCreateProject = useCallback(() => {
-    if (projectIdRef.current) return projectIdRef.current;
-    return null;
-  }, []);
-
-  // Track tool usage on mount + time spent + project handling
+  // Track tool usage on mount + time spent + milestone tracking
   useEffect(() => {
     if (!toolId) return;
     addRecentTool(toolId);
@@ -285,20 +287,6 @@ export default function ToolWorkspacePage() {
 
     const start = Date.now();
     dirtyCountRef.current = 0;
-
-    // If user stays >5s on a workspace tool without a project, create one
-    const projectTimer = setTimeout(() => {
-      const pid = getOrCreateProject();
-      if (!pid && !showProjectPicker) {
-        // No project yet and picker not showing — auto-create
-        const cat = toolCategories.find((c) => c.id === categoryId);
-        const t = cat?.tools.find((t) => t.id === toolId);
-        if (t && workspaceComponents[toolId]) {
-          const newId = addProject(toolId, t.name + " Project");
-          navigateToProject(newId);
-        }
-      }
-    }, 5000);
 
     // ── Milestone-based progress tracking ──────────────────
     // workspace:dirty → marks "input" on first fire, "edited" after content exists
@@ -345,7 +333,6 @@ export default function ToolWorkspacePage() {
     window.addEventListener("workspace:save", saveHandler);
 
     return () => {
-      clearTimeout(projectTimer);
       window.removeEventListener("workspace:dirty", dirtyHandler);
       window.removeEventListener("workspace:progress", progressHandler);
       window.removeEventListener("workspace:save", saveHandler);

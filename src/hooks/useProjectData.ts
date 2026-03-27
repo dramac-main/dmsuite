@@ -63,6 +63,8 @@ export function useProjectData({
   const loadedProjectRef = useRef<string | null>(null);
   /** Guard: suppresses workspace:save events during project transitions */
   const isTransitioningRef = useRef(false);
+  /** Generation counter — prevents stale async loads from corrupting state */
+  const loadGenRef = useRef(0);
   /** Tracks which project ID has been fully loaded — drives isReady */
   const [readyProjectId, setReadyProjectId] = useState<string | null>(null);
   const updateProject = useProjectStore((s) => s.updateProject);
@@ -91,6 +93,8 @@ export function useProjectData({
   const loadFromProject = useCallback(async (): Promise<boolean> => {
     if (!projectId) return false;
     const adapter = getOrCreateAdapter(toolId);
+    // Increment generation so older in-flight loads become no-ops
+    const gen = ++loadGenRef.current;
 
     try {
       isTransitioningRef.current = true;
@@ -106,6 +110,9 @@ export function useProjectData({
           snapshot = await loadProjectData(projectId);
         }
       }
+
+      // Bail out if a newer load has started while we were awaiting
+      if (gen !== loadGenRef.current) return false;
 
       if (snapshot?.data && Object.keys(snapshot.data).length > 0) {
         adapter.restoreSnapshot(snapshot.data);
@@ -124,14 +131,20 @@ export function useProjectData({
       setReadyProjectId(projectId);
       return false;
     } catch (err) {
+      // Bail out if a newer load has started
+      if (gen !== loadGenRef.current) return false;
       console.warn("[ProjectData] Load failed:", err);
       loadedProjectRef.current = projectId;
       setIsLoaded(true);
       setReadyProjectId(projectId);
       return false;
     } finally {
-      setIsLoading(false);
-      isTransitioningRef.current = false;
+      // Only clear transition guard if this is still the latest load.
+      // If a newer load is in-flight, keep the guard active.
+      if (gen === loadGenRef.current) {
+        setIsLoading(false);
+        isTransitioningRef.current = false;
+      }
     }
   }, [projectId, toolId, updateProject]);
 
