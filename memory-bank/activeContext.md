@@ -1,53 +1,37 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Worksheet & Form Designer Build — COMPLETE ✅
+**Phase:** Certificate Template SVG Upgrade — COMPLETE ✅
 
-### Session 139-141: Worksheet & Form Designer (3-session build)
+### Session 142: Certificate Templates SVG-to-CSS Conversion
 
 #### Summary
-Built a complete, production-ready Worksheet & Form Designer across 3 sessions:
+Replaced 10 generic placeholder certificate templates with 8 high-fidelity designs converted from downloaded SVG files. Each template has unique decorative borders, background patterns, and typography matching the original SVG reference designs.
 
-##### Worksheet & Form Designer (`worksheet-designer`)
-- **Schema:** `src/lib/worksheet/schema.ts` — 12 document types, 27 element types (6 categories), 8 templates, 9 educational subjects, 16 grade levels
-- **Store:** `src/stores/worksheet-editor.ts` — Zustand+Immer+Zundo, all update methods, section/element CRUD, answer key management
-- **Renderer:** `src/lib/worksheet/WorksheetRenderer.tsx` — Paginated HTML/CSS, 6 header styles, per-type element rendering (all 27 types), answer key page, educational worksheet support
-- **Tabs:** Content (document type, meta, branding, answer key), Elements (27 element types with type-specific sub-editors), Style (8 templates, accent color, fonts, header style), Format (page size, margins, spacing)
-- **Layers:** Figma-style layer tree with hover-to-highlight, click-to-navigate, visibility toggle (green accent)
-- **Workspace:** 3-panel layout (editor+preview+layers), template quick-switch strip, answer key toggle, page navigation dots, mobile bottom bar, zoom controls, print, Start Over
-- **Chiko:** 20+ AI actions including section/element CRUD, prefillFromMemory, validation, export, withActivityLogging
+#### 8 New Templates:
+1. **Classic Blue** — White bg + diagonal line pattern, blue double-line border, gold ribbon seal
+2. **Burgundy Ornate** — White bg, SVG corner flourishes in maroon, CSS ribbon banner, side ornaments
+3. **Antique Parchment** — Tan/beige bg, SVG corner swirls, double-line border, decorative rules
+4. **Golden Appreciation** — Cream bg + honeycomb CSS pattern, geometric L-shape corners, gold medal
+5. **Silver Weave** — White bg + wave pattern, chain/weave border, silver logo circle
+6. **Vintage Warm** — Cream bg + horizontal line texture, ornate corners, ribbon banner, filigree bars
+7. **Teal Regal** — Teal outer bg, ornate scrollwork corners, crown motif, dashed inner border, gold medal
+8. **Botanical Modern** — Asymmetric layout: navy botanical panel (left 38%) + white content area, seal badge
 
-#### Files Created (11 new):
-1. `src/lib/worksheet/schema.ts` (session 1)
-2. `src/stores/worksheet-editor.ts` (session 1)
-3. `src/lib/worksheet/WorksheetRenderer.tsx` (session 2)
-4. `src/components/workspaces/worksheet-designer/tabs/WorksheetContentTab.tsx` (session 2)
-5. `src/components/workspaces/worksheet-designer/tabs/WorksheetElementsTab.tsx` (session 2)
-6. `src/components/workspaces/worksheet-designer/tabs/WorksheetStyleTab.tsx` (session 2)
-7. `src/components/workspaces/worksheet-designer/tabs/WorksheetFormatTab.tsx` (session 2)
-8. `src/components/workspaces/worksheet-designer/WorksheetLayersPanel.tsx` (session 2)
-9. `src/components/workspaces/worksheet-designer/WorksheetDesignerWorkspace.tsx` (session 3)
-10. `src/lib/chiko/manifests/worksheet.ts` (session 3)
-11. Old scaffold `src/components/workspaces/WorksheetDesignerWorkspace.tsx` — DELETED
+#### Files Modified (3):
+- `src/stores/certificate-editor.ts` — Updated CertificateTemplate type (8 new IDs), CERTIFICATE_TEMPLATES array (8 configs), BorderStyle type (9 new), default style
+- `src/components/workspaces/certificate-designer/tabs/CertificateStyleTab.tsx` — Updated BORDER_OPTIONS for 9 new border styles
+- `src/components/workspaces/certificate-designer/CertificateRenderer.tsx` — Complete rewrite with 12 new decorative components (CornerFlourish, ScrollworkCorner, SideOrnament, RibbonBanner, MedalRibbon, OrnamentDivider, ScrollDivider, DottedSeparator, CrownMotif, TemplateBorderLayer, getBgCSS) + template-specific rendering logic
 
-#### Files Modified:
-- `src/app/tools/[categoryId]/[toolId]/page.tsx` — dynamic import → `worksheet-designer/WorksheetDesignerWorkspace`
-- `src/data/tools.ts` — status → ready, devStatus → complete
-- `src/data/credit-costs.ts` — added `"worksheet-designer": "invoice-fill"` to TOOL_CREDIT_MAP
-- `src/styles/workspace-canvas.css` — `.ws-canvas-root` highlight rules (green accent)
-- `TOOL-STATUS.md` — moved to COMPLETE section (#17), updated counts, added changelog
-
-#### Key Implementation Details:
-- **12 Document Types:** worksheet, quiz, test, exam, survey, feedback, registration, application, order-form, checklist, evaluation, custom
-- **27 Element Types (6 categories):** Text Input (short-answer, long-answer, fill-in-blank, essay), Selection (multiple-choice, checkbox, dropdown, true-false), Rating (rating-scale, likert, ranking, slider), Data (number-input, date-input, time-input, email-input, phone-input), Special (signature, file-upload, image-upload, drawing-area, table-grid, matching, word-bank, diagram-label), Structure (section-header, instruction-text, page-break)
-- **8 Templates:** classic, modern, academic, playful, minimal, professional, creative, exam
-- **Answer Key:** Toggle for educational document types, dedicated answer key page in renderer
-- **Educational Features:** Subject (9), Grade Level (16), academic year, term/semester support
-
-#### Key TypeScript Fix Patterns Applied:
-- **FormInput/FormTextarea/FormSelect:** Use native `(e) => fn(e.target.value)`, NOT clean value callbacks
-- **FormSelect:** Has NO `options` prop — use `<option>` children
-- **ChipGroup direction:** `"horizontal"` | `"grid"`, NOT `"row"`
+#### Key Technical Decisions:
+- Used pure CSS/HTML/inline-SVG for all decorations (no external assets)
+- SVG corner flourishes mirrored with CSS transforms (scaleX(-1), scaleY(-1), scale(-1))
+- Ribbon banners built with CSS triangle folds + gradient fills
+- Botanical-modern uses asymmetric layout (left panel 38% of page width)
+- Medal ribbons use radial gradients + clipPath for ribbon tails
+- Background patterns via repeating-linear-gradient (diagonal lines, horizontal lines, honeycomb dots)
+- Template-specific typography: teal-regal has red italic names, classic-blue has wide letter spacing
+- TypeScript: 0 errors
 - **ColorSwatchPicker:** Expects `{hex, label}[]` objects, NOT string arrays
 - **partialize type:** Fixed with `as WorksheetEditorState` cast
 - **setState in useEffect:** Use `queueMicrotask()` with ref-based change detection
