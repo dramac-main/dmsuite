@@ -33,16 +33,14 @@ const icons = {
 };
 
 const BORDER_OPTIONS: { id: BorderStyle; label: string }[] = [
-  { id: "ornate-gold", label: "Ornate Gold" },
-  { id: "clean-line", label: "Clean Line" },
-  { id: "double-frame", label: "Double Frame" },
-  { id: "thin-elegant", label: "Thin Elegant" },
-  { id: "official-border", label: "Official" },
-  { id: "accent-corner", label: "Accent Corners" },
-  { id: "bold-stripe", label: "Bold Stripe" },
-  { id: "modern-bracket", label: "Modern Bracket" },
-  { id: "vintage-frame", label: "Vintage Frame" },
-  { id: "minimal-rule", label: "Minimal Rule" },
+  { id: "classic-blue-frame", label: "Classic Blue Frame" },
+  { id: "burgundy-flourish", label: "Burgundy Flourish" },
+  { id: "antique-frame", label: "Antique Frame" },
+  { id: "golden-frame", label: "Golden Frame" },
+  { id: "silver-weave-border", label: "Silver Weave" },
+  { id: "vintage-warm-frame", label: "Vintage Warm" },
+  { id: "teal-scrollwork", label: "Teal Scrollwork" },
+  { id: "botanical-panel", label: "Botanical Panel" },
   { id: "none", label: "None" },
 ];
 

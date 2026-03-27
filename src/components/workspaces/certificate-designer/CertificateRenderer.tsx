@@ -1,7 +1,8 @@
 // =============================================================================
 // DMSuite — Certificate Designer Renderer
-// Pure HTML/CSS renderer for professional certificates with ornamental borders,
-// seals, signatures, and 10 distinct templates. Optimized for print at 300 DPI.
+// Pure HTML/CSS renderer with 8 high-fidelity templates matching reference SVGs.
+// Each template has unique decorative borders, backgrounds, and typography.
+// Optimized for print at 300 DPI. Fully editable — all text from form data.
 // =============================================================================
 
 "use client";
@@ -11,14 +12,10 @@ import type {
   CertificateFormData,
   CertificateTemplate,
   SealStyle,
-  BorderStyle,
   PageOrientation,
 } from "@/stores/certificate-editor";
 import { CERTIFICATE_FONT_PAIRINGS } from "@/stores/certificate-editor";
-import {
-  getAdvancedSettings,
-  scaledFontSize,
-} from "@/stores/advanced-helpers";
+import { scaledFontSize } from "@/stores/advanced-helpers";
 
 // ━━━ Page Constants ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -79,112 +76,37 @@ function formatDate(dateStr: string): string {
   }
 }
 
-// ━━━ Border Renderers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━ Background Patterns ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-function getBorderCSS(borderStyle: BorderStyle, accent: string, w: number, h: number): React.CSSProperties {
-  const base: React.CSSProperties = { position: "absolute", top: 0, left: 0, width: w, height: h, pointerEvents: "none" };
-
-  switch (borderStyle) {
-    case "ornate-gold":
+function getBgCSS(template: CertificateTemplate, accent: string): React.CSSProperties {
+  switch (template) {
+    case "classic-blue":
       return {
-        ...base,
-        border: `3px solid ${accent}`,
-        outline: `2px solid ${adjustColor(accent, -30)}`,
-        outlineOffset: "6px",
-        boxShadow: `inset 0 0 0 8px ${hexToRgba(accent, 0.08)}, inset 0 0 0 1px ${hexToRgba(accent, 0.3)}`,
+        background: `repeating-linear-gradient(-45deg, #f5f5f5, #f5f5f5 2px, #eeeeee 2px, #eeeeee 4px)`,
       };
-    case "clean-line":
+    case "burgundy-ornate":
+      return { background: "#ffffff" };
+    case "antique-parchment":
+      return { background: `linear-gradient(180deg, #d8cdb8 0%, #cec3ab 50%, #d8cdb8 100%)` };
+    case "golden-appreciation":
       return {
-        ...base,
-        border: `2px solid ${accent}`,
+        background: `radial-gradient(circle at 50% 50%, rgba(184,134,11,0.04) 0%, transparent 70%), #faf6ef`,
       };
-    case "double-frame":
+    case "silver-weave":
       return {
-        ...base,
-        border: `3px solid ${accent}`,
-        outline: `1px solid ${accent}`,
-        outlineOffset: "4px",
+        background: `repeating-linear-gradient(0deg, transparent, transparent 8px, rgba(0,0,0,0.02) 8px, rgba(0,0,0,0.02) 9px), #ffffff`,
       };
-    case "thin-elegant":
+    case "vintage-warm":
       return {
-        ...base,
-        border: `1px solid ${hexToRgba(accent, 0.5)}`,
-        boxShadow: `inset 0 0 0 4px transparent, inset 0 0 0 5px ${hexToRgba(accent, 0.15)}`,
+        background: `repeating-linear-gradient(0deg, transparent, transparent 5px, rgba(93,58,26,0.04) 5px, rgba(93,58,26,0.04) 6px), linear-gradient(180deg, #f5ead0 0%, #efe2c4 100%)`,
       };
-    case "official-border":
-      return {
-        ...base,
-        border: `2px solid ${accent}`,
-        outline: `3px solid ${adjustColor(accent, 30)}`,
-        outlineOffset: "3px",
-        boxShadow: `inset 0 0 0 1px ${hexToRgba(accent, 0.2)}`,
-      };
-    case "accent-corner":
-      return { ...base };
-    case "bold-stripe":
-      return { ...base };
-    case "modern-bracket":
-      return {
-        ...base,
-        borderTop: `4px solid ${accent}`,
-        borderBottom: `4px solid ${accent}`,
-      };
-    case "vintage-frame":
-      return {
-        ...base,
-        border: `4px double ${accent}`,
-        outline: `2px solid ${adjustColor(accent, -20)}`,
-        outlineOffset: "8px",
-        boxShadow: `inset 0 0 0 12px ${hexToRgba(accent, 0.05)}, inset 0 0 0 1px ${hexToRgba(accent, 0.2)}`,
-      };
-    case "minimal-rule":
-      return {
-        ...base,
-        borderBottom: `2px solid ${accent}`,
-        borderTop: `2px solid ${accent}`,
-      };
-    case "none":
+    case "teal-regal":
+      return { background: "#ffffff" };
+    case "botanical-modern":
+      return { background: "#ffffff" };
     default:
-      return base;
+      return { background: "#ffffff" };
   }
-}
-
-// ━━━ Template Background Patterns ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-function getBackgroundCSS(template: CertificateTemplate, accent: string): React.CSSProperties {
-  const tplBg: Record<CertificateTemplate, React.CSSProperties> = {
-    "classic-gold": {
-      background: `linear-gradient(135deg, #faf6ef 0%, #f5edd8 50%, #faf6ef 100%)`,
-    },
-    "corporate-modern": {
-      background: "#ffffff",
-    },
-    "academic-formal": {
-      background: `linear-gradient(180deg, #f9f5eb 0%, #f3ead5 100%)`,
-    },
-    "elegant-script": {
-      background: `radial-gradient(ellipse at 50% 30%, #fdfcf8 0%, #f5f0e8 100%)`,
-    },
-    "government-official": {
-      background: "#ffffff",
-    },
-    "creative-achievement": {
-      background: `linear-gradient(135deg, #ffffff 0%, ${hexToRgba(accent, 0.03)} 100%)`,
-    },
-    "sports-athletics": {
-      background: `linear-gradient(180deg, #ffffff 0%, ${hexToRgba(accent, 0.04)} 100%)`,
-    },
-    "professional-training": {
-      background: `linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)`,
-    },
-    "vintage-ornate": {
-      background: `linear-gradient(135deg, #faf3e3 0%, #f0e4c8 50%, #faf3e3 100%)`,
-    },
-    "minimalist-premium": {
-      background: "#ffffff",
-    },
-  };
-  return tplBg[template] || { background: "#ffffff" };
 }
 
 // ━━━ Seal Component ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

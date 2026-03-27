@@ -42,16 +42,14 @@ export const CERTIFICATE_TYPES: { id: CertificateType; label: string; defaultTit
 ];
 
 export type CertificateTemplate =
-  | "classic-gold"
-  | "corporate-modern"
-  | "academic-formal"
-  | "elegant-script"
-  | "government-official"
-  | "creative-achievement"
-  | "sports-athletics"
-  | "professional-training"
-  | "vintage-ornate"
-  | "minimalist-premium";
+  | "classic-blue"
+  | "burgundy-ornate"
+  | "antique-parchment"
+  | "golden-appreciation"
+  | "silver-weave"
+  | "vintage-warm"
+  | "teal-regal"
+  | "botanical-modern";
 
 export interface CertificateTemplateConfig {
   id: CertificateTemplate;
@@ -63,29 +61,25 @@ export interface CertificateTemplateConfig {
 }
 
 export const CERTIFICATE_TEMPLATES: CertificateTemplateConfig[] = [
-  { id: "classic-gold", name: "Classic Gold", accent: "#b8860b", borderStyle: "ornate-gold", bgColor: "#faf6ef", fontPairing: "playfair-lato" },
-  { id: "corporate-modern", name: "Corporate Modern", accent: "#1e40af", borderStyle: "clean-line", bgColor: "#ffffff", fontPairing: "inter-jetbrains" },
-  { id: "academic-formal", name: "Academic Formal", accent: "#1e3a5f", borderStyle: "double-frame", bgColor: "#f9f5eb", fontPairing: "merriweather-opensans" },
-  { id: "elegant-script", name: "Elegant Script", accent: "#7c3aed", borderStyle: "thin-elegant", bgColor: "#fdfcf8", fontPairing: "cormorant-montserrat" },
-  { id: "government-official", name: "Government Official", accent: "#166534", borderStyle: "official-border", bgColor: "#ffffff", fontPairing: "crimson-source" },
-  { id: "creative-achievement", name: "Creative Achievement", accent: "#dc2626", borderStyle: "accent-corner", bgColor: "#ffffff", fontPairing: "poppins-inter" },
-  { id: "sports-athletics", name: "Sports & Athletics", accent: "#ea580c", borderStyle: "bold-stripe", bgColor: "#ffffff", fontPairing: "oswald-roboto" },
-  { id: "professional-training", name: "Professional Training", accent: "#0891b2", borderStyle: "modern-bracket", bgColor: "#f8fafc", fontPairing: "inter-jetbrains" },
-  { id: "vintage-ornate", name: "Vintage Ornate", accent: "#92400e", borderStyle: "vintage-frame", bgColor: "#faf3e3", fontPairing: "playfair-lato" },
-  { id: "minimalist-premium", name: "Minimalist Premium", accent: "#18181b", borderStyle: "minimal-rule", bgColor: "#ffffff", fontPairing: "dm-serif-dm-sans" },
+  { id: "classic-blue", name: "Classic Blue", accent: "#35517D", borderStyle: "classic-blue-frame", bgColor: "#f5f5f5", fontPairing: "playfair-lato" },
+  { id: "burgundy-ornate", name: "Burgundy Ornate", accent: "#4C0C1E", borderStyle: "burgundy-flourish", bgColor: "#ffffff", fontPairing: "crimson-source" },
+  { id: "antique-parchment", name: "Antique Parchment", accent: "#3F3F41", borderStyle: "antique-frame", bgColor: "#d8cdb8", fontPairing: "cormorant-montserrat" },
+  { id: "golden-appreciation", name: "Golden Appreciation", accent: "#b8860b", borderStyle: "golden-frame", bgColor: "#faf6ef", fontPairing: "playfair-lato" },
+  { id: "silver-weave", name: "Silver Weave", accent: "#4a4a4a", borderStyle: "silver-weave-border", bgColor: "#ffffff", fontPairing: "cormorant-montserrat" },
+  { id: "vintage-warm", name: "Vintage Warm", accent: "#5D3A1A", borderStyle: "vintage-warm-frame", bgColor: "#f5ead0", fontPairing: "playfair-lato" },
+  { id: "teal-regal", name: "Teal Regal", accent: "#1a7f8f", borderStyle: "teal-scrollwork", bgColor: "#e8f4f6", fontPairing: "poppins-inter" },
+  { id: "botanical-modern", name: "Botanical Modern", accent: "#1B2650", borderStyle: "botanical-panel", bgColor: "#ffffff", fontPairing: "cormorant-montserrat" },
 ];
 
 export type BorderStyle =
-  | "ornate-gold"
-  | "clean-line"
-  | "double-frame"
-  | "thin-elegant"
-  | "official-border"
-  | "accent-corner"
-  | "bold-stripe"
-  | "modern-bracket"
-  | "vintage-frame"
-  | "minimal-rule"
+  | "classic-blue-frame"
+  | "burgundy-flourish"
+  | "antique-frame"
+  | "golden-frame"
+  | "silver-weave-border"
+  | "vintage-warm-frame"
+  | "teal-scrollwork"
+  | "botanical-panel"
   | "none";
 
 export type SealStyle = "gold" | "silver" | "embossed" | "stamp" | "none";
@@ -238,9 +232,9 @@ export function createDefaultCertificateForm(type?: CertificateType): Certificat
     sealStyle: "gold",
 
     style: {
-      template: "classic-gold",
-      accentColor: "#b8860b",
-      borderStyle: "ornate-gold",
+      template: "classic-blue",
+      accentColor: "#35517D",
+      borderStyle: "classic-blue-frame",
       fontPairing: "playfair-lato",
       fontScale: 1,
       headerStyle: "centered",

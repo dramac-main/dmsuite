@@ -7,13 +7,11 @@
 
 "use client";
 
-import { useEffect, useMemo } from "react";
-import type React from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type {
   WorksheetFormData,
   FormElement,
   HeaderStyle,
-  WorksheetStyleConfig,
 } from "@/lib/worksheet/schema";
 import {
   FONT_PAIRINGS,
@@ -91,6 +89,9 @@ let elementCounter = 0;
 function resetCounter() { elementCounter = 0; }
 function nextNumber(): number { return ++elementCounter; }
 
+// ━━━ Footer Height ━━━
+const FOOTER_H = 36;
+
 // ━━━ Renderer Props ━━━
 interface WorksheetRendererProps {
   form: WorksheetFormData;
@@ -108,8 +109,7 @@ export default function WorksheetRenderer({
 }: WorksheetRendererProps) {
   const pageDims = PAGE_PX[form.printConfig.pageSize] ?? PAGE_PX.a4;
   const margin = getMarginPx(form.printConfig.margins);
-  const contentWidth = pageDims.w - margin.left - margin.right;
-  const contentHeight = pageDims.h - margin.top - margin.bottom;
+  const contentHeight = pageDims.h - margin.top - margin.bottom - FOOTER_H;
   const sectionGap = getSectionGap(form.printConfig.sectionSpacing);
   const lineHeight = getLineHeight(form.printConfig.lineSpacing);
   const fieldHeight = getFieldHeight(form.printConfig.fieldSize);
@@ -119,183 +119,212 @@ export default function WorksheetRenderer({
   const fontUrl = getGoogleFontUrl(form.style.fontPairing);
   const isEducational = form.documentType === "educational-worksheet";
 
-  // Pagination: measure-based
-  // We render a single continuous column and let the browser split into pages
-  // For the pagination approach, we render pages based on estimated heights
-
   const visibleSections = form.sections.filter((s) => s.visible);
-
-  // Estimate page count (rough heuristic based on element count)
-  const estimatedPageCount = useMemo(() => {
-    let totalHeight = 100; // header
-    if (form.style.showInstructions && form.instructions) totalHeight += 60;
-    if (isEducational && (form.studentNameField || form.dateField)) totalHeight += 40;
-
-    for (const section of visibleSections) {
-      totalHeight += 40; // section header
-      for (const el of section.elements) {
-        totalHeight += estimateElementHeight(el, fieldHeight, lineHeight, contentWidth, form.style);
-      }
-      totalHeight += sectionGap;
-    }
-
-    return Math.max(1, Math.ceil(totalHeight / contentHeight));
-  }, [visibleSections, contentHeight, fieldHeight, lineHeight, sectionGap, form.instructions, form.style, isEducational, form.studentNameField, form.dateField, contentWidth]);
-
-  useEffect(() => {
-    onPageCount?.(estimatedPageCount);
-  }, [estimatedPageCount, onPageCount]);
 
   // Reset numbering
   resetCounter();
+
+  // Build all main document content once
+  const allContent = useMemo(() => {
+    resetCounter();
+    return (
+      <>
+        {/* ── Document Header ── */}
+        <div data-ws-section="header">
+          <HeaderBlock
+            form={form}
+            accent={accent}
+            headingFont={headingFont}
+            margin={margin}
+            isEducational={isEducational}
+            fieldHeight={fieldHeight}
+          />
+        </div>
+
+        {/* ── Instructions ── */}
+        {form.style.showInstructions && form.instructions && (
+          <div
+            data-ws-section="instructions"
+            style={{
+              padding: `12px ${margin.right}px 12px ${margin.left}px`,
+              background: hexToRgba(accent, 0.04),
+              borderLeft: `3px solid ${accent}`,
+              margin: `0 ${margin.right}px 16px ${margin.left}px`,
+              borderRadius: 4,
+              fontSize: form.style.compactMode ? 10.5 : 12,
+              color: "#4b5563",
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 4, color: accent, fontSize: form.style.compactMode ? 10 : 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Instructions
+            </div>
+            {form.instructions}
+          </div>
+        )}
+
+        {/* ── Sections ── */}
+        <div style={{ padding: `0 ${margin.left}px ${margin.bottom}px` }}>
+          {visibleSections.map((section, sIdx) => (
+            <div
+              key={section.id}
+              data-ws-section={`section-${sIdx}`}
+              style={{ marginBottom: sectionGap }}
+            >
+              {/* Section header */}
+              <SectionHeader
+                title={section.title}
+                description={section.description}
+                accent={accent}
+                headingFont={headingFont}
+                headerStyle={form.style.headerStyle}
+                compact={form.style.compactMode}
+              />
+
+              {/* Elements */}
+              <div style={{
+                display: section.columns === 2 ? "grid" : "flex",
+                gridTemplateColumns: section.columns === 2 ? "1fr 1fr" : undefined,
+                gap: section.columns === 2 ? "8px 16px" : "0",
+                flexDirection: section.columns === 2 ? undefined : "column",
+              }}>
+                {section.elements.map((element, eIdx) => (
+                  <div
+                    key={element.id}
+                    data-ws-section={`element-${section.id}-${element.id}`}
+                    style={{
+                      background: form.style.alternateRowShading && eIdx % 2 === 1
+                        ? hexToRgba(accent, 0.02)
+                        : undefined,
+                      padding: form.style.showBorders ? "8px 10px" : "6px 0",
+                      borderBottom: form.style.showBorders ? "1px solid #e5e7eb" : undefined,
+                    }}
+                  >
+                    <ElementRenderer
+                      element={element}
+                      accent={accent}
+                      fieldHeight={fieldHeight}
+                      numbered={form.style.numberedElements}
+                      showPoints={form.style.showPointValues && isEducational}
+                      showAnswerKey={showAnswerKey}
+                      bodyFont={bodyFont}
+                      compact={form.style.compactMode}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </>
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, accent, headingFont, bodyFont, margin.top, margin.right, margin.bottom, margin.left,
+      sectionGap, fieldHeight, isEducational, showAnswerKey, visibleSections]);
+
+  // ── Overflow-based page counting (same pattern as BusinessPlanRenderer) ──
+  const pagesRef = useRef<HTMLDivElement>(null);
+  const [pageCount, setPageCount] = useState(1);
+  const onPageCountRef = useRef(onPageCount);
+  onPageCountRef.current = onPageCount;
+  const lastReportedCount = useRef(0);
+
+  useEffect(() => {
+    const el = pagesRef.current;
+    if (!el) return;
+    const totalH = el.scrollHeight;
+    const count = Math.max(1, Math.ceil(totalH / contentHeight));
+    const hasAnswerKey = form.answerKey.enabled && isEducational;
+    const total = count + (hasAnswerKey ? 1 : 0);
+    setPageCount(count);
+    if (total !== lastReportedCount.current) {
+      lastReportedCount.current = total;
+      onPageCountRef.current?.(total);
+    }
+  }, [allContent, contentHeight, form.answerKey.enabled, isEducational]);
+
+  // ── Shared page styles ──
+  const pageStyle: React.CSSProperties = {
+    width: pageDims.w,
+    minHeight: pageDims.h,
+    backgroundColor: "#ffffff",
+    position: "relative",
+    overflow: "hidden",
+    boxShadow: "0 4px 32px rgba(0, 0, 0, 0.45)",
+    fontFamily: bodyFont,
+    fontSize: form.style.compactMode ? 11 : 13,
+    lineHeight,
+    color: "#1f2937",
+  };
 
   return (
     <>
       {fontUrl && <link rel="stylesheet" href={fontUrl} />}
 
       <div data-ws-pages className="flex flex-col items-center" style={{ gap: pageGap }}>
-        {/* Main document page(s) */}
-        <div
-          data-ws-page={1}
-          className="bg-white shadow-2xl shadow-black/20"
-          style={{
-            width: pageDims.w,
-            minHeight: pageDims.h,
-            fontFamily: bodyFont,
-            fontSize: form.style.compactMode ? 11 : 13,
-            lineHeight,
-            color: "#1f2937",
-            position: "relative",
-            overflow: "hidden",
-          }}
-        >
-          {/* ── Document Header ── */}
-          <div data-ws-section="header">
-            <HeaderBlock
-              form={form}
-              accent={accent}
-              headingFont={headingFont}
-              margin={margin}
-              isEducational={isEducational}
-              fieldHeight={fieldHeight}
-            />
-          </div>
-
-          {/* ── Instructions ── */}
-          {form.style.showInstructions && form.instructions && (
+        {/* ── Content Pages ── */}
+        {Array.from({ length: pageCount }, (_, pageIdx) => (
+          <div key={`page-${pageIdx}`} data-ws-page={pageIdx + 1} style={pageStyle}>
+            {/* Page 0: render content and measure scrollHeight */}
             <div
-              data-ws-section="instructions"
+              ref={pageIdx === 0 ? pagesRef : undefined}
               style={{
-                padding: `12px ${margin.right}px 12px ${margin.left}px`,
-                background: hexToRgba(accent, 0.04),
-                borderLeft: `3px solid ${accent}`,
-                margin: `0 ${margin.right}px 16px ${margin.left}px`,
-                borderRadius: 4,
-                fontSize: form.style.compactMode ? 10.5 : 12,
-                color: "#4b5563",
+                position: pageIdx === 0 ? "relative" : "absolute",
+                top: pageIdx === 0 ? 0 : undefined,
+                paddingBottom: FOOTER_H,
+                width: pageDims.w,
+                ...(pageIdx === 0
+                  ? {}
+                  : { visibility: "hidden", height: 0, overflow: "hidden" }),
               }}
             >
-              <div style={{ fontWeight: 600, marginBottom: 4, color: accent, fontSize: form.style.compactMode ? 10 : 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                Instructions
-              </div>
-              {form.instructions}
+              {pageIdx === 0 && allContent}
             </div>
-          )}
 
-          {/* ── Sections ── */}
-          <div style={{ padding: `0 ${margin.left}px ${margin.bottom}px` }}>
-            {visibleSections.map((section, sIdx) => (
-              <div
-                key={section.id}
-                data-ws-section={`section-${sIdx}`}
-                style={{ marginBottom: sectionGap }}
-              >
-                {/* Section header */}
-                <SectionHeader
-                  title={section.title}
-                  description={section.description}
-                  accent={accent}
-                  headingFont={headingFont}
-                  headerStyle={form.style.headerStyle}
-                  compact={form.style.compactMode}
-                />
-
-                {/* Elements */}
-                <div style={{
-                  display: section.columns === 2 ? "grid" : "flex",
-                  gridTemplateColumns: section.columns === 2 ? "1fr 1fr" : undefined,
-                  gap: section.columns === 2 ? "8px 16px" : "0",
-                  flexDirection: section.columns === 2 ? undefined : "column",
-                }}>
-                  {section.elements.map((element, eIdx) => (
-                    <div
-                      key={element.id}
-                      data-ws-section={`element-${section.id}-${element.id}`}
-                      style={{
-                        background: form.style.alternateRowShading && eIdx % 2 === 1
-                          ? hexToRgba(accent, 0.02)
-                          : undefined,
-                        padding: form.style.showBorders ? "8px 10px" : "6px 0",
-                        borderBottom: form.style.showBorders ? "1px solid #e5e7eb" : undefined,
-                      }}
-                    >
-                      <ElementRenderer
-                        element={element}
-                        accent={accent}
-                        fieldHeight={fieldHeight}
-                        numbered={form.style.numberedElements}
-                        showPoints={form.style.showPointValues && isEducational}
-                        showAnswerKey={showAnswerKey}
-                        bodyFont={bodyFont}
-                        compact={form.style.compactMode}
-                      />
-                    </div>
-                  ))}
+            {/* Pages > 0: show overflow using negative marginTop clip */}
+            {pageIdx > 0 && (
+              <div style={{
+                width: pageDims.w,
+                height: pageDims.h - FOOTER_H,
+                overflow: "hidden",
+              }}>
+                <div style={{ marginTop: -(pageIdx * contentHeight) }}>
+                  {allContent}
                 </div>
               </div>
-            ))}
-          </div>
+            )}
 
-          {/* ── Footer ── */}
-          {form.style.showPageNumbers && (
-            <div
-              data-ws-section="footer"
-              style={{
-                position: "absolute",
-                bottom: 16,
-                left: margin.left,
-                right: margin.right,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                fontSize: 9,
-                color: "#9ca3af",
-                borderTop: "1px solid #e5e7eb",
-                paddingTop: 8,
-              }}
-            >
-              <span>{form.branding.organization || ""}</span>
-              <span>{form.branding.formNumber ? `Form: ${form.branding.formNumber}` : ""}</span>
-              <span>Page 1</span>
-            </div>
-          )}
-        </div>
+            {/* Footer */}
+            {form.style.showPageNumbers && (
+              <div
+                data-ws-section="footer"
+                style={{
+                  position: "absolute",
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: FOOTER_H,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: `0 ${margin.left}px`,
+                  fontSize: 9,
+                  color: "#9ca3af",
+                  borderTop: "1px solid #e5e7eb",
+                }}
+              >
+                <span>{form.branding.organization || ""}</span>
+                <span>{form.branding.formNumber ? `Form: ${form.branding.formNumber}` : ""}</span>
+                <span>Page {pageIdx + 1} of {pageCount}</span>
+              </div>
+            )}
+          </div>
+        ))}
 
         {/* ── Answer Key Page (if enabled) ── */}
         {form.answerKey.enabled && isEducational && (
           <div
             data-ws-page="answer-key"
-            className="bg-white shadow-2xl shadow-black/20"
-            style={{
-              width: pageDims.w,
-              minHeight: pageDims.h,
-              fontFamily: bodyFont,
-              fontSize: form.style.compactMode ? 11 : 13,
-              lineHeight,
-              color: "#1f2937",
-              position: "relative",
-              overflow: "hidden",
-            }}
+            style={pageStyle}
           >
             <AnswerKeyPage
               form={form}
@@ -1285,40 +1314,4 @@ function renderFillInBlank(sentence: string, answers: string[] | undefined, acce
 function shuffleForDisplay<T>(arr: T[]): T[] {
   // Deterministic "shuffle" — just reverse for answer key mismatch
   return [...arr].reverse();
-}
-
-function estimateElementHeight(el: FormElement, fieldHeight: number, lineHeight: number, contentWidth: number, style: WorksheetStyleConfig): number {
-  const compact = style.compactMode;
-  const base = 24; // label + spacing
-
-  switch (el.type) {
-    case "text-field": return base + fieldHeight;
-    case "textarea": return base + (el.lineCount ?? 4) * (fieldHeight * 0.85 + 2);
-    case "checkbox":
-    case "radio-group": return base + (el.options?.length ?? 3) * 22;
-    case "dropdown": return base + fieldHeight;
-    case "date-field":
-    case "number-field": return base + fieldHeight;
-    case "signature-block": return base + 80;
-    case "rating-scale": return base + 36;
-    case "likert-scale": return base + 30 + (el.likertStatements?.length ?? 3) * 30;
-    case "table": return base + 30 + (el.tableRows ?? 5) * 28;
-    case "heading": return 40;
-    case "paragraph": return 40;
-    case "divider": return 24;
-    case "spacer": return el.spacerHeight ?? 20;
-    case "image-placeholder": return 200;
-    case "fill-in-blank": return base + 30;
-    case "multiple-choice": return base + (el.options?.length ?? 4) * 26;
-    case "matching-columns": return base + (el.matchingPairs?.length ?? 3) * 24 + 30;
-    case "word-bank": return base + 50;
-    case "numbered-list": return base + (el.items?.length ?? 3) * 22;
-    case "lined-writing": return base + (el.lineCount ?? 8) * (compact ? 28 : 34);
-    case "math-grid": return base + (el.gridRows ?? 10) * (compact ? 20 : 26);
-    case "diagram-label": return 240 + (el.diagramLabels?.length ?? 4) * 22;
-    case "true-false": return base + 30;
-    case "short-answer": return base + (el.answerLines ?? 3) * (fieldHeight * 0.85 + 2);
-    case "reading-passage": return 100 + Math.ceil((el.passageText?.length ?? 200) / 60) * 18;
-    default: return 40;
-  }
 }
