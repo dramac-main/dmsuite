@@ -44,6 +44,8 @@ interface UseProjectDataReturn {
   isLoading: boolean;
   /** Whether data has been loaded at least once */
   isLoaded: boolean;
+  /** Whether the current project's data is loaded and ready to render */
+  isReady: boolean;
   /** Current project ID */
   projectId: string | null;
   /** Save current workspace state to the project's IndexedDB slot */
@@ -61,6 +63,8 @@ export function useProjectData({
   const loadedProjectRef = useRef<string | null>(null);
   /** Guard: suppresses workspace:save events during project transitions */
   const isTransitioningRef = useRef(false);
+  /** Tracks which project ID has been fully loaded — drives isReady */
+  const [readyProjectId, setReadyProjectId] = useState<string | null>(null);
   const updateProject = useProjectStore((s) => s.updateProject);
 
   // Save current workspace data to IndexedDB
@@ -108,6 +112,7 @@ export function useProjectData({
         loadedProjectRef.current = projectId;
         updateProject(projectId, { hasData: true });
         setIsLoaded(true);
+        setReadyProjectId(projectId);
         return true;
       }
 
@@ -116,11 +121,13 @@ export function useProjectData({
       // Track that we've loaded (even with no data) to prevent re-triggers
       loadedProjectRef.current = projectId;
       setIsLoaded(true);
+      setReadyProjectId(projectId);
       return false;
     } catch (err) {
       console.warn("[ProjectData] Load failed:", err);
       loadedProjectRef.current = projectId;
       setIsLoaded(true);
+      setReadyProjectId(projectId);
       return false;
     } finally {
       setIsLoading(false);
@@ -149,6 +156,7 @@ export function useProjectData({
   return {
     isLoading,
     isLoaded,
+    isReady: readyProjectId === projectId && !isLoading,
     projectId,
     saveToProject,
     loadFromProject,

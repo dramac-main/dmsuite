@@ -184,7 +184,7 @@ export default function ToolWorkspacePage() {
   const editNameRef = useRef<HTMLInputElement>(null);
 
   // Use project data hook for IndexedDB persistence
-  const { isLoading: projectDataLoading } = useProjectData({
+  const { isReady: projectReady, saveToProject } = useProjectData({
     toolId,
     projectId: activeProjectId,
   });
@@ -208,19 +208,31 @@ export default function ToolWorkspacePage() {
   }, [router]);
 
   // Create a new project and navigate to it
-  const handleCreateNewProject = useCallback(() => {
+  const handleCreateNewProject = useCallback(async () => {
+    // Save current project data before switching
+    if (activeProjectId) await saveToProject();
     const cat = toolCategories.find((c) => c.id === categoryId);
     const t = cat?.tools.find((t) => t.id === toolId);
-    const name = t ? `${t.name} Project` : "Untitled Project";
+    const baseName = t ? `${t.name} Project` : "Untitled Project";
+    // Generate unique name so projects are never confused
+    const existingNames = new Set(toolProjects.map((p) => p.name));
+    let name = baseName;
+    if (existingNames.has(name)) {
+      let i = 2;
+      while (existingNames.has(`${baseName} (${i})`)) i++;
+      name = `${baseName} (${i})`;
+    }
     const newId = addProject(toolId, name);
     navigateToProject(newId);
-  }, [addProject, toolId, categoryId, navigateToProject]);
+  }, [saveToProject, activeProjectId, addProject, toolId, categoryId, navigateToProject, toolProjects]);
 
   // Handle project selection from picker
-  const handleSelectProject = useCallback((projectId: string) => {
+  const handleSelectProject = useCallback(async (projectId: string) => {
+    // Save current project data before switching
+    if (activeProjectId && activeProjectId !== projectId) await saveToProject();
     touchProject(projectId);
     navigateToProject(projectId);
-  }, [touchProject, navigateToProject]);
+  }, [saveToProject, activeProjectId, touchProject, navigateToProject]);
 
   // ── Project resolution on mount ──
   // If URL has project ID → use it. If tool has existing projects but no URL param → show picker.
@@ -246,8 +258,15 @@ export default function ToolWorkspacePage() {
     } else if (hasExistingProjects) {
       // No project in URL but tool has projects — show picker
       setShowProjectPicker(true);
+    } else {
+      // First-time visit — create a fresh project immediately
+      const cat = toolCategories.find((c) => c.id === categoryId);
+      const t = cat?.tools.find((t) => t.id === toolId);
+      if (t) {
+        const newId = addProject(toolId, `${t.name} Project`);
+        navigateToProject(newId);
+      }
     }
-    // No projects and no URL param — will auto-create after dwell below
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toolId]);
 
@@ -523,18 +542,20 @@ export default function ToolWorkspacePage() {
             </div>
           </header>
 
-          {/* ── Loading state while project data loads ── */}
-          {projectDataLoading && (
+          {/* ── Loading state — project not yet ready ── */}
+          {(!activeProjectId || !projectReady) && (
             <div className="flex-1 flex items-center justify-center">
               <div className="flex flex-col items-center gap-3">
                 <div className="size-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
-                <p className="text-xs text-gray-500">Loading project...</p>
+                <p className="text-xs text-gray-500">
+                  {activeProjectId ? "Loading project\u2026" : "Setting up workspace\u2026"}
+                </p>
               </div>
             </div>
           )}
 
-          {/* ── Full-height workspace ── */}
-          {!projectDataLoading && (
+          {/* ── Full-height workspace — only rendered when project data is ready ── */}
+          {activeProjectId && projectReady && (
             <div className="flex-1 overflow-hidden">
               <WorkspaceComponent />
             </div>
