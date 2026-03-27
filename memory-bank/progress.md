@@ -18,8 +18,12 @@
 - [x] Security: `set_updated_at()` + `update_updated_at()` search_path fixed
 - [x] Migration applied via MCP (`mcp_supabase_apply_migration`)
 - [x] Tables verified (user_projects + project_data, RLS, FKs)
+- [x] **Stale project fix:** Auto-select most recent project (no picker gate)
+- [x] **Picker onClose:** Creates new project on dismiss (never loads old silently)
+- [x] **key={activeProjectId}:** Forces full React remount on project switch
+- [x] **Loading text:** Context-aware ("Syncing..." / "Preparing..." / "Loading...")
 - [x] Build passes, TypeScript 0 errors
-- [x] Committed `1becb81` and pushed
+- [x] Committed `1becb81` + `ea9abdb` and pushed
 
 ### Session 143 — Project System Restructure
 

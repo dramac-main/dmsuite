@@ -110,6 +110,10 @@ Project Data (project_data table):
 Sync Strategy:
   ├── syncFromServer() called on mount (workspace page, projects page, dashboard)
   ├── Resolution effect GATED on hasSynced — prevents duplicates after clear site data
+  ├── Auto-select most recent project (no picker gate) — like Figma/Canva
+  ├── Picker only shown on explicit request (Projects button in header)
+  ├── Picker onClose: creates NEW project if dismissed without selection (never loads old)
+  ├── key={activeProjectId} on WorkspaceComponent forces full unmount+remount
   ├── Server is authoritative — server projects replace local by ID
   ├── Local-only projects (created offline) get pushed to server during sync
   ├── All store mutations (add, update, rename, delete) fire-and-forget to Supabase

@@ -3,10 +3,23 @@
 ## Current Focus
 **Phase:** Supabase-Backed Project Storage — HARDENED ✅
 
-### Session 144: Project Storage Hardening — Critical Fixes
+### Session 144: Project Storage Hardening + Stale Project Fix
 
 #### Summary
-Deep audit and hardening of the Supabase project storage system. Fixed critical race condition, added auth caching, debounced Supabase saves, added retry logic, and resolved security warnings.
+Deep audit and hardening of Supabase project storage, plus a critical UX fix where tools showed old project data instead of a fresh workspace.
+
+#### Root Cause of "Old Project" Bug:
+- When user navigated to a tool (no `?project=` in URL), the system showed a picker modal
+- If user dismissed the picker (Escape/X/backdrop), the `onClose` handler **auto-selected the most recent old project**
+- User saw "Setting up workspace..." then old data appeared — they expected fresh but got stale
+- Additionally, no `key` prop on `WorkspaceComponent` meant React could reuse component instances between project switches, leaking local state
+
+#### Fixes (commit `ea9abdb`):
+1. **Auto-select most recent project** — No picker gate on initial visit. Industry standard (Figma/Canva): resume where you left off. Picker still accessible via header's Projects button.
+2. **Picker `onClose` creates new project** — If dismissed without selection, always creates fresh project (never silently loads old).
+3. **Loading text is context-aware** — "Syncing projects..." / "Preparing workspace..." / "Loading project..." instead of misleading "Setting up workspace...".
+4. **`key={activeProjectId}` on WorkspaceComponent** — Forces React to fully unmount+remount on project switch, guaranteeing clean `useState`/`useRef`.
+5. **Fresh projects via `getState()`** — Resolution reads `useProjectStore.getState().projects` instead of potentially stale closure values.
 
 #### Fixes Applied:
 
@@ -42,6 +55,7 @@ Deep audit and hardening of the Supabase project storage system. Fixed critical 
 #### Commits:
 - `5a0f6fb` — Initial Supabase project storage implementation
 - `1becb81` — Hardening: race condition, auth caching, debounced saves, retry logic, security fixes
+- `ea9abdb` — Fix: auto-select most recent project, stop showing picker by default, key prop remount
 - Medal ribbons use radial gradients + clipPath for ribbon tails
 - Background patterns via repeating-linear-gradient (diagonal lines, horizontal lines, honeycomb dots)
 - Template-specific typography: teal-regal has red italic names, classic-blue has wide letter spacing
