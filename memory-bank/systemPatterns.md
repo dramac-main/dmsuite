@@ -131,6 +131,43 @@ Nuclear Reset (store-adapters.ts):
   1. Resets in-memory Zustand state (e.g., resetResume())
   2. Removes persist localStorage key (nukePersistStorage("dmsuite-resume"))
   This prevents stale data from bleeding into new projects via rehydration
+
+Auto-Save (Session 145):
+  Direct Zustand store subscription in useProjectData — no event pipeline needed
+  adapter.subscribe(cb) → detects changes via JSON comparison → debounce 1.5s → saveToProject()
+  isTransitioningRef guard prevents saving during project switches
+  All 13 adapters have subscribe method
+```
+
+### 2e. User Data Persistence Architecture (Session 145)
+```
+User-Level Data (survives browser cache clear):
+  Zustand stores (localStorage) ←→ useUserDataSync ←→ Supabase user_data table (KV store)
+
+Table: user_data
+  user_id (uuid FK), data_key (text), data (JSONB), updated_at
+  Composite PK: (user_id, data_key)
+  RLS: auth.uid() = user_id
+
+Data Keys: analytics, preferences, advanced-settings, business-memory, chiko, chat, notifications, export-history
+
+Sync Flow (on mount):
+  1. fetchAllUserData() — bulk load all user data keys from Supabase
+  2. Smart merge into local stores (strategy per key):
+     - analytics: Math.max() of each metric per tool (handles partial syncs)
+     - business-memory: newer updatedAt wins
+     - chat: merge conversations by ID (server + local-only)
+     - preferences/advanced-settings/chiko: server wins
+  3. isRestoringRef prevents save-back loops during restore
+
+Sync Flow (on change):
+  1. Store subscriptions detect changes (JSON dirty comparison)
+  2. debouncedSaveUserData() — 3s batching per key
+  3. Failed saves retry on next attempt
+  4. flushAllPendingSaves() on beforeunload
+
+Service: src/lib/supabase/user-data.ts
+Hook: src/hooks/useUserDataSync.ts (mounted in ClientShell.tsx)
 ```
 
 ### 3. Client Component Strategy

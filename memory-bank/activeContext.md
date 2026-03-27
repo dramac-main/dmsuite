@@ -1,50 +1,93 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Supabase-Backed Project Storage — HARDENED ✅
+**Phase:** Full Platform Data Persistence — Supabase + Auto-Save ✅
 
-### Session 144: Project Storage Hardening + Stale Project Fix
+### Session 145: User Data Persistence + Auto-Save Overhaul
 
-#### Summary
-Deep audit and hardening of Supabase project storage, plus a critical UX fix where tools showed old project data instead of a fresh workspace.
+#### Problem
+User cleared browser cache and lost ALL platform data:
+- Analytics/stats reset (active time, tool usage)
+- Preferences lost (theme, recent tools)
+- Business memory lost
+- Chat history lost
+- Project data never reached Supabase (`project_data` table was EMPTY for all 4 projects)
+- "New project" appeared to show old data (because no project had persisted data, all showed same default form)
 
-#### Root Cause of "Old Project" Bug:
-- When user navigated to a tool (no `?project=` in URL), the system showed a picker modal
-- If user dismissed the picker (Escape/X/backdrop), the `onClose` handler **auto-selected the most recent old project**
-- User saw "Setting up workspace..." then old data appeared — they expected fresh but got stale
-- Additionally, no `key` prop on `WorkspaceComponent` meant React could reuse component instances between project switches, leaking local state
+#### Root Causes Found
+1. **User-level data (7 stores)**: ALL stored ONLY in localStorage — no server persistence
+2. **Project data never saving**: `getGenericAdapter().getSnapshot()` returned `{}` (triggering early return). Auto-save relied on `workspace:dirty` events that only 9/90+ workspaces dispatched.
+3. **"New project = old project" illusion**: No project had saved data, so every project loaded the same default form from the global Zustand store.
 
-#### Fixes (commit `ea9abdb`):
-1. **Auto-select most recent project** — No picker gate on initial visit. Industry standard (Figma/Canva): resume where you left off. Picker still accessible via header's Projects button.
-2. **Picker `onClose` creates new project** — If dismissed without selection, always creates fresh project (never silently loads old).
-3. **Loading text is context-aware** — "Syncing projects..." / "Preparing workspace..." / "Loading project..." instead of misleading "Setting up workspace...".
-4. **`key={activeProjectId}` on WorkspaceComponent** — Forces React to fully unmount+remount on project switch, guaranteeing clean `useState`/`useRef`.
-5. **Fresh projects via `getState()`** — Resolution reads `useProjectStore.getState().projects` instead of potentially stale closure values.
+#### Solutions Implemented
 
-#### Fixes Applied:
+##### 1. Supabase Migration `006_user_data_storage`
+- New `user_data` table: composite PK (user_id, data_key), JSONB data column
+- RLS: 4 policies (select, insert, update, delete) using `auth.uid() = user_id`
+- Auto-update trigger with `search_path = ''` (security best practice)
+- Applied via MCP — verified in database
 
-1. **RACE CONDITION (CRITICAL):**
-   - Problem: `syncFromServer()` is async but project resolution `useEffect` ran immediately on `[toolId]`. If user cleared site data (no local projects), auto-creates blank project BEFORE sync brings server projects → duplicate projects.
-   - Fix: Resolution effect now gated on `hasSynced`. Added `hasResolvedRef` to prevent re-running. Added `hasSynced` to dependency array.
-   - Also: `syncFromServer()` now sets `hasSynced = true` even on error — prevents UI from being stuck forever.
+##### 2. User Data Service (`src/lib/supabase/user-data.ts`)
+- Generic key-value CRUD: `fetchUserData(key)`, `fetchAllUserData()`, `saveUserData(key, data)`, `deleteUserData(key)`
+- Debounced save manager: 3s batching per key, retry on failure
+- `flushAllPendingSaves()` for page unload / sign-out
+- Auth caching: 60s TTL (same pattern as projects.ts)
+- `UserDataKey` type: analytics, preferences, advanced-settings, business-memory, chiko, chat, notifications, export-history
 
-2. **AUTH CACHING:**
-   - Problem: `getAuthUserId()` called `auth.getUser()` (network request) on EVERY Supabase operation.
-   - Fix: Replaced with `auth.getSession()` (reads from memory, no network). Added 60s TTL cache. Exported `clearAuthCache()`.
+##### 3. User Data Sync Hook (`src/hooks/useUserDataSync.ts`)
+- Centralized bidirectional sync between Zustand stores and Supabase
+- **Smart merge strategies:**
+  - Analytics: `Math.max()` of each metric per tool (handles partial syncs)
+  - Business memory: newer `updatedAt` wins
+  - Chat: merge conversations by ID (server + local-only)
+  - Preferences/advanced-settings/chiko: server wins
+- `isRestoringRef` prevents save-back loops during restore
+- JSON dirty detection: only saves when snapshot actually changes
+- Flush on `beforeunload` event
+- Mounted in `ClientShell.tsx`
 
-3. **DEBOUNCED SUPABASE SAVES:**
-   - Problem: Every `workspace:save` event triggered immediate Supabase write.
-   - Fix: IndexedDB writes remain immediate. Supabase writes debounced 3s via `supabaseSaveTimerRef`. Batches rapid edits into one network write.
-   - Pending saves flushed before project switch and on unmount.
+##### 4. Direct Store Subscription Auto-Save
+- Extended `StoreAdapter` interface with optional `subscribe` method
+- New `useEffect` in `useProjectData`: subscribes to adapter's Zustand store
+- Auto-saves 1.5s after any store change — bypasses `workspace:dirty` event pipeline entirely
+- `isTransitioningRef` guard prevents saving during project switches
+- Added `subscribe: (cb) => useXxxEditor.subscribe(cb)` to ALL 13 adapters
 
-4. **RETRY LOGIC:**
-   - Problem: Failed Supabase saves logged and forgotten — silent data loss.
-   - Fix: Failed saves re-queued in `pendingSupabaseSaveRef`. Next save attempt retries the failed write.
+##### 5. Business Card Adapter (NEW)
+- Full `StoreAdapter` for `useBusinessCardWizard`
+- Snapshots: wizard step, logo, details, brief, style, generation results, documents
+- Restore: sets each field via store actions, restores step position last
+- Reset: `resetWizard()` + `sessionStorage.removeItem("dmsuite-business-card-wizard")`
+- Subscribe for auto-save
 
-5. **SECURITY:**
-   - Fixed `set_updated_at()` and `update_updated_at()` functions: added `set search_path = ''` per Supabase security advisor.
-   - Applied via `mcp_supabase_execute_sql` directly.
-   - Remaining: auth leaked password protection (dashboard config, not code).
+#### Files Changed
+- `src/lib/supabase/user-data.ts` (NEW) — User data persistence service
+- `src/hooks/useUserDataSync.ts` (NEW) — Centralized Zustand ↔ Supabase sync
+- `src/components/ClientShell.tsx` — Added `useUserDataSync()` hook
+- `src/hooks/useProjectData.ts` — Added `subscribe` to StoreAdapter, direct store subscription auto-save
+- `src/lib/store-adapters.ts` — Added `subscribe` to all 13 adapters + new business-card adapter
+- `supabase/migrations/006_user_data_storage.sql` (NEW) — Applied via MCP
+
+#### Architecture: Data Persistence Stack
+```
+User Level (survives cache clear):
+  Zustand stores (localStorage) ←→ useUserDataSync ←→ Supabase user_data table
+  ↓ write-through ↓                                    ↑ restore on login ↑
+
+Project Level (survives cache clear):
+  Zustand stores ←→ useProjectData ←→ IndexedDB (cache) + Supabase project_data table
+  ↓ auto-save (1.5s debounce) ↓     ↑ load: IDB first, then Supabase, then fresh ↑
+```
+
+#### Adapter Coverage (13 tools with auto-save):
+- contract-template, invoice-designer (+ quote, receipt, PO, delivery, credit, proforma)
+- resume-cv, cover-letter, sales-book, business-plan
+- menu-designer, id-badge, certificate, diploma-designer, ticket-designer, worksheet-designer
+- business-card (NEW)
+
+#### Verification
+- TypeScript: 0 errors
+- Next.js build: SUCCESS (all pages compiled)
 
 #### Supabase Status:
 - Project: `mbcehmofahrnscfpndkz` (dmsuite), region `eu-west-1`, status ACTIVE_HEALTHY

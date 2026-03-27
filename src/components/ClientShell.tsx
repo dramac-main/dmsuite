@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
+import { useUserDataSync } from "@/hooks/useUserDataSync";
 
 const MobileBottomNav = dynamic(() => import("@/components/MobileBottomNav"), {
   ssr: false,
@@ -41,6 +42,7 @@ const ChikoOnboarding = dynamic(
  */
 export default function ClientShell() {
   useGlobalShortcuts();
+  useUserDataSync(); // Sync user data (analytics, prefs, etc.) to/from Supabase
   const pathname = usePathname();
 
   // Auth pages should not show Chiko, mobile nav, or shortcuts

@@ -41,6 +41,8 @@ export interface StoreAdapter {
   getSnapshot: () => Record<string, unknown>;
   restoreSnapshot: (data: Record<string, unknown>) => void;
   resetStore: () => void;
+  /** Optional: subscribe to store changes for automatic save detection */
+  subscribe?: (cb: () => void) => () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -250,6 +252,39 @@ export function useProjectData({
     window.addEventListener("workspace:save", handleSave);
     return () => window.removeEventListener("workspace:save", handleSave);
   }, [projectId, saveToProject]);
+
+  // ── Direct store subscription for auto-save ──
+  // Subscribes to the Zustand store changes so ALL tools with adapters
+  // get automatic persistence — no need for each workspace to dispatch
+  // workspace:dirty/workspace:save events.
+  useEffect(() => {
+    if (!projectId) return;
+    const adapter = getOrCreateAdapter(toolId);
+    if (!adapter.subscribe) return; // Generic adapter — no subscription
+
+    let lastJson = JSON.stringify(adapter.getSnapshot());
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const unsub = adapter.subscribe(() => {
+      // Don't save during project transitions
+      if (isTransitioningRef.current) return;
+
+      const currentJson = JSON.stringify(adapter.getSnapshot());
+      if (currentJson === lastJson) return;
+      lastJson = currentJson;
+
+      // Debounce: save 1.5s after last store change
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        saveToProject();
+      }, 1500);
+    });
+
+    return () => {
+      unsub();
+      if (debounceTimer) clearTimeout(debounceTimer);
+    };
+  }, [projectId, toolId, saveToProject]);
 
   return {
     isLoading,

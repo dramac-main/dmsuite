@@ -44,9 +44,9 @@ function getContractAdapter(): StoreAdapter {
     },
     resetStore: () => {
       useContractEditor.getState().resetForm();
-      // Nuke localStorage so persist doesn't rehydrate old data
       nukePersistStorage("dmsuite-contract");
     },
+    subscribe: (cb) => useContractEditor.subscribe(cb),
   };
 }
 
@@ -67,6 +67,7 @@ function getInvoiceAdapter(): StoreAdapter {
       useInvoiceEditor.getState().resetInvoice();
       nukePersistStorage("dmsuite-invoice");
     },
+    subscribe: (cb) => useInvoiceEditor.subscribe(cb),
   };
 }
 
@@ -87,6 +88,7 @@ function getResumeAdapter(): StoreAdapter {
       useResumeEditor.getState().resetResume();
       nukePersistStorage("dmsuite-resume");
     },
+    subscribe: (cb) => useResumeEditor.subscribe(cb),
   };
 }
 
@@ -107,6 +109,7 @@ function getSalesBookAdapter(): StoreAdapter {
       useSalesBookEditor.getState().resetForm();
       nukePersistStorage("dmsuite-sales-book");
     },
+    subscribe: (cb) => useSalesBookEditor.subscribe(cb),
   };
 }
 
@@ -127,6 +130,7 @@ function getCoverLetterAdapter(): StoreAdapter {
       useCoverLetterEditor.getState().resetForm();
       nukePersistStorage("dmsuite-cover-letter");
     },
+    subscribe: (cb) => useCoverLetterEditor.subscribe(cb),
   };
 }
 
@@ -147,6 +151,7 @@ function getWorksheetAdapter(): StoreAdapter {
       useWorksheetEditor.getState().resetForm();
       nukePersistStorage("dmsuite-worksheet-designer");
     },
+    subscribe: (cb) => useWorksheetEditor.subscribe(cb),
   };
 }
 
@@ -167,6 +172,7 @@ function getBusinessPlanAdapter(): StoreAdapter {
       useBusinessPlanEditor.getState().resetForm();
       nukePersistStorage("dmsuite-business-plan");
     },
+    subscribe: (cb) => useBusinessPlanEditor.subscribe(cb),
   };
 }
 
@@ -187,6 +193,7 @@ function getMenuDesignerAdapter(): StoreAdapter {
       useMenuDesignerEditor.getState().resetForm();
       nukePersistStorage("dmsuite-menu-designer");
     },
+    subscribe: (cb) => useMenuDesignerEditor.subscribe(cb),
   };
 }
 
@@ -207,6 +214,7 @@ function getIDBadgeAdapter(): StoreAdapter {
       useIDBadgeEditor.getState().resetForm();
       nukePersistStorage("dmsuite-id-badge");
     },
+    subscribe: (cb) => useIDBadgeEditor.subscribe(cb),
   };
 }
 
@@ -227,6 +235,7 @@ function getCertificateAdapter(): StoreAdapter {
       useCertificateEditor.getState().resetForm();
       nukePersistStorage("dmsuite-certificate");
     },
+    subscribe: (cb) => useCertificateEditor.subscribe(cb),
   };
 }
 
@@ -247,6 +256,7 @@ function getDiplomaAdapter(): StoreAdapter {
       useDiplomaEditor.getState().resetForm();
       nukePersistStorage("dmsuite-diploma-editor");
     },
+    subscribe: (cb) => useDiplomaEditor.subscribe(cb),
   };
 }
 
@@ -267,6 +277,104 @@ function getTicketAdapter(): StoreAdapter {
       useTicketEditor.getState().resetForm();
       nukePersistStorage("dmsuite-ticket-designer");
     },
+    subscribe: (cb) => useTicketEditor.subscribe(cb),
+  };
+}
+
+function getBusinessCardAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useBusinessCardWizard } = require("@/stores/business-card-wizard");
+  return {
+    getSnapshot: () => {
+      const s = useBusinessCardWizard.getState();
+      return {
+        currentStep: s.currentStep,
+        highestCompletedStep: s.highestCompletedStep,
+        logo: {
+          logoUrl: s.logo.logoUrl,
+          logoType: s.logo.logoType,
+          iconOnlyUrl: s.logo.iconOnlyUrl,
+          logoColors: s.logo.logoColors,
+        },
+        details: s.details,
+        brief: s.brief,
+        style: s.style,
+        batchMode: s.batchMode,
+        generation: {
+          generatedDesigns: s.generation.generatedDesigns,
+          generatedBackDesigns: s.generation.generatedBackDesigns,
+          designDescriptions: s.generation.designDescriptions,
+          selectedDesignIndex: s.generation.selectedDesignIndex,
+        },
+        documents: {
+          frontDoc: s.documents.frontDoc,
+          backDoc: s.documents.backDoc,
+          currentSide: s.documents.currentSide,
+        },
+      };
+    },
+    restoreSnapshot: (data) => {
+      const state = useBusinessCardWizard.getState();
+      if (data.details) state.setDetails(data.details as never);
+      if (data.brief) {
+        const b = data.brief as Record<string, unknown>;
+        if (b.description !== undefined) state.setBriefDescription(b.description as string);
+        if (b.companyDescription !== undefined) state.setCompanyDescription(b.companyDescription as string);
+        if (b.frontOnly !== undefined) state.setFrontOnly(b.frontOnly as boolean);
+        if (b.cardSize !== undefined) state.setCardSize(b.cardSize as never);
+      }
+      if (data.logo) {
+        const l = data.logo as Record<string, unknown>;
+        if (l.logoUrl !== undefined) state.setLogoUrl(l.logoUrl as string | null);
+        if (l.logoType !== undefined) state.setLogoType(l.logoType as never);
+        if (l.iconOnlyUrl !== undefined) state.setIconOnlyUrl(l.iconOnlyUrl as string | null);
+        if (l.logoColors) state.setLogoColors(l.logoColors as string[]);
+      }
+      if (data.style) {
+        const st = data.style as Record<string, unknown>;
+        if (st.selectedMood !== undefined) state.setSelectedMood(st.selectedMood as never);
+        if (st.fontPreference !== undefined) state.setFontPreference(st.fontPreference as never);
+        if (st.colorOverride !== undefined) state.setColorOverride(st.colorOverride as string | null);
+        if (st.surpriseMe !== undefined) state.setSurpriseMe(st.surpriseMe as boolean);
+      }
+      if (data.generation) {
+        const g = data.generation as Record<string, unknown>;
+        if (Array.isArray(g.generatedDesigns) && g.generatedDesigns.length > 0) {
+          state.setGeneratedDesigns(
+            g.generatedDesigns as never[],
+            g.designDescriptions as string[] | undefined,
+            g.generatedBackDesigns as never[] | undefined,
+          );
+          if (typeof g.selectedDesignIndex === "number") state.selectDesign(g.selectedDesignIndex);
+        }
+      }
+      if (data.documents) {
+        const d = data.documents as Record<string, unknown>;
+        if (d.frontDoc) state.setFrontDoc(d.frontDoc as never);
+        if (d.backDoc) state.setBackDoc(d.backDoc as never);
+        if (d.currentSide) state.setCurrentSide(d.currentSide as never);
+      }
+      if (typeof data.batchMode === "boolean") state.setBatchMode(data.batchMode);
+      // Restore step position last so UI renders correctly
+      if (typeof data.currentStep === "number") {
+        state.goToStep(1 as never); // Reset first to allow forward navigation
+        // Set highestCompletedStep so goToStep allows navigation
+        useBusinessCardWizard.setState({
+          highestCompletedStep: data.highestCompletedStep as never ?? data.currentStep as never,
+          currentStep: data.currentStep as never,
+        });
+      }
+    },
+    resetStore: () => {
+      useBusinessCardWizard.getState().resetWizard();
+      // Business card wizard uses sessionStorage
+      try {
+        if (typeof sessionStorage !== "undefined") {
+          sessionStorage.removeItem("dmsuite-business-card-wizard");
+        }
+      } catch { /* SSR/incognito */ }
+    },
+    subscribe: (cb) => useBusinessCardWizard.subscribe(cb),
   };
 }
 
@@ -304,6 +412,7 @@ const ADAPTER_FACTORIES: Record<string, () => StoreAdapter> = {
   "sales-book": getSalesBookAdapter,
   "business-plan": getBusinessPlanAdapter,
   // Design editors
+  "business-card": getBusinessCardAdapter,
   "menu-designer": getMenuDesignerAdapter,
   "id-badge": getIDBadgeAdapter,
   "certificate": getCertificateAdapter,

@@ -1,29 +1,38 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 98/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅ — Resume Controls & Multi-Page A4 Fix ✅ — Project Saving System (IndexedDB + Store Adapters) ✅ — Architectural Audit Fixes (3-Phase Remediation) ✅ — **Certificate Designer + Diploma & Accreditation Designer ✅** — **Ticket & Pass Designer ✅** — **Business Plan Writer ✅** — **Worksheet & Form Designer ✅** — **Supabase-Backed Project Storage ✅**
+## Overall Status: 98/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅ — Resume Controls & Multi-Page A4 Fix ✅ — Project Saving System (IndexedDB + Store Adapters) ✅ — Architectural Audit Fixes (3-Phase Remediation) ✅ — **Certificate Designer + Diploma & Accreditation Designer ✅** — **Ticket & Pass Designer ✅** — **Business Plan Writer ✅** — **Worksheet & Form Designer ✅** — **Supabase-Backed Project Storage ✅** — **Full Platform Data Persistence ✅**
 
 ---
 
-## Current Work: Supabase-Backed Project Storage — HARDENED ✅
+## Current Work: Full Platform Data Persistence — COMPLETE ✅
+
+### Session 145 — User Data Persistence + Auto-Save Overhaul
+
+#### Problem: All user-level data lost on browser cache clear
+- Analytics, preferences, business memory, chat — ALL localStorage-only
+- Project workspace data never reached Supabase (empty `project_data` table)
+- Auto-save only worked for 9 tools that dispatched `workspace:dirty` events
+
+#### Fixes Applied (3 files created, 3 modified, 1 migration):
+- [x] Full audit of all 30 Zustand persist stores (7 user-level, 9 tool-level, 4 session)
+- [x] Supabase migration `006_user_data_storage` — new `user_data` table (KV store, RLS)
+- [x] `src/lib/supabase/user-data.ts` — CRUD + debounced saves + retry
+- [x] `src/hooks/useUserDataSync.ts` — bidirectional sync with smart merge (analytics: max, chat: merge by ID, etc.)
+- [x] Mounted in `ClientShell.tsx` — syncs on every page load
+- [x] Extended `StoreAdapter` with optional `subscribe` method
+- [x] Direct store subscription auto-save in `useProjectData` — 1.5s debounce, bypasses event pipeline
+- [x] Added `subscribe` to all 13 store adapters (12 existing + 1 new business-card)
+- [x] New `business-card` adapter — full wizard state snapshot/restore
+- [x] TypeScript: 0 errors
+- [x] Build: SUCCESS
+
+#### Known Gaps Remaining:
+- Canvas-based tools (poster, banner-ad, business-card canvas step) use `useEditorStore` — no adapter yet
+- Wizard stores (invoice-wizard, resume-cv-wizard, sales-book-wizard) not snapshotted — only final editor state saved
+
+---
 
 ### Session 144 — Project Storage Hardening
-
-#### Critical Fixes (4 files modified, Supabase security SQL applied)
-- [x] Race condition: resolution effect gated on `hasSynced`, `hasResolvedRef` guard
-- [x] syncFromServer: sets `hasSynced = true` on error (prevents infinite wait)
-- [x] Auth caching: `getSession()` instead of `getUser()`, 60s TTL cache
-- [x] Debounced Supabase saves: IndexedDB immediate, Supabase writes debounced 3s
-- [x] Retry logic: failed saves re-queued via `pendingSupabaseSaveRef`
-- [x] Flush on switch/unmount: pending saves flushed before project transition
-- [x] Security: `set_updated_at()` + `update_updated_at()` search_path fixed
-- [x] Migration applied via MCP (`mcp_supabase_apply_migration`)
-- [x] Tables verified (user_projects + project_data, RLS, FKs)
-- [x] **Stale project fix:** Auto-select most recent project (no picker gate)
-- [x] **Picker onClose:** Creates new project on dismiss (never loads old silently)
-- [x] **key={activeProjectId}:** Forces full React remount on project switch
-- [x] **Loading text:** Context-aware ("Syncing..." / "Preparing..." / "Loading...")
-- [x] Build passes, TypeScript 0 errors
-- [x] Committed `1becb81` + `ea9abdb` and pushed
 
 ### Session 143 — Project System Restructure
 
