@@ -2,17 +2,36 @@
 // DMSuite — Store Adapters
 // Centralized registry of get/set snapshot functions for each tool's store.
 // Used by the project data system to snapshot and restore workspace state.
+//
+// CRITICAL: resetStore() must BOTH reset in-memory state AND nuke the Zustand
+// persist localStorage key. This prevents stale data from a previous project
+// from bleeding into a new project via the persist middleware's rehydration.
 // =============================================================================
 
 import type { StoreAdapter } from "@/hooks/useProjectData";
+
+// ---------------------------------------------------------------------------
+// Persist storage helper — removes the localStorage key that Zustand persist
+// middleware uses, so that a clean reset isn't overwritten on next page load.
+// ---------------------------------------------------------------------------
+
+function nukePersistStorage(storageKey: string) {
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.removeItem(storageKey);
+    }
+  } catch {
+    // localStorage may be unavailable in SSR or incognito
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Lazy store imports — only loaded when adapter is first used
 // ---------------------------------------------------------------------------
 
 function getContractAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { useContractEditor } = require("@/stores/contract-editor");
-  const { createDefaultContractForm } = require("@/lib/contract/schema");
   return {
     getSnapshot: () => {
       const { form } = useContractEditor.getState();
@@ -25,11 +44,14 @@ function getContractAdapter(): StoreAdapter {
     },
     resetStore: () => {
       useContractEditor.getState().resetForm();
+      // Nuke localStorage so persist doesn't rehydrate old data
+      nukePersistStorage("dmsuite-contract");
     },
   };
 }
 
 function getInvoiceAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { useInvoiceEditor } = require("@/stores/invoice-editor");
   return {
     getSnapshot: () => {
@@ -43,11 +65,13 @@ function getInvoiceAdapter(): StoreAdapter {
     },
     resetStore: () => {
       useInvoiceEditor.getState().resetInvoice();
+      nukePersistStorage("dmsuite-invoice");
     },
   };
 }
 
 function getResumeAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { useResumeEditor } = require("@/stores/resume-editor");
   return {
     getSnapshot: () => {
@@ -61,11 +85,13 @@ function getResumeAdapter(): StoreAdapter {
     },
     resetStore: () => {
       useResumeEditor.getState().resetResume();
+      nukePersistStorage("dmsuite-resume");
     },
   };
 }
 
 function getSalesBookAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { useSalesBookEditor } = require("@/stores/sales-book-editor");
   return {
     getSnapshot: () => {
@@ -79,13 +105,13 @@ function getSalesBookAdapter(): StoreAdapter {
     },
     resetStore: () => {
       useSalesBookEditor.getState().resetForm();
+      nukePersistStorage("dmsuite-sales-book");
     },
   };
 }
 
 // ---------------------------------------------------------------------------
 // Generic adapter for tools that don't have dedicated stores
-// Uses a simple key-value store in the project data
 // ---------------------------------------------------------------------------
 
 function getGenericAdapter(): StoreAdapter {

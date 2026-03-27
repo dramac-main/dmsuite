@@ -51,6 +51,13 @@ export default function ActiveProjects() {
   const projects = useProjectStore((s) => s.projects);
   const removeProject = useProjectStore((s) => s.removeProject);
   const renameProject = useProjectStore((s) => s.renameProject);
+  const syncFromServer = useProjectStore((s) => s.syncFromServer);
+  const hasSynced = useProjectStore((s) => s.hasSynced);
+
+  // Sync projects from Supabase on mount
+  useEffect(() => {
+    if (!hasSynced) syncFromServer();
+  }, [hasSynced, syncFromServer]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");

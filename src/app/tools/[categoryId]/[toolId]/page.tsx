@@ -171,6 +171,8 @@ export default function ToolWorkspacePage() {
   const projects = useProjectStore((s) => s.projects);
   const updateProject = useProjectStore((s) => s.updateProject);
   const addMilestone = useProjectStore((s) => s.addMilestone);
+  const syncFromServer = useProjectStore((s) => s.syncFromServer);
+  const hasSynced = useProjectStore((s) => s.hasSynced);
   const projectIdRef = useRef<string | null>(null);
   const hasNotifiedRef = useRef(false);
   const dirtyCountRef = useRef(0);
@@ -233,6 +235,14 @@ export default function ToolWorkspacePage() {
     touchProject(projectId);
     navigateToProject(projectId);
   }, [saveToProject, activeProjectId, touchProject, navigateToProject]);
+
+  // ── Sync projects from Supabase on mount ──
+  // This ensures cross-device project data is available before resolution logic runs.
+  useEffect(() => {
+    if (!hasSynced) {
+      syncFromServer();
+    }
+  }, [hasSynced, syncFromServer]);
 
   // ── Project resolution on mount ──
   // If URL has project ID → use it. If tool has existing projects but no URL param → show picker.

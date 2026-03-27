@@ -116,6 +116,13 @@ export default function ProjectsPage() {
   const removeProject = useProjectStore((s) => s.removeProject);
   const renameProject = useProjectStore((s) => s.renameProject);
   const duplicateProject = useProjectStore((s) => s.duplicateProject);
+  const syncFromServer = useProjectStore((s) => s.syncFromServer);
+  const hasSynced = useProjectStore((s) => s.hasSynced);
+
+  // Sync projects from Supabase on mount
+  useEffect(() => {
+    if (!hasSynced) syncFromServer();
+  }, [hasSynced, syncFromServer]);
 
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("recent");

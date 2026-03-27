@@ -1,7 +1,16 @@
 // =============================================================================
 // DMSuite — useProjectData Hook
-// Bridges the project store with IndexedDB data storage.
-// Handles loading project data into workspace stores and saving back.
+// Bridges the project store with persistent storage.
+//
+// Storage strategy (write-through cache):
+//   WRITE: workspace → IndexedDB (fast local cache) + Supabase (durable server)
+//   READ:  IndexedDB first (cache hit) → fall back to Supabase → fresh project
+//
+// This ensures:
+//   1. Fast loads (IndexedDB is synchronous-ish, no network)
+//   2. Cross-device sync (Supabase is the authoritative source)
+//   3. Offline resilience (IndexedDB works without network)
+//   4. Data survives "Clear site data" (Supabase has the copy)
 // =============================================================================
 
 "use client";
@@ -13,6 +22,10 @@ import {
   loadProjectData,
   migrateLegacyData,
 } from "@/lib/project-data";
+import {
+  saveProjectDataRemote,
+  loadProjectDataRemote,
+} from "@/lib/supabase/projects";
 import { getOrCreateAdapter } from "@/lib/store-adapters";
 
 // ---------------------------------------------------------------------------
@@ -48,9 +61,9 @@ interface UseProjectDataReturn {
   isReady: boolean;
   /** Current project ID */
   projectId: string | null;
-  /** Save current workspace state to the project's IndexedDB slot */
+  /** Save current workspace state to storage (IndexedDB + Supabase) */
   saveToProject: () => Promise<void>;
-  /** Load project data from IndexedDB into the workspace store */
+  /** Load project data from storage into the workspace store */
   loadFromProject: () => Promise<boolean>;
 }
 
@@ -69,7 +82,7 @@ export function useProjectData({
   const [readyProjectId, setReadyProjectId] = useState<string | null>(null);
   const updateProject = useProjectStore((s) => s.updateProject);
 
-  // Save current workspace data to IndexedDB
+  // ── Save: write-through to IndexedDB (cache) + Supabase (durable) ──
   const saveToProject = useCallback(async () => {
     if (!projectId) return;
     // Don't save during project transitions — the store may still hold
@@ -79,17 +92,21 @@ export function useProjectData({
 
     try {
       const snapshot = adapter.getSnapshot();
-      // Only save if there's actual data
-      if (Object.keys(snapshot).length > 0) {
-        await saveProjectData(projectId, toolId, snapshot);
-        updateProject(projectId, { hasData: true });
-      }
+      if (Object.keys(snapshot).length === 0) return;
+
+      // 1. Save to IndexedDB (fast local cache)
+      await saveProjectData(projectId, toolId, snapshot);
+      // 2. Save to Supabase (durable server storage — fire and forget)
+      saveProjectDataRemote(projectId, toolId, snapshot).catch((err) => {
+        console.warn("[ProjectData] Supabase save failed (will retry next save):", err);
+      });
+      updateProject(projectId, { hasData: true });
     } catch (err) {
       console.warn("[ProjectData] Save failed:", err);
     }
   }, [projectId, toolId, updateProject]);
 
-  // Load project data from IndexedDB and restore into workspace store
+  // ── Load: try IndexedDB cache first, then Supabase, then fresh ──
   const loadFromProject = useCallback(async (): Promise<boolean> => {
     if (!projectId) return false;
     const adapter = getOrCreateAdapter(toolId);
@@ -100,14 +117,34 @@ export function useProjectData({
       isTransitioningRef.current = true;
       setIsLoading(true);
 
-      // Try loading from IndexedDB first
+      // ── Step 1: Try IndexedDB (fast local cache) ──
       let snapshot = await loadProjectData(projectId);
 
-      // If no data, attempt legacy migration (only runs once per tool)
+      // ── Step 2: If no local cache, try Supabase (server) ──
+      if (!snapshot) {
+        const serverData = await loadProjectDataRemote(projectId);
+        if (serverData?.data && Object.keys(serverData.data).length > 0) {
+          // Cache to IndexedDB for next time
+          await saveProjectData(projectId, toolId, serverData.data as Record<string, unknown>).catch(() => {});
+          snapshot = {
+            projectId,
+            toolId,
+            data: serverData.data as Record<string, unknown>,
+            savedAt: serverData.saved_at,
+            sizeBytes: serverData.size_bytes,
+          };
+        }
+      }
+
+      // ── Step 3: If still nothing, try legacy migration (one-time) ──
       if (!snapshot) {
         const migrated = await migrateLegacyData(projectId, toolId);
         if (migrated) {
           snapshot = await loadProjectData(projectId);
+          // Push migrated data to Supabase
+          if (snapshot?.data) {
+            saveProjectDataRemote(projectId, toolId, snapshot.data).catch(() => {});
+          }
         }
       }
 
@@ -123,9 +160,8 @@ export function useProjectData({
         return true;
       }
 
-      // No existing data — ensure store is reset for fresh project
+      // ── No data anywhere — reset store for a completely fresh project ──
       adapter.resetStore();
-      // Track that we've loaded (even with no data) to prevent re-triggers
       loadedProjectRef.current = projectId;
       setIsLoaded(true);
       setReadyProjectId(projectId);
@@ -134,13 +170,14 @@ export function useProjectData({
       // Bail out if a newer load has started
       if (gen !== loadGenRef.current) return false;
       console.warn("[ProjectData] Load failed:", err);
+      // Reset store on error to prevent stale data
+      adapter.resetStore();
       loadedProjectRef.current = projectId;
       setIsLoaded(true);
       setReadyProjectId(projectId);
       return false;
     } finally {
       // Only clear transition guard if this is still the latest load.
-      // If a newer load is in-flight, keep the guard active.
       if (gen === loadGenRef.current) {
         setIsLoading(false);
         isTransitioningRef.current = false;
@@ -154,7 +191,7 @@ export function useProjectData({
     loadFromProject();
   }, [projectId, loadFromProject]);
 
-  // Listen for workspace:save events → persist to IndexedDB
+  // Listen for workspace:save events → persist to storage
   useEffect(() => {
     if (!projectId) return;
 
