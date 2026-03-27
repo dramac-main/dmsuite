@@ -86,6 +86,49 @@ Pricing Model:
 Key Rule: Refund ACTUAL cost on failure, never hardcode amounts
 ```
 
+### 2d. Project Storage Architecture (Supabase + IndexedDB)
+```
+Write Path (save):
+  Workspace → StoreAdapter.getSnapshot()
+    → IndexedDB (fast local cache — immediate)
+    → Supabase project_data (debounced 3s, retry on failure)
+
+Read Path (load):
+  IndexedDB cache hit? → use it (fast)
+  IndexedDB miss? → Supabase project_data → cache to IndexedDB
+  Supabase miss? → Legacy migration (one-time localStorage → IndexedDB)
+  All miss? → resetStore() (nuclear: resets Zustand + removes persist localStorage key)
+
+Project Metadata (user_projects table):
+  id (text PK), user_id (FK profiles), tool_id, name, progress, milestones[], has_data
+  RLS: users can only CRUD their own projects
+
+Project Data (project_data table):
+  project_id (FK PK), user_id, tool_id, data (JSONB), saved_at, size_bytes
+  RLS: users can only CRUD their own data
+
+Sync Strategy:
+  ├── syncFromServer() called on mount (workspace page, projects page, dashboard)
+  ├── Resolution effect GATED on hasSynced — prevents duplicates after clear site data
+  ├── Server is authoritative — server projects replace local by ID
+  ├── Local-only projects (created offline) get pushed to server during sync
+  ├── All store mutations (add, update, rename, delete) fire-and-forget to Supabase
+  ├── hasSynced = true even on error — falls back to local-only, never blocks UI
+  └── Offline resilient — IndexedDB works without network, syncs when back online
+
+Performance:
+  ├── Auth: getSession() (memory read) + 60s TTL cache (no network per op)
+  ├── Supabase saves debounced 3s — batches rapid edits
+  ├── Failed saves re-queued for retry on next save attempt
+  └── Pending saves flushed on project switch and unmount
+
+Nuclear Reset (store-adapters.ts):
+  resetStore() does TWO things:
+  1. Resets in-memory Zustand state (e.g., resetResume())
+  2. Removes persist localStorage key (nukePersistStorage("dmsuite-resume"))
+  This prevents stale data from bleeding into new projects via rehydration
+```
+
 ### 3. Client Component Strategy
 - All interactive components use `"use client"` directive
 - Local config state per workspace via `useState<XxxConfig>()` — workspace-specific settings

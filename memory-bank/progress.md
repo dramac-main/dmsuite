@@ -1,21 +1,37 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 98/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅ — Resume Controls & Multi-Page A4 Fix ✅ — Project Saving System (IndexedDB + Store Adapters) ✅ — Architectural Audit Fixes (3-Phase Remediation) ✅ — **Certificate Designer + Diploma & Accreditation Designer ✅** — **Ticket & Pass Designer ✅** — **Business Plan Writer ✅** — **Worksheet & Form Designer ✅**
+## Overall Status: 98/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅ — Resume Controls & Multi-Page A4 Fix ✅ — Project Saving System (IndexedDB + Store Adapters) ✅ — Architectural Audit Fixes (3-Phase Remediation) ✅ — **Certificate Designer + Diploma & Accreditation Designer ✅** — **Ticket & Pass Designer ✅** — **Business Plan Writer ✅** — **Worksheet & Form Designer ✅** — **Supabase-Backed Project Storage ✅**
 
 ---
 
-## Current Work: Certificate Template SVG Upgrade — COMPLETE ✅
+## Current Work: Supabase-Backed Project Storage — HARDENED ✅
 
-### Session 142 — Certificate Templates SVG-to-CSS Conversion
+### Session 144 — Project Storage Hardening
 
-#### Certificate Renderer Rewrite (3 files modified, 0 created)
-- [x] Analyzed 8 SVG templates from `C:\Users\Drake\Downloads\dmsuite\certificates\`
-- [x] Converted SVGs to PNG with Chrome headless for visual analysis
-- [x] Store: CertificateTemplate type (8 new IDs), CERTIFICATE_TEMPLATES (8 configs), BorderStyle (9 new)
-- [x] StyleTab: BORDER_OPTIONS updated for 9 new border styles
-- [x] Renderer: Complete rewrite — 12 new decorative components + template-specific rendering
-- [x] New templates: classic-blue, burgundy-ornate, antique-parchment, golden-appreciation, silver-weave, vintage-warm, teal-regal, botanical-modern
+#### Critical Fixes (4 files modified, Supabase security SQL applied)
+- [x] Race condition: resolution effect gated on `hasSynced`, `hasResolvedRef` guard
+- [x] syncFromServer: sets `hasSynced = true` on error (prevents infinite wait)
+- [x] Auth caching: `getSession()` instead of `getUser()`, 60s TTL cache
+- [x] Debounced Supabase saves: IndexedDB immediate, Supabase writes debounced 3s
+- [x] Retry logic: failed saves re-queued via `pendingSupabaseSaveRef`
+- [x] Flush on switch/unmount: pending saves flushed before project transition
+- [x] Security: `set_updated_at()` + `update_updated_at()` search_path fixed
+- [x] Migration applied via MCP (`mcp_supabase_apply_migration`)
+- [x] Tables verified (user_projects + project_data, RLS, FKs)
+- [x] Build passes, TypeScript 0 errors
+- [x] Committed `1becb81` and pushed
+
+### Session 143 — Project System Restructure
+
+#### Supabase Server-Side Project Storage (2 files created, 6 modified)
+- [x] Migration: `005_project_storage.sql` — `user_projects` + `project_data` tables with RLS
+- [x] Service: `src/lib/supabase/projects.ts` — full CRUD for projects + data snapshots
+- [x] Store: `src/stores/projects.ts` — all mutations sync to Supabase (fire-and-forget)
+- [x] Hook: `src/hooks/useProjectData.ts` — write-through cache (IndexedDB + Supabase)
+- [x] Adapters: `src/lib/store-adapters.ts` — nuclear persist reset (removes localStorage keys)
+- [x] Sync: workspace page, projects page, dashboard all trigger `syncFromServer()` on mount
 - [x] TypeScript: 0 errors
+- [x] Build: passes
 
 ---
 

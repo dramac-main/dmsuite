@@ -1,33 +1,47 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Certificate Template SVG Upgrade — COMPLETE ✅
+**Phase:** Supabase-Backed Project Storage — HARDENED ✅
 
-### Session 142: Certificate Templates SVG-to-CSS Conversion
+### Session 144: Project Storage Hardening — Critical Fixes
 
 #### Summary
-Replaced 10 generic placeholder certificate templates with 8 high-fidelity designs converted from downloaded SVG files. Each template has unique decorative borders, background patterns, and typography matching the original SVG reference designs.
+Deep audit and hardening of the Supabase project storage system. Fixed critical race condition, added auth caching, debounced Supabase saves, added retry logic, and resolved security warnings.
 
-#### 8 New Templates:
-1. **Classic Blue** — White bg + diagonal line pattern, blue double-line border, gold ribbon seal
-2. **Burgundy Ornate** — White bg, SVG corner flourishes in maroon, CSS ribbon banner, side ornaments
-3. **Antique Parchment** — Tan/beige bg, SVG corner swirls, double-line border, decorative rules
-4. **Golden Appreciation** — Cream bg + honeycomb CSS pattern, geometric L-shape corners, gold medal
-5. **Silver Weave** — White bg + wave pattern, chain/weave border, silver logo circle
-6. **Vintage Warm** — Cream bg + horizontal line texture, ornate corners, ribbon banner, filigree bars
-7. **Teal Regal** — Teal outer bg, ornate scrollwork corners, crown motif, dashed inner border, gold medal
-8. **Botanical Modern** — Asymmetric layout: navy botanical panel (left 38%) + white content area, seal badge
+#### Fixes Applied:
 
-#### Files Modified (3):
-- `src/stores/certificate-editor.ts` — Updated CertificateTemplate type (8 new IDs), CERTIFICATE_TEMPLATES array (8 configs), BorderStyle type (9 new), default style
-- `src/components/workspaces/certificate-designer/tabs/CertificateStyleTab.tsx` — Updated BORDER_OPTIONS for 9 new border styles
-- `src/components/workspaces/certificate-designer/CertificateRenderer.tsx` — Complete rewrite with 12 new decorative components (CornerFlourish, ScrollworkCorner, SideOrnament, RibbonBanner, MedalRibbon, OrnamentDivider, ScrollDivider, DottedSeparator, CrownMotif, TemplateBorderLayer, getBgCSS) + template-specific rendering logic
+1. **RACE CONDITION (CRITICAL):**
+   - Problem: `syncFromServer()` is async but project resolution `useEffect` ran immediately on `[toolId]`. If user cleared site data (no local projects), auto-creates blank project BEFORE sync brings server projects → duplicate projects.
+   - Fix: Resolution effect now gated on `hasSynced`. Added `hasResolvedRef` to prevent re-running. Added `hasSynced` to dependency array.
+   - Also: `syncFromServer()` now sets `hasSynced = true` even on error — prevents UI from being stuck forever.
 
-#### Key Technical Decisions:
-- Used pure CSS/HTML/inline-SVG for all decorations (no external assets)
-- SVG corner flourishes mirrored with CSS transforms (scaleX(-1), scaleY(-1), scale(-1))
-- Ribbon banners built with CSS triangle folds + gradient fills
-- Botanical-modern uses asymmetric layout (left panel 38% of page width)
+2. **AUTH CACHING:**
+   - Problem: `getAuthUserId()` called `auth.getUser()` (network request) on EVERY Supabase operation.
+   - Fix: Replaced with `auth.getSession()` (reads from memory, no network). Added 60s TTL cache. Exported `clearAuthCache()`.
+
+3. **DEBOUNCED SUPABASE SAVES:**
+   - Problem: Every `workspace:save` event triggered immediate Supabase write.
+   - Fix: IndexedDB writes remain immediate. Supabase writes debounced 3s via `supabaseSaveTimerRef`. Batches rapid edits into one network write.
+   - Pending saves flushed before project switch and on unmount.
+
+4. **RETRY LOGIC:**
+   - Problem: Failed Supabase saves logged and forgotten — silent data loss.
+   - Fix: Failed saves re-queued in `pendingSupabaseSaveRef`. Next save attempt retries the failed write.
+
+5. **SECURITY:**
+   - Fixed `set_updated_at()` and `update_updated_at()` functions: added `set search_path = ''` per Supabase security advisor.
+   - Applied via `mcp_supabase_execute_sql` directly.
+   - Remaining: auth leaked password protection (dashboard config, not code).
+
+#### Supabase Status:
+- Project: `mbcehmofahrnscfpndkz` (dmsuite), region `eu-west-1`, status ACTIVE_HEALTHY
+- Migration `005_project_storage` applied via MCP
+- Tables verified: `user_projects` + `project_data` with RLS, FKs, indexes
+- Security advisor: only auth leaked password protection warning remains (dashboard toggle)
+
+#### Commits:
+- `5a0f6fb` — Initial Supabase project storage implementation
+- `1becb81` — Hardening: race condition, auth caching, debounced saves, retry logic, security fixes
 - Medal ribbons use radial gradients + clipPath for ribbon tails
 - Background patterns via repeating-linear-gradient (diagonal lines, horizontal lines, honeycomb dots)
 - Template-specific typography: teal-regal has red italic names, classic-blue has wide letter spacing
