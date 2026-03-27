@@ -134,7 +134,7 @@ function useToggleVisibility() {
         }
       }
     },
-    [toggleSection, updateStyle, form.style],
+    [toggleSection, updateStyle, form],
   );
 }
 

@@ -8,17 +8,14 @@
 
 "use client";
 
-import React, { useMemo, useLayoutEffect, useRef, useState, useEffect } from "react";
+import React, { useMemo, useRef, useState, useEffect } from "react";
 import type { BusinessPlanFormData, SectionKey } from "@/lib/business-plan/schema";
 import {
   FONT_PAIRINGS,
   SECTION_CONFIGS,
-  getBusinessPlanTemplate,
 } from "@/lib/business-plan/schema";
 import {
-  getAdvancedSettings,
   scaledFontSize,
-  scaledMarginX,
   scaledSectionGap,
 } from "@/stores/advanced-helpers";
 
@@ -36,7 +33,6 @@ export const PAGE_PX: Record<string, { w: number; h: number }> = {
 const MARGIN_MAP = { narrow: 36, standard: 50, wide: 64 };
 const LINE_HEIGHT_MAP = { tight: 1.4, normal: 1.6, loose: 1.9 };
 const FOOTER_H = 40;
-const SAFETY_PX = 4;
 export const PAGE_GAP = 16;
 
 // ---------------------------------------------------------------------------
@@ -102,7 +98,6 @@ interface CoverProps {
 }
 
 function CoverExecutive({ form, fonts, accent, pageW, pageH, margin }: CoverProps) {
-  const textCol = contrastText(accent);
   return (
     <div data-bp-page="cover" data-bp-section="cover" style={{ width: pageW, height: pageH, position: "relative", overflow: "hidden", backgroundColor: "#ffffff", pageBreakAfter: "always" }}>
       {/* Top accent band */}
@@ -348,7 +343,7 @@ function SectionHeader({ title, number, accent, fonts, headerStyle }: SectionHea
 // SWOT Grid
 // ---------------------------------------------------------------------------
 
-function SwotGrid({ swot, accent, fonts }: { swot: BusinessPlanFormData["swot"]; accent: string; fonts: { heading: string; body: string } }) {
+function SwotGrid({ swot, fonts }: { swot: BusinessPlanFormData["swot"]; fonts: { heading: string; body: string } }) {
   const quads: { label: string; items: { id: string; text: string }[]; color: string }[] = [
     { label: "Strengths", items: swot.strengths, color: "#059669" },
     { label: "Weaknesses", items: swot.weaknesses, color: "#b91c1c" },
@@ -511,10 +506,9 @@ function TeamCards({ members, accent, fonts }: {
 // Market Size (TAM/SAM/SOM) Visual
 // ---------------------------------------------------------------------------
 
-function MarketSizeVisual({ data, accent, fonts }: {
+function MarketSizeVisual({ data, accent }: {
   data: BusinessPlanFormData["marketAnalysis"];
   accent: string;
-  fonts: { heading: string; body: string };
 }) {
   if (!data.tam && !data.sam && !data.som) return null;
   const circles = [
@@ -604,7 +598,7 @@ function buildSectionContent(
         <div style={baseStyle}>
           {ma.industryOverview && <><h3 style={subHeading}>Industry Overview</h3>{formatParagraphs(ma.industryOverview)}</>}
           {ma.targetMarket && <><h3 style={subHeading}>Target Market</h3>{formatParagraphs(ma.targetMarket)}</>}
-          <MarketSizeVisual data={ma} accent={accent} fonts={fonts} />
+          <MarketSizeVisual data={ma} accent={accent} />
           {ma.marketSize && <><h3 style={subHeading}>Market Size</h3>{formatParagraphs(ma.marketSize)}</>}
           {ma.marketTrends && <><h3 style={subHeading}>Market Trends</h3>{formatParagraphs(ma.marketTrends)}</>}
           {ma.customerSegments && <><h3 style={subHeading}>Customer Segments</h3>{formatParagraphs(ma.customerSegments)}</>}
@@ -617,7 +611,7 @@ function buildSectionContent(
       return (
         <div style={baseStyle}>
           <CompetitorsTable competitors={form.competitors} accent={accent} fonts={fonts} />
-          <SwotGrid swot={form.swot} accent={accent} fonts={fonts} />
+          <SwotGrid swot={form.swot} fonts={fonts} />
           {form.competitiveAdvantage && <><h3 style={subHeading}>Our Competitive Advantage</h3>{formatParagraphs(form.competitiveAdvantage)}</>}
           {customContent && <>{formatParagraphs(customContent)}</>}
         </div>
@@ -768,17 +762,14 @@ interface BusinessPlanRendererProps {
 
 export default function BusinessPlanRenderer({ form, onPageCount, pageGap = PAGE_GAP }: BusinessPlanRendererProps) {
   const measureRef = useRef<HTMLDivElement>(null);
-  const [pages, setPages] = useState<React.ReactNode[][]>([]);
   const pageDim = PAGE_PX[form.printConfig.pageSize] || PAGE_PX.a4;
   const margin = MARGIN_MAP[form.printConfig.margins] || MARGIN_MAP.standard;
   const lineHeight = LINE_HEIGHT_MAP[form.printConfig.lineSpacing] || LINE_HEIGHT_MAP.normal;
   const sectionGap = scaledSectionGap(form.printConfig.sectionSpacing);
-  const fonts = getFonts(form.style.fontPairing);
+  const fonts = useMemo(() => getFonts(form.style.fontPairing), [form.style.fontPairing]);
   const accent = form.style.accentColor;
-  const tpl = getBusinessPlanTemplate(form.style.template);
   const bodySize = scaledFontSize(12, "body");
 
-  const contentW = pageDim.w - margin * 2;
   const contentH = pageDim.h - margin * 2 - FOOTER_H;
 
   // Build enabled sections
@@ -803,76 +794,7 @@ export default function BusinessPlanRenderer({ form, onPageCount, pageGap = PAGE
     }));
   }, [enabledSections, form, accent, fonts, bodySize, lineHeight]);
 
-  // Measurement-based pagination
-  useLayoutEffect(() => {
-    const container = measureRef.current;
-    if (!container) return;
-
-    container.style.width = `${contentW}px`;
-    container.style.position = "absolute";
-    container.style.visibility = "hidden";
-    container.style.left = "-9999px";
-
-    const blocks: React.ReactNode[] = [];
-
-    // Table of Contents
-    if (form.style.showTableOfContents && enabledSections.length > 0) {
-      blocks.push(
-        <div key="toc" data-bp-section="toc">
-          <TableOfContents sections={enabledSections} fonts={fonts} accent={accent} />
-        </div>
-      );
-    }
-
-    // Section blocks
-    sectionBlocks.forEach((sb) => {
-      blocks.push(
-        <div key={`section-${sb.key}`} data-bp-section={sb.key} style={{ marginTop: sectionGap }}>
-          <SectionHeader title={sb.title} number={sb.number} accent={accent} fonts={fonts} headerStyle={form.style.headerStyle} />
-          {sb.content}
-        </div>
-      );
-    });
-
-    // Simple pagination: render all blocks, measure cumulative height, split into pages
-    // We measure each block by rendering it into the hidden container
-    const measured: { node: React.ReactNode; height: number }[] = [];
-
-    // Clear measure container
-    container.innerHTML = "";
-
-    // Create a temp div for each block and measure
-    const tempDivs: HTMLDivElement[] = [];
-    blocks.forEach(() => {
-      const div = document.createElement("div");
-      container.appendChild(div);
-      tempDivs.push(div);
-    });
-
-    // Use requestAnimationFrame-less approach: we estimate heights
-    // Since exact measurement requires React rendering to a DOM node,
-    // we use a conservative estimate and let content flow
-    const estimatedBlockHeights = blocks.map(() => 300); // rough estimate
-
-    // Build pages by bin-packing
-    const pageBlocks: React.ReactNode[][] = [[]];
-    let currentPageHeight = 0;
-
-    blocks.forEach((block, i) => {
-      const estimatedH = estimatedBlockHeights[i];
-      if (currentPageHeight + estimatedH > contentH && pageBlocks[pageBlocks.length - 1].length > 0) {
-        pageBlocks.push([]);
-        currentPageHeight = 0;
-      }
-      pageBlocks[pageBlocks.length - 1].push(block);
-      currentPageHeight += estimatedH + sectionGap;
-    });
-
-    setPages(pageBlocks);
-  }, [contentW, contentH, sectionBlocks, enabledSections, form.style.showTableOfContents, form.style.headerStyle, fonts, accent, sectionGap]);
-
-  // Alternate approach: flow-based pagination using CSS and overflow detection
-  // For robustness, we use a simple content-flow approach with page-break markers
+  // Flow-based content blocks for rendering and page counting
   const allContent = useMemo(() => {
     const blocks: React.ReactNode[] = [];
 
@@ -899,15 +821,22 @@ export default function BusinessPlanRenderer({ form, onPageCount, pageGap = PAGE
   // Overflow-based page counting
   const pagesRef = useRef<HTMLDivElement>(null);
   const [pageCount, setPageCount] = useState(1);
+  const onPageCountRef = useRef(onPageCount);
+  onPageCountRef.current = onPageCount;
+  const lastReportedCount = useRef(0);
 
   useEffect(() => {
     const el = pagesRef.current;
     if (!el) return;
     const totalH = el.scrollHeight;
     const count = Math.max(1, Math.ceil(totalH / contentH));
+    const total = count + (form.style.showCoverPage ? 1 : 0);
     setPageCount(count);
-    onPageCount?.(count + (form.style.showCoverPage ? 1 : 0));
-  }, [allContent, contentH, onPageCount, form.style.showCoverPage]);
+    if (total !== lastReportedCount.current) {
+      lastReportedCount.current = total;
+      onPageCountRef.current?.(total);
+    }
+  }, [allContent, contentH, form.style.showCoverPage]);
 
   // Build cover
   const CoverComponent = COVER_MAP[form.style.coverStyle] || CoverExecutive;

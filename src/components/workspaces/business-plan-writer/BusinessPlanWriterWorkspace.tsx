@@ -398,7 +398,7 @@ export default function BusinessPlanWriterWorkspace({ initialPlanType }: Props) 
             ))}
           </div>
         ) : (
-          <span className="text-[11px] text-gray-400 tabular-nums font-mono min-w-[60px] text-center">
+          <span className="text-[11px] text-gray-400 tabular-nums font-mono min-w-15 text-center">
             {currentPage} / {totalPages}
           </span>
         )}
