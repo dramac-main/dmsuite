@@ -507,3 +507,53 @@ Data Flow:
     ├── "Document Colors" section → FIRST color = accent, exact hex values
     └── Rule: "never override extracted styling with guesses"
 ```
+
+### 12. WorkspaceUIKit Component API Patterns (Session 141)
+**CRITICAL** — these API patterns were discovered empirically and differ from what you might assume:
+
+```
+Form Controls (Native Event Handlers):
+  FormInput:      onChange={(e) => fn(e.target.value)}  — native ChangeEvent<HTMLInputElement>
+  FormTextarea:   onChange={(e) => fn(e.target.value)}  — native ChangeEvent<HTMLTextAreaElement>
+  FormSelect:     onChange={(e) => fn(e.target.value)}  — native ChangeEvent<HTMLSelectElement>
+                  ⚠️ NO `options` prop — use <option> children: <FormSelect><option value="x">X</option></FormSelect>
+
+Clean Value Callbacks:
+  Toggle:           onChange={(checked: boolean) => fn(checked)}
+  ChipGroup:        onChange={(value: string) => fn(value)}
+                    direction: "horizontal" | "grid"  ⚠️ NOT "row"
+  ColorSwatchPicker: onChange={(color: {hex, label}) => fn(color)}
+                    colors: {hex: string, label: string}[]  ⚠️ NOT string[]
+  RangeSlider:      onChange={(value: number) => fn(value)}
+
+Common Mistakes to Avoid:
+  ❌ onChange={(v) => fn(v)}         — FormInput/Textarea/Select don't pass clean values
+  ❌ <FormSelect options={[...]} /> — FormSelect has no options prop
+  ❌ direction="row"                 — ChipGroup only accepts "horizontal" | "grid"
+  ❌ colors={strings[]}              — ColorSwatchPicker needs {hex, label}[] objects
+```
+
+### 13. HTML/CSS Workspace Build Pattern (Pattern A)
+Standard structure for document-type tools (invoice, contract, resume, certificate, business plan, worksheet):
+
+```
+File Structure:
+  src/lib/{tool}/schema.ts                           — Types, configs, defaults, factories
+  src/stores/{tool}-editor.ts                        — Zustand + Immer + Zundo (temporal undo/redo)
+  src/lib/{tool}/{Tool}Renderer.tsx                  — Paginated HTML/CSS renderer
+  src/components/workspaces/{tool}/tabs/*Tab.tsx      — 3-5 editor tabs
+  src/components/workspaces/{tool}/{Tool}LayersPanel.tsx  — Figma-style layers
+  src/components/workspaces/{tool}/{Tool}Workspace.tsx    — 3-panel main component
+  src/lib/chiko/manifests/{tool}.ts                  — Chiko AI action manifest
+
+Registration Checklist:
+  ✅ tools.ts: status → "ready", devStatus → "complete"
+  ✅ page.tsx: dynamic import path
+  ✅ credit-costs.ts: TOOL_CREDIT_MAP entry
+  ✅ workspace-canvas.css: .{tool}-canvas-root highlight rules
+  ✅ TOOL-STATUS.md: move to COMPLETE, add changelog
+
+Store Middleware Stack:
+  temporal(persist(immer((...) => ({ ...state, ...actions }))))
+  partialize: (state) => ({...stateOnly}) as StateType  — cast needed for temporal compat
+```

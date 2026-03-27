@@ -1,11 +1,11 @@
 # DMSuite — Tool Development Status Tracker
 
-> **Last updated:** 2026-03-27
+> **Last updated:** 2026-03-28
 > **Total tools registered:** 195+
 > **Tools with workspace UI:** 98
-> **Tools fully complete:** 16
-> **Tools available (ready):** 13
-> **Tools coming soon:** 184
+> **Tools fully complete:** 17
+> **Tools available (ready):** 14
+> **Tools coming soon:** 183
 
 ---
 
@@ -82,6 +82,12 @@ All 9 route to `SalesBookDesignerWorkspace` with different `initialDocumentType`
 |---|---------|-----------|-----------|-------|
 | 16 | `id-badge` | ID Badge & Lanyard Designer | id-badge-designer/IDBadgeDesignerWorkspace | 12 badge types, 10 templates, CR80/CR79/CR100 card sizes, batch/bulk generation, dual-sided (front+back), QR code/barcode/magnetic stripe/NFC, lanyard config, 8 role variants, 8 font pairings, 16 accent colors, security features (holographic/watermark/microtext/sequential numbering), Chiko AI manifest (25 actions), Figma-style layers, print-ready |
 
+### Worksheet & Form Designer
+
+| # | Tool ID | Tool Name | Workspace | Notes |
+|---|---------|-----------|-----------|-------|
+| 17 | `worksheet-designer` | Worksheet & Form Designer | worksheet-designer/WorksheetDesignerWorkspace | 12 document types (educational-worksheet/quiz/exam/survey/feedback-form/registration-form/application-form/order-form/checklist/evaluation-form/sign-in-sheet/generic-form), 8 visual templates, 27 element types across 6 categories, educational specialization (subject/grade/answer key/student fields), answer key page generation, branding & confidentiality, multi-column sections, 6 header styles, 4-tab editor (Content/Elements/Style/Format), Figma-style layers panel, Chiko AI manifest (20+ actions + activity logging), print-ready (A4/Letter/Legal/A5) |
+
 **Shared architecture (Sales Book):**
 - Store: `useSalesBookEditor` (Zustand + Immer + Zundo undo)
 - Renderer: `BlankFormRenderer` (HTML → print pipeline)
@@ -150,12 +156,11 @@ These have real workspace code (state management, canvas/editor, templates) but 
 | 28 | `real-estate-listing` | Real Estate Listing | RealEstateListingWorkspace | `SCAFFOLD` |
 | 29 | `event-program` | Event Program | EventProgramWorkspace | `SCAFFOLD` |
 | 30 | `ticket-designer` | Ticket Designer | TicketDesignerWorkspace | `SCAFFOLD` |
-| 31 | `cover-letter` | Cover Letter | CoverLetterWorkspace | `SCAFFOLD` |
+| 31 | `cover-letter` | Cover Letter Writer | cover-letter-writer/CoverLetterWriterWorkspace | `COMPLETE` |
 | 32 | `invitation-designer` | Invitation Designer | InvitationDesignerWorkspace | `SCAFFOLD` |
 | 33 | `training-manual` | Training Manual | TrainingManualWorkspace | `SCAFFOLD` |
 | 34 | `user-guide` | User Guide | UserGuideWorkspace | `SCAFFOLD` |
-| 35 | `worksheet-designer` | Worksheet Designer | WorksheetDesignerWorkspace | `SCAFFOLD` |
-| 36 | `white-paper` | White Paper | WhitePaperWorkspace | `SCAFFOLD` |
+| 35 | `white-paper` | White Paper | WhitePaperWorkspace | `SCAFFOLD` |
 | 37 | `case-study` | Case Study | CaseStudyWorkspace | `SCAFFOLD` |
 | 38 | `media-kit` | Media Kit | MediaKitWorkspace | `SCAFFOLD` |
 | 39 | `ebook-creator` | eBook Creator | EbookCreatorWorkspace | `SCAFFOLD` |
@@ -331,3 +336,5 @@ These already have substantial workspace code and would benefit most from a poli
 | 2026-03-27 | menu-designer (Menu Designer) | Full build: Zustand+Immer+Zundo store, 13 menu types (restaurant/café/bar-cocktail/fine-dining/buffet/prix-fixe/wedding-event/takeaway/food-truck/wine-list/kids/dessert/brunch), 12 visual templates, 30 currencies, 10 dietary tags, 10 font pairings, 5 price display styles, 11 divider styles, 3 column layouts, 6 page sizes (A4/Letter/A5/DL/Square/Tabloid) with landscape variants, 3 fold types (flat/bi-fold/tri-fold), paginated HTML/CSS renderer, 4-tab editor (Content/Menu/Style/Format), Figma-style layers panel, Chiko AI manifest (17 actions), print-ready, Zambian default (ZMW currency, Lusaka sample data) | Drake |
 | 2026-03-27 | business-plan (Business Plan Writer) | Full build: Zustand+Immer+Zundo store, 8 plan types (startup/traditional/strategic/investor/lean/franchise/nonprofit/internal), 8 visual templates, 12 toggleable sections, SWOT grid, TAM/SAM/SOM visual, financial projections table, team cards, competitor analysis, 4 cover page styles, 5 header styles, paginated HTML/CSS renderer with cover/TOC, 5-tab editor (Content/Sections/Financials/Style/Format), Figma-style layers panel, Chiko AI manifest (16 actions + activity logging), print-ready, 0 TS errors | Drake |
 | 2026-03-27 | id-badge (ID Badge & Lanyard Designer) | Full build: Zustand+Immer+Zundo store, 12 badge types (corporate/student/visitor/event/conference/contractor/vip/membership/security/volunteer/intern), 10 templates, CR80/CR79/CR100/custom card sizes, batch/bulk CSV import+manual add, dual-sided design (front+back), QR code (4 content types)/barcode (Code128/Code39)/magnetic stripe/NFC zone, lanyard config (breakaway clip/badge holder/branding), 8 role variants with colors, 8 font pairings, 16 accent colors, security features (holographic zone/watermark/microtext border/sequential numbering), 5-tab editor (Content/Batch/Back/Style/Format), Figma-style layers panel, Chiko AI manifest (25 actions + activity logging), print-ready multi-up layouts (single/2-up/4-up/8-up/10-up), 0 TS errors | Drake |
+| 2026-03-28 | cover-letter (Cover Letter Writer) | Full build: Zustand+Immer+Zundo store, 12 letter types (general/targeted/referral/internal/career-change/entry-level/executive/academic/creative/technical/networking/follow-up), 6 tones (professional/confident/enthusiastic/conversational/formal/creative), 8 visual templates, 5 header styles (standard/banner/sidebar/minimal/boxed), 8 font pairings, 16 accent colors, job targeting (title/description/requirements/mission/whyThisCompany), personal background (skills/achievements/education/certifications), paginated HTML/CSS renderer with Google Fonts, 4-tab editor (Content/Target/Style/Format), Figma-style layers panel, Chiko AI manifest (14 actions + activity logging with prefillFromMemory), print-ready (A4/Letter), 0 TS errors | Drake |
+| 2026-03-28 | worksheet-designer (Worksheet & Form Designer) | Full build: Zustand+Immer+Zundo store, 12 document types (educational-worksheet/quiz/exam/survey/feedback-form/registration-form/application-form/order-form/checklist/evaluation-form/sign-in-sheet/generic-form), 8 visual templates (clean-modern/academic-classic/playful-bright/minimal-mono/professional-blue/warm-earth/bold-contrast/pastel-soft), 27 element types across 6 categories (input/choice/scale/educational/structure/special), educational specialization (9 subjects, 16 grade levels, student name/date/score fields, answer key page with points & explanations), branding & confidentiality, multi-column sections with visibility toggle, 6 header styles (banner/underline/border/boxed/playful/minimal), paginated HTML/CSS renderer with Google Fonts, 4-tab editor (Content/Elements/Style/Format), Figma-style layers panel with layer tree, Chiko AI manifest (20+ actions + activity logging + prefillFromMemory), print-ready (A4/Letter/Legal/A5), 0 TS errors | Drake |

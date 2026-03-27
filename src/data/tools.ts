@@ -1129,7 +1129,8 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Create fillable worksheets, forms, checklists, and planning templates for print or digital",
         icon: "clipboard",
-        status: "coming-soon",
+        status: "ready",
+        devStatus: "complete",
         tags: ["worksheet", "form", "checklist", "fillable", "template"],
         outputs: ["pdf", "docx"],
         printReady: true,
@@ -1203,11 +1204,14 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Generate tailored cover letters that match job descriptions with keyword optimization",
         icon: "mail",
-        status: "coming-soon",
+        status: "ready",
+        devStatus: "complete",
         tags: ["cover letter", "job", "application", "career"],
         aiProviders: ["claude"],
         outputs: ["pdf", "docx"],
         supportsPartEdit: true,
+        printReady: true,
+        printSizes: ["A4", "letter"],
       },
       {
         id: "portfolio-builder",

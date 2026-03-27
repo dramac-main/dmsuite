@@ -48,6 +48,7 @@ d:\dramac-ai-suite\
 │   │   ├── chat.ts                # Chat conversations (persisted)
 │   │   ├── preferences.ts         # User preferences (persisted)
 │   │   ├── resume-editor.ts       # Resume editor (temporal + immer + zundo)
+│   │   ├── worksheet-editor.ts    # Worksheet editor (temporal + immer + zundo)
 │   │   ├── editor.ts              # vNext canvas editor store
 │   │   └── index.ts               # Barrel export
 │   ├── lib/
@@ -65,6 +66,9 @@ d:\dramac-ai-suite\
 │   │   │       ├── templates.ts        # Registry (26 total)
 │   │   │       ├── TemplateRenderer.tsx # Renderer + pagination + fonts
 │   │   │       └── [6 legacy templates]
+│   │   ├── worksheet/             # Worksheet & Form Designer system
+│   │   │   └── schema.ts          # 12 doc types, 27 elements, 8 templates
+│   │   │   └── WorksheetRenderer.tsx  # Paginated HTML/CSS renderer
 │   │   └── editor/                # vNext editor infrastructure
 │   └── data/
 │       ├── config/colors.ts        # JS color config

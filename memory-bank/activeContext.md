@@ -1,153 +1,67 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Business Plan Writer Build — COMPLETE ✅
+**Phase:** Worksheet & Form Designer Build — COMPLETE ✅
 
-### Session 138: Business Plan Writer
+### Session 139-141: Worksheet & Form Designer (3-session build)
 
 #### Summary
-Built a complete, production-ready Business Plan Writer from scratch:
+Built a complete, production-ready Worksheet & Form Designer across 3 sessions:
 
-##### Business Plan Writer (`business-plan`)
-- **Schema:** `src/lib/business-plan/schema.ts` — 8 plan types, 12 section keys, 8 templates, SWOT, financials, team, competitors, funding sources, uses of funds
-- **Store:** `src/stores/business-plan-editor.ts` — Zustand+Immer+Zundo, all update methods use patch objects, entity CRUD (competitors, team members, financial years, funding sources, uses of funds)
-- **Renderer:** `src/lib/business-plan/BusinessPlanRenderer.tsx` — Paginated HTML/CSS, 4 cover page styles, 5 header styles, SWOT grid, TAM/SAM/SOM visual, financial tables, team cards, TOC, overflow pagination
-- **Tabs:** Content (plan type, meta, company info), Sections (12 toggleable sections, executive summary, market analysis, products/services, marketing, operations, SWOT), Financials (projections, revenue model, funding, competitors, team), Style (8 templates, accent color picker, fonts, header/cover styles, display toggles), Format (page size, margins, section spacing, line spacing)
-- **Layers:** Figma-style layer tree with hover-to-highlight, click-to-navigate, visibility toggle
-- **Workspace:** 3-panel layout (editor+preview+layers), template quick-switch strip, mobile bottom bar, zoom controls, print, Start Over
-- **Chiko:** 16 AI actions including SWOT update, financials, prefillFromMemory, validation, export, withActivityLogging
+##### Worksheet & Form Designer (`worksheet-designer`)
+- **Schema:** `src/lib/worksheet/schema.ts` — 12 document types, 27 element types (6 categories), 8 templates, 9 educational subjects, 16 grade levels
+- **Store:** `src/stores/worksheet-editor.ts` — Zustand+Immer+Zundo, all update methods, section/element CRUD, answer key management
+- **Renderer:** `src/lib/worksheet/WorksheetRenderer.tsx` — Paginated HTML/CSS, 6 header styles, per-type element rendering (all 27 types), answer key page, educational worksheet support
+- **Tabs:** Content (document type, meta, branding, answer key), Elements (27 element types with type-specific sub-editors), Style (8 templates, accent color, fonts, header style), Format (page size, margins, spacing)
+- **Layers:** Figma-style layer tree with hover-to-highlight, click-to-navigate, visibility toggle (green accent)
+- **Workspace:** 3-panel layout (editor+preview+layers), template quick-switch strip, answer key toggle, page navigation dots, mobile bottom bar, zoom controls, print, Start Over
+- **Chiko:** 20+ AI actions including section/element CRUD, prefillFromMemory, validation, export, withActivityLogging
 
 #### Files Created (11 new):
-1. `src/lib/business-plan/schema.ts`
-2. `src/stores/business-plan-editor.ts`
-3. `src/lib/business-plan/BusinessPlanRenderer.tsx`
-4. `src/components/workspaces/business-plan-writer/tabs/BusinessPlanContentTab.tsx`
-5. `src/components/workspaces/business-plan-writer/tabs/BusinessPlanSectionsTab.tsx`
-6. `src/components/workspaces/business-plan-writer/tabs/BusinessPlanFinancialsTab.tsx`
-7. `src/components/workspaces/business-plan-writer/tabs/BusinessPlanStyleTab.tsx`
-8. `src/components/workspaces/business-plan-writer/tabs/BusinessPlanFormatTab.tsx`
-9. `src/components/workspaces/business-plan-writer/BusinessPlanLayersPanel.tsx`
-10. `src/components/workspaces/business-plan-writer/BusinessPlanWriterWorkspace.tsx`
-11. `src/lib/chiko/manifests/business-plan.ts`
+1. `src/lib/worksheet/schema.ts` (session 1)
+2. `src/stores/worksheet-editor.ts` (session 1)
+3. `src/lib/worksheet/WorksheetRenderer.tsx` (session 2)
+4. `src/components/workspaces/worksheet-designer/tabs/WorksheetContentTab.tsx` (session 2)
+5. `src/components/workspaces/worksheet-designer/tabs/WorksheetElementsTab.tsx` (session 2)
+6. `src/components/workspaces/worksheet-designer/tabs/WorksheetStyleTab.tsx` (session 2)
+7. `src/components/workspaces/worksheet-designer/tabs/WorksheetFormatTab.tsx` (session 2)
+8. `src/components/workspaces/worksheet-designer/WorksheetLayersPanel.tsx` (session 2)
+9. `src/components/workspaces/worksheet-designer/WorksheetDesignerWorkspace.tsx` (session 3)
+10. `src/lib/chiko/manifests/worksheet.ts` (session 3)
+11. Old scaffold `src/components/workspaces/WorksheetDesignerWorkspace.tsx` — DELETED
 
 #### Files Modified:
-- `src/app/tools/[categoryId]/[toolId]/page.tsx` — dynamic import updated
-- `src/data/tools.ts` — status → ready, devStatus → scaffold
-- `src/styles/workspace-canvas.css` — `.bp-canvas-root` highlight rules
-- `TOOL-STATUS.md` — scaffold entry updated + change log entry
+- `src/app/tools/[categoryId]/[toolId]/page.tsx` — dynamic import → `worksheet-designer/WorksheetDesignerWorkspace`
+- `src/data/tools.ts` — status → ready, devStatus → complete
+- `src/data/credit-costs.ts` — added `"worksheet-designer": "invoice-fill"` to TOOL_CREDIT_MAP
+- `src/styles/workspace-canvas.css` — `.ws-canvas-root` highlight rules (green accent)
+- `TOOL-STATUS.md` — moved to COMPLETE section (#17), updated counts, added changelog
 
 #### Key Implementation Details:
-- **8 Plan Types:** startup, traditional, strategic, investor, lean, franchise, nonprofit, internal
-- **12 Sections:** executive-summary, company-description, market-analysis, competitive-analysis, products-services, marketing-strategy, operations-plan, management-team, financial-projections, revenue-model, funding-requirements, appendix
-- **8 Templates:** executive, modern, startup, corporate, minimal, bold, elegant, consulting
-- **4 Cover Styles:** executive, modern, minimal, bold
-- **5 Header Styles:** banner, underline, sidebar, minimal, boxed
-- **Financial Projections:** Multi-year table with revenue, COGS, gross profit, operating expenses, net income, cash flow
-- **SWOT Grid:** 2×2 color-coded grid with add/remove items
-- **TAM/SAM/SOM:** Nested circles visualization
-- **Chiko Manifest Pattern:** Actions array (descriptors only) + top-level `executeAction` switch + `getState` reader + `withActivityLogging` wrapper — NOT the broken `execute` on each action pattern
-- **TypeScript:** 0 business-plan-related errors
-- **Boarding Pass:** Full airline layout — departure/arrival with IATA codes, gate/boarding time, travel class
-- **Wristband:** Elongated horizontal layout optimized for 10×1" wristband printing
-- **Accent Color Lock:** Users can lock their accent color so template changes don't override it
+- **12 Document Types:** worksheet, quiz, test, exam, survey, feedback, registration, application, order-form, checklist, evaluation, custom
+- **27 Element Types (6 categories):** Text Input (short-answer, long-answer, fill-in-blank, essay), Selection (multiple-choice, checkbox, dropdown, true-false), Rating (rating-scale, likert, ranking, slider), Data (number-input, date-input, time-input, email-input, phone-input), Special (signature, file-upload, image-upload, drawing-area, table-grid, matching, word-bank, diagram-label), Structure (section-header, instruction-text, page-break)
+- **8 Templates:** classic, modern, academic, playful, minimal, professional, creative, exam
+- **Answer Key:** Toggle for educational document types, dedicated answer key page in renderer
+- **Educational Features:** Subject (9), Grade Level (16), academic year, term/semester support
 
-### Previous Session: Certificate & Diploma Tool Build — COMPLETE ✅
-4. `src/components/workspaces/certificate-designer/tabs/CertificateDetailsTab.tsx`
-5. `src/components/workspaces/certificate-designer/tabs/CertificateStyleTab.tsx`
-6. `src/components/workspaces/certificate-designer/tabs/CertificateFormatTab.tsx`
-7. `src/components/workspaces/certificate-designer/CertificateLayersPanel.tsx`
-8. `src/components/workspaces/certificate-designer/CertificateDesignerWorkspace.tsx`
-9. `src/lib/chiko/manifests/certificate.ts`
-10. `src/stores/diploma-editor.ts`
-11. `src/components/workspaces/diploma-designer/DiplomaRenderer.tsx`
-12. `src/components/workspaces/diploma-designer/tabs/DiplomaContentTab.tsx`
-13. `src/components/workspaces/diploma-designer/tabs/DiplomaDetailsTab.tsx`
-14. `src/components/workspaces/diploma-designer/tabs/DiplomaStyleTab.tsx`
-15. `src/components/workspaces/diploma-designer/tabs/DiplomaFormatTab.tsx`
-16. `src/components/workspaces/diploma-designer/DiplomaLayersPanel.tsx`
-17. `src/components/workspaces/diploma-designer/DiplomaDesignerWorkspace.tsx`
-18. `src/lib/chiko/manifests/diploma.ts`
+#### Key TypeScript Fix Patterns Applied:
+- **FormInput/FormTextarea/FormSelect:** Use native `(e) => fn(e.target.value)`, NOT clean value callbacks
+- **FormSelect:** Has NO `options` prop — use `<option>` children
+- **ChipGroup direction:** `"horizontal"` | `"grid"`, NOT `"row"`
+- **ColorSwatchPicker:** Expects `{hex, label}[]` objects, NOT string arrays
+- **partialize type:** Fixed with `as WorksheetEditorState` cast
+- **setState in useEffect:** Use `queueMicrotask()` with ref-based change detection
+- **Unused params:** Remove from signatures AND call sites (underscore prefix still flagged by project lint)
 
-#### Files Modified (4):
-1. `src/app/tools/[categoryId]/[toolId]/page.tsx` — Updated dynamic imports to folder paths
-2. `src/data/tools.ts` — Status: coming-soon → ready, added devStatus: "complete", aiProviders: ["claude"]
-3. `src/styles/workspace-canvas.css` — Added `.cert-canvas-root` highlight rules + print reset
-4. `TOOL-STATUS.md` — Moved both tools to COMPLETE, updated change log
-
-#### Verification:
-- [x] TypeScript: 0 errors (`npx tsc --noEmit` clean)
-- [ ] Next.js production build (pending)
-- [ ] Committed and pushed (pending)
-
----
-
-## Previous Focus
-**Phase:** Architectural Audit Fixes — 3-Phase Remediation — COMPLETE ✅
-
-- **ARIA labels** (SalesUIKit.tsx):
-  - `IconButton`: Added `aria-label={tooltip}` prop
-  - `ConfirmDialog`: Added `role="dialog"`, `aria-modal`, `aria-labelledby`, `aria-describedby`
-
-##### Phase 3: Workspace Updates (COMPLETE)
-- **SalesBookDesignerWorkspace.tsx**:
-  - Imports `dispatchDirty`/`dispatchProgress`, `ZOOM_*` constants, CSS
-  - Removed inline `<style>` block
-  - Wrapped tab content in `WorkspaceErrorBoundary`
-
-- **ContractDesignerWorkspace.tsx**:
-  - Same pattern as above
-  - Uses `PAGE_DOTS_THRESHOLD` for page navigation dots
-
-- **StepEditor.tsx** (Resume):
-  - Same pattern as above
-  - Uses `MILESTONE_EDIT_THRESHOLD` for edited milestone
-  - Uses `PAGE_DOTS_THRESHOLD` for page navigation dots
-
-#### Files Modified (11):
-1. `src/stores/sales-book-editor.ts` — accentLocked→state, middleware reorder
-2. `src/stores/contract-editor.ts` — same + static import getDefaultClauses
-3. `src/stores/resume-editor.ts` — middleware reorder, static import, getSection helper, fixed missing `}`
-4. `src/lib/workspace-events.ts` — NEW: typed event constants + dispatch helpers
-5. `src/lib/workspace-constants.ts` — NEW: shared numeric constants
-6. `src/styles/workspace-canvas.css` — NEW: extracted canvas highlight CSS
-7. `src/components/workspaces/shared/WorkspaceErrorBoundary.tsx` — NEW: error boundary
-8. `src/components/workspaces/shared/WorkspaceUIKit.tsx` — Re-exports ErrorBoundary
-9. `src/components/workspaces/sales-book-designer/SalesUIKit.tsx` — ARIA labels
-10. `src/components/workspaces/sales-book-designer/SalesBookDesignerWorkspace.tsx` — constants, events, CSS, ErrorBoundary
-11. `src/components/workspaces/contract-designer/ContractDesignerWorkspace.tsx` — same
-12. `src/components/workspaces/resume-cv/StepEditor.tsx` — same + milestone constants
-
-#### Verification:
-- [x] TypeScript: 0 errors (`npx tsc --noEmit` clean)
-- [ ] Next.js production build (pending)
-- [ ] Committed and pushed (pending)
-
----
-
-## Previous Focus
-**Phase:** Resume & CV Builder Controls & Multi-Page Fix — COMPLETE ✅
-
-### Session 133: Resume Controls + Multi-Page A4 Rendering Fix
-- Dynamic CSS Override System for all 20 resume templates
-- Per-template accent color variable overrides
-- Default page format changed from Letter to A4
-- Section spacing/line spacing/font scale/margin overrides
-
----
-
-## Previous Focus
-- Removed unused `Sections` type import from SectionsTab
-- Removed unused `ActionButton` import from StepEditor
-- Removed unused `IconEye`/`IconEyeOff` from SectionsTab
-
-#### Validation:
-- [x] TypeScript: 0 errors (`npx tsc --noEmit` clean)
-- [x] All lint warnings resolved
-- [x] Schema field names verified against `src/lib/resume/schema.ts`
-
----
-
-## Previous Focus
+### Previous Session: Business Plan Writer Build — COMPLETE ✅
+### Previous Sessions (Completed):
+- **Session 138:** Business Plan Writer — 11 files, 8 plan types, 12 sections, SWOT/TAM/SAM/SOM, financial projections
+- **Session 137:** Ticket & Pass Designer — event tickets, boarding passes, wristbands, VIP passes
+- **Session 136:** Certificate Designer + Diploma & Accreditation Designer — 18 files total
+- **Session 135:** Architectural Audit Fixes — 3-phase remediation (events, constants, error boundaries)
+- **Session 134:** Project Saving System — IndexedDB + store adapters
+- **Session 133:** Resume Controls & Multi-Page A4 Fix
+- **Earlier:** Platform Infrastructure, Resume 3-Panel + Layers, Credits system, Auth, Admin Panel, etc.
 **Phase:** Resume Dashboard Parity — COMPLETE ✅
 
 ### Session 129: Resume 3-Panel Layout + Layers Panel
