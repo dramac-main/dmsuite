@@ -281,6 +281,34 @@ function getTicketAdapter(): StoreAdapter {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Canvas editor adapter — for tools that use the shared useEditorStore
+// (poster, flyer, banner-ad, etc.)
+// No persist middleware, so no localStorage key to nuke. But the store is
+// global, so a project switch MUST reset it or old canvas data leaks.
+// ---------------------------------------------------------------------------
+
+function getCanvasEditorAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useEditorStore } = require("@/stores/editor");
+  return {
+    getSnapshot: () => {
+      const { doc } = useEditorStore.getState();
+      return { doc };
+    },
+    restoreSnapshot: (data) => {
+      if (data.doc) {
+        useEditorStore.getState().setDoc(data.doc as never);
+      }
+    },
+    resetStore: () => {
+      useEditorStore.getState().resetDoc();
+      // No persist — no localStorage key to nuke
+    },
+    subscribe: (cb) => useEditorStore.subscribe(cb),
+  };
+}
+
 function getBusinessCardAdapter(): StoreAdapter {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { useBusinessCardWizard } = require("@/stores/business-card-wizard");
@@ -373,6 +401,12 @@ function getBusinessCardAdapter(): StoreAdapter {
           sessionStorage.removeItem("dmsuite-business-card-wizard");
         }
       } catch { /* SSR/incognito */ }
+      // Also reset shared editor store (used by StepEditor canvas)
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { useEditorStore } = require("@/stores/editor");
+        useEditorStore.getState().resetDoc();
+      } catch { /* editor store may not be loaded yet */ }
     },
     subscribe: (cb) => useBusinessCardWizard.subscribe(cb),
   };
@@ -419,6 +453,11 @@ const ADAPTER_FACTORIES: Record<string, () => StoreAdapter> = {
   "diploma-designer": getDiplomaAdapter,
   "ticket-designer": getTicketAdapter,
   "worksheet-designer": getWorksheetAdapter,
+  // Canvas editors (shared useEditorStore)
+  "poster": getCanvasEditorAdapter,
+  "flyer": getCanvasEditorAdapter,
+  "banner-ad": getCanvasEditorAdapter,
+  "social-media-post": getCanvasEditorAdapter,
 };
 
 /**

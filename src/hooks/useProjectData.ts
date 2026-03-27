@@ -165,6 +165,14 @@ export function useProjectData({
       isTransitioningRef.current = true;
       setIsLoading(true);
 
+      // ── CRITICAL: Reset store FIRST — guarantees a clean slate ──
+      // This runs synchronously BEFORE any async I/O, eliminating any
+      // window where the workspace could read stale data from a previous
+      // project. If data is found later, restoreSnapshot() applies it on
+      // top of the clean state. This is the belt-and-suspenders defense
+      // against the "new project shows old data" bug.
+      adapter.resetStore();
+
       // ── Step 1: Try IndexedDB (fast local cache) ──
       let snapshot = await loadProjectData(projectId);
 
@@ -208,8 +216,7 @@ export function useProjectData({
         return true;
       }
 
-      // ── No data anywhere — reset store for a completely fresh project ──
-      adapter.resetStore();
+      // ── No data — store is already clean from the initial reset above ──
       loadedProjectRef.current = projectId;
       setIsLoaded(true);
       setReadyProjectId(projectId);
@@ -218,8 +225,7 @@ export function useProjectData({
       // Bail out if a newer load has started
       if (gen !== loadGenRef.current) return false;
       console.warn("[ProjectData] Load failed:", err);
-      // Reset store on error to prevent stale data
-      adapter.resetStore();
+      // Store was already reset at the top — just mark as ready
       loadedProjectRef.current = projectId;
       setIsLoaded(true);
       setReadyProjectId(projectId);
@@ -266,8 +272,13 @@ export function useProjectData({
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
     const unsub = adapter.subscribe(() => {
-      // Don't save during project transitions
-      if (isTransitioningRef.current) return;
+      // During project transitions (reset + restore), silently track state
+      // changes so lastJson stays in sync. This prevents a spurious save
+      // after the transition where the "change" is just reset→restored.
+      if (isTransitioningRef.current) {
+        lastJson = JSON.stringify(adapter.getSnapshot());
+        return;
+      }
 
       const currentJson = JSON.stringify(adapter.getSnapshot());
       if (currentJson === lastJson) return;
