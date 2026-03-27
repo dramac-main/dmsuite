@@ -47,14 +47,33 @@ function getClient() {
 // Guard: skip all Supabase calls when not configured or no auth
 // ---------------------------------------------------------------------------
 
+// Cache the auth user ID to avoid repeated session lookups
+let _cachedUserId: string | null = null;
+let _cacheExpiry = 0;
+const AUTH_CACHE_TTL = 60_000; // 60 seconds
+
 async function getAuthUserId(): Promise<string | null> {
   if (!isSupabaseConfigured()) return null;
+  // Return cached value if still valid
+  if (_cachedUserId && Date.now() < _cacheExpiry) return _cachedUserId;
   try {
-    const { data } = await getClient().auth.getUser();
-    return data.user?.id ?? null;
+    // getSession() reads from memory (no network request) — much faster than getUser()
+    const { data } = await getClient().auth.getSession();
+    const userId = data.session?.user?.id ?? null;
+    if (userId) {
+      _cachedUserId = userId;
+      _cacheExpiry = Date.now() + AUTH_CACHE_TTL;
+    }
+    return userId;
   } catch {
     return null;
   }
+}
+
+/** Clear the auth cache (call on sign-out) */
+export function clearAuthCache() {
+  _cachedUserId = null;
+  _cacheExpiry = 0;
 }
 
 // ---------------------------------------------------------------------------

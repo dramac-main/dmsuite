@@ -244,13 +244,20 @@ export default function ToolWorkspacePage() {
     }
   }, [hasSynced, syncFromServer]);
 
-  // ── Project resolution on mount ──
-  // If URL has project ID → use it. If tool has existing projects but no URL param → show picker.
-  // If tool has no projects → auto-create after dwell.
+  // Track whether project resolution has run (prevents re-running on state changes)
+  const hasResolvedRef = useRef(false);
+
+  // ── Project resolution — GATED on hasSynced ──
+  // Must wait for sync to complete so server projects are available.
+  // Without this gate, cleared local data → auto-creates blank project before
+  // sync brings in server projects → duplicate projects.
   useEffect(() => {
-    if (!toolId) return;
+    if (!toolId || !hasSynced) return; // Wait for sync before resolving
+    if (hasResolvedRef.current) return; // Only resolve once per mount
     const WorkspaceComponent = workspaceComponents[toolId];
     if (!WorkspaceComponent) return; // Non-workspace tools don't need project management
+
+    hasResolvedRef.current = true;
 
     if (urlProjectId) {
       // URL has a project ID — validate it exists
@@ -286,7 +293,7 @@ export default function ToolWorkspacePage() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toolId]);
+  }, [toolId, hasSynced]);
 
   // Track tool usage on mount + time spent + milestone tracking
   useEffect(() => {

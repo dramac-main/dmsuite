@@ -82,7 +82,42 @@ export function useProjectData({
   const [readyProjectId, setReadyProjectId] = useState<string | null>(null);
   const updateProject = useProjectStore((s) => s.updateProject);
 
-  // ── Save: write-through to IndexedDB (cache) + Supabase (durable) ──
+  // ── Debounced Supabase save (3s) — IndexedDB is immediate ──
+  const supabaseSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Track last failed Supabase save for retry on next attempt */
+  const pendingSupabaseSaveRef = useRef<{
+    projectId: string;
+    toolId: string;
+    snapshot: Record<string, unknown>;
+  } | null>(null);
+
+  // Flush pending Supabase save (used before project switch or unmount)
+  const flushSupabaseSave = useCallback(() => {
+    if (supabaseSaveTimerRef.current) {
+      clearTimeout(supabaseSaveTimerRef.current!);
+      supabaseSaveTimerRef.current = null;
+    }
+    const pending = pendingSupabaseSaveRef.current;
+    if (pending) {
+      pendingSupabaseSaveRef.current = null;
+      saveProjectDataRemote(pending.projectId, pending.toolId, pending.snapshot).catch(() => {});
+    }
+  }, []);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      // Flush any pending Supabase save on unmount
+      if (supabaseSaveTimerRef.current) clearTimeout(supabaseSaveTimerRef.current);
+      const pending = pendingSupabaseSaveRef.current;
+      if (pending) {
+        saveProjectDataRemote(pending.projectId, pending.toolId, pending.snapshot).catch(() => {});
+        pendingSupabaseSaveRef.current = null;
+      }
+    };
+  }, []);
+
+  // ── Save: write-through to IndexedDB (immediate) + Supabase (debounced) ──
   const saveToProject = useCallback(async () => {
     if (!projectId) return;
     // Don't save during project transitions — the store may still hold
@@ -94,12 +129,23 @@ export function useProjectData({
       const snapshot = adapter.getSnapshot();
       if (Object.keys(snapshot).length === 0) return;
 
-      // 1. Save to IndexedDB (fast local cache)
+      // 1. Save to IndexedDB (fast local cache — immediate)
       await saveProjectData(projectId, toolId, snapshot);
-      // 2. Save to Supabase (durable server storage — fire and forget)
-      saveProjectDataRemote(projectId, toolId, snapshot).catch((err) => {
-        console.warn("[ProjectData] Supabase save failed (will retry next save):", err);
-      });
+
+      // 2. Save to Supabase (debounced 3s — batches rapid edits into one network write)
+      if (supabaseSaveTimerRef.current) clearTimeout(supabaseSaveTimerRef.current);
+      pendingSupabaseSaveRef.current = { projectId, toolId, snapshot };
+      supabaseSaveTimerRef.current = setTimeout(() => {
+        const pending = pendingSupabaseSaveRef.current;
+        if (!pending) return;
+        pendingSupabaseSaveRef.current = null;
+        saveProjectDataRemote(pending.projectId, pending.toolId, pending.snapshot).catch((err) => {
+          console.warn("[ProjectData] Supabase save failed (will retry next save):", err);
+          // Re-queue for retry on next save attempt
+          pendingSupabaseSaveRef.current = pending;
+        });
+      }, 3000);
+
       updateProject(projectId, { hasData: true });
     } catch (err) {
       console.warn("[ProjectData] Save failed:", err);
@@ -188,8 +234,10 @@ export function useProjectData({
   // Auto-load when project ID changes
   useEffect(() => {
     if (!projectId || projectId === loadedProjectRef.current) return;
+    // Flush any pending Supabase save from the previous project
+    flushSupabaseSave();
     loadFromProject();
-  }, [projectId, loadFromProject]);
+  }, [projectId, loadFromProject, flushSupabaseSave]);
 
   // Listen for workspace:save events → persist to storage
   useEffect(() => {

@@ -222,12 +222,12 @@ export const useProjectStore = create<ProjectState>()(
        * Local-only projects (not yet on server) get pushed up.
        */
       syncFromServer: async () => {
+        if (get().hasSynced) return; // Already synced this session
         try {
           const serverProjects = await fetchUserProjects();
 
-          if (serverProjects.length === 0 && !get().hasSynced) {
+          if (serverProjects.length === 0) {
             // No server data yet — push all local projects to server
-            set({ hasSynced: true });
             const localProjects = get().projects;
             for (const p of localProjects) {
               createProjectRemote({
@@ -238,6 +238,7 @@ export const useProjectStore = create<ProjectState>()(
                 progress: p.progress,
               }).catch(() => {});
             }
+            set({ hasSynced: true });
             return;
           }
 
@@ -270,6 +271,8 @@ export const useProjectStore = create<ProjectState>()(
           set({ projects: merged.slice(0, 200), hasSynced: true });
         } catch (err) {
           console.warn("[ProjectStore] syncFromServer error:", err);
+          // Still mark synced on error — fall back to local-only, don't block UI
+          set({ hasSynced: true });
         }
       },
     }),
