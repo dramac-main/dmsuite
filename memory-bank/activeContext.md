@@ -1,33 +1,57 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Certificate & Diploma Tool Build — COMPLETE ✅
+**Phase:** Business Plan Writer Build — COMPLETE ✅
 
-### Session 136: Certificate Designer + Diploma & Accreditation Designer
+### Session 138: Business Plan Writer
 
 #### Summary
-Built two complete, production-ready tools from scratch:
+Built a complete, production-ready Business Plan Writer from scratch:
 
-##### 1. Certificate Designer (`certificate`)
-- **Store:** `src/stores/certificate-editor.ts` — Zustand+Immer+Zundo, 10 certificate types, 10 templates, 8 font pairings, 11 border styles, 5 seal styles
-- **Renderer:** `src/components/workspaces/certificate-designer/CertificateRenderer.tsx` — Pure HTML/CSS, 6 page sizes, ornamental borders, corner decorations, seals, signature blocks
-- **Tabs:** Content, Details (signatories+seal), Style (template picker+accent color+border+font), Format (page size+orientation+margins+print tips)
+##### Business Plan Writer (`business-plan`)
+- **Schema:** `src/lib/business-plan/schema.ts` — 8 plan types, 12 section keys, 8 templates, SWOT, financials, team, competitors, funding sources, uses of funds
+- **Store:** `src/stores/business-plan-editor.ts` — Zustand+Immer+Zundo, all update methods use patch objects, entity CRUD (competitors, team members, financial years, funding sources, uses of funds)
+- **Renderer:** `src/lib/business-plan/BusinessPlanRenderer.tsx` — Paginated HTML/CSS, 4 cover page styles, 5 header styles, SWOT grid, TAM/SAM/SOM visual, financial tables, team cards, TOC, overflow pagination
+- **Tabs:** Content (plan type, meta, company info), Sections (12 toggleable sections, executive summary, market analysis, products/services, marketing, operations, SWOT), Financials (projections, revenue model, funding, competitors, team), Style (8 templates, accent color picker, fonts, header/cover styles, display toggles), Format (page size, margins, section spacing, line spacing)
 - **Layers:** Figma-style layer tree with hover-to-highlight, click-to-navigate, visibility toggle
-- **Workspace:** 3-panel layout (editor+preview+layers), mobile bottom bar, template quick-switch strip, zoom controls, print
-- **Chiko:** 16 AI actions including validation and export, withActivityLogging, prefillFromMemory
+- **Workspace:** 3-panel layout (editor+preview+layers), template quick-switch strip, mobile bottom bar, zoom controls, print, Start Over
+- **Chiko:** 16 AI actions including SWOT update, financials, prefillFromMemory, validation, export, withActivityLogging
 
-##### 2. Diploma & Accreditation Designer (`diploma-designer`)
-- **Store:** `src/stores/diploma-editor.ts` — 8 diploma types, 10 templates, 8 honors levels, signatory roles, accreditation fields
-- **Renderer:** `src/components/workspaces/diploma-designer/DiplomaRenderer.tsx` — Institution header with motto, degree/field/honors, conferral text, institutional seal
-- **Tabs:** Content (6 sections), Details (signatories with roles, institutional seal), Style, Format
-- **Layers:** Figma-style layer tree adapted for diploma sections (institution, program, conferral, recipient, resolution, accreditation)
-- **Workspace:** Same 3-panel architecture as Certificate Designer
-- **Chiko:** 18 AI actions including validation, export, accreditation management
+#### Files Created (11 new):
+1. `src/lib/business-plan/schema.ts`
+2. `src/stores/business-plan-editor.ts`
+3. `src/lib/business-plan/BusinessPlanRenderer.tsx`
+4. `src/components/workspaces/business-plan-writer/tabs/BusinessPlanContentTab.tsx`
+5. `src/components/workspaces/business-plan-writer/tabs/BusinessPlanSectionsTab.tsx`
+6. `src/components/workspaces/business-plan-writer/tabs/BusinessPlanFinancialsTab.tsx`
+7. `src/components/workspaces/business-plan-writer/tabs/BusinessPlanStyleTab.tsx`
+8. `src/components/workspaces/business-plan-writer/tabs/BusinessPlanFormatTab.tsx`
+9. `src/components/workspaces/business-plan-writer/BusinessPlanLayersPanel.tsx`
+10. `src/components/workspaces/business-plan-writer/BusinessPlanWriterWorkspace.tsx`
+11. `src/lib/chiko/manifests/business-plan.ts`
 
-#### Files Created (18 new):
-1. `src/stores/certificate-editor.ts`
-2. `src/components/workspaces/certificate-designer/CertificateRenderer.tsx`
-3. `src/components/workspaces/certificate-designer/tabs/CertificateContentTab.tsx`
+#### Files Modified:
+- `src/app/tools/[categoryId]/[toolId]/page.tsx` — dynamic import updated
+- `src/data/tools.ts` — status → ready, devStatus → scaffold
+- `src/styles/workspace-canvas.css` — `.bp-canvas-root` highlight rules
+- `TOOL-STATUS.md` — scaffold entry updated + change log entry
+
+#### Key Implementation Details:
+- **8 Plan Types:** startup, traditional, strategic, investor, lean, franchise, nonprofit, internal
+- **12 Sections:** executive-summary, company-description, market-analysis, competitive-analysis, products-services, marketing-strategy, operations-plan, management-team, financial-projections, revenue-model, funding-requirements, appendix
+- **8 Templates:** executive, modern, startup, corporate, minimal, bold, elegant, consulting
+- **4 Cover Styles:** executive, modern, minimal, bold
+- **5 Header Styles:** banner, underline, sidebar, minimal, boxed
+- **Financial Projections:** Multi-year table with revenue, COGS, gross profit, operating expenses, net income, cash flow
+- **SWOT Grid:** 2×2 color-coded grid with add/remove items
+- **TAM/SAM/SOM:** Nested circles visualization
+- **Chiko Manifest Pattern:** Actions array (descriptors only) + top-level `executeAction` switch + `getState` reader + `withActivityLogging` wrapper — NOT the broken `execute` on each action pattern
+- **TypeScript:** 0 business-plan-related errors
+- **Boarding Pass:** Full airline layout — departure/arrival with IATA codes, gate/boarding time, travel class
+- **Wristband:** Elongated horizontal layout optimized for 10×1" wristband printing
+- **Accent Color Lock:** Users can lock their accent color so template changes don't override it
+
+### Previous Session: Certificate & Diploma Tool Build — COMPLETE ✅
 4. `src/components/workspaces/certificate-designer/tabs/CertificateDetailsTab.tsx`
 5. `src/components/workspaces/certificate-designer/tabs/CertificateStyleTab.tsx`
 6. `src/components/workspaces/certificate-designer/tabs/CertificateFormatTab.tsx`

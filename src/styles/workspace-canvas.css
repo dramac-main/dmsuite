@@ -76,20 +76,48 @@
 }
 
 /* ---------------------------------------------------------------------------
+   Business Plan Writer
+   --------------------------------------------------------------------------- */
+
+.bp-canvas-root [data-bp-section] {
+  transition: outline 0.15s ease, box-shadow 0.15s ease;
+  outline: 2px solid transparent;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.bp-canvas-root [data-bp-section]:hover {
+  outline: 2px solid rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.06);
+}
+
+.bp-canvas-root [data-bp-section].bp-layer-highlight {
+  outline: 2px solid rgba(139, 92, 246, 0.6);
+  box-shadow: 0 0 0 6px rgba(139, 92, 246, 0.1);
+}
+
+.bp-canvas-root [data-bp-page] {
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.45);
+}
+
+/* ---------------------------------------------------------------------------
    Print: hide all interactive outlines
    --------------------------------------------------------------------------- */
 
 @media print {
   .sb-canvas-root [data-sb-section],
   .ct-canvas-root [data-ct-section],
-  .resume-canvas-root [data-resume-section] {
+  .resume-canvas-root [data-resume-section],
+  .bp-canvas-root [data-bp-section],
+  .badge-canvas-root [data-badge-section] {
     outline: none !important;
     box-shadow: none !important;
     cursor: default !important;
   }
 
   .ct-canvas-root [data-contract-page],
-  .resume-canvas-root [data-resume-page] {
+  .resume-canvas-root [data-resume-page],
+  .bp-canvas-root [data-bp-page] {
     box-shadow: none !important;
   }
 }
@@ -117,6 +145,87 @@
 
 @media print {
   .cert-canvas-root [data-cert-section] {
+    outline: none !important;
+    box-shadow: none !important;
+    cursor: default !important;
+  }
+}
+
+/* ── Ticket & Pass Designer ──────────────────────────────── */
+
+.tk-canvas-root [data-tk-section] {
+  cursor: pointer;
+  transition: outline 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tk-canvas-root [data-tk-section]:hover {
+  outline: 1px dashed rgba(139, 92, 246, 0.3);
+  outline-offset: 2px;
+}
+
+.tk-canvas-root .tk-layer-highlight {
+  outline: 2px solid rgba(139, 92, 246, 0.6) !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.15);
+  border-radius: 2px;
+}
+
+@media print {
+  .tk-canvas-root [data-tk-section] {
+    outline: none !important;
+    box-shadow: none !important;
+    cursor: default !important;
+  }
+}
+
+/* ── Menu Designer ───────────────────────────────────────── */
+
+.md-canvas-root [data-md-section] {
+  cursor: pointer;
+  transition: outline 0.15s ease, box-shadow 0.15s ease;
+}
+
+.md-canvas-root [data-md-section]:hover {
+  outline: 1px dashed rgba(139, 92, 246, 0.3);
+  outline-offset: 2px;
+}
+
+.md-canvas-root .md-layer-highlight {
+  outline: 2px solid rgba(139, 92, 246, 0.6) !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.15);
+  border-radius: 2px;
+}
+
+@media print {
+  .md-canvas-root [data-md-section] {
+    outline: none !important;
+    box-shadow: none !important;
+    cursor: default !important;
+  }
+}
+
+/* ── ID Badge & Lanyard Designer ─────────────────────────── */
+
+.badge-canvas-root [data-badge-section] {
+  cursor: pointer;
+  transition: outline 0.15s ease, box-shadow 0.15s ease;
+}
+
+.badge-canvas-root [data-badge-section]:hover {
+  outline: 1px dashed rgba(139, 92, 246, 0.3);
+  outline-offset: 2px;
+}
+
+.badge-canvas-root .badge-layer-highlight {
+  outline: 2px solid rgba(139, 92, 246, 0.6) !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.15);
+  border-radius: 2px;
+}
+
+@media print {
+  .badge-canvas-root [data-badge-section] {
     outline: none !important;
     box-shadow: none !important;
     cursor: default !important;

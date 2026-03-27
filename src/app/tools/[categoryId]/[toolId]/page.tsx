@@ -49,13 +49,13 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   "envelope": dynamic(() => import("@/components/workspaces/EnvelopeDesignerWorkspace")),
   "certificate": dynamic(() => import("@/components/workspaces/certificate-designer/CertificateDesignerWorkspace")),
   "infographic": dynamic(() => import("@/components/workspaces/InfographicDesignerWorkspace")),
-  "menu-designer": dynamic(() => import("@/components/workspaces/MenuDesignerWorkspace")),
+  "menu-designer": dynamic(() => import("@/components/workspaces/menu-designer/MenuDesignerWorkspace")),
   "packaging-design": dynamic(() => import("@/components/workspaces/PackagingDesignerWorkspace")),
   "sticker-designer": dynamic(() => import("@/components/workspaces/StickerDesignerWorkspace")),
 
   // ── Phase 3: Apparel & Merchandise ──
   "tshirt-merch": dynamic(() => import("@/components/workspaces/ApparelDesignerWorkspace")),
-  "id-badge": dynamic(() => import("@/components/workspaces/IDCardDesignerWorkspace")),
+  "id-badge": dynamic(() => import("@/components/workspaces/id-badge-designer/IDBadgeDesignerWorkspace")),
 
   // ── Phase 3: Promotional ──
   "gift-voucher": dynamic(() => import("@/components/workspaces/CouponDesignerWorkspace")),
@@ -75,7 +75,7 @@ const workspaceComponents: Record<string, React.ComponentType> = {
 
   // ── Phase 3: Document Tools (New) ──
   "company-profile": dynamic(() => import("@/components/workspaces/CompanyProfileWorkspace")),
-  "business-plan": dynamic(() => import("@/components/workspaces/BusinessPlanWorkspace")),
+  "business-plan": dynamic(() => import("@/components/workspaces/business-plan-writer/BusinessPlanWriterWorkspace")),
   "purchase-order": dynamic(() => import("@/components/workspaces/SalesBookWrappers").then((m) => ({ default: m.PurchaseOrderBookWorkspace }))),
   "delivery-note": dynamic(() => import("@/components/workspaces/SalesBookWrappers").then((m) => ({ default: m.DeliveryNoteBookWorkspace }))),
   "credit-note": dynamic(() => import("@/components/workspaces/SalesBookWrappers").then((m) => ({ default: m.CreditNoteBookWorkspace }))),
@@ -89,7 +89,7 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   "line-sheet": dynamic(() => import("@/components/workspaces/LineSheetWorkspace")),
   "real-estate-listing": dynamic(() => import("@/components/workspaces/RealEstateListingWorkspace")),
   "event-program": dynamic(() => import("@/components/workspaces/EventProgramWorkspace")),
-  "ticket-designer": dynamic(() => import("@/components/workspaces/TicketDesignerWorkspace")),
+  "ticket-designer": dynamic(() => import("@/components/workspaces/ticket-designer/TicketDesignerWorkspace")),
   "cover-letter": dynamic(() => import("@/components/workspaces/CoverLetterWorkspace")),
   "invitation-designer": dynamic(() => import("@/components/workspaces/InvitationDesignerWorkspace")),
   "training-manual": dynamic(() => import("@/components/workspaces/TrainingManualWorkspace")),

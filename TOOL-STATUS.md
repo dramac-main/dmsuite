@@ -1,11 +1,11 @@
 # DMSuite — Tool Development Status Tracker
 
-> **Last updated:** 2026-03-26
+> **Last updated:** 2026-03-27
 > **Total tools registered:** 195+
-> **Tools with workspace UI:** 97
-> **Tools fully complete:** 13
-> **Tools available (ready):** 12
-> **Tools coming soon:** 185
+> **Tools with workspace UI:** 98
+> **Tools fully complete:** 16
+> **Tools available (ready):** 13
+> **Tools coming soon:** 184
 
 ---
 
@@ -70,6 +70,18 @@ All 9 route to `SalesBookDesignerWorkspace` with different `initialDocumentType`
 |---|---------|-----------|-----------|-------|
 | 14 | `diploma-designer` | Diploma & Accreditation | diploma-designer/DiplomaDesignerWorkspace | 8 diploma types, 10 templates, honors system, accreditation, institutional seal, Chiko AI manifest, Figma-style layers, print-ready |
 
+### Ticket & Pass Designer
+
+| # | Tool ID | Tool Name | Workspace | Notes |
+|---|---------|-----------|-----------|-------|
+| 15 | `ticket-designer` | Ticket & Pass Designer | ticket-designer/TicketDesignerWorkspace | 12 ticket types, 10 templates, QR/barcode SVG, boarding pass, wristband, stub/perforation, serial numbering, Chiko AI manifest, Figma-style layers, print-ready |
+
+### ID Badge & Lanyard Designer
+
+| # | Tool ID | Tool Name | Workspace | Notes |
+|---|---------|-----------|-----------|-------|
+| 16 | `id-badge` | ID Badge & Lanyard Designer | id-badge-designer/IDBadgeDesignerWorkspace | 12 badge types, 10 templates, CR80/CR79/CR100 card sizes, batch/bulk generation, dual-sided (front+back), QR code/barcode/magnetic stripe/NFC, lanyard config, 8 role variants, 8 font pairings, 16 accent colors, security features (holographic/watermark/microtext/sequential numbering), Chiko AI manifest (25 actions), Figma-style layers, print-ready |
+
 **Shared architecture (Sales Book):**
 - Store: `useSalesBookEditor` (Zustand + Immer + Zundo undo)
 - Renderer: `BlankFormRenderer` (HTML → print pipeline)
@@ -113,11 +125,11 @@ These have real workspace code (state management, canvas/editor, templates) but 
 | 3 | `envelope` | Envelope | EnvelopeDesignerWorkspace | `SCAFFOLD` |
 | 4 | `certificate` | Certificate | certificate-designer/CertificateDesignerWorkspace | `COMPLETE` |
 | 5 | `infographic` | Infographic | InfographicDesignerWorkspace | `SCAFFOLD` |
-| 6 | `menu-designer` | Menu Designer | MenuDesignerWorkspace | `SCAFFOLD` |
+| 6 | `menu-designer` | Menu Designer | menu-designer/MenuDesignerWorkspace | `COMPLETE` |
 | 7 | `packaging-design` | Packaging Design | PackagingDesignerWorkspace | `SCAFFOLD` |
 | 8 | `sticker-designer` | Sticker Designer | StickerDesignerWorkspace | `SCAFFOLD` |
 | 9 | `tshirt-merch` | T-Shirt & Merch | ApparelDesignerWorkspace | `SCAFFOLD` |
-| 10 | `id-badge` | ID Badge / Card | IDCardDesignerWorkspace | `SCAFFOLD` |
+| 10 | `id-badge` | ID Badge & Lanyard | id-badge-designer/IDBadgeDesignerWorkspace | `COMPLETE` |
 | 11 | `gift-voucher` | Gift Voucher / Coupon | CouponDesignerWorkspace | `SCAFFOLD` |
 | 12 | `calendar-designer` | Calendar Designer | CalendarDesignerWorkspace | `SCAFFOLD` |
 | 13 | `signage` | Signage | SignageDesignerWorkspace | `SCAFFOLD` |
@@ -127,7 +139,7 @@ These have real workspace code (state management, canvas/editor, templates) but 
 | 17 | `product-catalog` | Product Catalog | CatalogWorkspace | `SCAFFOLD` |
 | 18 | `price-list` | Price List | PriceListWorkspace | `SCAFFOLD` |
 | 19 | `company-profile` | Company Profile | CompanyProfileWorkspace | `SCAFFOLD` |
-| 20 | `business-plan` | Business Plan | BusinessPlanWorkspace | `SCAFFOLD` |
+| 20 | `business-plan` | Business Plan Writer | business-plan-writer/BusinessPlanWriterWorkspace | `SCAFFOLD` |
 | 21 | `diploma-designer` | Diploma Designer | diploma-designer/DiplomaDesignerWorkspace | `COMPLETE` |
 | 22 | `statement-of-account` | Statement of Account | StatementOfAccountWorkspace | `COMPLETE` |
 | 23 | `newsletter-print` | Newsletter (Print) | NewsletterPrintWorkspace | `SCAFFOLD` |
@@ -315,3 +327,7 @@ These already have substantial workspace code and would benefit most from a poli
 | 2026-03-26 | ALL tools | Bulk status update: 95 tools changed from ready/beta → coming-soon. Only 10 personally-worked tools remain as "ready": 7 sales books, statement-of-account, contract-template, resume-cv. Added devStatus: "complete" to resume-cv and statement-of-account. | Drake |
 | 2026-03-26 | certificate (Certificate Designer) | Full build: Zustand+Immer+Zundo store, 10 certificate types, 10 visual templates, HTML/CSS renderer with ornamental borders/seals/signatures, 4-tab editor (Content/Details/Style/Format), Figma-style layers panel, Chiko AI manifest (16 actions), print-ready, 0 TS errors | Drake |
 | 2026-03-26 | diploma-designer (Diploma & Accreditation) | Full build: Zustand+Immer+Zundo store, 8 diploma types, 10 templates, honors system (8 levels), accreditation fields, HTML/CSS renderer with institutional seal, 4-tab editor, Figma-style layers, Chiko AI manifest (18 actions), print-ready, 0 TS errors | Drake |
+| 2026-03-26 | ticket-designer (Ticket & Pass Designer) | Full build: Zustand+Immer+Zundo store, 12 ticket types (event/concert/movie/sports/boarding-pass/transit/vip/festival/raffle/parking/admission/conference), 10 templates, 7 sizes, QR code & Code128 barcode SVG generation, boarding pass layout, wristband layout, stub/perforation/serial numbering, 4-tab editor (Content/Details/Style/Format), Figma-style layers panel, Chiko AI manifest (17 actions), print-ready, 0 TS errors | Drake |
+| 2026-03-27 | menu-designer (Menu Designer) | Full build: Zustand+Immer+Zundo store, 13 menu types (restaurant/café/bar-cocktail/fine-dining/buffet/prix-fixe/wedding-event/takeaway/food-truck/wine-list/kids/dessert/brunch), 12 visual templates, 30 currencies, 10 dietary tags, 10 font pairings, 5 price display styles, 11 divider styles, 3 column layouts, 6 page sizes (A4/Letter/A5/DL/Square/Tabloid) with landscape variants, 3 fold types (flat/bi-fold/tri-fold), paginated HTML/CSS renderer, 4-tab editor (Content/Menu/Style/Format), Figma-style layers panel, Chiko AI manifest (17 actions), print-ready, Zambian default (ZMW currency, Lusaka sample data) | Drake |
+| 2026-03-27 | business-plan (Business Plan Writer) | Full build: Zustand+Immer+Zundo store, 8 plan types (startup/traditional/strategic/investor/lean/franchise/nonprofit/internal), 8 visual templates, 12 toggleable sections, SWOT grid, TAM/SAM/SOM visual, financial projections table, team cards, competitor analysis, 4 cover page styles, 5 header styles, paginated HTML/CSS renderer with cover/TOC, 5-tab editor (Content/Sections/Financials/Style/Format), Figma-style layers panel, Chiko AI manifest (16 actions + activity logging), print-ready, 0 TS errors | Drake |
+| 2026-03-27 | id-badge (ID Badge & Lanyard Designer) | Full build: Zustand+Immer+Zundo store, 12 badge types (corporate/student/visitor/event/conference/contractor/vip/membership/security/volunteer/intern), 10 templates, CR80/CR79/CR100/custom card sizes, batch/bulk CSV import+manual add, dual-sided design (front+back), QR code (4 content types)/barcode (Code128/Code39)/magnetic stripe/NFC zone, lanyard config (breakaway clip/badge holder/branding), 8 role variants with colors, 8 font pairings, 16 accent colors, security features (holographic zone/watermark/microtext border/sequential numbering), 5-tab editor (Content/Batch/Back/Style/Format), Figma-style layers panel, Chiko AI manifest (25 actions + activity logging), print-ready multi-up layouts (single/2-up/4-up/8-up/10-up), 0 TS errors | Drake |
