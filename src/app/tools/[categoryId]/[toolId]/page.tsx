@@ -249,8 +249,8 @@ export default function ToolWorkspacePage() {
 
   // ── Project resolution — GATED on hasSynced ──
   // Must wait for sync to complete so server projects are available.
-  // Without this gate, cleared local data → auto-creates blank project before
-  // sync brings in server projects → duplicate projects.
+  // Industry-standard pattern (Figma/Canva): auto-select most recent project,
+  // don't force picker. User can switch via the Projects button in the header.
   useEffect(() => {
     if (!toolId || !hasSynced) return; // Wait for sync before resolving
     if (hasResolvedRef.current) return; // Only resolve once per mount
@@ -259,30 +259,34 @@ export default function ToolWorkspacePage() {
 
     hasResolvedRef.current = true;
 
+    // Re-read projects NOW (post-sync) to get the freshest list
+    const freshToolProjects = useProjectStore.getState().projects.filter((p) => p.toolId === toolId);
+
     if (urlProjectId) {
       // URL has a project ID — validate it exists
-      const exists = projects.some((p) => p.id === urlProjectId);
+      const exists = useProjectStore.getState().projects.some((p) => p.id === urlProjectId);
       if (exists) {
         setActiveProjectId(urlProjectId);
         projectIdRef.current = urlProjectId;
         touchProject(urlProjectId);
+      } else if (freshToolProjects.length > 0) {
+        // Invalid URL but tool has projects — auto-select most recent
+        const mostRecent = [...freshToolProjects].sort((a, b) => b.updatedAt - a.updatedAt)[0];
+        navigateToProject(mostRecent.id);
       } else {
-        // Invalid project ID in URL — show picker or auto-create
-        if (hasExistingProjects) {
-          setShowProjectPicker(true);
-        } else {
-          // Invalid URL and no projects exist — create fresh immediately
-          const cat = toolCategories.find((c) => c.id === categoryId);
-          const t = cat?.tools.find((t) => t.id === toolId);
-          if (t) {
-            const newId = addProject(toolId, `${t.name} Project`);
-            navigateToProject(newId);
-          }
+        // Invalid URL and no projects exist — create fresh immediately
+        const cat = toolCategories.find((c) => c.id === categoryId);
+        const t = cat?.tools.find((t) => t.id === toolId);
+        if (t) {
+          const newId = addProject(toolId, `${t.name} Project`);
+          navigateToProject(newId);
         }
       }
-    } else if (hasExistingProjects) {
-      // No project in URL but tool has projects — show picker
-      setShowProjectPicker(true);
+    } else if (freshToolProjects.length > 0) {
+      // No project in URL but tool has projects — auto-select most recent
+      // (Industry standard: resume where you left off, switch via header)
+      const mostRecent = [...freshToolProjects].sort((a, b) => b.updatedAt - a.updatedAt)[0];
+      navigateToProject(mostRecent.id);
     } else {
       // First-time visit — create a fresh project immediately
       const cat = toolCategories.find((c) => c.id === categoryId);
@@ -434,10 +438,9 @@ export default function ToolWorkspacePage() {
             onCreateNew={handleCreateNewProject}
             onClose={() => {
               setShowProjectPicker(false);
-              // If no project selected, load most recent
-              if (!activeProjectId && toolProjects.length > 0) {
-                handleSelectProject(toolProjects[0].id);
-              } else if (!activeProjectId) {
+              // If no project is active yet, create a fresh one.
+              // Never auto-load an old project on dismiss — that's confusing.
+              if (!activeProjectId) {
                 handleCreateNewProject();
               }
             }}
@@ -552,15 +555,17 @@ export default function ToolWorkspacePage() {
               <div className="flex flex-col items-center gap-3">
                 <div className="size-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
                 <p className="text-xs text-gray-500">
-                  {activeProjectId ? "Loading project\u2026" : "Setting up workspace\u2026"}
+                  {activeProjectId ? "Loading project\u2026" : hasSynced ? "Preparing workspace\u2026" : "Syncing projects\u2026"}
                 </p>
               </div>
             </div>
           )}
 
           {/* ── Full-height workspace — only rendered when project data is ready ── */}
+          {/* key={activeProjectId} forces React to FULLY unmount + remount on project switch,
+              guaranteeing all local useState/useRef are fresh. Belt-and-suspenders safety. */}
           {activeProjectId && projectReady && (
-            <div className="flex-1 overflow-hidden">
+            <div key={activeProjectId} className="flex-1 overflow-hidden">
               <WorkspaceComponent />
             </div>
           )}
