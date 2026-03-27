@@ -110,6 +110,166 @@ function getSalesBookAdapter(): StoreAdapter {
   };
 }
 
+function getCoverLetterAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useCoverLetterEditor } = require("@/stores/cover-letter-editor");
+  return {
+    getSnapshot: () => {
+      const { form } = useCoverLetterEditor.getState();
+      return { form };
+    },
+    restoreSnapshot: (data) => {
+      if (data.form) {
+        useCoverLetterEditor.getState().setForm(data.form as never);
+      }
+    },
+    resetStore: () => {
+      useCoverLetterEditor.getState().resetForm();
+      nukePersistStorage("dmsuite-cover-letter");
+    },
+  };
+}
+
+function getWorksheetAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useWorksheetEditor } = require("@/stores/worksheet-editor");
+  return {
+    getSnapshot: () => {
+      const { form } = useWorksheetEditor.getState();
+      return { form };
+    },
+    restoreSnapshot: (data) => {
+      if (data.form) {
+        useWorksheetEditor.getState().setForm(data.form as never);
+      }
+    },
+    resetStore: () => {
+      useWorksheetEditor.getState().resetForm();
+      nukePersistStorage("dmsuite-worksheet-designer");
+    },
+  };
+}
+
+function getBusinessPlanAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useBusinessPlanEditor } = require("@/stores/business-plan-editor");
+  return {
+    getSnapshot: () => {
+      const { form } = useBusinessPlanEditor.getState();
+      return { form };
+    },
+    restoreSnapshot: (data) => {
+      if (data.form) {
+        useBusinessPlanEditor.getState().setForm(data.form as never);
+      }
+    },
+    resetStore: () => {
+      useBusinessPlanEditor.getState().resetForm();
+      nukePersistStorage("dmsuite-business-plan");
+    },
+  };
+}
+
+function getMenuDesignerAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useMenuDesignerEditor } = require("@/stores/menu-designer-editor");
+  return {
+    getSnapshot: () => {
+      const { form } = useMenuDesignerEditor.getState();
+      return { form };
+    },
+    restoreSnapshot: (data) => {
+      if (data.form) {
+        useMenuDesignerEditor.getState().setForm(data.form as never);
+      }
+    },
+    resetStore: () => {
+      useMenuDesignerEditor.getState().resetForm();
+      nukePersistStorage("dmsuite-menu-designer");
+    },
+  };
+}
+
+function getIDBadgeAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useIDBadgeEditor } = require("@/stores/id-badge-editor");
+  return {
+    getSnapshot: () => {
+      const { form } = useIDBadgeEditor.getState();
+      return { form };
+    },
+    restoreSnapshot: (data) => {
+      if (data.form) {
+        useIDBadgeEditor.getState().setForm(data.form as never);
+      }
+    },
+    resetStore: () => {
+      useIDBadgeEditor.getState().resetForm();
+      nukePersistStorage("dmsuite-id-badge");
+    },
+  };
+}
+
+function getCertificateAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useCertificateEditor } = require("@/stores/certificate-editor");
+  return {
+    getSnapshot: () => {
+      const { form } = useCertificateEditor.getState();
+      return { form };
+    },
+    restoreSnapshot: (data) => {
+      if (data.form) {
+        useCertificateEditor.getState().setForm(data.form as never);
+      }
+    },
+    resetStore: () => {
+      useCertificateEditor.getState().resetForm();
+      nukePersistStorage("dmsuite-certificate");
+    },
+  };
+}
+
+function getDiplomaAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useDiplomaEditor } = require("@/stores/diploma-editor");
+  return {
+    getSnapshot: () => {
+      const { form } = useDiplomaEditor.getState();
+      return { form };
+    },
+    restoreSnapshot: (data) => {
+      if (data.form) {
+        useDiplomaEditor.getState().setForm(data.form as never);
+      }
+    },
+    resetStore: () => {
+      useDiplomaEditor.getState().resetForm();
+      nukePersistStorage("dmsuite-diploma-editor");
+    },
+  };
+}
+
+function getTicketAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useTicketEditor } = require("@/stores/ticket-editor");
+  return {
+    getSnapshot: () => {
+      const { form } = useTicketEditor.getState();
+      return { form };
+    },
+    restoreSnapshot: (data) => {
+      if (data.form) {
+        useTicketEditor.getState().setForm(data.form as never);
+      }
+    },
+    resetStore: () => {
+      useTicketEditor.getState().resetForm();
+      nukePersistStorage("dmsuite-ticket-designer");
+    },
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Generic adapter for tools that don't have dedicated stores
 // ---------------------------------------------------------------------------
@@ -130,16 +290,26 @@ const _adapterCache: Record<string, StoreAdapter> = {};
 
 /** Master mapping: toolId → adapter factory */
 const ADAPTER_FACTORIES: Record<string, () => StoreAdapter> = {
+  // Document editors (invoice family shares one store)
   "contract-template": getContractAdapter,
   "invoice-designer": getInvoiceAdapter,
-  "quote-estimate": getInvoiceAdapter,       // Uses same invoice store
+  "quote-estimate": getInvoiceAdapter,
   "receipt-designer": getInvoiceAdapter,
   "purchase-order": getInvoiceAdapter,
   "delivery-note": getInvoiceAdapter,
   "credit-note": getInvoiceAdapter,
   "proforma-invoice": getInvoiceAdapter,
   "resume-cv": getResumeAdapter,
+  "cover-letter": getCoverLetterAdapter,
   "sales-book": getSalesBookAdapter,
+  "business-plan": getBusinessPlanAdapter,
+  // Design editors
+  "menu-designer": getMenuDesignerAdapter,
+  "id-badge": getIDBadgeAdapter,
+  "certificate": getCertificateAdapter,
+  "diploma-designer": getDiplomaAdapter,
+  "ticket-designer": getTicketAdapter,
+  "worksheet-designer": getWorksheetAdapter,
 };
 
 /**

@@ -525,6 +525,101 @@ const canUndo = pastStates.length > 0;
 const canRedo = futureStates.length > 0;
 ```
 
+### Project Data Integration (Store Adapters)
+
+Every tool whose Zustand store uses `persist` middleware **MUST** have a store adapter registered in `src/lib/store-adapters.ts`. Without an adapter, project data will **leak between projects** via localStorage rehydration.
+
+#### How It Works
+
+The project system uses a write-through cache architecture:
+1. **Save:** IndexedDB (immediate) + Supabase (debounced 3s with retry)
+2. **Load:** IndexedDB → Supabase → fresh reset (fallback)
+3. **Project switch:** `key={activeProjectId}` forces full component remount, then adapter restores the new project's snapshot
+
+Store adapters define three functions:
+- `getSnapshot()` — returns the serializable state to save per-project
+- `restoreSnapshot(data)` — replaces store state from a previously saved snapshot
+- `resetStore()` — resets state to defaults AND nukes the localStorage persist key
+
+#### Step 1: Create the Adapter Function
+
+Add a lazy-loaded adapter function in `src/lib/store-adapters.ts`:
+
+```typescript
+function get{ToolName}Adapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { use{ToolName}Editor } = require("@/stores/{tool-id}-editor");
+  return {
+    getSnapshot: () => {
+      const { form } = use{ToolName}Editor.getState();
+      return { form };
+    },
+    restoreSnapshot: (data) => {
+      if (data.form) {
+        use{ToolName}Editor.getState().setForm(data.form as never);
+      }
+    },
+    resetStore: () => {
+      use{ToolName}Editor.getState().resetForm();
+      // CRITICAL: Nuke localStorage so persist doesn't rehydrate old data
+      nukePersistStorage("dmsuite-{tool-id}");
+    },
+  };
+}
+```
+
+> **Why `require()` instead of `import`?** Adapters are lazily loaded — the store module is only imported when the tool is first opened. This prevents every store from being bundled into the initial page load.
+
+#### Step 2: Register in ADAPTER_FACTORIES
+
+Add the mapping in the `ADAPTER_FACTORIES` object in the same file:
+
+```typescript
+const ADAPTER_FACTORIES: Record<string, () => StoreAdapter> = {
+  // ... existing entries
+  "{tool-id}": get{ToolName}Adapter,
+};
+```
+
+The key is the **tool ID** from the URL path `/tools/[categoryId]/[toolId]`.
+
+#### Step 3: Ensure Store Has Required Methods
+
+Your Zustand store must expose:
+- `setForm(data)` — replaces the entire form state (used by `restoreSnapshot`)
+- `resetForm()` — resets to factory defaults (used by `resetStore`)
+
+Both are part of the standard store template in this guide.
+
+#### When Adapters Are NOT Needed
+
+- **Canvas editor store** (`editor.ts`) — no `persist` middleware, state is ephemeral
+- **System stores** (preferences, sidebar, notifications, chiko) — global state, not per-project
+- **Wizard stores** — UI navigation state, not document content
+
+#### Currently Registered Adapters
+
+| Tool ID | Adapter Function | Persist Key |
+|---------|-----------------|-------------|
+| `contract-template` | `getContractAdapter` | `dmsuite-contract` |
+| `invoice-designer` | `getInvoiceAdapter` | `dmsuite-invoice` |
+| `quote-estimate` | `getInvoiceAdapter` | `dmsuite-invoice` |
+| `receipt-designer` | `getInvoiceAdapter` | `dmsuite-invoice` |
+| `purchase-order` | `getInvoiceAdapter` | `dmsuite-invoice` |
+| `delivery-note` | `getInvoiceAdapter` | `dmsuite-invoice` |
+| `credit-note` | `getInvoiceAdapter` | `dmsuite-invoice` |
+| `proforma-invoice` | `getInvoiceAdapter` | `dmsuite-invoice` |
+| `resume-cv` | `getResumeAdapter` | `dmsuite-resume` |
+| `cover-letter` | `getCoverLetterAdapter` | `dmsuite-cover-letter` |
+| `sales-book` | `getSalesBookAdapter` | `dmsuite-sales-book` |
+| `business-plan` | `getBusinessPlanAdapter` | `dmsuite-business-plan` |
+| `menu-designer` | `getMenuDesignerAdapter` | `dmsuite-menu-designer` |
+| `id-badge` | `getIDBadgeAdapter` | `dmsuite-id-badge` |
+| `certificate` | `getCertificateAdapter` | `dmsuite-certificate` |
+| `diploma-designer` | `getDiplomaAdapter` | `dmsuite-diploma-editor` |
+| `ticket-designer` | `getTicketAdapter` | `dmsuite-ticket-designer` |
+| `worksheet-designer` | `getWorksheetAdapter` | `dmsuite-worksheet-designer` |
+
 ---
 
 ## 8. TAB SYSTEM & EDITOR PANEL
@@ -1920,6 +2015,13 @@ Before marking any tool as `devStatus: "complete"`:
 - [ ] `workspace:progress` dispatched with milestones
 - [ ] `workspace:progress` dispatched with `exported` on export
 
+### Project Data
+- [ ] Store adapter created in `src/lib/store-adapters.ts` (if tool has `persist` store)
+- [ ] Tool ID registered in `ADAPTER_FACTORIES` map
+- [ ] `resetStore()` calls `nukePersistStorage("dmsuite-{tool-id}")`
+- [ ] `restoreSnapshot()` correctly restores all persisted state
+- [ ] Project switch does not leak data from previous project
+
 ### Visual
 - [ ] Dark mode looks correct (all surfaces, borders, text)
 - [ ] Light mode looks correct (all variants applied)
@@ -1967,7 +2069,8 @@ Below is a minimal but complete scaffold for a new tab-based editor tool. Copy a
 1. `src/data/tools.ts` — Add tool definition (or update `devStatus`)
 2. `src/app/tools/[categoryId]/[toolId]/page.tsx` — Add dynamic import case
 3. `src/data/credit-costs.ts` — Add credit mapping
-4. `TOOL-STATUS.md` — Update tracker
+4. `src/lib/store-adapters.ts` — Add store adapter + register in `ADAPTER_FACTORIES` (if tool uses `persist`)
+5. `TOOL-STATUS.md` — Update tracker
 
 ---
 
