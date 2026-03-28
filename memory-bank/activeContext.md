@@ -1,9 +1,42 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Diploma Canvas Rewrite + Vector PDF — COMPLETE ✅
+**Phase:** Certificate + Diploma Architecture Fix — COMPLETE ✅
 
-### Session 148+: Vector PDF Renderer + Diploma Canvas Rewrite
+### Session 149+: Certificate & Diploma — Pattern A Rewiring
+
+#### Problem Discovered
+Two parallel implementations existed for certificate and diploma tools:
+- **Canvas2D** (was active): procedural Canvas2D rendering, canvas stores — visually poor output
+- **Pattern A HTML/CSS** (was dormant): fully-built 7-file workspace folders in `certificate-designer/` and `diploma-designer/` — correct architecture per TOOL-CREATION-GUIDE.md
+
+Everything (routing, store adapters, Chiko manifests) was wired to the Canvas2D versions despite Pattern A workspaces being complete and superior.
+
+#### What Was Done
+
+1. **page.tsx** — routing switched from Canvas2D to Pattern A folders for both tools
+2. **store-adapters.ts** — `getCertificateAdapter()` and `getDiplomaAdapter()` now use `certificate-editor` / `diploma-editor` stores (form-based, persist keys `dmsuite-certificate` / `dmsuite-diploma-editor`)
+3. **chiko/manifests/certificate.ts** — Fully rewritten: uses `useCertificateEditor`, form-based actions (updateContent, updateOrganization, updateEvent, updateDates, setCertificateType, add/update/removeSignatory, updateSeal, updateStyle, updateFormat, resetForm, exportDocument via `onPrintRef`)
+4. **chiko/manifests/diploma.ts** — Fully rewritten: uses `useDiplomaEditor`, form-based actions (updateInstitution, updateRecipient, updateProgram, updateConferral, updateAccreditation, updateDates, updateReference, setDiplomaType, add/update/removeSignatory by ID, updateSeal, updateStyle, updateFormat, resetForm, exportDocument via `onPrintRef`)
+5. **certificate-designer/CertificateDesignerWorkspace.tsx** — Chiko re-enabled with `chikoOnPrintRef` wiring (was disabled with comment "replaced by canvas workspace")
+6. **diploma-designer/DiplomaDesignerWorkspace.tsx** — Passes `onPrintRef` to manifest factory
+7. **CertificateDesignerWorkspace.tsx / DiplomaCanvasWorkspace.tsx** (legacy canvas) — Updated to compile with new manifest interface (`onPrintRef` instead of removed `onExportPng/onExportPdf/onCopy`)
+
+#### Architecture: Active Certificate/Diploma Pipeline
+```
+useCertificateEditor / useDiplomaEditor (Zustand + persist + immer + temporal)
+  ↓ form state
+CertificateRenderer / DiplomaRenderer (HTML/CSS templates with inline SVG)
+  ↓ print
+printHTML() → browser print dialog
+```
+
+#### Verification
+- TypeScript: 0 errors (`npx tsc --noEmit` — clean)
+- Committed: fe8695e — "fix(certificate,diploma): wire Pattern A workspaces to routing, adapters, and Chiko manifests"
+- Pushed to origin/main
+
+---
 
 #### What Was Done
 
