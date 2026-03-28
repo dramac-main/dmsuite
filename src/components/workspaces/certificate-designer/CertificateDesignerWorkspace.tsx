@@ -117,7 +117,6 @@ export default function CertificateDesignerWorkspace() {
 
   // Derived
   const typeConfig = CERTIFICATE_TYPES.find((t) => t.id === form.certificateType);
-  const pageDim = PAGE_PX[`${form.format.pageSize}-${form.format.orientation}`] ?? PAGE_PX["a4-landscape"];
 
   // Dispatch workspace:dirty on form changes
   const formRef = useRef(form);

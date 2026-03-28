@@ -201,22 +201,35 @@ function CornerFlourish({ color, size = 90, position }: {
 
   return (
     <svg
-      width={size} height={size} viewBox="0 0 100 100" fill="none"
+      width={size} height={size} viewBox="0 0 120 120" fill="none"
       style={{ position: "absolute", ...positions[position], transform: transforms[position], pointerEvents: "none" }}
     >
-      {/* Main swirl */}
-      <path d="M5,5 C5,5 15,5 20,10 C25,15 20,25 15,20 C10,15 25,10 30,15 C35,20 25,30 20,25" stroke={color} strokeWidth="2" fill="none" />
-      <path d="M5,5 C5,25 25,25 25,5" stroke={color} strokeWidth="1.5" fill="none" opacity="0.6" />
-      {/* Leaf/petal shapes */}
-      <path d="M30,8 C35,3 45,5 40,12 C35,19 28,12 30,8Z" fill={color} opacity="0.7" />
-      <path d="M8,30 C3,35 5,45 12,40 C19,35 12,28 8,30Z" fill={color} opacity="0.7" />
-      {/* Spiral detail */}
-      <path d="M15,15 C20,10 30,12 28,20 C26,28 18,25 20,18 C22,14 26,16 24,20" stroke={color} strokeWidth="1.2" fill="none" opacity="0.5" />
-      {/* Dot accents */}
-      <circle cx="38" cy="5" r="2" fill={color} opacity="0.5" />
-      <circle cx="5" cy="38" r="2" fill={color} opacity="0.5" />
-      <circle cx="45" cy="12" r="1.5" fill={color} opacity="0.4" />
-      <circle cx="12" cy="45" r="1.5" fill={color} opacity="0.4" />
+      {/* Primary volute scroll */}
+      <path d="M4,4 C4,20 10,28 18,32 C26,36 34,28 30,20 C26,12 18,14 20,22 C22,30 32,34 40,28 C48,22 44,12 36,10 C28,8 22,14 26,20" stroke={color} strokeWidth="2.2" fill="none" />
+      {/* Secondary scroll arm */}
+      <path d="M4,4 C12,4 28,8 36,16 C44,24 38,36 28,32 C18,28 22,18 30,18 C38,18 42,26 36,32" stroke={color} strokeWidth="1.8" fill="none" opacity="0.7" />
+      {/* Acanthus leaf shapes */}
+      <path d="M40,6 C48,2 58,6 54,16 C50,26 38,20 40,12 C42,6 50,8 48,14Z" fill={color} opacity="0.55" />
+      <path d="M6,40 C2,48 6,58 16,54 C26,50 20,38 12,40 C6,42 8,50 14,48Z" fill={color} opacity="0.55" />
+      <path d="M52,14 C56,8 66,10 62,20 C58,30 48,24 52,18Z" fill={color} opacity="0.4" />
+      <path d="M14,52 C8,56 10,66 20,62 C30,58 24,48 18,52Z" fill={color} opacity="0.4" />
+      {/* Tight inner spiral */}
+      <path d="M14,14 C20,8 32,10 30,22 C28,34 16,30 18,20 C20,14 28,16 26,22 C24,26 20,24 22,20" stroke={color} strokeWidth="1.4" fill="none" opacity="0.6" />
+      {/* Fleur-de-lis tip */}
+      <path d="M2,2 L2,10 C2,10 6,6 10,10 L10,2Z" fill={color} opacity="0.65" />
+      {/* Berry / dot cluster */}
+      <circle cx="50" cy="6" r="2.5" fill={color} opacity="0.5" />
+      <circle cx="6" cy="50" r="2.5" fill={color} opacity="0.5" />
+      <circle cx="58" cy="10" r="2" fill={color} opacity="0.4" />
+      <circle cx="10" cy="58" r="2" fill={color} opacity="0.4" />
+      <circle cx="64" cy="16" r="1.5" fill={color} opacity="0.35" />
+      <circle cx="16" cy="64" r="1.5" fill={color} opacity="0.35" />
+      {/* Tendril extensions */}
+      <path d="M44,28 C52,32 58,28 60,22" stroke={color} strokeWidth="1.2" fill="none" opacity="0.4" />
+      <path d="M28,44 C32,52 28,58 22,60" stroke={color} strokeWidth="1.2" fill="none" opacity="0.4" />
+      {/* Connecting vine */}
+      <path d="M60,4 C62,8 66,10 70,8" stroke={color} strokeWidth="1" fill="none" opacity="0.3" />
+      <path d="M4,60 C8,62 10,66 8,70" stroke={color} strokeWidth="1" fill="none" opacity="0.3" />
     </svg>
   );
 }
@@ -242,20 +255,35 @@ function ScrollworkCorner({ color, size = 100, position }: {
 
   return (
     <svg
-      width={size} height={size} viewBox="0 0 120 120" fill="none"
+      width={size} height={size} viewBox="0 0 140 140" fill="none"
       style={{ position: "absolute", ...positions[position], transform: transforms[position], pointerEvents: "none" }}
     >
-      {/* Main bold scrollwork */}
-      <path d="M0,0 C0,40 30,50 50,40 C70,30 40,60 60,60 C80,60 60,30 80,20 C100,10 100,0 120,0" stroke={color} strokeWidth="3" fill="none" />
-      <path d="M0,0 C10,30 40,40 45,25 C50,10 30,5 20,15 C10,25 25,35 35,28" stroke={color} strokeWidth="2.5" fill="none" />
-      <path d="M0,0 C0,15 10,25 25,20 C40,15 30,0 15,5" stroke={color} strokeWidth="2" fill="none" opacity="0.7" />
-      {/* Fill shapes: leaves and petals */}
-      <path d="M20,5 C30,0 40,5 35,15 C30,25 15,15 20,5Z" fill={color} opacity="0.5" />
-      <path d="M5,20 C0,30 5,40 15,35 C25,30 15,15 5,20Z" fill={color} opacity="0.5" />
-      <path d="M50,15 C55,8 65,10 62,18 C59,26 45,22 50,15Z" fill={color} opacity="0.4" />
-      <path d="M15,50 C8,55 10,65 18,62 C26,59 22,45 15,50Z" fill={color} opacity="0.4" />
-      {/* Crown / fleur-de-lis hint */}
-      <path d="M3,3 L3,12 L7,8 L12,12 L12,3Z" fill={color} opacity="0.6" />
+      {/* Bold primary scroll curve */}
+      <path d="M0,0 C0,50 30,60 55,48 C80,36 50,70 70,70 C90,70 70,38 92,24 C114,10 120,0 140,0" stroke={color} strokeWidth="3.5" fill="none" />
+      {/* Inner scroll with tighter curve */}
+      <path d="M0,0 C10,36 45,48 52,30 C59,12 36,6 24,18 C12,30 30,42 42,34 C54,26 48,14 38,16" stroke={color} strokeWidth="2.8" fill="none" />
+      {/* Tertiary fine detail curve */}
+      <path d="M0,0 C0,18 12,30 28,24 C44,18 34,2 18,6 C8,8 12,18 20,16" stroke={color} strokeWidth="2" fill="none" opacity="0.7" />
+      {/* Volute spiral center */}
+      <path d="M18,18 C24,10 38,12 36,26 C34,40 20,36 22,24 C24,16 32,18 30,24 C28,28 24,26 26,22" stroke={color} strokeWidth="1.6" fill="none" opacity="0.5" />
+      {/* Acanthus leaf fills */}
+      <path d="M24,4 C36,0 48,6 42,18 C36,30 18,20 24,10 C28,4 38,8 34,16Z" fill={color} opacity="0.45" />
+      <path d="M4,24 C0,36 6,48 18,42 C30,36 20,18 10,24 C4,28 8,38 16,34Z" fill={color} opacity="0.45" />
+      <path d="M56,16 C62,8 74,12 68,24 C62,36 50,28 56,20Z" fill={color} opacity="0.35" />
+      <path d="M16,56 C8,62 12,74 24,68 C36,62 28,50 20,56Z" fill={color} opacity="0.35" />
+      {/* Palmette / fan shape at corner */}
+      <path d="M2,2 L2,14 C2,14 7,8 12,14 C12,14 7,8 14,2Z" fill={color} opacity="0.6" />
+      <path d="M0,6 C4,10 8,8 6,4" stroke={color} strokeWidth="1.2" fill="none" opacity="0.5" />
+      {/* Rosette dots */}
+      <circle cx="60" cy="6" r="3" fill={color} opacity="0.45" />
+      <circle cx="6" cy="60" r="3" fill={color} opacity="0.45" />
+      <circle cx="72" cy="12" r="2.2" fill={color} opacity="0.35" />
+      <circle cx="12" cy="72" r="2.2" fill={color} opacity="0.35" />
+      <circle cx="82" cy="20" r="1.8" fill={color} opacity="0.3" />
+      <circle cx="20" cy="82" r="1.8" fill={color} opacity="0.3" />
+      {/* Extension tendrils */}
+      <path d="M70,30 C80,36 88,30 92,22" stroke={color} strokeWidth="1.4" fill="none" opacity="0.35" />
+      <path d="M30,70 C36,80 30,88 22,92" stroke={color} strokeWidth="1.4" fill="none" opacity="0.35" />
     </svg>
   );
 }
@@ -269,16 +297,31 @@ function SideOrnament({ color, height, position }: {
   const posStyle: React.CSSProperties = position === "left"
     ? { position: "absolute", left: 18, top: "50%", transform: "translateY(-50%)" }
     : { position: "absolute", right: 18, top: "50%", transform: "translateY(-50%) scaleX(-1)" };
+  const h = Math.min(height * 0.45, 260);
 
   return (
-    <svg width="20" height={Math.min(height * 0.4, 200)} viewBox="0 0 20 200" style={{ ...posStyle, pointerEvents: "none" }}>
-      {/* Vertical vine with curls */}
-      <line x1="10" y1="0" x2="10" y2="200" stroke={color} strokeWidth="1" opacity="0.3" />
-      <path d="M10,30 C20,25 20,15 10,20" stroke={color} strokeWidth="1.5" fill="none" opacity="0.5" />
-      <path d="M10,60 C0,55 0,45 10,50" stroke={color} strokeWidth="1.5" fill="none" opacity="0.5" />
-      <path d="M10,100 C20,95 20,85 10,90" stroke={color} strokeWidth="1.5" fill="none" opacity="0.5" />
-      <path d="M10,140 C0,135 0,125 10,130" stroke={color} strokeWidth="1.5" fill="none" opacity="0.5" />
-      <path d="M10,170 C20,165 20,155 10,160" stroke={color} strokeWidth="1.5" fill="none" opacity="0.5" />
+    <svg width="28" height={h} viewBox={`0 0 28 260`} style={{ ...posStyle, pointerEvents: "none" }}>
+      {/* Central vine stem */}
+      <path d="M14,0 C14,20 14,40 14,260" stroke={color} strokeWidth="1" opacity="0.25" />
+      {/* Repeating leaf + curl motifs along the vine */}
+      {[20, 60, 100, 140, 180, 220].map((y, i) => (
+        <g key={i} opacity={i % 2 === 0 ? 0.55 : 0.45}>
+          {/* Right-facing leaf */}
+          <path d={`M14,${y} C22,${y - 8} 26,${y - 4} 22,${y + 2} C18,${y + 8} 14,${y + 4} 14,${y}`} fill={color} opacity="0.5" />
+          {/* Left-facing leaf (alternating) */}
+          <path d={`M14,${y + 20} C6,${y + 12} 2,${y + 16} 6,${y + 22} C10,${y + 28} 14,${y + 24} 14,${y + 20}`} fill={color} opacity="0.45" />
+          {/* Curl detail */}
+          <path d={`M14,${y + 8} C18,${y + 4} 20,${y + 8} 18,${y + 12}`} stroke={color} strokeWidth="1" fill="none" opacity="0.4" />
+          {/* Berry dot */}
+          <circle cx={i % 2 === 0 ? 22 : 6} cy={y + 10} r="1.5" fill={color} opacity="0.35" />
+        </g>
+      ))}
+      {/* Top terminal flourish */}
+      <path d="M14,8 C18,2 22,4 20,10 C18,14 14,12 14,8" fill={color} opacity="0.5" />
+      <path d="M14,8 C10,2 6,4 8,10 C10,14 14,12 14,8" fill={color} opacity="0.5" />
+      {/* Bottom terminal flourish */}
+      <path d="M14,252 C18,258 22,256 20,250 C18,246 14,248 14,252" fill={color} opacity="0.5" />
+      <path d="M14,252 C10,258 6,256 8,250 C10,246 14,248 14,252" fill={color} opacity="0.5" />
     </svg>
   );
 }
@@ -373,32 +416,55 @@ function MedalRibbon({ color, size = 70 }: { color: string; size?: number }) {
   );
 }
 
-/** Decorative line divider with diamond */
+/** Decorative line divider with diamond and ornamental endpoints */
 function OrnamentDivider({ accent, width = 200 }: { accent: string; width?: number }) {
+  const hw = width / 2;
   return (
-    <svg width={width} height="12" viewBox={`0 0 ${width} 12`} fill="none" xmlns="http://www.w3.org/2000/svg">
-      <line x1="0" y1="6" x2={width * 0.35} y2="6" stroke={accent} strokeWidth="1" opacity="0.4" />
-      <circle cx={width * 0.38} cy="6" r="2" fill={accent} opacity="0.5" />
-      <path d={`M${width * 0.42},6 L${width * 0.5},2 L${width * 0.58},6 L${width * 0.5},10 Z`} fill={accent} opacity="0.3" />
-      <circle cx={width * 0.62} cy="6" r="2" fill={accent} opacity="0.5" />
-      <line x1={width * 0.65} y1="6" x2={width} y2="6" stroke={accent} strokeWidth="1" opacity="0.4" />
+    <svg width={width} height="16" viewBox={`0 0 ${width} 16`} fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Left line */}
+      <line x1="0" y1="8" x2={hw - 18} y2="8" stroke={accent} strokeWidth="0.8" opacity="0.4" />
+      {/* Left endpoint curl */}
+      <path d={`M${4},8 C${8},4 ${12},6 ${10},8 C${8},10 ${4},12 ${4},8`} fill={accent} opacity="0.3" />
+      {/* Left rosette */}
+      <circle cx={hw - 14} cy="8" r="2.5" fill={accent} opacity="0.45" />
+      <circle cx={hw - 14} cy="8" r="1.2" fill={accent} opacity="0.25" />
+      {/* Center diamond with ring */}
+      <path d={`M${hw},3 L${hw + 5},8 L${hw},13 L${hw - 5},8 Z`} fill={accent} opacity="0.3" />
+      <path d={`M${hw},5 L${hw + 3},8 L${hw},11 L${hw - 3},8 Z`} fill={accent} opacity="0.15" />
+      {/* Right rosette */}
+      <circle cx={hw + 14} cy="8" r="2.5" fill={accent} opacity="0.45" />
+      <circle cx={hw + 14} cy="8" r="1.2" fill={accent} opacity="0.25" />
+      {/* Right line */}
+      <line x1={hw + 18} y1="8" x2={width} y2="8" stroke={accent} strokeWidth="0.8" opacity="0.4" />
+      {/* Right endpoint curl */}
+      <path d={`M${width - 4},8 C${width - 8},4 ${width - 12},6 ${width - 10},8 C${width - 8},10 ${width - 4},12 ${width - 4},8`} fill={accent} opacity="0.3" />
     </svg>
   );
 }
 
-/** Scroll divider with curls */
+/** Scroll divider with curls and floral motifs */
 function ScrollDivider({ color, width = 200 }: { color: string; width?: number }) {
+  const hw = width / 2;
   return (
-    <svg width={width} height="16" viewBox={`0 0 ${width} 16`} fill="none">
-      <line x1={width * 0.1} y1="8" x2={width * 0.9} y2="8" stroke={color} strokeWidth="1" opacity="0.4" />
-      {/* Left curl */}
-      <path d={`M${width * 0.12},8 C${width * 0.08},8 ${width * 0.08},2 ${width * 0.14},2 C${width * 0.18},2 ${width * 0.18},8 ${width * 0.14},8`} stroke={color} strokeWidth="1.2" fill="none" opacity="0.6" />
-      <circle cx={width * 0.06} cy="8" r="2.5" fill={color} opacity="0.3" />
-      {/* Diamond center */}
-      <path d={`M${width * 0.47},8 L${width * 0.5},3 L${width * 0.53},8 L${width * 0.5},13 Z`} fill={color} opacity="0.35" />
-      {/* Right curl */}
-      <path d={`M${width * 0.88},8 C${width * 0.92},8 ${width * 0.92},2 ${width * 0.86},2 C${width * 0.82},2 ${width * 0.82},8 ${width * 0.86},8`} stroke={color} strokeWidth="1.2" fill="none" opacity="0.6" />
-      <circle cx={width * 0.94} cy="8" r="2.5" fill={color} opacity="0.3" />
+    <svg width={width} height="20" viewBox={`0 0 ${width} 20`} fill="none">
+      {/* Center line */}
+      <line x1={width * 0.12} y1="10" x2={width * 0.88} y2="10" stroke={color} strokeWidth="0.8" opacity="0.35" />
+      {/* Left scroll volute */}
+      <path d={`M${width * 0.14},10 C${width * 0.1},10 ${width * 0.08},4 ${width * 0.12},3 C${width * 0.16},2 ${width * 0.18},6 ${width * 0.16},10`} stroke={color} strokeWidth="1.4" fill="none" opacity="0.55" />
+      <path d={`M${width * 0.1},10 C${width * 0.06},10 ${width * 0.06},14 ${width * 0.1},15 C${width * 0.14},16 ${width * 0.14},12 ${width * 0.12},10`} stroke={color} strokeWidth="1.2" fill="none" opacity="0.45" />
+      {/* Left terminal rosette */}
+      <circle cx={width * 0.06} cy="10" r="3" fill={color} opacity="0.3" />
+      <circle cx={width * 0.06} cy="10" r="1.5" fill={color} opacity="0.15" />
+      {/* Center ornament — fleur motif */}
+      <path d={`M${hw},4 C${hw - 4},2 ${hw - 6},6 ${hw - 3},10 L${hw},8 L${hw + 3},10 C${hw + 6},6 ${hw + 4},2 ${hw},4`} fill={color} opacity="0.3" />
+      <path d={`M${hw},16 C${hw - 4},18 ${hw - 6},14 ${hw - 3},10 L${hw},12 L${hw + 3},10 C${hw + 6},14 ${hw + 4},18 ${hw},16`} fill={color} opacity="0.25" />
+      <circle cx={hw} cy="10" r="2" fill={color} opacity="0.35" />
+      {/* Right scroll volute */}
+      <path d={`M${width * 0.86},10 C${width * 0.9},10 ${width * 0.92},4 ${width * 0.88},3 C${width * 0.84},2 ${width * 0.82},6 ${width * 0.84},10`} stroke={color} strokeWidth="1.4" fill="none" opacity="0.55" />
+      <path d={`M${width * 0.9},10 C${width * 0.94},10 ${width * 0.94},14 ${width * 0.9},15 C${width * 0.86},16 ${width * 0.86},12 ${width * 0.88},10`} stroke={color} strokeWidth="1.2" fill="none" opacity="0.45" />
+      {/* Right terminal rosette */}
+      <circle cx={width * 0.94} cy="10" r="3" fill={color} opacity="0.3" />
+      <circle cx={width * 0.94} cy="10" r="1.5" fill={color} opacity="0.15" />
     </svg>
   );
 }
