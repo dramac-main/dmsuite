@@ -184,46 +184,39 @@ export default function CertificateDesignerWorkspace() {
     }
   }, [resetToDefaults]);
 
-  // Full-screen editor mode
-  const isEditor = phase === "editor";
-
   return (
-    <div
-      className={
-        isEditor
-          ? "fixed inset-0 z-50 flex flex-col bg-gray-950 text-white overflow-hidden"
-          : "flex h-full flex-col bg-gray-950 text-white overflow-hidden"
-      }
-    >
-      {/* Header bar (template picker phase only) */}
-      {!isEditor && (
+    <div className="flex h-full flex-col bg-gray-950 text-white overflow-hidden">
+      {/* Header bar (template picker & loading phases only) */}
+      {phase !== "editor" && (
         <motion.header
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between border-b border-gray-800/50 bg-gray-900/40 px-4 py-2 backdrop-blur-sm"
+          className="shrink-0 flex items-center justify-between border-b border-gray-800/50 bg-gray-900/40 px-4 py-2 backdrop-blur-sm"
         >
           <p className="text-sm font-medium text-gray-300">Certificate Designer</p>
-          {documentSnapshot && (
-            <button
-              onClick={() => setPhase("editor")}
-              className="text-xs text-primary-400 hover:text-primary-300 transition-colors"
-            >
-              Back to Editor
-            </button>
-          )}
-          {phase !== "pick" && (
-            <button
-              onClick={handleStartOver}
-              className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
-            >
-              Start Over
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {documentSnapshot && (
+              <button
+                onClick={() => setPhase("editor")}
+                className="text-xs text-primary-400 hover:text-primary-300 transition-colors"
+              >
+                Back to Editor
+              </button>
+            )}
+            {phase !== "pick" && (
+              <button
+                onClick={handleStartOver}
+                className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
+              >
+                Start Over
+              </button>
+            )}
+          </div>
         </motion.header>
       )}
 
       {/* Phase content */}
-      <div className={isEditor ? "flex-1 overflow-hidden relative" : "flex-1 overflow-y-auto relative"}>
+      <div className="flex-1 overflow-hidden relative">
         <AnimatePresence mode="wait">
           {phase === "pick" && (
             <motion.div
@@ -232,7 +225,7 @@ export default function CertificateDesignerWorkspace() {
               initial="enter"
               animate="center"
               exit="exit"
-              className="h-full py-6"
+              className="h-full overflow-y-auto py-6"
             >
               <CertificateTemplatePicker
                 onSelect={handleTemplateSelect}
