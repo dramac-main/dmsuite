@@ -1,7 +1,40 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Certificate Canvas Rebuild — EditorV2 COMPLETE ✅
+**Phase:** Fabric.js Editor Revamp — PLANNING
+
+### Session 152+: Fabric.js Editor Migration — CRITICAL ARCHITECTURE CHANGE
+
+#### Decision
+Replacing the entire custom Canvas 2D rendering engine (DesignDocumentV2 + renderer.ts + hit-test.ts + interaction.ts + snapping.ts + commands.ts) with **Fabric.js v5** — the same library used by the Canva clone (github.com/Davronov-Alimardon/canva-clone).
+
+#### Why
+The custom Canvas 2D system we built is a one-way rendering pipeline. Users cannot click, drag, resize, or edit individual elements on the canvas. Templates are code-generated through adapter functions — they produce pixel output, not editable objects. This is fundamentally broken for a design tool.
+
+Fabric.js provides everything we built from scratch (hit-testing, interaction, snapping, undo/redo, object model, serialization) as a mature, battle-tested open-source library.
+
+#### Impact
+- 20+ visual design tools will use Fabric.js (certificate, business card, ticket, badge, menu, poster, etc.)
+- HTML/CSS document tools are UNAFFECTED (resume, invoice, contract, worksheet)
+- Templates become Fabric.js JSON (fully editable) instead of code-generated LayerV2
+- Chiko AI gets direct Fabric object manipulation instead of complex ai-patch protocol
+- See `FABRIC-EDITOR-REVAMP-GUIDE.md` for full plan
+
+#### Files to Delete (Old Custom Engine)
+- `src/lib/editor/renderer.ts`, `hit-test.ts`, `interaction.ts`, `snapping.ts`, `commands.ts`, `schema.ts`, `ai-patch.ts`, `business-card-adapter.ts`, `certificate-adapter.ts`, `certificate-design-generator.ts`, `template-generator.ts`, `card-template-helpers.ts`, `ai-design-generator.ts`, `v1-migration.ts`, `align-distribute.ts`, `design-rules.ts`
+- `src/components/editor/` (all files)
+- `src/stores/editor.ts`, `certificate-editor.ts`, `diploma-canvas.ts`
+
+#### Files to Keep
+- `src/lib/editor/font-loader.ts` (adapt)
+- `src/lib/editor/pdf-renderer.ts` (adapt for Fabric data)
+- `src/lib/editor/svg-renderer.ts` (thumbnails)
+- `src/lib/editor/abstract-library.ts` (adapt to produce Fabric objects)
+- All HTML/CSS tool systems (resume, invoice, contract, worksheet) — UNTOUCHED
+
+---
+
+### Previous: Certificate Canvas Rebuild — EditorV2 COMPLETE ✅
 
 ### Session 151+: Certificate EditorV2 Canvas Rebuild — COMPLETE
 
