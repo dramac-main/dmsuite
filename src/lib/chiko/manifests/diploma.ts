@@ -1,34 +1,30 @@
 ﻿// =============================================================================
-// DMSuite  Diploma Canvas Designer Action Manifest for Chiko
-// Gives Chiko AI full control over the canvas-based Diploma Designer:
-// institution, program, recipient, signatories, style, presets, export.
-// Bridges between Chiko action system and the new vNext canvas editor.
+// DMSuite — Diploma & Accreditation Designer Action Manifest for Chiko
+// Gives Chiko AI full control over the Diploma Designer:
+// institution, program, recipient, signatories, style, templates, format, export.
+// Uses diploma-editor store (Pattern A — HTML/CSS renderer).
 // =============================================================================
 
 import type { ChikoActionManifest, ChikoActionResult } from "@/stores/chiko-actions";
-import { useDiplomaCanvas } from "@/stores/diploma-canvas";
+import {
+  useDiplomaEditor,
+  DIPLOMA_TEMPLATES,
+  DIPLOMA_TYPES,
+  HONORS_LEVELS,
+  type DiplomaFormData,
+  type DiplomaType,
+  type DiplomaTemplate,
+  type HonorsLevel,
+} from "@/stores/diploma-editor";
 import { withActivityLogging } from "@/stores/activity-log";
 import { useBusinessMemory } from "@/stores/business-memory";
-import {
-  type DiplomaConfig,
-  type DiplomaType,
-  type DiplomaSize,
-  type DiplomaStyle,
-  type HonorsLevel,
-  DIPLOMA_COLOR_SCHEMES,
-  DIPLOMA_TEMPLATE_PRESETS,
-  DIPLOMA_SIZES,
-  HONORS_LEVELS,
-} from "@/lib/editor/diploma-composer";
 
 // ---------------------------------------------------------------------------
 // Manifest Options
 // ---------------------------------------------------------------------------
 
 export interface DiplomaManifestOptions {
-  onExportPng?: React.RefObject<(() => void) | null>;
-  onExportPdf?: React.RefObject<(() => void) | null>;
-  onCopy?: React.RefObject<(() => void) | null>;
+  onPrintRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 // ---------------------------------------------------------------------------
@@ -36,43 +32,46 @@ export interface DiplomaManifestOptions {
 // ---------------------------------------------------------------------------
 
 function readDiplomaState(): Record<string, unknown> {
-  const { config, activePresetId } = useDiplomaCanvas.getState();
+  const { form } = useDiplomaEditor.getState();
   return {
-    type: config.type,
-    size: config.size,
-    style: config.style,
-    colorSchemeId: config.colorSchemeId,
-    institutionName: config.institutionName,
-    institutionSubtitle: config.institutionSubtitle,
-    institutionMotto: config.institutionMotto,
-    recipientName: config.recipientName,
-    recipientId: config.recipientId,
-    degreeName: config.degreeName,
-    fieldOfStudy: config.fieldOfStudy,
-    honors: config.honors,
-    conferralText: config.conferralText,
-    resolutionText: config.resolutionText,
-    accreditationBody: config.accreditationBody,
-    accreditationNumber: config.accreditationNumber,
-    dateConferred: config.dateConferred,
-    graduationDate: config.graduationDate,
-    registrationNumber: config.registrationNumber,
-    serialNumber: config.serialNumber,
-    signatories: config.signatories.map((s, i) => ({
+    diplomaType: form.diplomaType,
+    institutionName: form.institutionName,
+    institutionSubtitle: form.institutionSubtitle,
+    institutionMotto: form.institutionMotto,
+    recipientName: form.recipientName,
+    recipientId: form.recipientId,
+    programName: form.programName,
+    fieldOfStudy: form.fieldOfStudy,
+    honors: form.honors,
+    conferralText: form.conferralText,
+    resolutionText: form.resolutionText,
+    accreditationBody: form.accreditationBody,
+    accreditationNumber: form.accreditationNumber,
+    dateConferred: form.dateConferred,
+    graduationDate: form.graduationDate,
+    registrationNumber: form.registrationNumber,
+    serialNumber: form.serialNumber,
+    signatories: form.signatories.map((s, i) => ({
       index: i,
+      id: s.id,
       name: s.name,
       title: s.title,
       role: s.role,
     })),
-    signatoryCount: config.signatories.length,
-    showSeal: config.showSeal,
-    showCorners: config.showCorners,
-    showBorder: config.showBorder,
-    showMotto: config.showMotto,
-    activePresetId,
-    availableColorSchemes: DIPLOMA_COLOR_SCHEMES.map((c) => c.id),
-    availablePresets: DIPLOMA_TEMPLATE_PRESETS.map((p) => ({ id: p.id, label: p.label, type: p.type })),
-    availableSizes: DIPLOMA_SIZES.map((s) => ({ id: s.id, label: s.label })),
+    signatoryCount: form.signatories.length,
+    showSeal: form.showSeal,
+    sealText: form.sealText,
+    sealStyle: form.sealStyle,
+    template: form.style.template,
+    accentColor: form.style.accentColor,
+    fontPairing: form.style.fontPairing,
+    fontScale: form.style.fontScale,
+    headerStyle: form.style.headerStyle,
+    pageSize: form.format.pageSize,
+    orientation: form.format.orientation,
+    margins: form.format.margins,
+    availableTypes: DIPLOMA_TYPES.map((t) => t.id),
+    availableTemplates: DIPLOMA_TEMPLATES.map((t) => ({ id: t.id, name: t.name })),
     availableHonors: HONORS_LEVELS.map((h) => ({ id: h.id, label: h.label })),
   };
 }
@@ -88,22 +87,22 @@ interface ValidationIssue {
 }
 
 function validateDiploma(): { issues: ValidationIssue[]; ready: boolean } {
-  const { config } = useDiplomaCanvas.getState();
+  const { form } = useDiplomaEditor.getState();
   const issues: ValidationIssue[] = [];
 
-  if (!config.recipientName || config.recipientName.trim().length === 0) {
+  if (!form.recipientName || form.recipientName.trim().length === 0) {
     issues.push({ severity: "error", field: "recipientName", message: "Recipient name is empty" });
   }
-  if (!config.degreeName || config.degreeName.trim().length === 0) {
-    issues.push({ severity: "warning", field: "degreeName", message: "Degree / program name is empty" });
+  if (!form.programName || form.programName.trim().length === 0) {
+    issues.push({ severity: "warning", field: "programName", message: "Program name is empty" });
   }
-  if (!config.institutionName || config.institutionName.trim().length === 0) {
+  if (!form.institutionName || form.institutionName.trim().length === 0) {
     issues.push({ severity: "warning", field: "institutionName", message: "Institution name is not set" });
   }
-  if (!config.dateConferred) {
+  if (!form.dateConferred) {
     issues.push({ severity: "warning", field: "dateConferred", message: "No conferral date set" });
   }
-  const namedSignatories = config.signatories.filter((s) => s.name.trim().length > 0);
+  const namedSignatories = form.signatories.filter((s) => s.name.trim().length > 0);
   if (namedSignatories.length === 0) {
     issues.push({ severity: "warning", field: "signatories", message: "No signatories have names filled in" });
   }
@@ -117,8 +116,7 @@ function validateDiploma(): { issues: ValidationIssue[]; ready: boolean } {
 // ---------------------------------------------------------------------------
 
 const VALID_TYPES: DiplomaType[] = ["bachelors", "masters", "doctorate", "professional-diploma", "honorary-doctorate", "vocational", "postgraduate", "accreditation"];
-const VALID_STYLES: DiplomaStyle[] = ["academic", "modern", "classic", "ivy-league", "executive", "minimal"];
-const VALID_SIZES: DiplomaSize[] = ["a4-landscape", "a4-portrait", "letter-landscape", "letter-portrait"];
+const VALID_TEMPLATES: DiplomaTemplate[] = ["university-classic", "institutional-formal", "modern-professional", "ivy-league", "executive", "technical-vocational", "medical-health", "legal-bar", "vintage-academic", "international"];
 const VALID_HONORS: HonorsLevel[] = ["", "cum-laude", "magna-cum-laude", "summa-cum-laude", "distinction", "high-distinction", "first-class", "merit"];
 
 // ---------------------------------------------------------------------------
@@ -128,7 +126,7 @@ const VALID_HONORS: HonorsLevel[] = ["", "cum-laude", "magna-cum-laude", "summa-
 export function createDiplomaManifest(options?: DiplomaManifestOptions): ChikoActionManifest {
   const baseManifest: ChikoActionManifest = {
     toolId: "diploma-designer",
-    toolName: "Diploma & Accreditation Designer (Canvas)",
+    toolName: "Diploma & Accreditation Designer",
     actions: [
       // -- Institution
       {
@@ -162,13 +160,13 @@ export function createDiplomaManifest(options?: DiplomaManifestOptions): ChikoAc
       // -- Program / Degree
       {
         name: "updateProgram",
-        description: "Update program details: degreeName, fieldOfStudy, honors.",
+        description: "Update program details: programName, fieldOfStudy, honors.",
         parameters: {
           type: "object",
           properties: {
-            degreeName: { type: "string", description: "Degree or program name" },
+            programName: { type: "string", description: "Degree or program name" },
             fieldOfStudy: { type: "string", description: "Major or field of study" },
-            honors: { type: "string", enum: ["", "cum-laude", "magna-cum-laude", "summa-cum-laude", "distinction", "high-distinction", "first-class", "merit"], description: "Honors level" },
+            honors: { type: "string", enum: VALID_HONORS, description: "Honors level" },
           },
         },
         category: "Content",
@@ -177,12 +175,24 @@ export function createDiplomaManifest(options?: DiplomaManifestOptions): ChikoAc
       // -- Conferral
       {
         name: "updateConferral",
-        description: "Update conferral text, resolution text, accreditation body and number.",
+        description: "Update conferral text and resolution text.",
         parameters: {
           type: "object",
           properties: {
             conferralText: { type: "string", description: "Conferral statement" },
             resolutionText: { type: "string", description: "Resolution / authority text" },
+          },
+        },
+        category: "Content",
+      },
+
+      // -- Accreditation
+      {
+        name: "updateAccreditation",
+        description: "Update accreditation body and number.",
+        parameters: {
+          type: "object",
+          properties: {
             accreditationBody: { type: "string", description: "Accrediting body name" },
             accreditationNumber: { type: "string", description: "Accreditation reference number" },
           },
@@ -204,6 +214,20 @@ export function createDiplomaManifest(options?: DiplomaManifestOptions): ChikoAc
         category: "Content",
       },
 
+      // -- Reference
+      {
+        name: "updateReference",
+        description: "Update registration number and serial number.",
+        parameters: {
+          type: "object",
+          properties: {
+            registrationNumber: { type: "string", description: "Registration number" },
+            serialNumber: { type: "string", description: "Serial number" },
+          },
+        },
+        category: "Content",
+      },
+
       // -- Diploma Type
       {
         name: "setDiplomaType",
@@ -211,7 +235,7 @@ export function createDiplomaManifest(options?: DiplomaManifestOptions): ChikoAc
         parameters: {
           type: "object",
           properties: {
-            type: { type: "string", enum: ["bachelors", "masters", "doctorate", "professional-diploma", "honorary-doctorate", "vocational", "postgraduate", "accreditation"], description: "Diploma type" },
+            type: { type: "string", enum: VALID_TYPES, description: "Diploma type" },
           },
           required: ["type"],
         },
@@ -227,7 +251,7 @@ export function createDiplomaManifest(options?: DiplomaManifestOptions): ChikoAc
           properties: {
             name: { type: "string", description: "Signatory full name" },
             title: { type: "string", description: "Signatory title/position" },
-            role: { type: "string", description: "Signatory role" },
+            role: { type: "string", description: "Signatory role (e.g. Chancellor, Dean)" },
           },
         },
         category: "Details",
@@ -261,122 +285,88 @@ export function createDiplomaManifest(options?: DiplomaManifestOptions): ChikoAc
         destructive: true,
       },
 
+      // -- Seal
+      {
+        name: "updateSeal",
+        description: "Update seal settings: showSeal, sealText, sealStyle.",
+        parameters: {
+          type: "object",
+          properties: {
+            showSeal: { type: "boolean", description: "Show/hide the seal" },
+            sealText: { type: "string", description: "Text inside the seal" },
+            sealStyle: { type: "string", enum: ["gold", "silver", "embossed", "stamp", "none"], description: "Seal visual style" },
+          },
+        },
+        category: "Details",
+      },
+
       // -- Style
       {
-        name: "setStyle",
-        description: "Change the visual style.",
+        name: "updateStyle",
+        description: "Change visual styling: template, accentColor, fontPairing, fontScale, headerStyle.",
         parameters: {
           type: "object",
           properties: {
-            style: { type: "string", enum: ["academic", "modern", "classic", "ivy-league", "executive", "minimal"], description: "Visual style" },
+            template: { type: "string", enum: VALID_TEMPLATES, description: "Visual template" },
+            accentColor: { type: "string", description: "Hex color" },
+            fontPairing: { type: "string", enum: ["playfair-lato", "inter-jetbrains", "merriweather-opensans", "cormorant-montserrat", "crimson-source", "poppins-inter", "dm-serif-dm-sans"], description: "Font pairing" },
+            fontScale: { type: "number", description: "Font scale multiplier (0.85 to 1.2)" },
+            headerStyle: { type: "string", enum: ["centered", "left-aligned", "crest-centered"], description: "Header layout style" },
           },
-          required: ["style"],
         },
         category: "Style",
       },
 
-      // -- Color Scheme
+      // -- Format
       {
-        name: "setColorScheme",
-        description: "Change the color scheme. Available: university-navy, ivy-crimson, academic-green, royal-purple, executive-black, medical-teal, classic-gold, vintage-sepia.",
+        name: "updateFormat",
+        description: "Change page size, orientation, margins.",
         parameters: {
           type: "object",
           properties: {
-            schemeId: { type: "string", enum: ["university-navy", "ivy-crimson", "academic-green", "royal-purple", "executive-black", "medical-teal", "classic-gold", "vintage-sepia"], description: "Color scheme ID" },
+            pageSize: { type: "string", enum: ["a4", "letter", "a5"], description: "Page size" },
+            orientation: { type: "string", enum: ["landscape", "portrait"], description: "Page orientation" },
+            margins: { type: "string", enum: ["narrow", "standard", "wide"], description: "Margin preset" },
           },
-          required: ["schemeId"],
-        },
-        category: "Style",
-      },
-
-      // -- Size
-      {
-        name: "setSize",
-        description: "Change page size/orientation.",
-        parameters: {
-          type: "object",
-          properties: {
-            size: { type: "string", enum: ["a4-landscape", "a4-portrait", "letter-landscape", "letter-portrait"], description: "Page size" },
-          },
-          required: ["size"],
         },
         category: "Format",
       },
 
-      // -- Feature Toggles
-      {
-        name: "toggleFeatures",
-        description: "Toggle decorative elements: seal, corners, border, motto.",
-        parameters: {
-          type: "object",
-          properties: {
-            showSeal: { type: "boolean", description: "Show/hide seal" },
-            showCorners: { type: "boolean", description: "Show/hide corners" },
-            showBorder: { type: "boolean", description: "Show/hide border" },
-            showMotto: { type: "boolean", description: "Show/hide motto" },
-          },
-        },
-        category: "Style",
-      },
-
-      // -- Preset
-      {
-        name: "applyPreset",
-        description: "Apply a template preset. Available: university-classic, ivy-league, graduate-modern, doctorate-formal, executive-diploma, medical-credential, tvet-vocational, accreditation-cert.",
-        parameters: {
-          type: "object",
-          properties: {
-            presetId: { type: "string", enum: ["university-classic", "ivy-league", "graduate-modern", "doctorate-formal", "executive-diploma", "medical-credential", "tvet-vocational", "accreditation-cert"], description: "Preset ID" },
-          },
-          required: ["presetId"],
-        },
-        category: "Style",
-      },
-
-      // -- Honors
-      {
-        name: "setHonors",
-        description: "Set the honors level.",
-        parameters: {
-          type: "object",
-          properties: {
-            honors: { type: "string", enum: ["", "cum-laude", "magna-cum-laude", "summa-cum-laude", "distinction", "high-distinction", "first-class", "merit"], description: "Honors level" },
-          },
-          required: ["honors"],
-        },
-        category: "Content",
-      },
-
-      // -- Serial
-      { name: "regenerateSerial", description: "Generate a new random serial number.", parameters: { type: "object", properties: {} }, category: "Content" },
-
       // -- Reset
       {
-        name: "resetDiploma",
+        name: "resetForm",
         description: "Reset diploma to defaults. WARNING: Erases content.",
         parameters: {
           type: "object",
           properties: {
-            diplomaType: { type: "string", enum: ["bachelors", "masters", "doctorate", "professional-diploma", "honorary-doctorate", "vocational", "postgraduate", "accreditation"], description: "Type to reset to" },
+            diplomaType: { type: "string", enum: VALID_TYPES, description: "Type to reset to" },
           },
         },
-        category: "Document",
+        category: "Reset",
         destructive: true,
       },
 
       // -- Read
       { name: "readCurrentState", description: "Read all current diploma settings.", parameters: { type: "object", properties: {} }, category: "Read" },
       { name: "prefillFromMemory", description: "Pre-fill institution from business profile.", parameters: { type: "object", properties: {} }, category: "Content" },
-      { name: "validateBeforeExport", description: "Check diploma for issues before export.", parameters: { type: "object", properties: {} }, category: "Export" },
-      { name: "exportPng", description: "Export as high-resolution PNG.", parameters: { type: "object", properties: {} }, category: "Export" },
-      { name: "exportPdf", description: "Export as vector PDF.", parameters: { type: "object", properties: {} }, category: "Export" },
-      { name: "copyToClipboard", description: "Copy as image to clipboard.", parameters: { type: "object", properties: {} }, category: "Export" },
+      { name: "validateBeforeExport", description: "Check diploma for issues before export.", parameters: { type: "object", properties: {} }, category: "Validate" },
+      {
+        name: "exportDocument",
+        description: "Export or print the diploma via browser print dialog.",
+        parameters: {
+          type: "object",
+          properties: {
+            format: { type: "string", enum: ["print"], description: "Export format" },
+          },
+        },
+        category: "Export",
+      },
     ],
 
     getState: readDiplomaState,
 
     executeAction: (actionName: string, params: Record<string, unknown>): ChikoActionResult => {
-      const store = useDiplomaCanvas.getState();
+      const store = useDiplomaEditor.getState();
       try {
         switch (actionName) {
           case "updateInstitution":
@@ -395,88 +385,84 @@ export function createDiplomaManifest(options?: DiplomaManifestOptions): ChikoAc
             store.updateConferral(params as Parameters<typeof store.updateConferral>[0]);
             return { success: true, message: "Conferral text updated" };
 
+          case "updateAccreditation":
+            store.updateAccreditation(params as Parameters<typeof store.updateAccreditation>[0]);
+            return { success: true, message: "Accreditation details updated" };
+
           case "updateDates":
             store.updateDates(params as Parameters<typeof store.updateDates>[0]);
             return { success: true, message: "Dates updated" };
 
+          case "updateReference":
+            store.updateReference(params as Parameters<typeof store.updateReference>[0]);
+            return { success: true, message: "Reference details updated" };
+
           case "setDiplomaType": {
             const t = params.type as DiplomaType;
             if (!VALID_TYPES.includes(t)) return { success: false, message: `Invalid type: ${t}` };
-            store.setType(t);
+            store.setDiplomaType(t);
             return { success: true, message: `Diploma type set to ${t}` };
           }
 
-          case "addSignatory":
-            store.addSignatory({ name: (params.name as string) || "", title: (params.title as string) || "", role: (params.role as string) || "" });
+          case "addSignatory": {
+            const newId = store.addSignatory();
+            if (params.name || params.title || params.role) {
+              store.updateSignatory(newId, {
+                name: (params.name as string) || "",
+                title: (params.title as string) || "",
+                role: (params.role as string) || "",
+              });
+            }
             return { success: true, message: "Signatory added" };
+          }
 
           case "updateSignatory": {
             const idx = params.index as number;
-            if (idx < 0 || idx >= store.config.signatories.length) return { success: false, message: `Invalid index: ${idx}` };
+            const sig = store.form.signatories[idx];
+            if (!sig) return { success: false, message: `Invalid index: ${idx}` };
             const patch: Record<string, string> = {};
             if (params.name !== undefined) patch.name = params.name as string;
             if (params.title !== undefined) patch.title = params.title as string;
             if (params.role !== undefined) patch.role = params.role as string;
-            store.updateSignatory(idx, patch);
+            store.updateSignatory(sig.id, patch);
             return { success: true, message: "Signatory updated" };
           }
 
           case "removeSignatory": {
             const idx = params.index as number;
-            if (idx < 0 || idx >= store.config.signatories.length) return { success: false, message: `Invalid index: ${idx}` };
-            store.removeSignatory(idx);
+            const sig = store.form.signatories[idx];
+            if (!sig) return { success: false, message: `Invalid index: ${idx}` };
+            store.removeSignatory(sig.id);
             return { success: true, message: "Signatory removed" };
           }
 
-          case "setStyle": {
-            const s = params.style as DiplomaStyle;
-            if (!VALID_STYLES.includes(s)) return { success: false, message: `Invalid style: ${s}` };
-            store.setStyle(s);
-            return { success: true, message: `Style set to ${s}` };
-          }
+          case "updateSeal":
+            store.updateSeal(params as Parameters<typeof store.updateSeal>[0]);
+            return { success: true, message: "Seal settings updated" };
 
-          case "setColorScheme": {
-            const id = params.schemeId as string;
-            if (!DIPLOMA_COLOR_SCHEMES.some((c) => c.id === id)) return { success: false, message: `Invalid scheme: ${id}` };
-            store.setColorScheme(id);
-            return { success: true, message: `Color scheme set to ${id}` };
-          }
-
-          case "setSize": {
-            const sz = params.size as DiplomaSize;
-            if (!VALID_SIZES.includes(sz)) return { success: false, message: `Invalid size: ${sz}` };
-            store.setSize(sz);
-            return { success: true, message: `Size set to ${sz}` };
-          }
-
-          case "toggleFeatures": {
-            const features = ["showSeal", "showCorners", "showBorder", "showMotto"] as const;
-            for (const f of features) {
-              if (typeof params[f] === "boolean") store.toggleFeature(f, params[f] as boolean);
+          case "updateStyle": {
+            if (params.template) {
+              store.setTemplate(params.template as DiplomaTemplate);
             }
-            return { success: true, message: "Feature toggles updated" };
+            if (params.accentColor) {
+              store.setAccentColor(params.accentColor as string);
+            }
+            const stylePatch: Record<string, unknown> = {};
+            if (params.fontPairing) stylePatch.fontPairing = params.fontPairing;
+            if (params.fontScale) stylePatch.fontScale = params.fontScale;
+            if (params.headerStyle) stylePatch.headerStyle = params.headerStyle;
+            if (Object.keys(stylePatch).length > 0) {
+              store.updateStyle(stylePatch as Parameters<typeof store.updateStyle>[0]);
+            }
+            return { success: true, message: "Style updated" };
           }
 
-          case "applyPreset": {
-            const pid = params.presetId as string;
-            if (!DIPLOMA_TEMPLATE_PRESETS.some((p) => p.id === pid)) return { success: false, message: `Invalid preset: ${pid}` };
-            store.applyPreset(pid);
-            return { success: true, message: `Preset "${pid}" applied` };
-          }
+          case "updateFormat":
+            store.updateFormat(params as Parameters<typeof store.updateFormat>[0]);
+            return { success: true, message: "Format updated" };
 
-          case "setHonors": {
-            const h = params.honors as HonorsLevel;
-            if (!VALID_HONORS.includes(h)) return { success: false, message: `Invalid honors: ${h}` };
-            store.setHonors(h);
-            return { success: true, message: `Honors set to ${h || "(none)"}` };
-          }
-
-          case "regenerateSerial":
-            store.regenerateSerial();
-            return { success: true, message: `Serial regenerated: ${useDiplomaCanvas.getState().config.serialNumber}` };
-
-          case "resetDiploma":
-            store.resetConfig(params.diplomaType as DiplomaType | undefined);
+          case "resetForm":
+            store.resetForm(params.diplomaType as DiplomaType | undefined);
             return { success: true, message: "Diploma reset to defaults" };
 
           case "readCurrentState":
@@ -498,34 +484,18 @@ export function createDiplomaManifest(options?: DiplomaManifestOptions): ChikoAc
             const wc = issues.filter((i) => i.severity === "warning").length;
             let msg = "";
             if (ready && wc === 0) msg = "Diploma is ready to export.";
-            else if (ready) { msg = `Can export with ${wc} warning(s):\n`; for (const i of issues) msg += `  Warning: ${i.message}\n`; }
-            else { msg = `${ec} error(s), ${wc} warning(s):\n`; for (const i of issues) msg += `  ${i.severity === "error" ? "Error" : "Warning"}: ${i.message}\n`; }
+            else if (ready) { msg = `Can export with ${wc} warning(s):\n`; for (const i of issues) msg += `  ⚠ ${i.message}\n`; }
+            else { msg = `${ec} error(s), ${wc} warning(s):\n`; for (const i of issues) msg += `  ${i.severity === "error" ? "✘" : "⚠"} ${i.message}\n`; }
             return { success: true, message: msg.trim(), newState: { issues, ready, errorCount: ec, warningCount: wc } };
           }
 
-          case "exportPng": {
+          case "exportDocument": {
             const { ready, issues } = validateDiploma();
             if (!ready) return { success: false, message: `Cannot export: ${issues.filter((i) => i.severity === "error").map((i) => i.message).join(", ")}` };
-            const handler = options?.onExportPng?.current;
+            const handler = options?.onPrintRef?.current;
             if (!handler) return { success: false, message: "Export not ready yet." };
             handler();
-            return { success: true, message: "PNG export started." };
-          }
-
-          case "exportPdf": {
-            const { ready, issues } = validateDiploma();
-            if (!ready) return { success: false, message: `Cannot export: ${issues.filter((i) => i.severity === "error").map((i) => i.message).join(", ")}` };
-            const handler = options?.onExportPdf?.current;
-            if (!handler) return { success: false, message: "PDF export not ready yet." };
-            handler();
-            return { success: true, message: "Vector PDF export started." };
-          }
-
-          case "copyToClipboard": {
-            const handler = options?.onCopy?.current;
-            if (!handler) return { success: false, message: "Copy not ready yet." };
-            handler();
-            return { success: true, message: "Diploma copied to clipboard." };
+            return { success: true, message: "Export triggered." };
           }
 
           default:
@@ -539,7 +509,7 @@ export function createDiplomaManifest(options?: DiplomaManifestOptions): ChikoAc
 
   return withActivityLogging(
     baseManifest,
-    () => useDiplomaCanvas.getState().config,
-    (snapshot) => useDiplomaCanvas.getState().setConfig(snapshot as DiplomaConfig),
+    () => useDiplomaEditor.getState().form,
+    (snapshot) => useDiplomaEditor.getState().setForm(snapshot as DiplomaFormData),
   );
 }

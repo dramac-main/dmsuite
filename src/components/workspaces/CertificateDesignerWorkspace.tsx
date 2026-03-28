@@ -48,11 +48,9 @@ export default function CertificateDesignerWorkspace() {
   const upd = useCertificateCanvas((s) => s.updateConfig);
 
   /* ── Chiko Manifest Registration ────────────────────── */
-  const exportPngRef = useRef<(() => void) | null>(null);
-  const exportPdfRef = useRef<(() => void) | null>(null);
-  const copyRef = useRef<(() => void) | null>(null);
+  const chikoOnPrintRef = useRef<(() => void) | null>(null);
   const manifestFactory = useCallback(
-    () => createCertificateManifest({ onExportPng: exportPngRef, onExportPdf: exportPdfRef, onCopy: copyRef }),
+    () => createCertificateManifest({ onPrintRef: chikoOnPrintRef }),
     [],
   );
   useChikoActions(manifestFactory);
@@ -217,10 +215,8 @@ Return ONLY valid JSON:
     downloadPdf(pdfBytes, `certificate-${config.type}-${Date.now()}.pdf`);
   }, [editorStore.doc, config.type]);
 
-  /* Wire export refs for Chiko manifest */
-  exportPngRef.current = exportPNG;
-  exportPdfRef.current = handleExportPdf;
-  copyRef.current = handleCopy;
+  /* Wire export ref for Chiko manifest */
+  chikoOnPrintRef.current = exportPNG;
 
   /* ── Left Panel ─────────────────────────────────────────── */
   const leftPanel = (

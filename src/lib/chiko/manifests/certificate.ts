@@ -1,32 +1,28 @@
 // =============================================================================
-// DMSuite — Certificate Designer Canvas Action Manifest for Chiko
-// Gives Chiko AI full control over the canvas-based Certificate Designer:
-// content, style, color scheme, features, presets, export.
-// Bridges between Chiko action system and the new vNext canvas editor.
+// DMSuite — Certificate Designer Action Manifest for Chiko
+// Gives Chiko AI full control over the Certificate Designer:
+// content, style, templates, format, signatories, seal, export.
+// Uses certificate-editor store (Pattern A — HTML/CSS renderer).
 // =============================================================================
 
 import type { ChikoActionManifest, ChikoActionResult } from "@/stores/chiko-actions";
-import { useCertificateCanvas } from "@/stores/certificate-canvas";
+import {
+  useCertificateEditor,
+  CERTIFICATE_TEMPLATES,
+  CERTIFICATE_TYPES,
+  type CertificateFormData,
+  type CertificateType,
+  type CertificateTemplate,
+} from "@/stores/certificate-editor";
 import { withActivityLogging } from "@/stores/activity-log";
 import { useBusinessMemory } from "@/stores/business-memory";
-import {
-  type CertificateConfig,
-  type CertificateType,
-  type CertificateSize,
-  type CertStyle,
-  CERT_COLOR_SCHEMES,
-  CERT_TEMPLATE_PRESETS,
-  CERT_SIZES,
-} from "@/lib/editor/certificate-composer";
 
 // ---------------------------------------------------------------------------
 // Manifest Options
 // ---------------------------------------------------------------------------
 
 export interface CertificateManifestOptions {
-  onExportPng?: React.RefObject<(() => void) | null>;
-  onExportPdf?: React.RefObject<(() => void) | null>;
-  onCopy?: React.RefObject<(() => void) | null>;
+  onPrintRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 // ---------------------------------------------------------------------------
@@ -34,29 +30,42 @@ export interface CertificateManifestOptions {
 // ---------------------------------------------------------------------------
 
 function readCertificateState(): Record<string, unknown> {
-  const { config, activePresetId } = useCertificateCanvas.getState();
+  const { form } = useCertificateEditor.getState();
   return {
-    type: config.type,
-    title: config.title,
-    subtitle: config.subtitle,
-    recipientName: config.recipientName,
-    description: config.description,
-    issuerName: config.issuerName,
-    issuerTitle: config.issuerTitle,
-    organizationName: config.organizationName,
-    date: config.date,
-    serialNumber: config.serialNumber,
-    size: config.size,
-    style: config.style,
-    colorSchemeId: config.colorSchemeId,
-    showSeal: config.showSeal,
-    showCorners: config.showCorners,
-    showRibbon: config.showRibbon,
-    showDivider: config.showDivider,
-    activePresetId,
-    availableColorSchemes: CERT_COLOR_SCHEMES.map((c) => c.id),
-    availablePresets: CERT_TEMPLATE_PRESETS.map((p) => ({ id: p.id, label: p.label, type: p.certType })),
-    availableSizes: CERT_SIZES.map((s) => ({ id: s.id, label: s.label })),
+    certificateType: form.certificateType,
+    title: form.title,
+    subtitle: form.subtitle,
+    recipientName: form.recipientName,
+    description: form.description,
+    additionalText: form.additionalText,
+    organizationName: form.organizationName,
+    organizationSubtitle: form.organizationSubtitle,
+    eventName: form.eventName,
+    courseName: form.courseName,
+    dateIssued: form.dateIssued,
+    validUntil: form.validUntil,
+    referenceNumber: form.referenceNumber,
+    signatories: form.signatories.map((s, i) => ({
+      index: i,
+      id: s.id,
+      name: s.name,
+      title: s.title,
+      organization: s.organization,
+    })),
+    signatoryCount: form.signatories.length,
+    showSeal: form.showSeal,
+    sealText: form.sealText,
+    sealStyle: form.sealStyle,
+    template: form.style.template,
+    accentColor: form.style.accentColor,
+    fontPairing: form.style.fontPairing,
+    fontScale: form.style.fontScale,
+    headerStyle: form.style.headerStyle,
+    pageSize: form.format.pageSize,
+    orientation: form.format.orientation,
+    margins: form.format.margins,
+    availableTypes: CERTIFICATE_TYPES.map((t) => t.id),
+    availableTemplates: CERTIFICATE_TEMPLATES.map((t) => ({ id: t.id, name: t.name })),
   };
 }
 
@@ -71,20 +80,20 @@ interface ValidationIssue {
 }
 
 function validateCertificate(): { issues: ValidationIssue[]; ready: boolean } {
-  const { config } = useCertificateCanvas.getState();
+  const { form } = useCertificateEditor.getState();
   const issues: ValidationIssue[] = [];
 
-  if (!config.recipientName || config.recipientName.trim().length === 0) {
+  if (!form.recipientName || form.recipientName.trim().length === 0) {
     issues.push({ severity: "error", field: "recipientName", message: "Recipient name is empty" });
   }
-  if (!config.title || config.title.trim().length === 0) {
+  if (!form.title || form.title.trim().length === 0) {
     issues.push({ severity: "warning", field: "title", message: "Certificate title is empty" });
   }
-  if (!config.organizationName || config.organizationName.trim().length === 0) {
+  if (!form.organizationName || form.organizationName.trim().length === 0) {
     issues.push({ severity: "warning", field: "organizationName", message: "Organization name is not set" });
   }
-  if (!config.date) {
-    issues.push({ severity: "warning", field: "date", message: "No date set" });
+  if (!form.dateIssued) {
+    issues.push({ severity: "warning", field: "dateIssued", message: "No date set" });
   }
 
   const errorCount = issues.filter((i) => i.severity === "error").length;
@@ -95,56 +104,69 @@ function validateCertificate(): { issues: ValidationIssue[]; ready: boolean } {
 // Manifest Factory
 // ---------------------------------------------------------------------------
 
-const VALID_TYPES: CertificateType[] = ["achievement", "completion", "award", "recognition", "participation", "training", "diploma", "accreditation"];
-const VALID_STYLES: CertStyle[] = ["classic", "modern", "elegant", "bold", "vintage", "minimal"];
-const VALID_SIZES: CertificateSize[] = ["a4-landscape", "a4-portrait", "letter-landscape", "letter-portrait"];
+const VALID_TYPES: CertificateType[] = ["achievement", "completion", "appreciation", "participation", "training", "recognition", "award", "excellence", "honorary", "membership"];
+const VALID_TEMPLATES: CertificateTemplate[] = ["classic-blue", "burgundy-ornate", "antique-parchment", "golden-appreciation", "silver-weave", "vintage-warm", "teal-regal", "botanical-modern"];
 
 export function createCertificateManifest(options?: CertificateManifestOptions): ChikoActionManifest {
   const baseManifest: ChikoActionManifest = {
     toolId: "certificate",
-    toolName: "Certificate Designer (Canvas)",
+    toolName: "Certificate Designer",
     actions: [
       // ── Content ──────────────────────────────────────────────────────────
       {
         name: "updateContent",
-        description:
-          "Update certificate content fields: title, subtitle, recipientName, description.",
+        description: "Update certificate content fields: title, subtitle, recipientName, description, additionalText.",
         parameters: {
           type: "object",
           properties: {
             title: { type: "string", description: "Certificate title (e.g. 'Certificate of Achievement')" },
             subtitle: { type: "string", description: "Subtitle text (e.g. 'This is proudly presented to')" },
             recipientName: { type: "string", description: "Full name of the recipient" },
-            description: { type: "string", description: "Main body text describing the achievement/completion" },
+            description: { type: "string", description: "Main body text" },
+            additionalText: { type: "string", description: "Extra text below description" },
           },
         },
         category: "Content",
       },
 
-      // ── Issuer ───────────────────────────────────────────────────────────
+      // ── Organization ─────────────────────────────────────────────────────
       {
-        name: "updateIssuer",
-        description: "Update issuer and organization details: issuerName, issuerTitle, organizationName.",
+        name: "updateOrganization",
+        description: "Update organization details: organizationName, organizationSubtitle.",
         parameters: {
           type: "object",
           properties: {
-            issuerName: { type: "string", description: "Issuer's full name" },
-            issuerTitle: { type: "string", description: "Issuer's title/position" },
             organizationName: { type: "string", description: "Name of the issuing organization" },
+            organizationSubtitle: { type: "string", description: "Subtitle or department" },
           },
         },
         category: "Content",
       },
 
-      // ── Meta (Date & Serial) ─────────────────────────────────────────────
+      // ── Event / Program ──────────────────────────────────────────────────
       {
-        name: "updateMeta",
-        description: "Update date and serial number.",
+        name: "updateEvent",
+        description: "Update event or program details: eventName, courseName.",
         parameters: {
           type: "object",
           properties: {
-            date: { type: "string", description: "Date string (e.g. '15 January 2026')" },
-            serialNumber: { type: "string", description: "Certificate serial (e.g. CERT-ABC12345)" },
+            eventName: { type: "string", description: "Event name" },
+            courseName: { type: "string", description: "Course or program name" },
+          },
+        },
+        category: "Content",
+      },
+
+      // ── Dates & Reference ────────────────────────────────────────────────
+      {
+        name: "updateDates",
+        description: "Update dates and reference: dateIssued, validUntil, referenceNumber.",
+        parameters: {
+          type: "object",
+          properties: {
+            dateIssued: { type: "string", description: "Date issued (YYYY-MM-DD)" },
+            validUntil: { type: "string", description: "Valid until date (YYYY-MM-DD)" },
+            referenceNumber: { type: "string", description: "Certificate reference/serial number" },
           },
         },
         category: "Content",
@@ -157,129 +179,114 @@ export function createCertificateManifest(options?: CertificateManifestOptions):
         parameters: {
           type: "object",
           properties: {
-            type: {
-              type: "string",
-              enum: VALID_TYPES,
-              description: "Certificate type",
-            },
+            type: { type: "string", enum: VALID_TYPES, description: "Certificate type" },
           },
           required: ["type"],
         },
         category: "Content",
       },
 
+      // ── Signatories ──────────────────────────────────────────────────────
+      {
+        name: "addSignatory",
+        description: "Add a new signatory to the certificate (max 4).",
+        parameters: {
+          type: "object",
+          properties: {
+            name: { type: "string", description: "Signatory full name" },
+            title: { type: "string", description: "Signatory title/position" },
+            organization: { type: "string", description: "Signatory organization" },
+          },
+        },
+        category: "Details",
+      },
+      {
+        name: "updateSignatory",
+        description: "Update a signatory by index (0-based).",
+        parameters: {
+          type: "object",
+          properties: {
+            index: { type: "number", description: "Signatory index (0-based)" },
+            name: { type: "string", description: "Signatory full name" },
+            title: { type: "string", description: "Signatory title/position" },
+            organization: { type: "string", description: "Signatory organization" },
+          },
+          required: ["index"],
+        },
+        category: "Details",
+      },
+      {
+        name: "removeSignatory",
+        description: "Remove a signatory by index (0-based).",
+        parameters: {
+          type: "object",
+          properties: {
+            index: { type: "number", description: "Signatory index (0-based)" },
+          },
+          required: ["index"],
+        },
+        category: "Details",
+        destructive: true,
+      },
+
+      // ── Seal ─────────────────────────────────────────────────────────────
+      {
+        name: "updateSeal",
+        description: "Update seal settings: showSeal, sealText, sealStyle.",
+        parameters: {
+          type: "object",
+          properties: {
+            showSeal: { type: "boolean", description: "Show/hide the seal" },
+            sealText: { type: "string", description: "Text inside the seal" },
+            sealStyle: { type: "string", enum: ["gold", "silver", "embossed", "stamp", "none"], description: "Seal visual style" },
+          },
+        },
+        category: "Details",
+      },
+
       // ── Style ────────────────────────────────────────────────────────────
       {
-        name: "setStyle",
-        description: "Change the visual style. Each style selects different decorative assets (frames, borders, seals, ornaments).",
+        name: "updateStyle",
+        description: "Change visual styling: template, accentColor, fontPairing, fontScale, headerStyle.",
         parameters: {
           type: "object",
           properties: {
-            style: {
-              type: "string",
-              enum: VALID_STYLES,
-              description: "Visual style preset",
-            },
+            template: { type: "string", enum: VALID_TEMPLATES, description: "Visual template" },
+            accentColor: { type: "string", description: "Hex color like #35517D" },
+            fontPairing: { type: "string", enum: ["playfair-lato", "inter-jetbrains", "merriweather-opensans", "cormorant-montserrat", "crimson-source", "poppins-inter", "oswald-roboto", "dm-serif-dm-sans"], description: "Font pairing" },
+            fontScale: { type: "number", description: "Font scale multiplier (0.85 to 1.2)" },
+            headerStyle: { type: "string", enum: ["centered", "left-aligned", "accent-bar"], description: "Header layout style" },
           },
-          required: ["style"],
         },
         category: "Style",
       },
 
-      // ── Color Scheme ─────────────────────────────────────────────────────
+      // ── Format ───────────────────────────────────────────────────────────
       {
-        name: "setColorScheme",
-        description: "Change the color scheme. Available schemes: " + CERT_COLOR_SCHEMES.map((c) => `${c.id} (${c.label})`).join(", "),
+        name: "updateFormat",
+        description: "Change page size, orientation, margins.",
         parameters: {
           type: "object",
           properties: {
-            schemeId: {
-              type: "string",
-              enum: CERT_COLOR_SCHEMES.map((c) => c.id),
-              description: "Color scheme ID",
-            },
+            pageSize: { type: "string", enum: ["a4", "letter", "a5"], description: "Page size" },
+            orientation: { type: "string", enum: ["landscape", "portrait"], description: "Page orientation" },
+            margins: { type: "string", enum: ["narrow", "standard", "wide"], description: "Margin preset" },
           },
-          required: ["schemeId"],
-        },
-        category: "Style",
-      },
-
-      // ── Size ──────────────────────────────────────────────────────────────
-      {
-        name: "setSize",
-        description: "Change the document size/orientation.",
-        parameters: {
-          type: "object",
-          properties: {
-            size: {
-              type: "string",
-              enum: VALID_SIZES,
-              description: "Page size and orientation",
-            },
-          },
-          required: ["size"],
         },
         category: "Format",
       },
 
-      // ── Feature Toggles ──────────────────────────────────────────────────
-      {
-        name: "toggleFeatures",
-        description: "Toggle decorative elements: seal, corner ornaments, ribbon banner, divider line.",
-        parameters: {
-          type: "object",
-          properties: {
-            showSeal: { type: "boolean", description: "Show/hide the seal emblem" },
-            showCorners: { type: "boolean", description: "Show/hide corner decorations" },
-            showRibbon: { type: "boolean", description: "Show/hide the ribbon banner" },
-            showDivider: { type: "boolean", description: "Show/hide the divider rule" },
-          },
-        },
-        category: "Style",
-      },
-
-      // ── Template Preset ───────────────────────────────────────────────────
-      {
-        name: "applyPreset",
-        description: "Apply a full template preset. Changes style, colors, type, and feature toggles at once. Available presets: " +
-          CERT_TEMPLATE_PRESETS.map((p) => `${p.id} (${p.label})`).join(", "),
-        parameters: {
-          type: "object",
-          properties: {
-            presetId: {
-              type: "string",
-              enum: CERT_TEMPLATE_PRESETS.map((p) => p.id),
-              description: "Template preset ID",
-            },
-          },
-          required: ["presetId"],
-        },
-        category: "Style",
-      },
-
-      // ── Serial ────────────────────────────────────────────────────────────
-      {
-        name: "regenerateSerial",
-        description: "Generate a new random serial number for the certificate.",
-        parameters: { type: "object", properties: {} },
-        category: "Content",
-      },
-
       // ── Reset ─────────────────────────────────────────────────────────────
       {
-        name: "resetCertificate",
+        name: "resetForm",
         description: "Reset the certificate to defaults. WARNING: Erases all current content.",
         parameters: {
           type: "object",
           properties: {
-            certificateType: {
-              type: "string",
-              enum: VALID_TYPES,
-              description: "Certificate type to reset to (optional — defaults to achievement)",
-            },
+            certificateType: { type: "string", enum: VALID_TYPES, description: "Certificate type to reset to" },
           },
         },
-        category: "Document",
+        category: "Reset",
         destructive: true,
       },
 
@@ -302,29 +309,21 @@ export function createCertificateManifest(options?: CertificateManifestOptions):
       // ── Validation ─────────────────────────────────────────────────────────
       {
         name: "validateBeforeExport",
-        description:
-          "Check the certificate for issues before exporting: missing recipient name, empty fields. ALWAYS call this before exportPng/exportPdf.",
+        description: "Check the certificate for issues before exporting.",
         parameters: { type: "object", properties: {} },
-        category: "Export",
+        category: "Validate",
       },
 
       // ── Export ─────────────────────────────────────────────────────────────
       {
-        name: "exportPng",
-        description: "Export the certificate as a high-resolution PNG image.",
-        parameters: { type: "object", properties: {} },
-        category: "Export",
-      },
-      {
-        name: "exportPdf",
-        description: "Export the certificate as a PDF document.",
-        parameters: { type: "object", properties: {} },
-        category: "Export",
-      },
-      {
-        name: "copyToClipboard",
-        description: "Copy the certificate as an image to the clipboard.",
-        parameters: { type: "object", properties: {} },
+        name: "exportDocument",
+        description: "Export or print the certificate via browser print dialog (PDF/Print).",
+        parameters: {
+          type: "object",
+          properties: {
+            format: { type: "string", enum: ["print"], description: "Export format" },
+          },
+        },
         category: "Export",
       },
     ],
@@ -334,82 +333,96 @@ export function createCertificateManifest(options?: CertificateManifestOptions):
 
     // ── executeAction ─────────────────────────────────────────────────────────
     executeAction: (actionName: string, params: Record<string, unknown>): ChikoActionResult => {
-      const store = useCertificateCanvas.getState();
+      const store = useCertificateEditor.getState();
       try {
         switch (actionName) {
           case "updateContent":
             store.updateContent(params as Parameters<typeof store.updateContent>[0]);
             return { success: true, message: "Content updated" };
 
-          case "updateIssuer":
-            store.updateIssuer(params as Parameters<typeof store.updateIssuer>[0]);
-            return { success: true, message: "Issuer details updated" };
+          case "updateOrganization":
+            store.updateOrganization(params as Parameters<typeof store.updateOrganization>[0]);
+            return { success: true, message: "Organization updated" };
 
-          case "updateMeta":
-            store.updateMeta(params as Parameters<typeof store.updateMeta>[0]);
-            return { success: true, message: "Date/serial updated" };
+          case "updateEvent":
+            store.updateEvent(params as Parameters<typeof store.updateEvent>[0]);
+            return { success: true, message: "Event details updated" };
+
+          case "updateDates":
+            store.updateDates(params as Parameters<typeof store.updateDates>[0]);
+            return { success: true, message: "Dates updated" };
 
           case "setCertificateType": {
             const t = params.type as CertificateType;
             if (!VALID_TYPES.includes(t)) {
               return { success: false, message: `Invalid type: ${t}. Valid: ${VALID_TYPES.join(", ")}` };
             }
-            store.setType(t);
+            store.setCertificateType(t);
             return { success: true, message: `Certificate type set to ${t}` };
           }
 
-          case "setStyle": {
-            const s = params.style as CertStyle;
-            if (!VALID_STYLES.includes(s)) {
-              return { success: false, message: `Invalid style: ${s}. Valid: ${VALID_STYLES.join(", ")}` };
+          case "addSignatory": {
+            if (store.form.signatories.length >= 4) {
+              return { success: false, message: "Maximum 4 signatories allowed" };
             }
-            store.setStyle(s);
-            return { success: true, message: `Style set to ${s}` };
+            const newId = store.addSignatory();
+            if (params.name || params.title || params.organization) {
+              store.updateSignatory(newId, {
+                name: (params.name as string) || "",
+                title: (params.title as string) || "",
+                organization: (params.organization as string) || "",
+              });
+            }
+            return { success: true, message: "Signatory added" };
           }
 
-          case "setColorScheme": {
-            const id = params.schemeId as string;
-            if (!CERT_COLOR_SCHEMES.some((c) => c.id === id)) {
-              return { success: false, message: `Invalid color scheme: ${id}. Valid: ${CERT_COLOR_SCHEMES.map((c) => c.id).join(", ")}` };
-            }
-            store.setColorScheme(id);
-            return { success: true, message: `Color scheme set to ${id}` };
+          case "updateSignatory": {
+            const idx = params.index as number;
+            const sig = store.form.signatories[idx];
+            if (!sig) return { success: false, message: `Invalid signatory index: ${idx}` };
+            const patch: Record<string, string> = {};
+            if (params.name !== undefined) patch.name = params.name as string;
+            if (params.title !== undefined) patch.title = params.title as string;
+            if (params.organization !== undefined) patch.organization = params.organization as string;
+            store.updateSignatory(sig.id, patch);
+            return { success: true, message: "Signatory updated" };
           }
 
-          case "setSize": {
-            const sz = params.size as CertificateSize;
-            if (!VALID_SIZES.includes(sz)) {
-              return { success: false, message: `Invalid size: ${sz}. Valid: ${VALID_SIZES.join(", ")}` };
-            }
-            store.setSize(sz);
-            return { success: true, message: `Size set to ${sz}` };
+          case "removeSignatory": {
+            const idx = params.index as number;
+            const sig = store.form.signatories[idx];
+            if (!sig) return { success: false, message: `Invalid signatory index: ${idx}` };
+            store.removeSignatory(sig.id);
+            return { success: true, message: "Signatory removed" };
           }
 
-          case "toggleFeatures": {
-            const features = ["showSeal", "showCorners", "showRibbon", "showDivider"] as const;
-            for (const f of features) {
-              if (typeof params[f] === "boolean") {
-                store.toggleFeature(f, params[f] as boolean);
-              }
+          case "updateSeal":
+            store.updateSeal(params as Parameters<typeof store.updateSeal>[0]);
+            return { success: true, message: "Seal settings updated" };
+
+          case "updateStyle": {
+            if (params.template) {
+              store.setTemplate(params.template as CertificateTemplate);
             }
-            return { success: true, message: "Feature toggles updated" };
+            if (params.accentColor) {
+              store.setAccentColor(params.accentColor as string);
+            }
+            const stylePatch: Record<string, unknown> = {};
+            if (params.fontPairing) stylePatch.fontPairing = params.fontPairing;
+            if (params.fontScale) stylePatch.fontScale = params.fontScale;
+            if (params.headerStyle) stylePatch.headerStyle = params.headerStyle;
+            if (Object.keys(stylePatch).length > 0) {
+              store.updateStyle(stylePatch as Parameters<typeof store.updateStyle>[0]);
+            }
+            return { success: true, message: "Style updated" };
           }
 
-          case "applyPreset": {
-            const pid = params.presetId as string;
-            if (!CERT_TEMPLATE_PRESETS.some((p) => p.id === pid)) {
-              return { success: false, message: `Invalid preset: ${pid}` };
-            }
-            store.applyPreset(pid);
-            return { success: true, message: `Preset "${pid}" applied` };
-          }
+          case "updateFormat":
+            store.updateFormat(params as Parameters<typeof store.updateFormat>[0]);
+            return { success: true, message: "Format updated" };
 
-          case "regenerateSerial":
-            store.regenerateSerial();
-            return { success: true, message: `Serial regenerated: ${useCertificateCanvas.getState().config.serialNumber}` };
-
-          case "resetCertificate":
-            store.resetConfig(params.certificateType as CertificateType | undefined);
+          case "resetForm":
+            store.resetForm(params.certificateType as CertificateType | undefined);
             return { success: true, message: "Certificate reset to defaults" };
 
           case "readCurrentState":
@@ -418,14 +431,14 @@ export function createCertificateManifest(options?: CertificateManifestOptions):
           case "prefillFromMemory": {
             const memory = useBusinessMemory.getState();
             if (!memory.hasProfile) {
-              return { success: false, message: "No business profile saved yet. Ask the user to set up their Business Memory first." };
+              return { success: false, message: "No business profile saved yet." };
             }
             const profile = memory.profile;
             if (profile.companyName) {
-              store.updateIssuer({ organizationName: profile.companyName });
+              store.updateOrganization({ organizationName: profile.companyName });
               return { success: true, message: `Organization pre-filled: ${profile.companyName}` };
             }
-            return { success: false, message: "Business profile has no company name to pre-fill." };
+            return { success: false, message: "No company name in business profile." };
           }
 
           case "validateBeforeExport": {
@@ -436,7 +449,7 @@ export function createCertificateManifest(options?: CertificateManifestOptions):
             if (ready && warningCount === 0) {
               msg = "Certificate is ready to export — no issues found.";
             } else if (ready) {
-              msg = `Certificate can be exported but has ${warningCount} warning(s) to review:\n`;
+              msg = `Certificate can be exported but has ${warningCount} warning(s):\n`;
               for (const i of issues) msg += `  ⚠ ${i.message}\n`;
             } else {
               msg = `Certificate has ${errorCount} error(s) and ${warningCount} warning(s):\n`;
@@ -445,35 +458,16 @@ export function createCertificateManifest(options?: CertificateManifestOptions):
             return { success: true, message: msg.trim(), newState: { issues, ready, errorCount, warningCount } };
           }
 
-          case "exportPng": {
+          case "exportDocument": {
             const { ready, issues } = validateCertificate();
             const errors = issues.filter((i) => i.severity === "error");
             if (!ready) {
               return { success: false, message: `Cannot export — ${errors.length} error(s):\n${errors.map((i) => `• ${i.message}`).join("\n")}` };
             }
-            const handler = options?.onExportPng?.current;
+            const handler = options?.onPrintRef?.current;
             if (!handler) return { success: false, message: "Export not ready yet — please wait and try again." };
             handler();
-            return { success: true, message: "PNG export started." };
-          }
-
-          case "exportPdf": {
-            const { ready, issues } = validateCertificate();
-            const errors = issues.filter((i) => i.severity === "error");
-            if (!ready) {
-              return { success: false, message: `Cannot export — ${errors.length} error(s):\n${errors.map((i) => `• ${i.message}`).join("\n")}` };
-            }
-            const handler = options?.onExportPdf?.current;
-            if (!handler) return { success: false, message: "PDF export not ready yet — please wait and try again." };
-            handler();
-            return { success: true, message: "PDF export started." };
-          }
-
-          case "copyToClipboard": {
-            const handler = options?.onCopy?.current;
-            if (!handler) return { success: false, message: "Copy not ready yet — please wait and try again." };
-            handler();
-            return { success: true, message: "Certificate copied to clipboard." };
+            return { success: true, message: "Export triggered." };
           }
 
           default:
@@ -487,7 +481,7 @@ export function createCertificateManifest(options?: CertificateManifestOptions):
 
   return withActivityLogging(
     baseManifest,
-    () => useCertificateCanvas.getState().config,
-    (snapshot) => useCertificateCanvas.getState().setConfig(snapshot as CertificateConfig),
+    () => useCertificateEditor.getState().form,
+    (snapshot) => useCertificateEditor.getState().setForm(snapshot as CertificateFormData),
   );
 }

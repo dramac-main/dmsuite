@@ -58,11 +58,9 @@ export default function DiplomaCanvasWorkspace() {
   const upd = useDiplomaCanvas((s) => s.updateConfig);
 
   /* ── Chiko Manifest Registration ────────────────────── */
-  const exportPngRef = useRef<(() => void) | null>(null);
-  const exportPdfRef = useRef<(() => void) | null>(null);
-  const copyRef = useRef<(() => void) | null>(null);
+  const chikoOnPrintRef = useRef<(() => void) | null>(null);
   const manifestFactory = useCallback(
-    () => createDiplomaManifest({ onExportPng: exportPngRef, onExportPdf: exportPdfRef, onCopy: copyRef }),
+    () => createDiplomaManifest({ onPrintRef: chikoOnPrintRef }),
     [],
   );
   useChikoActions(manifestFactory);
@@ -245,10 +243,8 @@ Return ONLY valid JSON:
     downloadPdf(pdfBytes, `diploma-${config.type}-${Date.now()}.pdf`);
   }, [editorStore.doc, config.type]);
 
-  /* Wire export refs for Chiko manifest */
-  exportPngRef.current = exportPNG;
-  exportPdfRef.current = handleExportPdf;
-  copyRef.current = handleCopy;
+  /* Wire export ref for Chiko manifest */
+  chikoOnPrintRef.current = exportPNG;
 
   /* ── Left Panel ─────────────────────────────────────────── */
   const leftPanel = (

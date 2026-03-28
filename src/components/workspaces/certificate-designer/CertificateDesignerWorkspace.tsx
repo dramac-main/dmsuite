@@ -38,6 +38,8 @@ import {
   SIcon,
 } from "@/components/workspaces/shared/WorkspaceUIKit";
 import WorkspaceErrorBoundary from "@/components/workspaces/shared/WorkspaceErrorBoundary";
+import { useChikoActions } from "@/hooks/useChikoActions";
+import { createCertificateManifest } from "@/lib/chiko/manifests/certificate";
 
 // =============================================================================
 // Editor tab definitions
@@ -168,7 +170,10 @@ export default function CertificateDesignerWorkspace() {
     dispatchProgress("exported");
   }, [form.title, form.format.pageSize, form.format.orientation, form.style.fontPairing]);
 
-  // Register Chiko manifest — disabled (old CSS workspace, replaced by canvas workspace)
+  // Chiko AI integration
+  const chikoOnPrintRef = useRef<(() => void) | null>(null);
+  useEffect(() => { chikoOnPrintRef.current = handlePrint; }, [handlePrint]);
+  useChikoActions(() => createCertificateManifest({ onPrintRef: chikoOnPrintRef }));
 
   const handleStartOver = useCallback(() => {
     resetForm();
