@@ -1,10 +1,40 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 98/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅ — Resume Controls & Multi-Page A4 Fix ✅ — Project Saving System (IndexedDB + Store Adapters) ✅ — Architectural Audit Fixes (3-Phase Remediation) ✅ — **Certificate Designer + Diploma & Accreditation Designer ✅** — **Ticket & Pass Designer ✅** — **Business Plan Writer ✅** — **Worksheet & Form Designer ✅** — **Supabase-Backed Project Storage ✅** — **Full Platform Data Persistence ✅** — **Vector PDF Renderer ✅** — **Diploma Canvas Rewrite ✅**
+## Overall Status: 98/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅ — Resume Controls & Multi-Page A4 Fix ✅ — Project Saving System (IndexedDB + Store Adapters) ✅ — Architectural Audit Fixes (3-Phase Remediation) ✅ — **Certificate Designer + Diploma & Accreditation Designer ✅** — **Ticket & Pass Designer ✅** — **Business Plan Writer ✅** — **Worksheet & Form Designer ✅** — **Supabase-Backed Project Storage ✅** — **Full Platform Data Persistence ✅** — **Vector PDF Renderer ✅** — **Diploma Canvas Rewrite ✅** — **Certificate V3 Handoff (Infrastructure Upgrade Spec) ✅**
 
 ---
 
-## Current Work: Vector PDF + Diploma Canvas — COMPLETE ✅
+## Current Work: Certificate EditorV2 Canvas Rebuild — COMPLETE ✅
+
+### Session 151 — Certificate EditorV2 Full Rebuild
+
+#### Infrastructure Upgrades (Phase 0 — benefits ALL tools)
+- [x] Installed fontfaceobserver + @types/fontfaceobserver
+- [x] Created src/lib/editor/font-loader.ts (ensureFontReady, ensureDocumentFontsReady)
+- [x] Created src/lib/editor/svg-renderer.ts (renderSvgToHighDpiPng)
+- [x] Created src/app/api/fonts/route.ts (server-side Google Font TTF fetcher)
+- [x] Modified renderer.ts — full applyPostEffects() (blur, glow, outline, noise, etc.)
+- [x] Modified pdf-renderer.ts — fontkit integration, custom fonts, gradient/effects raster fallback
+
+#### Certificate Rebuild (Phase 1-7)
+- [x] Migrated 8 SVG borders + 8 PNG thumbnails to public/templates/certificates/
+- [x] Deleted 10 old form-based files (tabs, workspace, renderer, layers panel, store, manifest)
+- [x] Created certificate-templates.ts (8 templates with colors, fonts, layouts)
+- [x] Created certificate-adapter.ts (CertificateConfig → DesignDocumentV2, 15-25 layers, 4 seal styles)
+- [x] Created certificate-editor.ts (Zustand store, sessionStorage persistence)
+- [x] Created CertificateTemplatePicker.tsx (gallery with category filters)
+- [x] Created CertificateQuickEdit.tsx (left sidebar form panel)
+- [x] Created CertificateEditor.tsx (canvas editor, AI revision bar, bidirectional sync)
+- [x] Created CertificateDesignerWorkspace.tsx (state machine: pick → loading → editor)
+- [x] Created certificate.ts manifest (22 actions, 8 categories, tag-based layer lookup)
+- [x] Created certificate-design-generator.ts (AI prompt builder, deterministic fallback)
+- [x] Updated store-adapters.ts (getCertificateAdapter for project save/load)
+- [x] Updated TOOL-STATUS.md changelog
+- [x] TypeScript: 0 errors (exit code 0)
+
+---
+
+## Previous Work: Vector PDF + Diploma Canvas — COMPLETE ✅
 
 ### Session 148 — Vector PDF Renderer + Diploma Canvas Rewrite
 

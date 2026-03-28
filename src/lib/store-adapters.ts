@@ -223,17 +223,40 @@ function getCertificateAdapter(): StoreAdapter {
   const { useCertificateEditor } = require("@/stores/certificate-editor");
   return {
     getSnapshot: () => {
-      const { form, accentColorLocked } = useCertificateEditor.getState();
-      return { form, accentColorLocked };
+      const { meta, selectedTemplateId, documentSnapshot } = useCertificateEditor.getState();
+      return { meta, selectedTemplateId, documentSnapshot };
     },
     restoreSnapshot: (data) => {
-      if (data.form) {
-        useCertificateEditor.getState().setForm(data.form as never);
+      if (data.meta) {
+        useCertificateEditor.getState().setMeta(data.meta as never);
+      }
+      if (data.selectedTemplateId) {
+        useCertificateEditor.getState().setTemplateId(data.selectedTemplateId as string);
+      }
+      if (data.documentSnapshot) {
+        useCertificateEditor.getState().setDocumentSnapshot(data.documentSnapshot as never);
+        // Also push to shared editor store
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { useEditorStore } = require("@/stores/editor");
+          useEditorStore.getState().setDoc(data.documentSnapshot as never);
+        } catch { /* editor store may not be loaded yet */ }
       }
     },
     resetStore: () => {
-      useCertificateEditor.getState().resetForm();
-      nukePersistStorage("dmsuite-certificate");
+      useCertificateEditor.getState().resetToDefaults();
+      // Certificate v2 uses sessionStorage
+      try {
+        if (typeof sessionStorage !== "undefined") {
+          sessionStorage.removeItem("dmsuite-certificate-v2");
+        }
+      } catch { /* SSR/incognito */ }
+      // Also reset shared editor store
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { useEditorStore } = require("@/stores/editor");
+        useEditorStore.getState().resetDoc();
+      } catch { /* editor store may not be loaded yet */ }
     },
     subscribe: (cb) => useCertificateEditor.subscribe(cb),
   };

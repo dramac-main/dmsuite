@@ -10,7 +10,8 @@ import type {
   TextLayerV2, ShapeLayerV2, ImageLayerV2, FrameLayerV2,
   PathLayerV2, IconLayerV2, GroupLayerV2, BooleanGroupLayerV2,
   Paint, GradientPaint, StrokeSpec,
-  DropShadowEffect,
+  DropShadowEffect, InnerShadowEffect, BlurEffect, GlowEffect,
+  OutlineEffect, ColorAdjustEffect, NoiseEffect,
   RGBA,
 } from "./schema";
 import { BLEND_MODE_TO_COMPOSITE, rgbaToHex } from "./schema";
@@ -574,10 +575,232 @@ function applyPreEffects(ctx: CanvasRenderingContext2D, layer: LayerV2): void {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function applyPostEffects(_ctx: CanvasRenderingContext2D, _layer: LayerV2): void {
-  // Post-effects (outline, glow, noise) require off-screen compositing
-  // Placeholder for future implementation
+function applyPostEffects(ctx: CanvasRenderingContext2D, layer: LayerV2): void {
+  const hasPostEffects = layer.effects.some(
+    (e) => e.enabled && e.type !== "drop-shadow",
+  );
+  if (!hasPostEffects) return;
+
+  // Get layer bounds for temporary canvas
+  const { x, y } = layer.transform.position;
+  const { x: w, y: h } = layer.transform.size;
+  if (w <= 0 || h <= 0) return;
+
+  for (const effect of layer.effects) {
+    if (!effect.enabled) continue;
+
+    switch (effect.type) {
+      case "blur": {
+        const e = effect as BlurEffect;
+        if (e.radius <= 0) break;
+        // Apply CSS filter blur to the drawn region
+        // We need to re-draw the affected area with a blur filter
+        const pad = Math.ceil(e.radius * 2);
+        const srcX = Math.max(0, Math.floor(x - pad));
+        const srcY = Math.max(0, Math.floor(y - pad));
+        const srcW = Math.ceil(w + pad * 2);
+        const srcH = Math.ceil(h + pad * 2);
+
+        try {
+          const imgData = ctx.getImageData(srcX, srcY, srcW, srcH);
+          const tmp = document.createElement("canvas");
+          tmp.width = srcW;
+          tmp.height = srcH;
+          const tmpCtx = tmp.getContext("2d")!;
+          tmpCtx.putImageData(imgData, 0, 0);
+
+          // Apply blur
+          ctx.save();
+          ctx.clearRect(srcX, srcY, srcW, srcH);
+          ctx.filter = `blur(${e.radius}px)`;
+          ctx.drawImage(tmp, srcX, srcY);
+          ctx.filter = "none";
+          ctx.restore();
+        } catch {
+          // getImageData may fail with CORS-tainted canvases
+        }
+        break;
+      }
+
+      case "glow": {
+        const e = effect as GlowEffect;
+        if (e.radius <= 0) break;
+        const glowColor = rgbaToCSS(e.color);
+        const passes = Math.max(1, Math.ceil(e.intensity * 3));
+
+        ctx.save();
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = e.radius;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+
+        // Re-draw the layer content with glow shadow multiple times
+        // We capture the region and redraw with shadow
+        const pad = Math.ceil(e.radius * 2);
+        const srcX = Math.max(0, Math.floor(x - pad));
+        const srcY = Math.max(0, Math.floor(y - pad));
+        const srcW = Math.ceil(w + pad * 2);
+        const srcH = Math.ceil(h + pad * 2);
+
+        try {
+          const imgData = ctx.getImageData(srcX, srcY, srcW, srcH);
+          const tmp = document.createElement("canvas");
+          tmp.width = srcW;
+          tmp.height = srcH;
+          const tmpCtx = tmp.getContext("2d")!;
+          tmpCtx.putImageData(imgData, 0, 0);
+
+          for (let p = 0; p < passes; p++) {
+            ctx.drawImage(tmp, srcX, srcY);
+          }
+        } catch {
+          // CORS fallback
+        }
+        ctx.restore();
+        break;
+      }
+
+      case "outline": {
+        const e = effect as OutlineEffect;
+        if (e.width <= 0) break;
+        const outlineColor = rgbaToCSS(e.color);
+
+        ctx.save();
+        // Draw outline by creating shadow offsets in 8 directions
+        ctx.shadowColor = outlineColor;
+        ctx.shadowBlur = 0;
+
+        const offsets = [
+          [e.width, 0], [-e.width, 0], [0, e.width], [0, -e.width],
+          [e.width, e.width], [-e.width, e.width], [e.width, -e.width], [-e.width, -e.width],
+        ];
+
+        try {
+          const pad = Math.ceil(e.width * 2);
+          const srcX = Math.max(0, Math.floor(x - pad));
+          const srcY = Math.max(0, Math.floor(y - pad));
+          const srcW = Math.ceil(w + pad * 2);
+          const srcH = Math.ceil(h + pad * 2);
+          const imgData = ctx.getImageData(srcX, srcY, srcW, srcH);
+          const tmp = document.createElement("canvas");
+          tmp.width = srcW;
+          tmp.height = srcH;
+          const tmpCtx = tmp.getContext("2d")!;
+          tmpCtx.putImageData(imgData, 0, 0);
+
+          for (const [ox, oy] of offsets) {
+            ctx.shadowOffsetX = ox;
+            ctx.shadowOffsetY = oy;
+            ctx.drawImage(tmp, srcX, srcY);
+          }
+        } catch {
+          // CORS fallback
+        }
+        ctx.restore();
+        break;
+      }
+
+      case "color-adjust": {
+        const e = effect as ColorAdjustEffect;
+        // Build CSS filter string
+        const filters: string[] = [];
+        if (e.brightness !== 0) filters.push(`brightness(${1 + e.brightness / 100})`);
+        if (e.contrast !== 0) filters.push(`contrast(${1 + e.contrast / 100})`);
+        if (e.saturation !== 0) filters.push(`saturate(${1 + e.saturation / 100})`);
+        if (e.hueRotate !== 0) filters.push(`hue-rotate(${e.hueRotate}deg)`);
+        // Temperature approximation via sepia + hue-rotate
+        if (e.temperature > 0) {
+          filters.push(`sepia(${Math.min(e.temperature / 100, 0.4)})`);
+        }
+        if (filters.length === 0) break;
+
+        try {
+          const srcX = Math.max(0, Math.floor(x));
+          const srcY = Math.max(0, Math.floor(y));
+          const srcW = Math.ceil(w);
+          const srcH = Math.ceil(h);
+          const imgData = ctx.getImageData(srcX, srcY, srcW, srcH);
+          const tmp = document.createElement("canvas");
+          tmp.width = srcW;
+          tmp.height = srcH;
+          const tmpCtx = tmp.getContext("2d")!;
+          tmpCtx.putImageData(imgData, 0, 0);
+
+          ctx.save();
+          ctx.clearRect(srcX, srcY, srcW, srcH);
+          ctx.filter = filters.join(" ");
+          ctx.drawImage(tmp, srcX, srcY);
+          ctx.filter = "none";
+          ctx.restore();
+        } catch {
+          // CORS fallback
+        }
+        break;
+      }
+
+      case "noise": {
+        const e = effect as NoiseEffect;
+        if (e.intensity <= 0) break;
+
+        try {
+          const srcX = Math.max(0, Math.floor(x));
+          const srcY = Math.max(0, Math.floor(y));
+          const srcW = Math.ceil(w);
+          const srcH = Math.ceil(h);
+          const imgData = ctx.getImageData(srcX, srcY, srcW, srcH);
+          const data = imgData.data;
+          const strength = e.intensity * 255;
+
+          for (let i = 0; i < data.length; i += 4) {
+            if (data[i + 3] === 0) continue; // Skip transparent pixels
+            if (e.monochrome) {
+              const noise = (Math.random() - 0.5) * strength;
+              data[i] = Math.max(0, Math.min(255, data[i] + noise));
+              data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + noise));
+              data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise));
+            } else {
+              data[i] = Math.max(0, Math.min(255, data[i] + (Math.random() - 0.5) * strength));
+              data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + (Math.random() - 0.5) * strength));
+              data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + (Math.random() - 0.5) * strength));
+            }
+          }
+
+          ctx.putImageData(imgData, srcX, srcY);
+        } catch {
+          // CORS fallback
+        }
+        break;
+      }
+
+      case "inner-shadow": {
+        const e = effect as InnerShadowEffect;
+        ctx.save();
+        try {
+          // Clip to the layer bounds
+          ctx.beginPath();
+          ctx.rect(x, y, w, h);
+          ctx.clip();
+
+          // Draw shadow-casting shape outside the layer bounds
+          ctx.shadowColor = rgbaToCSS(e.color);
+          ctx.shadowBlur = e.blur;
+          ctx.shadowOffsetX = e.offsetX;
+          ctx.shadowOffsetY = e.offsetY;
+
+          // Draw a large rectangle with a hole at the layer position
+          ctx.beginPath();
+          ctx.rect(x - 5000, y - 5000, w + 10000, h + 10000);
+          ctx.rect(x, y + h, w, -h); // counter-clockwise hole
+          ctx.fillStyle = "rgba(0,0,0,1)";
+          ctx.fill("evenodd");
+        } catch {
+          // fallback
+        }
+        ctx.restore();
+        break;
+      }
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------

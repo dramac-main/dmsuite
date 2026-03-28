@@ -1,25 +1,49 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Certificate + Diploma Architecture Fix — COMPLETE ✅
+**Phase:** Certificate Canvas Rebuild — EditorV2 COMPLETE ✅
 
-### Session 149+: Certificate & Diploma — Pattern A Rewiring
-
-#### Problem Discovered
-Two parallel implementations existed for certificate and diploma tools:
-- **Canvas2D** (was active): procedural Canvas2D rendering, canvas stores — visually poor output
-- **Pattern A HTML/CSS** (was dormant): fully-built 7-file workspace folders in `certificate-designer/` and `diploma-designer/` — correct architecture per TOOL-CREATION-GUIDE.md
-
-Everything (routing, store adapters, Chiko manifests) was wired to the Canvas2D versions despite Pattern A workspaces being complete and superior.
+### Session 151+: Certificate EditorV2 Canvas Rebuild — COMPLETE
 
 #### What Was Done
+Complete rebuild of the Certificate Designer from form-based HTML/CSS system to production-grade EditorV2 canvas editor, following `CERTIFICATE-REBUILD-HANDOFF-V3.md` (1237-line spec).
 
-1. **page.tsx** — routing switched from Canvas2D to Pattern A folders for both tools
-2. **store-adapters.ts** — `getCertificateAdapter()` and `getDiplomaAdapter()` now use `certificate-editor` / `diploma-editor` stores (form-based, persist keys `dmsuite-certificate` / `dmsuite-diploma-editor`)
-3. **chiko/manifests/certificate.ts** — Fully rewritten: uses `useCertificateEditor`, form-based actions (updateContent, updateOrganization, updateEvent, updateDates, setCertificateType, add/update/removeSignatory, updateSeal, updateStyle, updateFormat, resetForm, exportDocument via `onPrintRef`)
-4. **chiko/manifests/diploma.ts** — Fully rewritten: uses `useDiplomaEditor`, form-based actions (updateInstitution, updateRecipient, updateProgram, updateConferral, updateAccreditation, updateDates, updateReference, setDiplomaType, add/update/removeSignatory by ID, updateSeal, updateStyle, updateFormat, resetForm, exportDocument via `onPrintRef`)
-5. **certificate-designer/CertificateDesignerWorkspace.tsx** — Chiko re-enabled with `chikoOnPrintRef` wiring (was disabled with comment "replaced by canvas workspace")
-6. **diploma-designer/DiplomaDesignerWorkspace.tsx** — Passes `onPrintRef` to manifest factory
+**Infrastructure Upgrades (Phase 0 — benefits ALL tools):**
+1. `fontfaceobserver` + `@types/fontfaceobserver` installed
+2. Created `src/lib/editor/font-loader.ts` — shared font readiness detection
+3. Created `src/lib/editor/svg-renderer.ts` — high-DPI SVG → PNG
+4. Created `src/app/api/fonts/route.ts` — server-side Google Font TTF fetcher
+5. Modified `src/lib/editor/renderer.ts` — full `applyPostEffects()` (blur, glow, outline, etc.)
+6. Modified `src/lib/editor/pdf-renderer.ts` — fontkit, custom fonts, gradient/effects raster fallback
+
+**Certificate Files Created:**
+1. `public/templates/certificates/` — 8 SVG borders + 8 PNG thumbnails
+2. `src/data/certificate-templates.ts` — 8-template registry with colors, fonts, layouts
+3. `src/lib/editor/certificate-adapter.ts` — CertificateConfig → DesignDocumentV2 (15-25 tagged layers, 4 seal styles, signatories)
+4. `src/stores/certificate-editor.ts` — Zustand store with sessionStorage persistence
+5. `src/components/workspaces/certificate-designer/CertificateTemplatePicker.tsx` — gallery with category filters
+6. `src/components/workspaces/certificate-designer/CertificateQuickEdit.tsx` — left sidebar form panel
+7. `src/components/workspaces/certificate-designer/CertificateEditor.tsx` — canvas editor with AI revision bar, bidirectional sync
+8. `src/components/workspaces/certificate-designer/CertificateDesignerWorkspace.tsx` — workspace state machine (pick → loading → editor)
+9. `src/lib/chiko/manifests/certificate.ts` — 22 actions, 8 categories, tag-based layer lookup
+10. `src/lib/editor/certificate-design-generator.ts` — AI prompt builder with deterministic fallback
+11. `src/lib/store-adapters.ts` — updated getCertificateAdapter() for project save/load
+
+**Old files deleted:** 10 files (tabs directory, old workspace, renderer, layers panel, old store, old manifest)
+
+**TypeScript check:** 0 errors (exit code 0)
+
+#### Architecture Decisions
+- Full DesignDocumentV2 scene graph with semantic tags on every layer
+- Bidirectional sync via `isSyncingRef` + `lastLoadedDocRef` (StepEditor pattern)
+- `certificateConfigToDocumentAsync()` includes font preloading
+- AI revision bar with contextual suggestion chips
+- 4 seal styles: gold (radial gradient), silver, embossed, stamp
+- Template picker → font loading skeleton → full-screen canvas editor state machine
+
+#### Next Steps
+- Business card PDF regression test (after pdf-renderer.ts changes)
+- Consider applying same EditorV2 rebuild pattern to Diploma & Accreditation
 7. **CertificateDesignerWorkspace.tsx / DiplomaCanvasWorkspace.tsx** (legacy canvas) — Updated to compile with new manifest interface (`onPrintRef` instead of removed `onExportPng/onExportPdf/onCopy`)
 
 #### Architecture: Active Certificate/Diploma Pipeline
