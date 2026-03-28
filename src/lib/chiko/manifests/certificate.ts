@@ -21,7 +21,6 @@ import {
   certificateConfigToDocument,
   syncTextToCertificateDoc,
   syncColorsToCertificateDoc,
-  regenerateCertificateFromTemplate,
 } from "@/lib/editor/certificate-adapter";
 import {
   createTextLayerV2,
@@ -765,7 +764,7 @@ export function createCertificateManifest(options?: ManifestOptions): ChikoActio
             store.getState().setTemplateId(templateId);
             store.getState().setMeta({ templateId });
             const currentMeta = store.getState().meta;
-            const newDoc = regenerateCertificateFromTemplate(currentMeta, template);
+            const newDoc = certificateConfigToDocument(currentMeta, template);
             pushDoc(newDoc);
             return ok(`Template changed to "${template.name}"`);
           }

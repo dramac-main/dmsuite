@@ -18,6 +18,7 @@ import type {
 import {
   createDocumentV2,
   addLayer,
+  updateLayer,
   createTextLayerV2,
   createShapeLayerV2,
   createImageLayerV2,
@@ -25,6 +26,7 @@ import {
   solidPaint,
   solidPaintHex,
 } from "./schema";
+import type { LayerV2 } from "./schema";
 import type {
   CertificateTemplate,
   CertificateTemplateColors,
@@ -813,11 +815,11 @@ export function syncColorsToCertificateDoc(
 }
 
 /** Complete regeneration when user switches template */
-export function regenerateCertificateFromTemplate(
+export async function regenerateCertificateFromTemplate(
   cfg: CertificateConfig,
   template: CertificateTemplate,
-): DesignDocumentV2 {
-  return certificateConfigToDocument(cfg, template);
+): Promise<DesignDocumentV2> {
+  return certificateConfigToDocumentAsync(cfg, template);
 }
 
 // =============================================================================
@@ -828,9 +830,42 @@ export async function certificateConfigToDocumentAsync(
   cfg: CertificateConfig,
   template?: CertificateTemplate,
 ): Promise<DesignDocumentV2> {
-  const doc = certificateConfigToDocument(cfg, template);
+  let doc = certificateConfigToDocument(cfg, template);
+
+  // Load SVG border image and attach it to the image layer for canvas rendering
+  const tpl = template ?? getCertificateTemplate(cfg.templateId);
+  if (tpl.svgBorderPath) {
+    const borderLayer = Object.values(doc.layersById).find(
+      (l) => l.type === "image" && l.tags.includes("border"),
+    );
+    if (borderLayer) {
+      try {
+        const img = await loadImageElement(tpl.svgBorderPath);
+        doc = updateLayer(doc, borderLayer.id, {
+          _imageElement: img,
+        } as Partial<LayerV2>);
+      } catch (err) {
+        console.warn("Failed to load SVG border:", err);
+      }
+    }
+  }
+
   await ensureDocumentFontsReady(doc);
   return doc;
+}
+
+// ---------------------------------------------------------------------------
+// Image loader helper
+// ---------------------------------------------------------------------------
+
+function loadImageElement(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+    img.src = src;
+  });
 }
 
 // =============================================================================
