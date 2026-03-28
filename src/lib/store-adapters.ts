@@ -220,43 +220,43 @@ function getIDBadgeAdapter(): StoreAdapter {
 
 function getCertificateAdapter(): StoreAdapter {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useCertificateEditor } = require("@/stores/certificate-editor");
+  const { useCertificateCanvas } = require("@/stores/certificate-canvas");
   return {
     getSnapshot: () => {
-      const { form } = useCertificateEditor.getState();
-      return { form };
+      const { config, activePresetId } = useCertificateCanvas.getState();
+      return { config, activePresetId };
     },
     restoreSnapshot: (data) => {
-      if (data.form) {
-        useCertificateEditor.getState().setForm(data.form as never);
+      if (data.config) {
+        useCertificateCanvas.getState().setConfig(data.config as never);
       }
     },
     resetStore: () => {
-      useCertificateEditor.getState().resetForm();
-      nukePersistStorage("dmsuite-certificate");
+      useCertificateCanvas.getState().resetConfig();
+      nukePersistStorage("dmsuite-certificate-canvas");
     },
-    subscribe: (cb) => useCertificateEditor.subscribe(cb),
+    subscribe: (cb) => useCertificateCanvas.subscribe(cb),
   };
 }
 
 function getDiplomaAdapter(): StoreAdapter {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useDiplomaEditor } = require("@/stores/diploma-editor");
+  const { useDiplomaCanvas } = require("@/stores/diploma-canvas");
   return {
     getSnapshot: () => {
-      const { form } = useDiplomaEditor.getState();
-      return { form };
+      const { config, activePresetId } = useDiplomaCanvas.getState();
+      return { config, activePresetId };
     },
     restoreSnapshot: (data) => {
-      if (data.form) {
-        useDiplomaEditor.getState().setForm(data.form as never);
+      if (data.config) {
+        useDiplomaCanvas.getState().setConfig(data.config as never);
       }
     },
     resetStore: () => {
-      useDiplomaEditor.getState().resetForm();
-      nukePersistStorage("dmsuite-diploma-editor");
+      useDiplomaCanvas.getState().resetConfig();
+      nukePersistStorage("dmsuite-diploma-canvas");
     },
-    subscribe: (cb) => useDiplomaEditor.subscribe(cb),
+    subscribe: (cb) => useDiplomaCanvas.subscribe(cb),
   };
 }
 

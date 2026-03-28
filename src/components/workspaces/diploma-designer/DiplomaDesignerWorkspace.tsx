@@ -176,7 +176,7 @@ export default function DiplomaDesignerWorkspace() {
   }, [handlePrint]);
 
   // Register Chiko manifest
-  useChikoActions(() => createDiplomaManifest({ onPrintRef: chikoOnPrintRef }));
+  useChikoActions(() => createDiplomaManifest({}));
 
   const handleStartOver = useCallback(() => {
     resetForm();

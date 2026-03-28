@@ -1,34 +1,28 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 98/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅ — Resume Controls & Multi-Page A4 Fix ✅ — Project Saving System (IndexedDB + Store Adapters) ✅ — Architectural Audit Fixes (3-Phase Remediation) ✅ — **Certificate Designer + Diploma & Accreditation Designer ✅** — **Ticket & Pass Designer ✅** — **Business Plan Writer ✅** — **Worksheet & Form Designer ✅** — **Supabase-Backed Project Storage ✅** — **Full Platform Data Persistence ✅**
+## Overall Status: 98/195 tools with workspaces (50%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅ — Resume Controls & Multi-Page A4 Fix ✅ — Project Saving System (IndexedDB + Store Adapters) ✅ — Architectural Audit Fixes (3-Phase Remediation) ✅ — **Certificate Designer + Diploma & Accreditation Designer ✅** — **Ticket & Pass Designer ✅** — **Business Plan Writer ✅** — **Worksheet & Form Designer ✅** — **Supabase-Backed Project Storage ✅** — **Full Platform Data Persistence ✅** — **Vector PDF Renderer ✅** — **Diploma Canvas Rewrite ✅**
 
 ---
 
-## Current Work: Full Platform Data Persistence — COMPLETE ✅
+## Current Work: Vector PDF + Diploma Canvas — COMPLETE ✅
 
-### Session 145 — User Data Persistence + Auto-Save Overhaul
+### Session 148 — Vector PDF Renderer + Diploma Canvas Rewrite
 
-#### Problem: All user-level data lost on browser cache clear
-- Analytics, preferences, business memory, chat — ALL localStorage-only
-- Project workspace data never reached Supabase (empty `project_data` table)
-- Auto-save only worked for 9 tools that dispatched `workspace:dirty` events
+#### Vector PDF Renderer (replaces raster jsPDF for canvas tools)
+- [x] Installed pdf-lib + @pdf-lib/fontkit
+- [x] Created `src/lib/editor/pdf-renderer.ts` — vector text, shapes, paths, images
+- [x] Replaced raster PDF in CertificateDesignerWorkspace
+- [x] Replaced raster PDF in business-card StepExport (multi-page front+back merge)
 
-#### Fixes Applied (3 files created, 3 modified, 1 migration):
-- [x] Full audit of all 30 Zustand persist stores (7 user-level, 9 tool-level, 4 session)
-- [x] Supabase migration `006_user_data_storage` — new `user_data` table (KV store, RLS)
-- [x] `src/lib/supabase/user-data.ts` — CRUD + debounced saves + retry
-- [x] `src/hooks/useUserDataSync.ts` — bidirectional sync with smart merge (analytics: max, chat: merge by ID, etc.)
-- [x] Mounted in `ClientShell.tsx` — syncs on every page load
-- [x] Extended `StoreAdapter` with optional `subscribe` method
-- [x] Direct store subscription auto-save in `useProjectData` — 1.5s debounce, bypasses event pipeline
-- [x] Added `subscribe` to all 13 store adapters (12 existing + 1 new business-card)
-- [x] New `business-card` adapter — full wizard state snapshot/restore
+#### Diploma Canvas Rewrite (follows certificate canvas pattern)
+- [x] Created `src/lib/editor/diploma-composer.ts` — 8 types, 6 styles, 8 schemes, 8 presets, signatories, honors
+- [x] Created `src/stores/diploma-canvas.ts` — Zustand + Immer + Zundo + persist
+- [x] Created `src/components/workspaces/DiplomaCanvasWorkspace.tsx` — full canvas workspace with all panels
+- [x] Rewrote `src/lib/chiko/manifests/diploma.ts` — 20+ actions targeting canvas store
+- [x] Updated routing: diploma-designer → DiplomaCanvasWorkspace
+- [x] Updated store adapter: diploma → useDiplomaCanvas
+- [x] Fixed old CSS workspace compilation (removed incompatible onPrintRef)
 - [x] TypeScript: 0 errors
-- [x] Build: SUCCESS
-
-#### Known Gaps Remaining:
-- Canvas-based tools (poster, banner-ad, business-card canvas step) use `useEditorStore` — no adapter yet
-- Wizard stores (invoice-wizard, resume-cv-wizard, sales-book-wizard) not snapshotted — only final editor state saved
 
 ---
 

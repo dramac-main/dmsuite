@@ -52,39 +52,41 @@ export default function StepExport() {
 
     setIsExporting(true);
     try {
-      const { renderToCanvas } = await import("@/lib/editor/renderer");
-      const { default: jsPDF } = await import("jspdf");
+      const { renderDocumentToPdf, downloadPdf } = await import("@/lib/editor/pdf-renderer");
 
-      const rootFrame = activeDoc.layersById[activeDoc.rootFrameId];
-      if (!rootFrame) return;
-
-      const docW = rootFrame.transform.size.x;
-      const docH = rootFrame.transform.size.y;
-
-      // Convert px to mm (at 300 DPI)
-      const mmW = (docW / 300) * 25.4;
-      const mmH = (docH / 300) * 25.4;
-
-      const pdf = new jsPDF({
-        orientation: mmW > mmH ? "landscape" : "portrait",
-        unit: "mm",
-        format: [mmW, mmH],
-      });
-
-      // Front
-      const frontCanvas = renderToCanvas(activeDoc, 3);
-      const frontDataUrl = frontCanvas.toDataURL("image/png");
-      pdf.addImage(frontDataUrl, "PNG", 0, 0, mmW, mmH);
-
-      // Back (if available and requested)
       if (includeBothSides && documents.backDoc) {
-        pdf.addPage([mmW, mmH]);
-        const backCanvas = renderToCanvas(documents.backDoc, 3);
-        const backDataUrl = backCanvas.toDataURL("image/png");
-        pdf.addImage(backDataUrl, "PNG", 0, 0, mmW, mmH);
+        // Multi-page: front + back
+        // Render front page first
+        const frontBytes = await renderDocumentToPdf(activeDoc, {
+          fileName: "business-card",
+          author: "DMSuite",
+        });
+
+        // For multi-page, render back separately and merge via pdf-lib
+        const { PDFDocument } = await import("pdf-lib");
+        const backBytes = await renderDocumentToPdf(documents.backDoc, {
+          fileName: "business-card-back",
+          author: "DMSuite",
+        });
+
+        // Merge front + back into one PDF
+        const merged = await PDFDocument.create();
+        const frontPdf = await PDFDocument.load(frontBytes);
+        const backPdf = await PDFDocument.load(backBytes);
+        const [frontPage] = await merged.copyPages(frontPdf, [0]);
+        const [backPage] = await merged.copyPages(backPdf, [0]);
+        merged.addPage(frontPage);
+        merged.addPage(backPage);
+        const mergedBytes = await merged.save();
+        downloadPdf(mergedBytes, "business-card.pdf");
+      } else {
+        const pdfBytes = await renderDocumentToPdf(activeDoc, {
+          fileName: "business-card",
+          author: "DMSuite",
+        });
+        downloadPdf(pdfBytes, "business-card.pdf");
       }
 
-      pdf.save(`business-card.pdf`);
       setExportSuccess("PDF downloaded successfully!");
       setTimeout(() => setExportSuccess(null), 3000);
     } catch (e) {

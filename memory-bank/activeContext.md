@@ -1,6 +1,65 @@
 # DMSuite — Active Context
 
 ## Current Focus
+**Phase:** Diploma Canvas Rewrite + Vector PDF — COMPLETE ✅
+
+### Session 148+: Vector PDF Renderer + Diploma Canvas Rewrite
+
+#### What Was Done
+
+1. **Vector PDF Renderer** (`src/lib/editor/pdf-renderer.ts`) — NEW ~600 lines
+   - Uses pdf-lib + @pdf-lib/fontkit (newly installed)
+   - `renderDocumentToPdf(doc, opts)` → `Uint8Array`, `downloadPdf(pdfBytes, fileName)`
+   - Text → selectable PDF text (Helvetica standard fonts)
+   - Shapes → vector paths (rectangle, ellipse, triangle, polygon, star, line, rounded rect)
+   - Images → embedded PNG at 2x scale
+   - Icons → raster fallback (4x canvas → PNG)
+   - Replaced raster jsPDF in CertificateDesignerWorkspace + business-card StepExport
+
+2. **Diploma Composer** (`src/lib/editor/diploma-composer.ts`) — NEW ~520 lines
+   - 8 DiplomaTypes, 4 sizes, 6 styles, 8 color schemes, 8 template presets
+   - Honors levels (cum-laude through merit)
+   - Signatories array with name/title/role
+   - `composeDiploma(options)` → DesignDocumentV2 (reuses certificate-library 80 assets)
+   - `configFromPreset(preset, overrides)` — quick-start helper
+
+3. **Diploma Canvas Store** (`src/stores/diploma-canvas.ts`) — NEW
+   - Zustand + Immer + Zundo + persist (key: `dmsuite-diploma-canvas`)
+   - All actions: setConfig, updateConfig, resetConfig, applyPreset, updateInstitution, updateRecipient, updateProgram, updateConferral, updateDates, addSignatory, removeSignatory, updateSignatory, setStyle, setColorScheme, setSize, setType, setHonors, toggleFeature, regenerateSerial
+
+4. **Diploma Canvas Workspace** (`src/components/workspaces/DiplomaCanvasWorkspace.tsx`) — NEW
+   - Full canvas workspace: TemplateSlider, Institution/Recipient/Program/Conferral/Signatories/Style panels
+   - AI Diploma Director (generates text, style, colors, signatories via /api/chat)
+   - Export: PNG (2x canvas), PDF (vector pdf-renderer), Copy (clipboard)
+   - Chiko manifest integration with exportPng/exportPdf/copy refs
+
+5. **Diploma Chiko Manifest** (`src/lib/chiko/manifests/diploma.ts`) — REWRITTEN
+   - Now targets `useDiplomaCanvas` store (not old CSS `useDiplomaEditor`)
+   - 20 actions: updateInstitution, updateRecipient, updateProgram, updateConferral, updateDates, setDiplomaType, addSignatory, updateSignatory, removeSignatory, setStyle, setColorScheme, setSize, toggleFeatures, applyPreset, setHonors, regenerateSerial, resetDiploma, readCurrentState, prefillFromMemory, validateBeforeExport, exportPng, exportPdf, copyToClipboard
+   - Activity logging + undo/redo support
+
+6. **Updated Routing + Adapter**
+   - `page.tsx`: diploma-designer → new `DiplomaCanvasWorkspace` (not old CSS workspace)
+   - `store-adapters.ts`: diploma adapter → `useDiplomaCanvas` store
+   - Old CSS workspace preserved (compile-fixed) but no longer routed
+
+#### Verification
+- TypeScript: 0 errors (`npx tsc --noEmit` — clean)
+- All diploma files compile
+
+#### Architecture: Diploma Canvas Pipeline
+```
+DiplomaConfig (Zustand store)
+  → composeDiploma({config}) // diploma-composer
+    → DesignDocumentV2 (scene graph)
+      → editorStore.setDoc(doc)
+        → CanvasEditor renders (Canvas2D)
+        → renderDocumentToPdf(doc) // vector PDF export
+```
+
+---
+
+## Previous Focus
 **Phase:** Full Platform Data Persistence — Supabase + Auto-Save ✅
 
 ### Session 145: User Data Persistence + Auto-Save Overhaul

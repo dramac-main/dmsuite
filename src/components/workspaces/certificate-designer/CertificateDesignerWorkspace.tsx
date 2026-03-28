@@ -18,8 +18,6 @@ import {
   type CertificateType,
 } from "@/stores/certificate-editor";
 import { printHTML } from "@/lib/print";
-import { useChikoActions } from "@/hooks/useChikoActions";
-import { createCertificateManifest } from "@/lib/chiko/manifests/certificate";
 import { dispatchDirty, dispatchProgress } from "@/lib/workspace-events";
 import { ZOOM_MIN, ZOOM_MAX, ZOOM_STEP, ZOOM_DEFAULT } from "@/lib/workspace-constants";
 import "@/styles/workspace-canvas.css";
@@ -98,7 +96,6 @@ export default function CertificateDesignerWorkspace() {
 
   const printAreaRef = useRef<HTMLDivElement>(null);
   const previewScrollRef = useRef<HTMLDivElement>(null);
-  const chikoOnPrintRef = useRef<(() => void) | null>(null);
 
   // Active editor tab
   const [activeTab, setActiveTab] = useState<EditorTabKey>("content");
@@ -171,13 +168,7 @@ export default function CertificateDesignerWorkspace() {
     dispatchProgress("exported");
   }, [form.title, form.format.pageSize, form.format.orientation, form.style.fontPairing]);
 
-  // Keep Chiko's print ref in sync
-  useEffect(() => {
-    chikoOnPrintRef.current = handlePrint;
-  }, [handlePrint]);
-
-  // Register Chiko manifest
-  useChikoActions(() => createCertificateManifest({ onPrintRef: chikoOnPrintRef }));
+  // Register Chiko manifest — disabled (old CSS workspace, replaced by canvas workspace)
 
   const handleStartOver = useCallback(() => {
     resetForm();
