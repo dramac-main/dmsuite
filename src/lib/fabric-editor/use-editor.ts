@@ -152,13 +152,19 @@ function buildEditor({
       downloadFile(fileString, "json");
     },
     loadJson: (json: string) => {
-      const data = JSON.parse(json);
+      let data: Record<string, unknown>;
+      try {
+        data = JSON.parse(json);
+      } catch {
+        console.warn("[FabricEditor] loadJson: failed to parse JSON");
+        return;
+      }
 
       // Capture workspace dimensions before loadFromJSON blows them away
       const currentWs = getWorkspace() as fabric.Rect | undefined;
       const wsWidth = (currentWs?.width as number) || canvas.getWidth();
       const wsHeight = (currentWs?.height as number) || canvas.getHeight();
-      const templateBg = data.background || (typeof currentWs?.fill === "string" ? currentWs.fill : "white");
+      const templateBg = (typeof data.background === "string" ? data.background : null) || (typeof currentWs?.fill === "string" ? currentWs.fill : "white");
 
       canvas.loadFromJSON(data, () => {
         // loadFromJSON replaces ALL objects — the "clip" workspace is lost.
@@ -614,6 +620,8 @@ export function useEditor({
     canvas,
     autoZoom,
     initialState,
+    initialWidth,
+    initialHeight,
     canvasHistory,
     setHistoryIndex,
   });

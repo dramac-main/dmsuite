@@ -55,9 +55,32 @@ export function useHistory({ canvas, saveCallback }: UseHistoryProps) {
     const prevIndex = historyIndex - 1;
     const prevState = canvasHistory.current[prevIndex];
 
-    canvas.loadFromJSON(JSON.parse(prevState), () => {
-      const ws = canvas.getObjects().find((o) => o.name === "clip");
-      if (ws) canvas.clipPath = ws;
+    let data: Record<string, unknown>;
+    try {
+      data = JSON.parse(prevState);
+    } catch {
+      console.warn("[useHistory] undo: failed to parse state");
+      skipSaveRef.current = false;
+      return;
+    }
+
+    canvas.loadFromJSON(data, () => {
+      let ws = canvas.getObjects().find((o) => o.name === "clip");
+      if (!ws) {
+        ws = new fabric.Rect({
+          width: canvas.getWidth(),
+          height: canvas.getHeight(),
+          name: "clip",
+          fill: "white",
+          selectable: false,
+          hasControls: false,
+          shadow: new fabric.Shadow({ color: "rgba(0,0,0,0.8)", blur: 5 }),
+        });
+        canvas.add(ws);
+        canvas.centerObject(ws);
+        ws.sendToBack();
+      }
+      canvas.clipPath = ws;
       canvas.renderAll();
       setHistoryIndex(prevIndex);
       skipSaveRef.current = false;
@@ -72,9 +95,32 @@ export function useHistory({ canvas, saveCallback }: UseHistoryProps) {
     const nextIndex = historyIndex + 1;
     const nextState = canvasHistory.current[nextIndex];
 
-    canvas.loadFromJSON(JSON.parse(nextState), () => {
-      const ws = canvas.getObjects().find((o) => o.name === "clip");
-      if (ws) canvas.clipPath = ws;
+    let data: Record<string, unknown>;
+    try {
+      data = JSON.parse(nextState);
+    } catch {
+      console.warn("[useHistory] redo: failed to parse state");
+      skipSaveRef.current = false;
+      return;
+    }
+
+    canvas.loadFromJSON(data, () => {
+      let ws = canvas.getObjects().find((o) => o.name === "clip");
+      if (!ws) {
+        ws = new fabric.Rect({
+          width: canvas.getWidth(),
+          height: canvas.getHeight(),
+          name: "clip",
+          fill: "white",
+          selectable: false,
+          hasControls: false,
+          shadow: new fabric.Shadow({ color: "rgba(0,0,0,0.8)", blur: 5 }),
+        });
+        canvas.add(ws);
+        canvas.centerObject(ws);
+        ws.sendToBack();
+      }
+      canvas.clipPath = ws;
       canvas.renderAll();
       setHistoryIndex(nextIndex);
       skipSaveRef.current = false;
