@@ -14,6 +14,21 @@ export function ImageSidebar() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // If the file is an SVG, load it as editable vector objects
+    if (file.type === "image/svg+xml" || file.name.endsWith(".svg")) {
+      const textReader = new FileReader();
+      textReader.onload = (evt) => {
+        const svgString = evt.target?.result as string;
+        if (svgString) {
+          editor.addSvgElements(svgString);
+          setActiveTool("select");
+        }
+      };
+      textReader.readAsText(file);
+      e.target.value = "";
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (evt) => {
       const dataUrl = evt.target?.result as string;
@@ -51,7 +66,7 @@ export function ImageSidebar() {
       </button>
 
       <p className="text-xs text-gray-500">
-        Supports PNG, JPG, SVG, WebP. Images are embedded in your design.
+        Supports PNG, JPG, WebP, and SVG. SVG files are imported as editable vector objects.
       </p>
     </div>
   );

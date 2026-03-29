@@ -10,6 +10,7 @@ import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { PACKAGING_FABRIC_TEMPLATES } from "@/data/packaging-fabric-templates";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
+import { createPackagingFabricManifest } from "@/lib/chiko/manifests/packaging-fabric";
 
 // ── Quick-edit fields for packaging details ─────────────────────────────────
 const QUICK_EDIT_FIELDS: QuickEditField[] = [
@@ -58,6 +59,7 @@ export default function PackagingDesignerWorkspace() {
         config={PACKAGING_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createPackagingFabricManifest}
       />
     </div>
   );

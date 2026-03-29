@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { CERTIFICATE_FABRIC_TEMPLATES } from "@/data/certificate-fabric-templates";
+import { createCertificateFabricManifest } from "@/lib/chiko/manifests/certificate-fabric";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
 
 // ── Quick-edit fields for certificate details ───────────────────────────────
@@ -70,6 +71,7 @@ export default function CertificateDesignerWorkspace() {
         config={CERTIFICATE_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createCertificateFabricManifest}
       />
     </div>
   );

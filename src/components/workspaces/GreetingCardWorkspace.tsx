@@ -11,6 +11,7 @@ import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { GREETING_CARD_FABRIC_TEMPLATES } from "@/data/greeting-card-fabric-templates";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
+import { createGreetingCardFabricManifest } from "@/lib/chiko/manifests/greeting-card-fabric";
 
 // ── Quick-edit fields for greeting card details ─────────────────────────────
 const QUICK_EDIT_FIELDS: QuickEditField[] = [
@@ -60,6 +61,7 @@ export default function GreetingCardWorkspace() {
         config={GREETING_CARD_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createGreetingCardFabricManifest}
       />
     </div>
   );

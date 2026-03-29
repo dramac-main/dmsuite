@@ -10,6 +10,7 @@ import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { BROCHURE_FABRIC_TEMPLATES } from "@/data/brochure-fabric-templates";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
+import { createBrochureFabricManifest } from "@/lib/chiko/manifests/brochure-fabric";
 
 // ── Quick-edit fields for brochure details ──────────────────────────────────
 const QUICK_EDIT_FIELDS: QuickEditField[] = [
@@ -64,6 +65,7 @@ export default function BrochureDesignerWorkspace() {
         config={BROCHURE_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createBrochureFabricManifest}
       />
     </div>
   );

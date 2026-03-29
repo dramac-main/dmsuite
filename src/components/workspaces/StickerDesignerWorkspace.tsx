@@ -10,6 +10,7 @@ import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { STICKER_FABRIC_TEMPLATES } from "@/data/sticker-fabric-templates";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
+import { createStickerFabricManifest } from "@/lib/chiko/manifests/sticker-fabric";
 
 // ── Quick-edit fields for sticker details ───────────────────────────────────
 const QUICK_EDIT_FIELDS: QuickEditField[] = [
@@ -58,6 +59,7 @@ export default function StickerDesignerWorkspace() {
         config={STICKER_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createStickerFabricManifest}
       />
     </div>
   );

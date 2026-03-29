@@ -12,6 +12,7 @@ import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { POSTER_FABRIC_TEMPLATES } from "@/data/poster-fabric-templates";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
+import { createPosterFabricManifest } from "@/lib/chiko/manifests/poster-fabric";
 
 // ── Quick-edit fields for poster/flyer details ──────────────────────────────
 const QUICK_EDIT_FIELDS: QuickEditField[] = [
@@ -64,6 +65,7 @@ export default function PosterFlyerWorkspace() {
         config={POSTER_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createPosterFabricManifest}
       />
     </div>
   );

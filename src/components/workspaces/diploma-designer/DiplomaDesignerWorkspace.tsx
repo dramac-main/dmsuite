@@ -11,6 +11,7 @@ import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { DIPLOMA_FABRIC_TEMPLATES } from "@/data/diploma-fabric-templates";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
+import { createDiplomaFabricManifest } from "@/lib/chiko/manifests/diploma-fabric";
 
 // ── Quick-edit fields for diploma details ───────────────────────────────────
 const QUICK_EDIT_FIELDS: QuickEditField[] = [
@@ -72,6 +73,7 @@ export default function DiplomaDesignerWorkspace() {
         config={DIPLOMA_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createDiplomaFabricManifest}
       />
     </div>
   );

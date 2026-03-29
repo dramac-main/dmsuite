@@ -11,6 +11,7 @@ import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { MENU_FABRIC_TEMPLATES } from "@/data/menu-fabric-templates";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
+import { createMenuDesignerFabricManifest } from "@/lib/chiko/manifests/menu-designer-fabric";
 
 // ── Quick-edit fields for menu details ──────────────────────────────────────
 const QUICK_EDIT_FIELDS: QuickEditField[] = [
@@ -66,6 +67,7 @@ export default function MenuDesignerWorkspace() {
         config={MENU_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createMenuDesignerFabricManifest}
       />
     </div>
   );

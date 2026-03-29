@@ -11,6 +11,7 @@ import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { TICKET_FABRIC_TEMPLATES } from "@/data/ticket-fabric-templates";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
+import { createTicketDesignerFabricManifest } from "@/lib/chiko/manifests/ticket-designer-fabric";
 
 // ── Quick-edit fields for ticket details ────────────────────────────────────
 const QUICK_EDIT_FIELDS: QuickEditField[] = [
@@ -69,6 +70,7 @@ export default function TicketDesignerWorkspace() {
         config={TICKET_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createTicketDesignerFabricManifest}
       />
     </div>
   );

@@ -11,6 +11,7 @@ import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { LETTERHEAD_FABRIC_TEMPLATES } from "@/data/letterhead-fabric-templates";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
+import { createLetterheadFabricManifest } from "@/lib/chiko/manifests/letterhead-fabric";
 
 // ── Quick-edit fields for letterhead details ────────────────────────────────
 const QUICK_EDIT_FIELDS: QuickEditField[] = [
@@ -60,6 +61,7 @@ export default function LetterheadDesignerWorkspace() {
         config={LETTERHEAD_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createLetterheadFabricManifest}
       />
     </div>
   );

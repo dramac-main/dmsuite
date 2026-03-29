@@ -185,6 +185,8 @@ export interface FabricTemplate {
   width: number;
   height: number;
   json: string;                  // Fabric.js JSON (stringified)
+  svg?: string;                  // Optional inline SVG string — if present, loadSvg is used instead of loadJson
+  svgUrl?: string;               // Optional SVG URL — fetched on demand then treated like svg field
   isPro?: boolean;
 }
 
@@ -229,6 +231,8 @@ export interface Editor {
   saveSvg: () => void;
   saveJson: () => void;
   loadJson: (json: string) => void;
+  loadSvg: (svgString: string) => void;
+  addSvgElements: (svgString: string) => void;
 
   // History
   onUndo: () => void;

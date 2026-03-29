@@ -198,6 +198,105 @@ function buildEditor({
         loadCanvasFonts(canvas);
       });
     },
+    loadSvg: (svgString: string) => {
+      fabric.loadSVGFromString(svgString, (objects, options) => {
+        if (!objects || objects.length === 0) {
+          console.warn("[FabricEditor] loadSvg: no objects parsed from SVG");
+          return;
+        }
+
+        // Determine SVG dimensions from the parsed options
+        const svgW = options.width ? parseFloat(String(options.width)) : 0;
+        const svgH = options.height ? parseFloat(String(options.height)) : 0;
+
+        // Get workspace dimensions
+        const currentWs = getWorkspace() as fabric.Rect | undefined;
+        const wsWidth = (currentWs?.width as number) || canvas.getWidth();
+        const wsHeight = (currentWs?.height as number) || canvas.getHeight();
+
+        // Remove everything except workspace clip
+        const toRemove = canvas.getObjects().filter((o) => o.name !== "clip");
+        toRemove.forEach((o) => canvas.remove(o));
+
+        // Ensure workspace clip exists
+        let workspace = canvas.getObjects().find((o) => o.name === "clip") as fabric.Rect | undefined;
+        if (!workspace) {
+          workspace = new fabric.Rect({
+            width: wsWidth,
+            height: wsHeight,
+            name: "clip",
+            fill: "white",
+            selectable: false,
+            hasControls: false,
+            shadow: new fabric.Shadow({
+              color: "rgba(0,0,0,0.8)",
+              blur: 5,
+            }),
+          });
+          canvas.add(workspace);
+          canvas.centerObject(workspace);
+          workspace.sendToBack();
+        }
+        canvas.clipPath = workspace;
+
+        // Calculate scale to fit SVG within workspace
+        let scale = 1;
+        if (svgW > 0 && svgH > 0) {
+          const scaleX = wsWidth / svgW;
+          const scaleY = wsHeight / svgH;
+          scale = Math.min(scaleX, scaleY);
+        }
+
+        // Add each SVG element as an individual Fabric object (editable)
+        const wsLeft = (workspace.left as number) || 0;
+        const wsTop = (workspace.top as number) || 0;
+
+        // Calculate offset to center the SVG content within the workspace
+        const scaledW = svgW * scale;
+        const scaledH = svgH * scale;
+        const offsetX = wsLeft + (wsWidth - scaledW) / 2;
+        const offsetY = wsTop + (wsHeight - scaledH) / 2;
+
+        for (const obj of objects) {
+          if (!obj) continue;
+          // Scale and reposition each object relative to workspace
+          const objLeft = ((obj.left as number) || 0) * scale + offsetX;
+          const objTop = ((obj.top as number) || 0) * scale + offsetY;
+          const objScaleX = ((obj.scaleX as number) || 1) * scale;
+          const objScaleY = ((obj.scaleY as number) || 1) * scale;
+
+          obj.set({
+            left: objLeft,
+            top: objTop,
+            scaleX: objScaleX,
+            scaleY: objScaleY,
+            name: obj.name || generateObjectName(obj.type || "svg-element"),
+          });
+          canvas.add(obj);
+        }
+
+        canvas.backgroundColor = "";
+        canvas.renderAll();
+        autoZoom();
+        loadCanvasFonts(canvas);
+      });
+    },
+    addSvgElements: (svgString: string) => {
+      fabric.loadSVGFromString(svgString, (objects, options) => {
+        if (!objects || objects.length === 0) {
+          console.warn("[FabricEditor] addSvgElements: no objects parsed");
+          return;
+        }
+        const ws = getWorkspace();
+        const wsW = (ws?.width as number) || canvas.getWidth();
+
+        // Group SVG objects and add to canvas center
+        const group = fabric.util.groupSVGElements(objects, options);
+        group.set({ name: generateObjectName("svg-group") });
+        group.scaleToWidth(wsW * 0.5);
+        addToCanvas(group);
+      });
+    },
 
     // ── History ────────────────────────────────────────────────────────
     onUndo: () => undo(),
@@ -712,6 +811,11 @@ export function useEditor({
 
       setCanvas(initialCanvas);
       setContainer(initialContainer);
+
+      // Expose for e2e testing / Chiko bridge debugging
+      if (typeof window !== "undefined") {
+        (window as unknown as Record<string, unknown>).__fabricCanvas = initialCanvas;
+      }
 
       const currentState = JSON.stringify(
         initialCanvas.toJSON(JSON_KEYS as unknown as string[])

@@ -10,6 +10,7 @@ import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { COUPON_FABRIC_TEMPLATES } from "@/data/coupon-fabric-templates";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
+import { createCouponFabricManifest } from "@/lib/chiko/manifests/coupon-fabric";
 
 // ── Quick-edit fields for coupon details ────────────────────────────────────
 const QUICK_EDIT_FIELDS: QuickEditField[] = [
@@ -60,6 +61,7 @@ export default function CouponDesignerWorkspace() {
         config={COUPON_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createCouponFabricManifest}
       />
     </div>
   );

@@ -10,6 +10,7 @@ import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { CALENDAR_FABRIC_TEMPLATES } from "@/data/calendar-fabric-templates";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
+import { createCalendarFabricManifest } from "@/lib/chiko/manifests/calendar-fabric";
 
 // ── Quick-edit fields for calendar details ──────────────────────────────────
 const QUICK_EDIT_FIELDS: QuickEditField[] = [
@@ -57,6 +58,7 @@ export default function CalendarDesignerWorkspace() {
         config={CALENDAR_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createCalendarFabricManifest}
       />
     </div>
   );

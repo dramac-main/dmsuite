@@ -11,6 +11,7 @@ import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { BANNER_AD_FABRIC_TEMPLATES } from "@/data/banner-ad-fabric-templates";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
+import { createBannerAdFabricManifest } from "@/lib/chiko/manifests/banner-ad-fabric";
 
 // ── Quick-edit fields for banner ad text ────────────────────────────────────
 const QUICK_EDIT_FIELDS: QuickEditField[] = [
@@ -57,6 +58,7 @@ export default function BannerAdWorkspace() {
         config={BANNER_AD_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createBannerAdFabricManifest}
       />
     </div>
   );

@@ -11,6 +11,7 @@ import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { ID_BADGE_FABRIC_TEMPLATES } from "@/data/id-badge-fabric-templates";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
+import { createIDBadgeFabricManifest } from "@/lib/chiko/manifests/id-badge-fabric";
 
 // ── Quick-edit fields for badge details ─────────────────────────────────────
 const QUICK_EDIT_FIELDS: QuickEditField[] = [
@@ -71,6 +72,7 @@ export default function IDBadgeDesignerWorkspace() {
         config={ID_BADGE_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createIDBadgeFabricManifest}
       />
     </div>
   );

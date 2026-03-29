@@ -11,6 +11,7 @@ import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { INVITATION_FABRIC_TEMPLATES } from "@/data/invitation-fabric-templates";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
+import { createInvitationFabricManifest } from "@/lib/chiko/manifests/invitation-fabric";
 
 // ── Quick-edit fields for invitation details ────────────────────────────────
 const QUICK_EDIT_FIELDS: QuickEditField[] = [
@@ -66,6 +67,7 @@ export default function InvitationDesignerWorkspace() {
         config={INVITATION_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createInvitationFabricManifest}
       />
     </div>
   );

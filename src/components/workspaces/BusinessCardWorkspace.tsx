@@ -11,6 +11,7 @@ import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { BUSINESS_CARD_TEMPLATES } from "@/data/business-card-templates";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
+import { createBusinessCardFabricManifest } from "@/lib/chiko/manifests/business-card-fabric";
 
 // ── Quick-edit fields for business card details ─────────────────────────────
 const QUICK_EDIT_FIELDS: QuickEditField[] = [
@@ -64,6 +65,7 @@ export default function BusinessCardWorkspace() {
         config={BUSINESS_CARD_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createBusinessCardFabricManifest}
       />
     </div>
   );

@@ -26,8 +26,9 @@ import {
   type ReactNode,
 } from "react";
 
-import { useEditor, type Editor, type ActiveTool, type FabricEditorConfig, SELECTION_DEPENDENT_TOOLS, FONTS } from "@/lib/fabric-editor";
+import { useEditor, type Editor, type ActiveTool, type FabricEditorConfig, SELECTION_DEPENDENT_TOOLS, FONTS, createFabricManifest } from "@/lib/fabric-editor";
 import { ensureFontReady } from "@/lib/fabric-editor/font-loader";
+import { useChikoActionRegistry, type ChikoActionManifest } from "@/stores/chiko-actions";
 import { EditorToolbar } from "./EditorToolbar";
 import { EditorSidebar } from "./EditorSidebar";
 import { EditorFooter } from "./EditorFooter";
@@ -63,6 +64,12 @@ interface FabricEditorProps {
   extraSidebar?: ReactNode;
   /** Optional extra navbar content (tool-specific buttons) */
   extraNavbar?: ReactNode;
+  /**
+   * Optional manifest factory for Chiko AI integration.
+   * If provided, the returned manifest is registered with the Chiko action registry.
+   * If omitted, a default manifest (core actions only) is registered automatically.
+   */
+  chikoManifestFactory?: (editor: Editor) => ChikoActionManifest;
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
@@ -73,6 +80,7 @@ export function FabricEditor({
   onSave,
   extraSidebar,
   extraNavbar,
+  chikoManifestFactory,
 }: FabricEditorProps) {
   const [activeTool, setActiveTool] = useState<ActiveTool>("select");
 
@@ -120,6 +128,27 @@ export function FabricEditor({
       ensureFontReady(font);
     }
   }, []);
+
+  // ── Chiko AI action registration ──────────────────────────────────────
+  const chikoRegister = useChikoActionRegistry((s) => s.register);
+  const chikoUnregister = useChikoActionRegistry((s) => s.unregister);
+
+  useEffect(() => {
+    if (!editor) return;
+
+    const manifest = chikoManifestFactory
+      ? chikoManifestFactory(editor)
+      : createFabricManifest({
+          toolId: config.toolId,
+          toolName: config.toolId
+            .replace(/-/g, " ")
+            .replace(/\b\w/g, (c) => c.toUpperCase()),
+          editor,
+        });
+
+    chikoRegister(manifest);
+    return () => chikoUnregister(manifest.toolId);
+  }, [editor, chikoManifestFactory, config.toolId, chikoRegister, chikoUnregister]);
 
   const contextValue: FabricEditorContextValue = {
     editor,

@@ -360,6 +360,33 @@ const CORE_ACTIONS: ChikoActionDescriptor[] = [
     category: "Canvas",
     destructive: true,
   },
+
+  // ─ SVG Import ───────────────────────────────────────────────────────────
+  {
+    name: "load_svg",
+    description: "Load an SVG string onto the canvas, replacing all current objects. Each SVG element becomes an individually editable Fabric object. Use this to import SVG templates or vector artwork.",
+    parameters: {
+      type: "object",
+      properties: {
+        svg: { type: "string", description: "SVG markup string to load" },
+      },
+      required: ["svg"],
+    },
+    category: "Canvas",
+    destructive: true,
+  },
+  {
+    name: "add_svg",
+    description: "Add SVG vector elements to the canvas without removing existing objects. The SVG is imported as a grouped object.",
+    parameters: {
+      type: "object",
+      properties: {
+        svg: { type: "string", description: "SVG markup string to add" },
+      },
+      required: ["svg"],
+    },
+    category: "Canvas",
+  },
 ];
 
 // ── Action Executor ─────────────────────────────────────────────────────────
@@ -636,6 +663,21 @@ function executeAction(
       canvas.discardActiveObject();
       canvas.renderAll();
       return ok(`Cleared ${objects.length} object(s) from canvas`);
+    }
+
+    // ─ SVG Import ─────────────────────────────────────────────────────────
+    case "load_svg": {
+      const svg = params.svg as string;
+      if (!svg || typeof svg !== "string") return fail("SVG string is required");
+      editor.loadSvg(svg);
+      return ok("SVG loaded onto canvas — all elements are now individually editable");
+    }
+
+    case "add_svg": {
+      const svg = params.svg as string;
+      if (!svg || typeof svg !== "string") return fail("SVG string is required");
+      editor.addSvgElements(svg);
+      return ok("SVG elements added to canvas as a group");
     }
 
     default:

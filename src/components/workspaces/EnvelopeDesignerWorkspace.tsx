@@ -10,6 +10,7 @@ import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { ENVELOPE_FABRIC_TEMPLATES } from "@/data/envelope-fabric-templates";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
+import { createEnvelopeFabricManifest } from "@/lib/chiko/manifests/envelope-fabric";
 
 // ── Quick-edit fields for envelope details ──────────────────────────────────
 const QUICK_EDIT_FIELDS: QuickEditField[] = [
@@ -56,6 +57,7 @@ export default function EnvelopeDesignerWorkspace() {
         config={ENVELOPE_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createEnvelopeFabricManifest}
       />
     </div>
   );

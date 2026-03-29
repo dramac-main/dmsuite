@@ -1,10 +1,12 @@
 /*  Template Sidebar — loads pre-built Fabric.js JSON templates */
 "use client";
 
+import { useState } from "react";
 import { useFabricEditor } from "../FabricEditor";
 
 export function TemplateSidebar() {
   const { editor, config } = useFabricEditor();
+  const [loadingId, setLoadingId] = useState<string | null>(null);
   if (!editor) return null;
 
   const templates = config.templates;
@@ -17,8 +19,24 @@ export function TemplateSidebar() {
     );
   }
 
-  const handleLoad = (json: string) => {
-    editor.loadJson(json);
+  const handleLoad = async (tpl: typeof templates[number]) => {
+    if (tpl.svg) {
+      editor.loadSvg(tpl.svg);
+    } else if (tpl.svgUrl) {
+      try {
+        setLoadingId(tpl.id);
+        const res = await fetch(tpl.svgUrl);
+        if (!res.ok) throw new Error(`Failed to fetch SVG: ${res.status}`);
+        const svgString = await res.text();
+        editor.loadSvg(svgString);
+      } catch (err) {
+        console.error("[TemplateSidebar] SVG fetch error:", err);
+      } finally {
+        setLoadingId(null);
+      }
+    } else {
+      editor.loadJson(tpl.json);
+    }
   };
 
   return (
@@ -26,8 +44,9 @@ export function TemplateSidebar() {
       {templates.map((tpl) => (
         <button
           key={tpl.id}
-          onClick={() => handleLoad(tpl.json)}
-          className="group relative overflow-hidden rounded-lg border border-gray-700 transition-colors hover:border-primary-500/50"
+          onClick={() => handleLoad(tpl)}
+          disabled={loadingId === tpl.id}
+          className="group relative overflow-hidden rounded-lg border border-gray-700 transition-colors hover:border-primary-500/50 disabled:opacity-60"
         >
           {tpl.thumbnailUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element */

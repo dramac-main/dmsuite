@@ -10,6 +10,7 @@ import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { SIGNAGE_FABRIC_TEMPLATES } from "@/data/signage-fabric-templates";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
+import { createSignageFabricManifest } from "@/lib/chiko/manifests/signage-fabric";
 
 // ── Quick-edit fields for signage details ───────────────────────────────────
 const QUICK_EDIT_FIELDS: QuickEditField[] = [
@@ -60,6 +61,7 @@ export default function SignageDesignerWorkspace() {
         config={SIGNAGE_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createSignageFabricManifest}
       />
     </div>
   );

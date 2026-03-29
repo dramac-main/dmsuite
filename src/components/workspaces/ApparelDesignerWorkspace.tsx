@@ -10,6 +10,7 @@ import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { APPAREL_FABRIC_TEMPLATES } from "@/data/apparel-fabric-templates";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
+import { createApparelFabricManifest } from "@/lib/chiko/manifests/apparel-fabric";
 
 // ── Quick-edit fields for apparel details ───────────────────────────────────
 const QUICK_EDIT_FIELDS: QuickEditField[] = [
@@ -54,6 +55,7 @@ export default function ApparelDesignerWorkspace() {
         config={APPAREL_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createApparelFabricManifest}
       />
     </div>
   );

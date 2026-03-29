@@ -597,4 +597,14 @@ export const CERTIFICATE_FABRIC_TEMPLATES: FabricTemplate[] = [
     json: darkPrestige,
     isPro: true,
   },
+  {
+    id: "cert-vecteezy-creative",
+    name: "Creative Vector",
+    category: "Professional",
+    thumbnailUrl: "/templates/certificates/vecteezy-creative.svg",
+    width: 2500,
+    height: 1600,
+    json: "",   // SVG-based template — json is unused
+    svgUrl: "/templates/certificates/vecteezy-creative.svg",
+  },
 ];

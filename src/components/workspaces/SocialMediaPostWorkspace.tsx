@@ -11,6 +11,7 @@ import { FabricEditor } from "@/components/fabric-editor";
 import { useFabricProjectStore } from "@/stores/fabric-project";
 import { SOCIAL_MEDIA_FABRIC_TEMPLATES } from "@/data/social-media-fabric-templates";
 import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
+import { createSocialMediaFabricManifest } from "@/lib/chiko/manifests/social-media-fabric";
 
 // ── Quick-edit fields for social media post details ─────────────────────────
 const QUICK_EDIT_FIELDS: QuickEditField[] = [
@@ -62,6 +63,7 @@ export default function SocialMediaPostWorkspace() {
         config={SOCIAL_CONFIG}
         defaultState={fabricJson ?? undefined}
         onSave={handleSave}
+        chikoManifestFactory={createSocialMediaFabricManifest}
       />
     </div>
   );
