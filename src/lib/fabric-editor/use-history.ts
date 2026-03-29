@@ -56,6 +56,8 @@ export function useHistory({ canvas, saveCallback }: UseHistoryProps) {
     const prevState = canvasHistory.current[prevIndex];
 
     canvas.loadFromJSON(JSON.parse(prevState), () => {
+      const ws = canvas.getObjects().find((o) => o.name === "clip");
+      if (ws) canvas.clipPath = ws;
       canvas.renderAll();
       setHistoryIndex(prevIndex);
       skipSaveRef.current = false;
@@ -71,6 +73,8 @@ export function useHistory({ canvas, saveCallback }: UseHistoryProps) {
     const nextState = canvasHistory.current[nextIndex];
 
     canvas.loadFromJSON(JSON.parse(nextState), () => {
+      const ws = canvas.getObjects().find((o) => o.name === "clip");
+      if (ws) canvas.clipPath = ws;
       canvas.renderAll();
       setHistoryIndex(nextIndex);
       skipSaveRef.current = false;

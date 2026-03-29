@@ -1,53 +1,53 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Fabric.js Editor Revamp — Phase 6 COMPLETE (Cleanup & Old Engine Deletion)
+**Phase:** Fabric.js Editor Revamp — Critical Bug Fixes & Missing Features
 
-### Fabric.js Migration — FULLY COMPLETE ✅
+### Session: Fabric Editor Deep Audit & Fixes ✅
 
-All 21 visual design tools now use Fabric.js v5. The entire old Canvas 2D engine has been deleted.
+#### ROOT CAUSE: Blank Canvas on Template Load — FIXED
+Templates loaded via `editor.loadJson()` appeared blank because `canvas.loadFromJSON()` replaces ALL objects, destroying the "clip" workspace rect. Without it, `autoZoom()` returns early (no clip → no zoom), and all template objects at 3508×2480 coordinates are off-screen.
 
-#### Phase 5 Batch 2 (Session 156+): 9 Remaining Visual Tools ✅
-Migrated brochure, sticker, coupon, envelope, signage, infographic, calendar, apparel, packaging to Fabric.js.
-Each got: templates file → thin workspace wrapper → Chiko manifest → store adapter → barrel export.
-Shared `makeFabricAdapter(defaultW, defaultH)` helper added to store-adapters.ts.
+**Fix applied to 4 files:**
+- `use-editor.ts` → `loadJson()`: Captures dimensions pre-load, recreates clip workspace after loadFromJSON, clears canvas.backgroundColor
+- `use-load-state.ts`: Restores `canvas.clipPath = workspace` after initial state load
+- `use-history.ts`: Both `undo()` and `redo()` now restore clipPath after loadFromJSON
+- `use-auto-resize.ts`: Sets `canvas.clipPath = workspace` synchronously before async clone
 
-#### Banner Ad Migration (Phase 6 prerequisite) ✅
-BannerAdWorkspace was the last tool using old Canvas 2D engine.
-Migrated: banner-ad-fabric-templates.ts (10 templates, 300×250), new workspace wrapper, manifest, adapter.
+#### saveSvg Bug — FIXED
+Was generating a PNG dataURL and naming it `.svg`. Now properly uses `canvas.toSVG()`.
 
-#### Phase 6: Cleanup — Old Engine Deletion ✅
+#### savePng/saveJpg Viewport Flicker — FIXED
+Now saves/restores viewport transform directly instead of calling autoZoom (prevents visual flicker).
 
-**Deleted Files (total ~70+):**
-- `src/lib/editor/` — ENTIRE DIRECTORY deleted (schema.ts, renderer.ts, hit-test.ts, interaction.ts, snapping.ts, commands.ts, ai-patch.ts, business-card-adapter.ts, certificate-adapter.ts, certificate-design-generator.ts, template-generator.ts, card-template-helpers.ts, ai-design-generator.ts, v1-migration.ts, align-distribute.ts, design-rules.ts, abstract-library.ts, font-loader.ts, pdf-renderer.ts, svg-renderer.ts)
-- `src/components/editor/` — ENTIRE DIRECTORY deleted (13 old editor components)
-- `src/components/workspaces/business-card/` — 9 old wizard step files deleted
-- 5 old Chiko manifests deleted (certificate, diploma, id-badge, ticket-designer, menu-designer)
-- 7 old stores deleted (editor, certificate-editor, business-card-wizard, diploma-editor, id-badge-editor, ticket-editor, menu-designer-editor)
-- `BannerAdWorkspace.tsx.OLD` backup deleted
-- 9 Phase 5 Batch 2 `.OLD` backups deleted
+#### Line Object Deserialization — FIXED (14 template files)
+All template files with `line()` helpers now include `width: Math.abs(x2-x1)` and `height: Math.abs(y2-y1) || 0` for proper Fabric.js deserialization. Fixed in: certificate, diploma, ticket, id-badge, menu, poster, brochure, calendar, coupon, greeting-card, infographic, invitation, letterhead, packaging.
 
-**Fixed Files:**
-- `src/lib/chiko/field-mapper.ts` — Inlined UserDetails interface (was importing from deleted store)
-- `src/stores/index.ts` — Removed editor store re-exports
-- `src/data/banner-ad-fabric-templates.ts` — Fixed template structure (canvas+objects → width+height+json)
-- `src/lib/chiko/manifests/index.ts` — Removed 5 old manifest barrel exports
+#### Google Fonts Loading — NEW
+**Problem:** Templates reference Google Fonts (Playfair Display, Great Vibes, Dancing Script, Cinzel, etc.) but fonts were never loaded. Text rendered in fallback fonts.
 
-**TypeScript:** 0 errors ✅
+**Fix:**
+- `use-editor.ts`: Added `loadCanvasFonts()` helper + `ensureFontReady` import from existing `font-loader.ts`
+- After `loadJson` completes, fonts are extracted from text objects and loaded via Google Fonts API
+- `changeFontFamily()` now loads the font via `ensureFontReady()` before applying
+- `FabricEditor.tsx`: Pre-loads all FONTS list on mount for sidebar preview
 
-#### Architecture Summary (Post-Migration)
-- **Visual tools (21)**: All use Fabric.js v5 via `FabricEditor` component
-- **Document tools (9)**: HTML/CSS editors — resume, invoice, contract, cover-letter, worksheet, business-plan, sales-book, business-memory, workflow-engine — UNTOUCHED
-- **Engine location**: `src/lib/fabric-editor/` (13 engine files)
-- **Editor UI**: `src/components/fabric-editor/` (18 component files)
-- **State**: `src/stores/fabric-project.ts` (shared Zustand store)
-- **Templates pattern**: `src/data/*-fabric-templates.ts` → Fabric.js JSON strings with named objects
-- **Workspace pattern**: ~70-line thin FabricEditor wrappers with quick-edit fields
-- **Old `src/lib/editor/`**: Deleted entirely — no longer exists
+#### QuickEdit Sidebar — NEW
+**Problem:** All 17 FabricEditor workspaces define `quickEditFields` in config but no QuickEdit UI existed.
 
-#### Next Steps
-- Phase 7: New visual tools can be added following the established pattern
-- Consider building remaining ~90 tools from the 116-tool registry
+**Fix:**
+- Created `src/components/fabric-editor/sidebars/QuickEditSidebar.tsx` — reads named objects from canvas, provides form fields for fast editing
+- Supports: text, textarea, select, color, number input types
+- Debounced `after:render` sync to keep fields in sync with canvas
+- Wired into `EditorSidebar.tsx` — appears as pencil icon in tool rail (only shown when config has quickEditFields)
+- Added `"quick-edit"` to `ActiveTool` union in types.ts
+
+#### Workspace Audit Results (27 total)
+- **17 FabricEditor workspaces**: All follow identical pattern, all pass config correctly
+- **7 HTML/Document workspaces**: Business Plan, Contract, Cover Letter, Sales Book, Worksheet — custom renderers
+- **3 Canvas 2D workspaces**: ID Card (legacy), Invoice, Resume — custom wizards with jsPDF
+
+### Previous Phase: Fabric.js Editor Revamp — Phase 6 COMPLETE (Cleanup & Old Engine Deletion)
 
 #### Phase 4: Remaining Tool Migrations to Fabric.js ✅
 

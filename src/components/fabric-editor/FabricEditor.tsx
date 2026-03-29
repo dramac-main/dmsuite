@@ -26,7 +26,8 @@ import {
   type ReactNode,
 } from "react";
 
-import { useEditor, type Editor, type ActiveTool, type FabricEditorConfig, SELECTION_DEPENDENT_TOOLS } from "@/lib/fabric-editor";
+import { useEditor, type Editor, type ActiveTool, type FabricEditorConfig, SELECTION_DEPENDENT_TOOLS, FONTS } from "@/lib/fabric-editor";
+import { ensureFontReady } from "@/lib/fabric-editor/font-loader";
 import { EditorToolbar } from "./EditorToolbar";
 import { EditorSidebar } from "./EditorSidebar";
 import { EditorFooter } from "./EditorFooter";
@@ -111,6 +112,13 @@ export function FabricEditor({
       canvas.dispose();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Pre-load Google Fonts so sidebar previews render correctly
+  useEffect(() => {
+    for (const font of FONTS) {
+      ensureFontReady(font);
+    }
   }, []);
 
   const contextValue: FabricEditorContextValue = {

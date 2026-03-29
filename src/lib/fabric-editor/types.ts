@@ -32,7 +32,8 @@ export type ActiveTool =
   | "ai"
   | "remove-bg"
   | "templates"
-  | "layers";
+  | "layers"
+  | "quick-edit";
 
 /** Tools whose sidebar should auto-close when the selection clears */
 export const SELECTION_DEPENDENT_TOOLS: ActiveTool[] = [

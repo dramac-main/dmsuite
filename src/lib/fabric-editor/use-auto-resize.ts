@@ -54,6 +54,12 @@ export function useAutoResize({ canvas, container }: UseAutoResizeProps) {
 
     canvas.setViewportTransform(viewportTransform);
 
+    // Set the workspace as clipPath immediately so content is clipped.
+    // The clone callback is async; setting clipPath directly first prevents
+    // a brief flash of unclipped content.
+    canvas.clipPath = workspace;
+    canvas.requestRenderAll();
+
     workspace.clone((cloned: fabric.Object) => {
       canvas.clipPath = cloned;
       canvas.requestRenderAll();

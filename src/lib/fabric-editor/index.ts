@@ -59,6 +59,9 @@ export {
   batchGenerate,
 } from "./chiko-bridge";
 
+// Font loading
+export { ensureFontReady } from "./font-loader";
+
 // Utils
 export {
   isTextType,

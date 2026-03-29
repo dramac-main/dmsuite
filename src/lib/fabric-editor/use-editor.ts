@@ -2,6 +2,7 @@ import { fabric } from "fabric";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { ITextboxOptions } from "fabric/fabric-impl";
 
+import { ensureFontReady } from "./font-loader";
 import {
   type Editor,
   type BuildEditorProps,
@@ -34,6 +35,22 @@ import {
   transformText,
   generateObjectName,
 } from "./utils";
+
+/* ─── Font loading helper ─────────────────────────────────────────────────── */
+
+/** Extract unique font families from canvas objects and load them via Google Fonts. */
+function loadCanvasFonts(canvas: fabric.Canvas): void {
+  const families = new Set<string>();
+  for (const obj of canvas.getObjects()) {
+    if (isTextType(obj.type)) {
+      const ff = (obj as fabric.Textbox).fontFamily;
+      if (ff) families.add(ff);
+    }
+  }
+  for (const family of families) {
+    ensureFontReady(family).then(() => canvas.requestRenderAll());
+  }
+}
 
 /* ─── Build the editor API from a live canvas ─────────────────────────────── */
 function buildEditor({
@@ -92,24 +109,39 @@ function buildEditor({
     // ── Export ──────────────────────────────────────────────────────────
     savePng: () => {
       const opts = generateSaveOptions();
+      const prevTransform = canvas.viewportTransform?.slice() ?? [1, 0, 0, 1, 0, 0];
       canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
       const dataUrl = canvas.toDataURL(opts);
       downloadFile(dataUrl, "png");
-      autoZoom();
+      canvas.setViewportTransform(prevTransform as number[]);
     },
     saveJpg: () => {
       const opts = generateSaveOptions();
+      const prevTransform = canvas.viewportTransform?.slice() ?? [1, 0, 0, 1, 0, 0];
       canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
       const dataUrl = canvas.toDataURL({ ...opts, format: "jpeg" });
       downloadFile(dataUrl, "jpg");
-      autoZoom();
+      canvas.setViewportTransform(prevTransform as number[]);
     },
     saveSvg: () => {
-      const opts = generateSaveOptions();
+      const ws = getWorkspace() as fabric.Rect;
+      const prevTransform = canvas.viewportTransform?.slice() ?? [1, 0, 0, 1, 0, 0];
       canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-      const dataUrl = canvas.toDataURL(opts);
-      downloadFile(dataUrl, "svg");
-      autoZoom();
+      const svgString = canvas.toSVG({
+        viewBox: {
+          x: ws?.left ?? 0,
+          y: ws?.top ?? 0,
+          width: ws?.width ?? canvas.getWidth(),
+          height: ws?.height ?? canvas.getHeight(),
+        },
+        width: `${ws?.width ?? canvas.getWidth()}px`,
+        height: `${ws?.height ?? canvas.getHeight()}px`,
+      });
+      canvas.setViewportTransform(prevTransform as number[]);
+      const blob = new Blob([svgString], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      downloadFile(url, "svg");
+      URL.revokeObjectURL(url);
     },
     saveJson: async () => {
       const data = canvas.toJSON(JSON_KEYS as unknown as string[]);
@@ -121,8 +153,43 @@ function buildEditor({
     },
     loadJson: (json: string) => {
       const data = JSON.parse(json);
+
+      // Capture workspace dimensions before loadFromJSON blows them away
+      const currentWs = getWorkspace() as fabric.Rect | undefined;
+      const wsWidth = (currentWs?.width as number) || canvas.getWidth();
+      const wsHeight = (currentWs?.height as number) || canvas.getHeight();
+      const templateBg = data.background || (typeof currentWs?.fill === "string" ? currentWs.fill : "white");
+
       canvas.loadFromJSON(data, () => {
+        // loadFromJSON replaces ALL objects — the "clip" workspace is lost.
+        // Re-create it so autoZoom, clipPath, and the visible workspace work.
+        let workspace = canvas.getObjects().find((o) => o.name === "clip");
+        if (!workspace) {
+          workspace = new fabric.Rect({
+            width: wsWidth,
+            height: wsHeight,
+            name: "clip",
+            fill: templateBg,
+            selectable: false,
+            hasControls: false,
+            shadow: new fabric.Shadow({
+              color: "rgba(0,0,0,0.8)",
+              blur: 5,
+            }),
+          });
+          canvas.add(workspace);
+          canvas.centerObject(workspace);
+          workspace.sendToBack();
+        }
+        canvas.clipPath = workspace;
+        // Clear canvas.backgroundColor — our workspace clip fill IS the background.
+        // Without this, the entire canvas area shows the template bg color instead of
+        // just the workspace rect (the dark editor background around it is lost).
+        canvas.backgroundColor = "";
+        canvas.renderAll();
         autoZoom();
+        // Load any Google Fonts used in the template
+        loadCanvasFonts(canvas);
       });
     },
 
@@ -318,12 +385,15 @@ function buildEditor({
     },
     changeFontFamily: (value: string) => {
       setFontFamily(value);
-      canvas.getActiveObjects().forEach((o) => {
-        if (isTextType(o.type)) {
-          (o as fabric.Textbox).set({ fontFamily: value });
-        }
+      // Load the font first, then apply and re-render
+      ensureFontReady(value).then(() => {
+        canvas.getActiveObjects().forEach((o) => {
+          if (isTextType(o.type)) {
+            (o as fabric.Textbox).set({ fontFamily: value });
+          }
+        });
+        canvas.renderAll();
       });
-      canvas.renderAll();
     },
     getActiveFontFamily: () => {
       const sel = selectedObjects[0];
