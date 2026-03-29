@@ -152,13 +152,19 @@ function buildEditor({
       downloadFile(fileString, "json");
     },
     loadJson: (json: string) => {
+      console.log("[FabricEditor] loadJson called, json length:", json?.length ?? 0);
+      if (!json || json.length === 0) {
+        console.warn("[FabricEditor] loadJson: empty JSON string, aborting");
+        return;
+      }
       let data: Record<string, unknown>;
       try {
         data = JSON.parse(json);
-      } catch {
-        console.warn("[FabricEditor] loadJson: failed to parse JSON");
+      } catch (e) {
+        console.warn("[FabricEditor] loadJson: failed to parse JSON", e);
         return;
       }
+      console.log("[FabricEditor] loadJson parsed OK, objects:", (data.objects as unknown[])?.length ?? 0);
 
       // Capture workspace dimensions before loadFromJSON blows them away
       const currentWs = getWorkspace() as fabric.Rect | undefined;
@@ -166,40 +172,48 @@ function buildEditor({
       const wsHeight = (currentWs?.height as number) || canvas.getHeight();
       const templateBg = (typeof data.background === "string" ? data.background : null) || (typeof currentWs?.fill === "string" ? currentWs.fill : "white");
 
-      canvas.loadFromJSON(data, () => {
-        // loadFromJSON replaces ALL objects — the "clip" workspace is lost.
-        // Re-create it so autoZoom, clipPath, and the visible workspace work.
-        let workspace = canvas.getObjects().find((o) => o.name === "clip");
-        if (!workspace) {
-          workspace = new fabric.Rect({
-            width: wsWidth,
-            height: wsHeight,
-            name: "clip",
-            fill: templateBg,
-            selectable: false,
-            hasControls: false,
-            shadow: new fabric.Shadow({
-              color: "rgba(0,0,0,0.8)",
-              blur: 5,
-            }),
-          });
-          canvas.add(workspace);
-          canvas.centerObject(workspace);
-          workspace.sendToBack();
-        }
-        canvas.clipPath = workspace;
-        // Clear canvas.backgroundColor — our workspace clip fill IS the background.
-        // Without this, the entire canvas area shows the template bg color instead of
-        // just the workspace rect (the dark editor background around it is lost).
-        canvas.backgroundColor = "";
-        canvas.renderAll();
-        autoZoom();
-        // Load any Google Fonts used in the template
-        loadCanvasFonts(canvas);
-      });
+      console.log("[FabricEditor] calling canvas.loadFromJSON...");
+      try {
+        canvas.loadFromJSON(data, () => {
+          console.log("[FabricEditor] loadFromJSON callback fired, objects on canvas:", canvas.getObjects().length);
+          // loadFromJSON replaces ALL objects — the "clip" workspace is lost.
+          // Re-create it so autoZoom, clipPath, and the visible workspace work.
+          let workspace = canvas.getObjects().find((o) => o.name === "clip");
+          if (!workspace) {
+            workspace = new fabric.Rect({
+              width: wsWidth,
+              height: wsHeight,
+              name: "clip",
+              fill: templateBg,
+              selectable: false,
+              hasControls: false,
+              shadow: new fabric.Shadow({
+                color: "rgba(0,0,0,0.8)",
+                blur: 5,
+              }),
+            });
+            canvas.add(workspace);
+            canvas.centerObject(workspace);
+            workspace.sendToBack();
+          }
+          canvas.clipPath = workspace;
+          // Clear canvas.backgroundColor — our workspace clip fill IS the background.
+          // Without this, the entire canvas area shows the template bg color instead of
+          // just the workspace rect (the dark editor background around it is lost).
+          canvas.backgroundColor = "";
+          canvas.renderAll();
+          autoZoom();
+          // Load any Google Fonts used in the template
+          loadCanvasFonts(canvas);
+        });
+      } catch (err) {
+        console.error("[FabricEditor] loadFromJSON threw error:", err);
+      }
     },
     loadSvg: (svgString: string) => {
+      console.log("[FabricEditor] loadSvg called, string length:", svgString?.length ?? 0);
       fabric.loadSVGFromString(svgString, (objects, options) => {
+        console.log("[FabricEditor] loadSVGFromString callback:", objects?.length ?? 0, "objects parsed");
         if (!objects || objects.length === 0) {
           console.warn("[FabricEditor] loadSvg: no objects parsed from SVG");
           return;
