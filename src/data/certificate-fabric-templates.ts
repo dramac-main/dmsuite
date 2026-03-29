@@ -36,6 +36,7 @@ function txt(
     originY: "top",
     name,
     text,
+    styles: [],
     selectable: true,
     hasControls: true,
     editable: true,

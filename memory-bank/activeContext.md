@@ -1,53 +1,51 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Fabric.js Editor Revamp — Critical Bug Fixes & Missing Features
+**Phase:** Template loading fixed — templates render correctly on canvas
 
-### Session: Fabric Editor Deep Audit & Fixes ✅
+### Session: Fix Template Loading Crash — RESOLVED
 
-#### ROOT CAUSE: Blank Canvas on Template Load — FIXED
-Templates loaded via `editor.loadJson()` appeared blank because `canvas.loadFromJSON()` replaces ALL objects, destroying the "clip" workspace rect. Without it, `autoZoom()` returns early (no clip → no zoom), and all template objects at 3508×2480 coordinates are off-screen.
+#### ROOT CAUSE #3: Fabric.js `stylesToArray` crash on textbox serialization — FIXED
+When a template was selected from the sidebar, loading it crashed the canvas:
 
-**Fix applied to 4 files:**
-- `use-editor.ts` → `loadJson()`: Captures dimensions pre-load, recreates clip workspace after loadFromJSON, clears canvas.backgroundColor
-- `use-load-state.ts`: Restores `canvas.clipPath = workspace` after initial state load
-- `use-history.ts`: Both `undo()` and `redo()` now restore clipPath after loadFromJSON
-- `use-auto-resize.ts`: Sets `canvas.clipPath = workspace` synchronously before async clone
+**Error:** `TypeError: Cannot read properties of undefined (reading '0')` in `stylesToArray`
 
-#### saveSvg Bug — FIXED
-Was generating a PNG dataURL and naming it `.svg`. Now properly uses `canvas.toSVG()`.
+**Crash chain:**
+1. `loadJson()` calls `canvas.loadFromJSON(data)` — template objects load successfully
+2. Callback creates new "clip" workspace rect, calls `canvas.add(workspace)`
+3. `canvas.add()` fires `object:added` event → `save()` → `canvas.toJSON()` 
+4. `canvas.toJSON()` calls `toObject()` on all textbox objects
+5. Textbox `toObject()` calls `stylesToArray(this.styles, this.text)`
+6. **`this.styles` is `null`** (default for Textbox) → `clone(null)` returns `null` → `null[0]` crashes
+7. Error propagates up through `canvas.add()`, **preventing the rest of `loadJson` callback** from executing
+8. Result: No `clipPath`, no `autoZoom`, no `centerObject` → canvas goes completely dark
 
-#### savePng/saveJpg Viewport Flicker — FIXED
-Now saves/restores viewport transform directly instead of calling autoZoom (prevents visual flicker).
+**Fix (3 layers):**
+1. **Root cause**: Added `styles: []` to all textbox template objects across **21 fabric template files** (all `*-fabric-templates.ts` + `business-card-templates.ts`)
+2. **Safety net**: Wrapped `canvas.toJSON()` in try/catch in `use-history.ts` `save()` function
+3. Files modified: All `txt()` helpers in 20 fabric template files + 4 inline textbox helpers in `banner-ad-fabric-templates.ts` + `business-card-templates.ts`
 
-#### Line Object Deserialization — FIXED (14 template files)
-All template files with `line()` helpers now include `width: Math.abs(x2-x1)` and `height: Math.abs(y2-y1) || 0` for proper Fabric.js deserialization. Fixed in: certificate, diploma, ticket, id-badge, menu, poster, brochure, calendar, coupon, greeting-card, infographic, invitation, letterhead, packaging.
+**Verification:** Puppeteer e2e test loading 3 different certificate templates (Classic Gold, Classic Blue, Burgundy Ornate) — all render correctly with proper backgrounds, borders, fonts, and text. Zero console errors.
 
-#### Google Fonts Loading — NEW
-**Problem:** Templates reference Google Fonts (Playfair Display, Great Vibes, Dancing Script, Cinzel, etc.) but fonts were never loaded. Text rendered in fallback fonts.
+### Previous Fixes (still in place)
 
-**Fix:**
-- `use-editor.ts`: Added `loadCanvasFonts()` helper + `ensureFontReady` import from existing `font-loader.ts`
-- After `loadJson` completes, fonts are extracted from text objects and loaded via Google Fonts API
-- `changeFontFamily()` now loads the font via `ensureFontReady()` before applying
-- `FabricEditor.tsx`: Pre-loads all FONTS list on mount for sidebar preview
+#### ROOT CAUSE #1: Stale `.next` Turbopack cache → 404 on ALL tool routes
+**Fix:** Delete `.next` folder and restart dev server.
 
-#### QuickEdit Sidebar — NEW
-**Problem:** All 17 FabricEditor workspaces define `quickEditFields` in config but no QuickEdit UI existed.
+#### ROOT CAUSE #2: useLoadState & useHistory Missing Workspace Clip — FIXED (commit fd28c4c)
+The previous session fixed `loadJson()` to recreate the workspace clip after `loadFromJSON`. However, `useLoadState` (project initial load) and `useHistory` (undo/redo) had the **same bug** — they didn't recreate the clip if missing.
 
-**Fix:**
-- Created `src/components/fabric-editor/sidebars/QuickEditSidebar.tsx` — reads named objects from canvas, provides form fields for fast editing
-- Supports: text, textarea, select, color, number input types
-- Debounced `after:render` sync to keep fields in sync with canvas
-- Wired into `EditorSidebar.tsx` — appears as pencil icon in tool rail (only shown when config has quickEditFields)
-- Added `"quick-edit"` to `ActiveTool` union in types.ts
+**Fix applied to 3 files (commit fd28c4c):**
+- `use-load-state.ts`: Now recreates workspace clip rect after `loadFromJSON` using `initialWidth`/`initialHeight` refs, clears `canvas.backgroundColor`, wraps JSON.parse in try/catch
+- `use-history.ts`: Both `undo()` and `redo()` recreate workspace clip if missing + JSON.parse error handling
+- `use-editor.ts`: Wrapped `loadJson` JSON.parse in try/catch, passes `initialWidth`/`initialHeight` to useLoadState
 
-#### Workspace Audit Results (27 total)
-- **17 FabricEditor workspaces**: All follow identical pattern, all pass config correctly
-- **7 HTML/Document workspaces**: Business Plan, Contract, Cover Letter, Sales Book, Worksheet — custom renderers
-- **3 Canvas 2D workspaces**: ID Card (legacy), Invoice, Resume — custom wizards with jsPDF
-
-### Previous Phase: Fabric.js Editor Revamp — Phase 6 COMPLETE (Cleanup & Old Engine Deletion)
+#### Previous Session Fixes (commit 501869a) — STILL IN PLACE
+- `loadJson()` workspace clip recreation
+- saveSvg bug, savePng/saveJpg viewport flicker
+- Line object deserialization (14 template files)
+- Google Fonts loading
+- QuickEdit sidebar
 
 #### Phase 4: Remaining Tool Migrations to Fabric.js ✅
 

@@ -25,7 +25,13 @@ export function useHistory({ canvas, saveCallback }: UseHistoryProps) {
       if (!canvas) return;
       if (skipSaveRef.current) return;
 
-      const currentState = JSON.stringify(canvas.toJSON(JSON_KEYS as unknown as string[]));
+      let currentState: string;
+      try {
+        currentState = JSON.stringify(canvas.toJSON(JSON_KEYS as unknown as string[]));
+      } catch (err) {
+        console.warn("[useHistory] save: failed to serialize canvas", err);
+        return;
+      }
       const workspace = canvas.getObjects().find((o) => o.name === "clip");
 
       if (!skip && !skipSaveRef.current) {

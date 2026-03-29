@@ -17,7 +17,7 @@ function bg(fill: string) {
 
 function headline(text: string, opts: Record<string, unknown> = {}) {
   return {
-    type: "textbox", name: "ban-headline", text, width: W - 40,
+    type: "textbox", name: "ban-headline", text, styles: [], width: W - 40,
     left: 20, top: 30, fontSize: 24, fontWeight: "bold", fontFamily: "Inter",
     fill: "#ffffff", textAlign: "left", ...opts,
   };
@@ -25,7 +25,7 @@ function headline(text: string, opts: Record<string, unknown> = {}) {
 
 function subtext(text: string, opts: Record<string, unknown> = {}) {
   return {
-    type: "textbox", name: "ban-subtext", text, width: W - 40,
+    type: "textbox", name: "ban-subtext", text, styles: [], width: W - 40,
     left: 20, top: 80, fontSize: 13, fontFamily: "Inter",
     fill: "#ffffffcc", textAlign: "left", ...opts,
   };
@@ -39,13 +39,13 @@ function ctaButton(text: string, btnFill: string, textFill: string, opts: Record
   delete opts.btnLeft; delete opts.btnTop; delete opts.btnW; delete opts.btnH;
   return [
     { type: "rect", name: "ban-cta-bg", left: btnLeft, top: btnTop, width: btnW, height: btnH, fill: btnFill, rx: 4, ry: 4, ...opts },
-    { type: "textbox", name: "ban-cta-text", text, left: btnLeft + 10, top: btnTop + 9, width: btnW - 20, fontSize: 13, fontWeight: "bold", fontFamily: "Inter", fill: textFill, textAlign: "center" },
+    { type: "textbox", name: "ban-cta-text", text, styles: [], left: btnLeft + 10, top: btnTop + 9, width: btnW - 20, fontSize: 13, fontWeight: "bold", fontFamily: "Inter", fill: textFill, textAlign: "center" },
   ];
 }
 
 function brand(text: string, opts: Record<string, unknown> = {}) {
   return {
-    type: "textbox", name: "ban-brand-name", text, width: W - 40,
+    type: "textbox", name: "ban-brand-name", text, styles: [], width: W - 40,
     left: 20, top: H - 30, fontSize: 10, fontFamily: "Inter",
     fill: "#ffffff88", textAlign: "left", ...opts,
   };
