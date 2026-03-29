@@ -7,7 +7,20 @@
 import type { BusinessProfile } from "@/stores/business-memory";
 import type { CompanyBranding } from "@/lib/sales-book/schema";
 import type { BusinessInfo, PaymentInfo } from "@/lib/invoice/schema";
-import type { UserDetails } from "@/stores/business-card-wizard";
+/** Business card contact details (previously from business-card-wizard store) */
+export interface UserDetails {
+  name: string;
+  title: string;
+  company: string;
+  tagline: string;
+  email: string;
+  phone: string;
+  website: string;
+  address: string;
+  linkedin: string;
+  twitter: string;
+  instagram: string;
+}
 import type { Basics as ResumeBasics } from "@/lib/resume/schema";
 import type { DetectedBusinessFields } from "@/lib/chiko/extractors/field-detector";
 

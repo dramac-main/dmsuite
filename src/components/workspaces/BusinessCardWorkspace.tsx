@@ -1,151 +1,70 @@
 ﻿// =============================================================================
-// DMSuite — Business Card Workspace (AI-First Wizard)
-// Multi-step wizard flow replacing the legacy panel-heavy interface.
-// This is the default export imported by the tool page.
+// DMSuite — Business Card Workspace (Fabric.js Editor)
+// Thin wrapper around the universal FabricEditor for business card design.
+// Replaces the legacy 6-step wizard with a direct canvas editor.
 // =============================================================================
 
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useBusinessCardWizard, type WizardStep } from "@/stores/business-card-wizard";
+import { FabricEditor } from "@/components/fabric-editor";
+import { useFabricProjectStore } from "@/stores/fabric-project";
+import { BUSINESS_CARD_TEMPLATES } from "@/data/business-card-templates";
+import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
 
-import WizardStepIndicator from "./business-card/WizardStepIndicator";
-import StepLogoUpload from "./business-card/StepLogoUpload";
-import StepDetails from "./business-card/StepDetails";
-import StepBrief from "./business-card/StepBrief";
-import StepGeneration from "./business-card/StepGeneration";
-import StepEditor from "./business-card/StepEditor";
-import StepExport from "./business-card/StepExport";
+// ── Quick-edit fields for business card details ─────────────────────────────
+const QUICK_EDIT_FIELDS: QuickEditField[] = [
+  { key: "name", label: "Full Name", type: "text", targetLayer: "bc-name", placeholder: "Your Name" },
+  { key: "title", label: "Job Title", type: "text", targetLayer: "bc-title", placeholder: "Job Title" },
+  { key: "company", label: "Company", type: "text", targetLayer: "bc-company", placeholder: "Company Name" },
+  { key: "phone", label: "Phone", type: "text", targetLayer: "bc-phone", placeholder: "+1 (555) 000-0000" },
+  { key: "email", label: "Email", type: "text", targetLayer: "bc-email", placeholder: "name@company.com" },
+  { key: "website", label: "Website", type: "text", targetLayer: "bc-website", placeholder: "www.company.com" },
+  { key: "address", label: "Address", type: "text", targetLayer: "bc-address", placeholder: "123 Business St, City" },
+];
 
-// ---------------------------------------------------------------------------
-// Animation variants (Section 5 of the blueprint)
-// ---------------------------------------------------------------------------
-
-const stepVariants = {
-  enter: (direction: "forward" | "backward") => ({
-    y: direction === "forward" ? 60 : -60,
-    opacity: 0,
-    scale: 0.98,
-  }),
-  center: {
-    y: 0,
-    opacity: 1,
-    scale: 1,
-    transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] as const },
-  },
-  exit: (direction: "forward" | "backward") => ({
-    y: direction === "forward" ? -60 : 60,
-    opacity: 0,
-    scale: 0.98,
-    transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] as const },
-  }),
+// ── Editor config ───────────────────────────────────────────────────────────
+// Standard business card: 1050 × 600 px (3.5 × 2 in @ 300 DPI)
+const BUSINESS_CARD_CONFIG: FabricEditorConfig = {
+  toolId: "business-card",
+  defaultWidth: 1050,
+  defaultHeight: 600,
+  templates: BUSINESS_CARD_TEMPLATES,
+  quickEditFields: QUICK_EDIT_FIELDS,
+  exportOptions: ["png", "jpg", "pdf", "json"],
 };
 
-// ---------------------------------------------------------------------------
-// Step renderer
-// ---------------------------------------------------------------------------
-
-function StepContent({ step }: { step: WizardStep }) {
-  switch (step) {
-    case 1:
-      return <StepLogoUpload />;
-    case 2:
-      return <StepDetails />;
-    case 3:
-      return <StepBrief />;
-    case 4:
-      return <StepGeneration />;
-    case 5:
-      return <StepEditor />;
-    case 6:
-      return <StepExport />;
-    default:
-      return null;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Main Workspace
-// ---------------------------------------------------------------------------
+// ── Main Workspace ──────────────────────────────────────────────────────────
 
 export default function BusinessCardWorkspace() {
-  const { currentStep, stepDirection, resetWizard } = useBusinessCardWizard();
+  const { fabricJson, setFabricState } = useFabricProjectStore();
+  const hasDispatchedRef = useRef(false);
 
-  // Dispatch step-based progress: steps 1-4 = wizard (0→65%), step 5 = editor (65%), step 6 = export (90%)
-  const prevStepRef = useRef<number>(-1);
+  // Dispatch progress milestones on mount
   useEffect(() => {
-    if (currentStep === prevStepRef.current) return;
-    prevStepRef.current = currentStep;
-    // Steps 1-4 are wizard, step 5 = editor, step 6 = export
-    const progressMap: Record<number, number> = { 1: 10, 2: 25, 3: 40, 4: 55, 5: 70, 6: 90 };
-    const progress = progressMap[currentStep] ?? 0;
-    window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { progress } }));
-    // Input milestone once past step 2 (details filled)
-    if (currentStep >= 3) {
-      window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "input" } }));
-    }
-    // Content milestone when generation/editor is reached
-    if (currentStep >= 5) {
-      window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "content" } }));
-    }
-    // Export step = exported milestone
-    if (currentStep >= 6) {
-      window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "exported" } }));
-    }
-  }, [currentStep]);
+    if (hasDispatchedRef.current) return;
+    hasDispatchedRef.current = true;
+    // Editor is immediately active — fire content milestone
+    window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { progress: 70 } }));
+    window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "content" } }));
+  }, []);
 
-  const handleStartOver = useCallback(() => {
-    if (confirm("Start a new business card design? Your current progress will be cleared.")) {
-      resetWizard();
-    }
-  }, [resetWizard]);
-
-  // Step 5 (editor) gets full-screen treatment — escapes all page chrome
-  const isEditorStep = currentStep === 5;
+  // Save callback — stores Fabric JSON in the project store for persistence
+  const handleSave = useCallback(
+    (json: string, width: number, height: number) => {
+      setFabricState(json, width, height);
+      window.dispatchEvent(new CustomEvent("workspace:dirty"));
+    },
+    [setFabricState],
+  );
 
   return (
-    <div className={
-      isEditorStep
-        ? "fixed inset-0 z-50 flex flex-col bg-gray-950 text-white overflow-hidden"
-        : "flex flex-col h-full bg-gray-950 text-white overflow-hidden"
-    }>
-      {/* Top bar with step indicator */}
-      {!isEditorStep && (
-        <motion.header
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between px-4 border-b border-gray-800/50 bg-gray-900/40 backdrop-blur-sm relative z-10"
-        >
-          <div className="flex-1" />
-          <WizardStepIndicator />
-          <div className="flex-1 flex justify-end">
-            <button
-              onClick={handleStartOver}
-              className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
-            >
-              Start Over
-            </button>
-          </div>
-        </motion.header>
-      )}
-
-      {/* Step content with AnimatePresence */}
-      <div className={isEditorStep ? "flex-1 overflow-hidden relative" : "flex-1 overflow-y-auto relative"}>
-        <AnimatePresence mode="wait" custom={stepDirection}>
-          <motion.div
-            key={currentStep}
-            custom={stepDirection}
-            variants={stepVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            className={isEditorStep ? "h-full" : "h-full py-6"}
-          >
-            <StepContent step={currentStep} />
-          </motion.div>
-        </AnimatePresence>
-      </div>
+    <div className="flex h-full w-full flex-col overflow-hidden">
+      <FabricEditor
+        config={BUSINESS_CARD_CONFIG}
+        defaultState={fabricJson ?? undefined}
+        onSave={handleSave}
+      />
     </div>
   );
 }

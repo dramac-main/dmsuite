@@ -178,262 +178,333 @@ function getBusinessPlanAdapter(): StoreAdapter {
 
 function getMenuDesignerAdapter(): StoreAdapter {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useMenuDesignerEditor } = require("@/stores/menu-designer-editor");
+  const { useFabricProjectStore } = require("@/stores/fabric-project");
   return {
     getSnapshot: () => {
-      const { form } = useMenuDesignerEditor.getState();
-      return { form };
+      const s = useFabricProjectStore.getState();
+      if (!s.fabricJson) return {};
+      return {
+        fabricJson: s.fabricJson,
+        canvasWidth: s.canvasWidth,
+        canvasHeight: s.canvasHeight,
+      };
     },
     restoreSnapshot: (data) => {
-      if (data.form) {
-        useMenuDesignerEditor.getState().setForm(data.form as never);
+      if (typeof data.fabricJson === "string") {
+        useFabricProjectStore.getState().setFabricState(
+          data.fabricJson as string,
+          (data.canvasWidth as number) || 794,
+          (data.canvasHeight as number) || 1123,
+        );
       }
     },
     resetStore: () => {
-      useMenuDesignerEditor.getState().resetForm();
-      nukePersistStorage("dmsuite-menu-designer");
+      useFabricProjectStore.getState().reset();
     },
-    subscribe: (cb) => useMenuDesignerEditor.subscribe(cb),
+    subscribe: (cb) => useFabricProjectStore.subscribe(cb),
   };
 }
 
 function getIDBadgeAdapter(): StoreAdapter {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useIDBadgeEditor } = require("@/stores/id-badge-editor");
+  const { useFabricProjectStore } = require("@/stores/fabric-project");
   return {
     getSnapshot: () => {
-      const { form } = useIDBadgeEditor.getState();
-      return { form };
+      const s = useFabricProjectStore.getState();
+      if (!s.fabricJson) return {};
+      return {
+        fabricJson: s.fabricJson,
+        canvasWidth: s.canvasWidth,
+        canvasHeight: s.canvasHeight,
+      };
     },
     restoreSnapshot: (data) => {
-      if (data.form) {
-        useIDBadgeEditor.getState().setForm(data.form as never);
+      if (typeof data.fabricJson === "string") {
+        useFabricProjectStore.getState().setFabricState(
+          data.fabricJson as string,
+          (data.canvasWidth as number) || 1013,
+          (data.canvasHeight as number) || 638,
+        );
       }
     },
     resetStore: () => {
-      useIDBadgeEditor.getState().resetForm();
-      nukePersistStorage("dmsuite-id-badge");
+      useFabricProjectStore.getState().reset();
     },
-    subscribe: (cb) => useIDBadgeEditor.subscribe(cb),
+    subscribe: (cb) => useFabricProjectStore.subscribe(cb),
   };
 }
 
 function getCertificateAdapter(): StoreAdapter {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useCertificateEditor } = require("@/stores/certificate-editor");
+  const { useFabricProjectStore } = require("@/stores/fabric-project");
   return {
     getSnapshot: () => {
-      const { meta, selectedTemplateId, documentSnapshot } = useCertificateEditor.getState();
-      return { meta, selectedTemplateId, documentSnapshot };
+      const s = useFabricProjectStore.getState();
+      if (!s.fabricJson) return {};
+      return {
+        fabricJson: s.fabricJson,
+        canvasWidth: s.canvasWidth,
+        canvasHeight: s.canvasHeight,
+      };
     },
     restoreSnapshot: (data) => {
-      if (data.meta) {
-        useCertificateEditor.getState().setMeta(data.meta as never);
-      }
-      if (data.selectedTemplateId) {
-        useCertificateEditor.getState().setTemplateId(data.selectedTemplateId as string);
-      }
-      if (data.documentSnapshot) {
-        useCertificateEditor.getState().setDocumentSnapshot(data.documentSnapshot as never);
-        // Also push to shared editor store
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const { useEditorStore } = require("@/stores/editor");
-          useEditorStore.getState().setDoc(data.documentSnapshot as never);
-        } catch { /* editor store may not be loaded yet */ }
+      if (typeof data.fabricJson === "string") {
+        useFabricProjectStore.getState().setFabricState(
+          data.fabricJson as string,
+          (data.canvasWidth as number) || 3508,
+          (data.canvasHeight as number) || 2480,
+        );
       }
     },
     resetStore: () => {
-      useCertificateEditor.getState().resetToDefaults();
-      // Certificate v2 uses sessionStorage
-      try {
-        if (typeof sessionStorage !== "undefined") {
-          sessionStorage.removeItem("dmsuite-certificate-v2");
-        }
-      } catch { /* SSR/incognito */ }
-      // Also reset shared editor store
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { useEditorStore } = require("@/stores/editor");
-        useEditorStore.getState().resetDoc();
-      } catch { /* editor store may not be loaded yet */ }
+      useFabricProjectStore.getState().reset();
     },
-    subscribe: (cb) => useCertificateEditor.subscribe(cb),
+    subscribe: (cb) => useFabricProjectStore.subscribe(cb),
   };
 }
 
 function getDiplomaAdapter(): StoreAdapter {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useDiplomaEditor } = require("@/stores/diploma-editor");
+  const { useFabricProjectStore } = require("@/stores/fabric-project");
   return {
     getSnapshot: () => {
-      const { form, accentColorLocked } = useDiplomaEditor.getState();
-      return { form, accentColorLocked };
+      const s = useFabricProjectStore.getState();
+      if (!s.fabricJson) return {};
+      return {
+        fabricJson: s.fabricJson,
+        canvasWidth: s.canvasWidth,
+        canvasHeight: s.canvasHeight,
+      };
     },
     restoreSnapshot: (data) => {
-      if (data.form) {
-        useDiplomaEditor.getState().setForm(data.form as never);
+      if (typeof data.fabricJson === "string") {
+        useFabricProjectStore.getState().setFabricState(
+          data.fabricJson as string,
+          (data.canvasWidth as number) || 1123,
+          (data.canvasHeight as number) || 794,
+        );
       }
     },
     resetStore: () => {
-      useDiplomaEditor.getState().resetForm();
-      nukePersistStorage("dmsuite-diploma-editor");
+      useFabricProjectStore.getState().reset();
     },
-    subscribe: (cb) => useDiplomaEditor.subscribe(cb),
+    subscribe: (cb) => useFabricProjectStore.subscribe(cb),
   };
 }
 
 function getTicketAdapter(): StoreAdapter {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useTicketEditor } = require("@/stores/ticket-editor");
+  const { useFabricProjectStore } = require("@/stores/fabric-project");
   return {
     getSnapshot: () => {
-      const { form } = useTicketEditor.getState();
-      return { form };
+      const s = useFabricProjectStore.getState();
+      if (!s.fabricJson) return {};
+      return {
+        fabricJson: s.fabricJson,
+        canvasWidth: s.canvasWidth,
+        canvasHeight: s.canvasHeight,
+      };
     },
     restoreSnapshot: (data) => {
-      if (data.form) {
-        useTicketEditor.getState().setForm(data.form as never);
+      if (typeof data.fabricJson === "string") {
+        useFabricProjectStore.getState().setFabricState(
+          data.fabricJson as string,
+          (data.canvasWidth as number) || 816,
+          (data.canvasHeight as number) || 336,
+        );
       }
     },
     resetStore: () => {
-      useTicketEditor.getState().resetForm();
-      nukePersistStorage("dmsuite-ticket-designer");
+      useFabricProjectStore.getState().reset();
     },
-    subscribe: (cb) => useTicketEditor.subscribe(cb),
+    subscribe: (cb) => useFabricProjectStore.subscribe(cb),
   };
 }
 
 // ---------------------------------------------------------------------------
-// Canvas editor adapter — for tools that use the shared useEditorStore
-// (poster, flyer, banner-ad, etc.)
-// No persist middleware, so no localStorage key to nuke. But the store is
-// global, so a project switch MUST reset it or old canvas data leaks.
+// Fabric.js adapters for Phase 5 visual design tools
 // ---------------------------------------------------------------------------
 
-function getCanvasEditorAdapter(): StoreAdapter {
+function getPosterAdapter(): StoreAdapter {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useEditorStore } = require("@/stores/editor");
+  const { useFabricProjectStore } = require("@/stores/fabric-project");
   return {
     getSnapshot: () => {
-      const { doc } = useEditorStore.getState();
-      return { doc };
+      const s = useFabricProjectStore.getState();
+      if (!s.fabricJson) return {};
+      return { fabricJson: s.fabricJson, canvasWidth: s.canvasWidth, canvasHeight: s.canvasHeight };
     },
     restoreSnapshot: (data) => {
-      if (data.doc) {
-        useEditorStore.getState().setDoc(data.doc as never);
+      if (typeof data.fabricJson === "string") {
+        useFabricProjectStore.getState().setFabricState(
+          data.fabricJson as string,
+          (data.canvasWidth as number) || 794,
+          (data.canvasHeight as number) || 1123,
+        );
       }
     },
-    resetStore: () => {
-      useEditorStore.getState().resetDoc();
-      // No persist — no localStorage key to nuke
+    resetStore: () => { useFabricProjectStore.getState().reset(); },
+    subscribe: (cb) => useFabricProjectStore.subscribe(cb),
+  };
+}
+
+function getSocialMediaAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useFabricProjectStore } = require("@/stores/fabric-project");
+  return {
+    getSnapshot: () => {
+      const s = useFabricProjectStore.getState();
+      if (!s.fabricJson) return {};
+      return { fabricJson: s.fabricJson, canvasWidth: s.canvasWidth, canvasHeight: s.canvasHeight };
     },
-    subscribe: (cb) => useEditorStore.subscribe(cb),
+    restoreSnapshot: (data) => {
+      if (typeof data.fabricJson === "string") {
+        useFabricProjectStore.getState().setFabricState(
+          data.fabricJson as string,
+          (data.canvasWidth as number) || 1080,
+          (data.canvasHeight as number) || 1080,
+        );
+      }
+    },
+    resetStore: () => { useFabricProjectStore.getState().reset(); },
+    subscribe: (cb) => useFabricProjectStore.subscribe(cb),
+  };
+}
+
+function getInvitationAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useFabricProjectStore } = require("@/stores/fabric-project");
+  return {
+    getSnapshot: () => {
+      const s = useFabricProjectStore.getState();
+      if (!s.fabricJson) return {};
+      return { fabricJson: s.fabricJson, canvasWidth: s.canvasWidth, canvasHeight: s.canvasHeight };
+    },
+    restoreSnapshot: (data) => {
+      if (typeof data.fabricJson === "string") {
+        useFabricProjectStore.getState().setFabricState(
+          data.fabricJson as string,
+          (data.canvasWidth as number) || 420,
+          (data.canvasHeight as number) || 595,
+        );
+      }
+    },
+    resetStore: () => { useFabricProjectStore.getState().reset(); },
+    subscribe: (cb) => useFabricProjectStore.subscribe(cb),
+  };
+}
+
+function getGreetingCardAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useFabricProjectStore } = require("@/stores/fabric-project");
+  return {
+    getSnapshot: () => {
+      const s = useFabricProjectStore.getState();
+      if (!s.fabricJson) return {};
+      return { fabricJson: s.fabricJson, canvasWidth: s.canvasWidth, canvasHeight: s.canvasHeight };
+    },
+    restoreSnapshot: (data) => {
+      if (typeof data.fabricJson === "string") {
+        useFabricProjectStore.getState().setFabricState(
+          data.fabricJson as string,
+          (data.canvasWidth as number) || 420,
+          (data.canvasHeight as number) || 595,
+        );
+      }
+    },
+    resetStore: () => { useFabricProjectStore.getState().reset(); },
+    subscribe: (cb) => useFabricProjectStore.subscribe(cb),
+  };
+}
+
+function getLetterheadAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useFabricProjectStore } = require("@/stores/fabric-project");
+  return {
+    getSnapshot: () => {
+      const s = useFabricProjectStore.getState();
+      if (!s.fabricJson) return {};
+      return { fabricJson: s.fabricJson, canvasWidth: s.canvasWidth, canvasHeight: s.canvasHeight };
+    },
+    restoreSnapshot: (data) => {
+      if (typeof data.fabricJson === "string") {
+        useFabricProjectStore.getState().setFabricState(
+          data.fabricJson as string,
+          (data.canvasWidth as number) || 595,
+          (data.canvasHeight as number) || 842,
+        );
+      }
+    },
+    resetStore: () => { useFabricProjectStore.getState().reset(); },
+    subscribe: (cb) => useFabricProjectStore.subscribe(cb),
   };
 }
 
 function getBusinessCardAdapter(): StoreAdapter {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useBusinessCardWizard } = require("@/stores/business-card-wizard");
+  const { useFabricProjectStore } = require("@/stores/fabric-project");
   return {
     getSnapshot: () => {
-      const s = useBusinessCardWizard.getState();
+      const s = useFabricProjectStore.getState();
+      if (!s.fabricJson) return {};
       return {
-        currentStep: s.currentStep,
-        highestCompletedStep: s.highestCompletedStep,
-        logo: {
-          logoUrl: s.logo.logoUrl,
-          logoType: s.logo.logoType,
-          iconOnlyUrl: s.logo.iconOnlyUrl,
-          logoColors: s.logo.logoColors,
-        },
-        details: s.details,
-        brief: s.brief,
-        style: s.style,
-        batchMode: s.batchMode,
-        generation: {
-          generatedDesigns: s.generation.generatedDesigns,
-          generatedBackDesigns: s.generation.generatedBackDesigns,
-          designDescriptions: s.generation.designDescriptions,
-          selectedDesignIndex: s.generation.selectedDesignIndex,
-        },
-        documents: {
-          frontDoc: s.documents.frontDoc,
-          backDoc: s.documents.backDoc,
-          currentSide: s.documents.currentSide,
-        },
+        fabricJson: s.fabricJson,
+        canvasWidth: s.canvasWidth,
+        canvasHeight: s.canvasHeight,
       };
     },
     restoreSnapshot: (data) => {
-      const state = useBusinessCardWizard.getState();
-      if (data.details) state.setDetails(data.details as never);
-      if (data.brief) {
-        const b = data.brief as Record<string, unknown>;
-        if (b.description !== undefined) state.setBriefDescription(b.description as string);
-        if (b.companyDescription !== undefined) state.setCompanyDescription(b.companyDescription as string);
-        if (b.frontOnly !== undefined) state.setFrontOnly(b.frontOnly as boolean);
-        if (b.cardSize !== undefined) state.setCardSize(b.cardSize as never);
-      }
-      if (data.logo) {
-        const l = data.logo as Record<string, unknown>;
-        if (l.logoUrl !== undefined) state.setLogoUrl(l.logoUrl as string | null);
-        if (l.logoType !== undefined) state.setLogoType(l.logoType as never);
-        if (l.iconOnlyUrl !== undefined) state.setIconOnlyUrl(l.iconOnlyUrl as string | null);
-        if (l.logoColors) state.setLogoColors(l.logoColors as string[]);
-      }
-      if (data.style) {
-        const st = data.style as Record<string, unknown>;
-        if (st.selectedMood !== undefined) state.setSelectedMood(st.selectedMood as never);
-        if (st.fontPreference !== undefined) state.setFontPreference(st.fontPreference as never);
-        if (st.colorOverride !== undefined) state.setColorOverride(st.colorOverride as string | null);
-        if (st.surpriseMe !== undefined) state.setSurpriseMe(st.surpriseMe as boolean);
-      }
-      if (data.generation) {
-        const g = data.generation as Record<string, unknown>;
-        if (Array.isArray(g.generatedDesigns) && g.generatedDesigns.length > 0) {
-          state.setGeneratedDesigns(
-            g.generatedDesigns as never[],
-            g.designDescriptions as string[] | undefined,
-            g.generatedBackDesigns as never[] | undefined,
-          );
-          if (typeof g.selectedDesignIndex === "number") state.selectDesign(g.selectedDesignIndex);
-        }
-      }
-      if (data.documents) {
-        const d = data.documents as Record<string, unknown>;
-        if (d.frontDoc) state.setFrontDoc(d.frontDoc as never);
-        if (d.backDoc) state.setBackDoc(d.backDoc as never);
-        if (d.currentSide) state.setCurrentSide(d.currentSide as never);
-      }
-      if (typeof data.batchMode === "boolean") state.setBatchMode(data.batchMode);
-      // Restore step position last so UI renders correctly
-      if (typeof data.currentStep === "number") {
-        state.goToStep(1 as never); // Reset first to allow forward navigation
-        // Set highestCompletedStep so goToStep allows navigation
-        useBusinessCardWizard.setState({
-          highestCompletedStep: data.highestCompletedStep as never ?? data.currentStep as never,
-          currentStep: data.currentStep as never,
-        });
+      if (typeof data.fabricJson === "string") {
+        useFabricProjectStore.getState().setFabricState(
+          data.fabricJson as string,
+          (data.canvasWidth as number) || 1050,
+          (data.canvasHeight as number) || 600,
+        );
       }
     },
     resetStore: () => {
-      useBusinessCardWizard.getState().resetWizard();
-      // Business card wizard uses sessionStorage
-      try {
-        if (typeof sessionStorage !== "undefined") {
-          sessionStorage.removeItem("dmsuite-business-card-wizard");
-        }
-      } catch { /* SSR/incognito */ }
-      // Also reset shared editor store (used by StepEditor canvas)
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { useEditorStore } = require("@/stores/editor");
-        useEditorStore.getState().resetDoc();
-      } catch { /* editor store may not be loaded yet */ }
+      useFabricProjectStore.getState().reset();
     },
-    subscribe: (cb) => useBusinessCardWizard.subscribe(cb),
+    subscribe: (cb) => useFabricProjectStore.subscribe(cb),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Fabric.js adapters for Phase 5 Batch 2 visual design tools
+// ---------------------------------------------------------------------------
+
+function makeFabricAdapter(defaultW: number, defaultH: number): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useFabricProjectStore } = require("@/stores/fabric-project");
+  return {
+    getSnapshot: () => {
+      const s = useFabricProjectStore.getState();
+      if (!s.fabricJson) return {};
+      return { fabricJson: s.fabricJson, canvasWidth: s.canvasWidth, canvasHeight: s.canvasHeight };
+    },
+    restoreSnapshot: (data) => {
+      if (typeof data.fabricJson === "string") {
+        useFabricProjectStore.getState().setFabricState(
+          data.fabricJson as string,
+          (data.canvasWidth as number) || defaultW,
+          (data.canvasHeight as number) || defaultH,
+        );
+      }
+    },
+    resetStore: () => { useFabricProjectStore.getState().reset(); },
+    subscribe: (cb) => useFabricProjectStore.subscribe(cb),
+  };
+}
+
+function getBrochureAdapter(): StoreAdapter { return makeFabricAdapter(842, 595); }
+function getStickerAdapter(): StoreAdapter { return makeFabricAdapter(300, 300); }
+function getCouponAdapter(): StoreAdapter { return makeFabricAdapter(900, 400); }
+function getEnvelopeAdapter(): StoreAdapter { return makeFabricAdapter(624, 312); }
+function getSignageAdapter(): StoreAdapter { return makeFabricAdapter(425, 1000); }
+function getInfographicAdapter(): StoreAdapter { return makeFabricAdapter(800, 1200); }
+function getCalendarAdapter(): StoreAdapter { return makeFabricAdapter(1200, 900); }
+function getApparelAdapter(): StoreAdapter { return makeFabricAdapter(500, 600); }
+function getPackagingAdapter(): StoreAdapter { return makeFabricAdapter(900, 700); }
 
 // ---------------------------------------------------------------------------
 // Generic adapter for tools that don't have dedicated stores
@@ -476,11 +547,24 @@ const ADAPTER_FACTORIES: Record<string, () => StoreAdapter> = {
   "diploma-designer": getDiplomaAdapter,
   "ticket-designer": getTicketAdapter,
   "worksheet-designer": getWorksheetAdapter,
-  // Canvas editors (shared useEditorStore)
-  "poster": getCanvasEditorAdapter,
-  "flyer": getCanvasEditorAdapter,
-  "banner-ad": getCanvasEditorAdapter,
-  "social-media-post": getCanvasEditorAdapter,
+  // Fabric.js visual design editors (Phase 5)
+  "poster": getPosterAdapter,
+  "flyer": getPosterAdapter,
+  "social-media-post": getSocialMediaAdapter,
+  "invitation-designer": getInvitationAdapter,
+  "greeting-card": getGreetingCardAdapter,
+  "letterhead": getLetterheadAdapter,
+  // Fabric.js visual design editors (Phase 5 — Batch 2)
+  "brochure": getBrochureAdapter,
+  "sticker-designer": getStickerAdapter,
+  "gift-voucher": getCouponAdapter,
+  "envelope": getEnvelopeAdapter,
+  "signage": getSignageAdapter,
+  "infographic": getInfographicAdapter,
+  "calendar-designer": getCalendarAdapter,
+  "tshirt-merch": getApparelAdapter,
+  "packaging-design": getPackagingAdapter,
+  "banner-ad": () => makeFabricAdapter(300, 250),
 };
 
 /**

@@ -4,7 +4,79 @@
 
 ---
 
-## Current Work: Certificate EditorV2 Canvas Rebuild — COMPLETE ✅
+## Current Work: Fabric.js Editor Revamp — ALL PHASES COMPLETE ✅
+
+### Phase 6 (Session 157+): Cleanup & Old Engine Deletion ✅
+
+**Banner Ad Migration** (last Canvas 2D tool)
+- [x] Created `src/data/banner-ad-fabric-templates.ts` — 10 Fabric.js JSON templates (300×250 IAB)
+- [x] Rewrote `BannerAdWorkspace.tsx` — thin FabricEditor wrapper
+- [x] Created `src/lib/chiko/manifests/banner-ad-fabric.ts`
+- [x] Updated store adapter + barrel export
+
+**Mass Deletion — Old Canvas 2D Engine**
+- [x] Deleted `src/lib/editor/` — ENTIRE DIRECTORY (20 files: schema, renderer, hit-test, interaction, snapping, commands, ai-patch, adapters, generators, abstract-library, font-loader, pdf-renderer, svg-renderer, etc.)
+- [x] Deleted `src/components/editor/` — ENTIRE DIRECTORY (13 old editor components)
+- [x] Deleted `src/components/workspaces/business-card/` — 9 old wizard step files
+- [x] Deleted 5 old Chiko manifests (certificate, diploma, id-badge, ticket-designer, menu-designer)
+- [x] Deleted 7 old stores (editor, certificate-editor, business-card-wizard, diploma-editor, id-badge-editor, ticket-editor, menu-designer-editor)
+- [x] Fixed `field-mapper.ts` — inlined UserDetails interface
+- [x] Fixed `stores/index.ts` — removed editor re-exports
+- [x] Fixed `manifests/index.ts` — removed 5 old manifest exports
+- [x] Fixed `banner-ad-fabric-templates.ts` — corrected template structure (width+height+json)
+- [x] TypeScript: 0 errors
+
+### Session 156+: Phase 5 Batch 2 — 9 Remaining Visual Tools ✅
+
+**Brochure** (842×595 A4 landscape), **Sticker** (300×300), **Coupon** (900×400), **Envelope** (624×312 DL), **Signage** (425×1000 banner stand), **Infographic** (800×1200), **Calendar** (1200×900 landscape), **Apparel** (500×600), **Packaging** (900×700)
+- [x] 9 template files, 9 workspace wrappers, 9 Chiko manifests
+- [x] Shared `makeFabricAdapter()` helper in store-adapters.ts
+- [x] All barrel exports added
+- [x] TypeScript: 0 errors
+
+### Session 155+ — Phase 4: Remaining Tool Migrations to Fabric.js ✅
+
+**Ticket Designer** ✅ (816×336 px, 10 templates)
+- [x] Created `src/data/ticket-fabric-templates.ts` — 10 Fabric.js JSON templates
+- [x] Rewrote `TicketDesignerWorkspace.tsx` — thin FabricEditor wrapper (13 quick-edit fields)
+- [x] Created `src/lib/chiko/manifests/ticket-designer-fabric.ts` — update_ticket_details action
+- [x] Updated store adapter + barrel export
+- [x] Removed old files (TicketRenderer, LayersPanel, tabs)
+- [x] TypeScript: 0 errors
+
+**ID Badge Designer** ✅ (1013×638 px CR80, 10 templates)
+- [x] Created `src/data/id-badge-fabric-templates.ts` — 10 Fabric.js JSON templates
+- [x] Rewrote `IDBadgeDesignerWorkspace.tsx` — thin FabricEditor wrapper (15 quick-edit fields)
+- [x] Created `src/lib/chiko/manifests/id-badge-fabric.ts` — update_badge_details action
+- [x] Updated store adapter + barrel export
+- [x] Removed old files (IDBadgeRenderer, LayersPanel, 5 tabs)
+- [x] TypeScript: 0 errors
+
+**Diploma Designer** ✅ (1123×794 px A4 landscape, 10 templates)
+- [x] Created `src/data/diploma-fabric-templates.ts` — 10 Fabric.js JSON templates
+- [x] Rewrote `DiplomaDesignerWorkspace.tsx` — thin FabricEditor wrapper (16 quick-edit fields)
+- [x] Created `src/lib/chiko/manifests/diploma-fabric.ts` — update_diploma_details + update_signatories
+- [x] Updated store adapter + barrel export
+- [x] Removed old files (DiplomaRenderer, LayersPanel, 4 tabs)
+- [x] TypeScript: 0 errors
+
+**Menu Designer** ✅ (794×1123 px A4 portrait, 12 templates)
+- [x] Created `src/data/menu-fabric-templates.ts` — 12 Fabric.js JSON templates
+- [x] Rewrote `MenuDesignerWorkspace.tsx` — thin FabricEditor wrapper (10 quick-edit fields)
+- [x] Created `src/lib/chiko/manifests/menu-designer-fabric.ts` — update_menu_header + update_menu_section
+- [x] Updated store adapter + barrel export
+- [x] Removed old files (MenuDesignerRenderer, LayersPanel, 4 tabs)
+- [x] TypeScript: 0 errors
+
+### Previous Phases
+- [x] Phase 0: Foundation — 13 engine files (`src/lib/fabric-editor/`)
+- [x] Phase 1: Shared Editor UI — 18 component files (`src/components/fabric-editor/`)
+- [x] Phase 2: Business Card — templates, workspace, manifest, adapter (1050×600px, 8 templates)
+- [x] Phase 3: Certificate — templates, workspace, manifest, adapter (3508×2480px, 8 templates)
+
+---
+
+## Previous Work: Certificate EditorV2 Canvas Rebuild — COMPLETE ✅
 
 ### Session 151 — Certificate EditorV2 Full Rebuild
 

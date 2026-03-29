@@ -1,268 +1,76 @@
 // =============================================================================
-// DMSuite — Certificate Designer Workspace
-// Main workspace container with state machine:
-//   template-picker → font-loading → editor → (export handled via toolbar)
-// Default export consumed by tools/[categoryId]/[toolId]/page.tsx
+// DMSuite — Certificate Designer Workspace (Fabric.js Editor)
+// Thin wrapper around the universal FabricEditor for certificate design.
+// Replaces the legacy state-machine workspace with a direct canvas editor.
 // =============================================================================
 
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useCertificateEditor } from "@/stores/certificate-editor";
-import {
-  getCertificateTemplate,
-  type CertificateTemplate,
-} from "@/data/certificate-templates";
-import {
-  certificateConfigToDocumentAsync,
-  createDefaultCertificateConfig,
-} from "@/lib/editor/certificate-adapter";
-import CertificateTemplatePicker from "./CertificateTemplatePicker";
-import CertificateEditor from "./CertificateEditor";
+import { useCallback, useEffect, useRef } from "react";
+import { FabricEditor } from "@/components/fabric-editor";
+import { useFabricProjectStore } from "@/stores/fabric-project";
+import { CERTIFICATE_FABRIC_TEMPLATES } from "@/data/certificate-fabric-templates";
+import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
 
-// ---------------------------------------------------------------------------
-// Workspace phases
-// ---------------------------------------------------------------------------
+// ── Quick-edit fields for certificate details ───────────────────────────────
+const QUICK_EDIT_FIELDS: QuickEditField[] = [
+  { key: "org", label: "Organization", type: "text", targetLayer: "cert-org", placeholder: "Organization Name" },
+  { key: "title", label: "Certificate Title", type: "text", targetLayer: "cert-title", placeholder: "CERTIFICATE OF ACHIEVEMENT" },
+  { key: "subtitle", label: "Subtitle", type: "text", targetLayer: "cert-subtitle", placeholder: "This certificate is proudly presented to" },
+  { key: "recipient", label: "Recipient Name", type: "text", targetLayer: "cert-recipient", placeholder: "Recipient Name" },
+  { key: "description", label: "Description", type: "textarea", targetLayer: "cert-description", placeholder: "For outstanding performance..." },
+  { key: "date", label: "Date", type: "text", targetLayer: "cert-date", placeholder: "Date: January 1, 2026" },
+  { key: "ref", label: "Reference Number", type: "text", targetLayer: "cert-ref", placeholder: "Ref: CERT-2026-001" },
+  { key: "sig0-name", label: "Signatory 1 Name", type: "text", targetLayer: "cert-signatory-0-name", placeholder: "Signatory Name" },
+  { key: "sig0-title", label: "Signatory 1 Title", type: "text", targetLayer: "cert-signatory-0-title", placeholder: "Position / Title" },
+  { key: "sig1-name", label: "Signatory 2 Name", type: "text", targetLayer: "cert-signatory-1-name", placeholder: "Signatory Name" },
+  { key: "sig1-title", label: "Signatory 2 Title", type: "text", targetLayer: "cert-signatory-1-title", placeholder: "Position / Title" },
+  { key: "sig2-name", label: "Signatory 3 Name", type: "text", targetLayer: "cert-signatory-2-name", placeholder: "Signatory Name" },
+  { key: "sig2-title", label: "Signatory 3 Title", type: "text", targetLayer: "cert-signatory-2-title", placeholder: "Position / Title" },
+  { key: "seal-text", label: "Seal Text", type: "text", targetLayer: "cert-seal-text", placeholder: "CERTIFIED" },
+];
 
-type Phase = "pick" | "loading" | "editor";
-
-// ---------------------------------------------------------------------------
-// Transition animations
-// ---------------------------------------------------------------------------
-
-const fadeVariants = {
-  enter: { opacity: 0, y: 24, scale: 0.98 },
-  center: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as const },
-  },
-  exit: {
-    opacity: 0,
-    y: -24,
-    scale: 0.98,
-    transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] as const },
-  },
+// ── Editor config ───────────────────────────────────────────────────────────
+// A4 Landscape at 300 DPI: 3508 × 2480 px
+const CERTIFICATE_CONFIG: FabricEditorConfig = {
+  toolId: "certificate",
+  defaultWidth: 3508,
+  defaultHeight: 2480,
+  templates: CERTIFICATE_FABRIC_TEMPLATES,
+  quickEditFields: QUICK_EDIT_FIELDS,
+  exportOptions: ["png", "jpg", "svg", "pdf", "json"],
 };
 
-// ---------------------------------------------------------------------------
-// Font loading skeleton
-// ---------------------------------------------------------------------------
-
-function LoadingSkeleton({ templateName }: { templateName: string }) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-6 bg-gray-950 text-white">
-      {/* Pulsing certificate outline */}
-      <div className="relative">
-        <div className="h-48 w-72 animate-pulse rounded-lg border-2 border-gray-700 bg-gray-900" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6">
-          <div className="h-3 w-32 animate-pulse rounded bg-gray-700" />
-          <div className="h-2 w-20 animate-pulse rounded bg-gray-800" />
-          <div className="h-4 w-40 animate-pulse rounded bg-gray-700" />
-          <div className="h-2 w-28 animate-pulse rounded bg-gray-800" />
-        </div>
-      </div>
-      <div className="flex flex-col items-center gap-1">
-        <p className="text-sm font-medium text-gray-300">
-          Preparing &ldquo;{templateName}&rdquo;&hellip;
-        </p>
-        <p className="text-xs text-gray-500">Loading fonts and building document</p>
-      </div>
-      {/* Spinner */}
-      <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-700 border-t-primary-500" />
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Main Workspace
-// ---------------------------------------------------------------------------
+// ── Main Workspace ──────────────────────────────────────────────────────────
 
 export default function CertificateDesignerWorkspace() {
-  const {
-    meta,
-    setMeta,
-    selectedTemplateId,
-    setTemplateId,
-    documentSnapshot,
-    setDocumentSnapshot,
-    setGenerating,
-    setGenerationError,
-    setFontsReady,
-    resetToDefaults,
-  } = useCertificateEditor();
+  const { fabricJson, setFabricState } = useFabricProjectStore();
+  const hasDispatchedRef = useRef(false);
 
-  const [phase, setPhase] = useState<Phase>(() =>
-    documentSnapshot ? "editor" : "pick",
-  );
-  const [activeTemplate, setActiveTemplate] = useState<CertificateTemplate | null>(null);
-  const mountedRef = useRef(true);
-
-  // Track previous documentSnapshot to skip re-init on restore
+  // Dispatch progress milestones on mount
   useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
+    if (hasDispatchedRef.current) return;
+    hasDispatchedRef.current = true;
+    window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { progress: 70 } }));
+    window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "content" } }));
   }, []);
 
-  // --- Progress milestones ---
-  useEffect(() => {
-    const progress: Record<Phase, number> = {
-      pick: 10,
-      loading: 30,
-      editor: 50,
-    };
-    window.dispatchEvent(
-      new CustomEvent("workspace:progress", { detail: { progress: progress[phase] } }),
-    );
-    if (phase === "editor") {
-      window.dispatchEvent(
-        new CustomEvent("workspace:progress", { detail: { milestone: "content" } }),
-      );
-    }
-  }, [phase]);
-
-  // --- Template selection handler ---
-  const handleTemplateSelect = useCallback(
-    async (template: CertificateTemplate) => {
-      setActiveTemplate(template);
-      setTemplateId(template.id);
-      setPhase("loading");
-      setGenerating(true);
-      setGenerationError(null);
-
-      // Build initial config from defaults + template
-      const cfg = {
-        ...createDefaultCertificateConfig(),
-        ...meta,
-        templateId: template.id,
-      };
-      setMeta(cfg);
-
-      try {
-        const doc = await certificateConfigToDocumentAsync(cfg, template);
-        if (!mountedRef.current) return;
-        setDocumentSnapshot(doc);
-        setFontsReady(true);
-        setGenerating(false);
-        setPhase("editor");
-      } catch (err) {
-        if (!mountedRef.current) return;
-        setGenerating(false);
-        setGenerationError(
-          err instanceof Error ? err.message : "Failed to generate certificate",
-        );
-        // Fallback: still go to editor with whatever we have
-        setPhase("editor");
-      }
+  // Save callback — stores Fabric JSON in the project store for persistence
+  const handleSave = useCallback(
+    (json: string, width: number, height: number) => {
+      setFabricState(json, width, height);
+      window.dispatchEvent(new CustomEvent("workspace:dirty"));
     },
-    [meta, setMeta, setTemplateId, setDocumentSnapshot, setGenerating, setGenerationError, setFontsReady],
+    [setFabricState],
   );
-
-  // --- Start blank handler ---
-  const handleStartBlank = useCallback(() => {
-    const template = getCertificateTemplate("classic-gold");
-    handleTemplateSelect(template);
-  }, [handleTemplateSelect]);
-
-  // --- Template change from within editor ---
-  const handleTemplateChange = useCallback(() => {
-    setPhase("pick");
-    window.dispatchEvent(
-      new CustomEvent("workspace:progress", { detail: { progress: 10 } }),
-    );
-  }, []);
-
-  // --- Start over ---
-  const handleStartOver = useCallback(() => {
-    if (confirm("Start a new certificate design? Your current progress will be cleared.")) {
-      resetToDefaults();
-      setPhase("pick");
-      setActiveTemplate(null);
-    }
-  }, [resetToDefaults]);
 
   return (
-    <div className="flex h-full flex-col bg-gray-950 text-white overflow-hidden">
-      {/* Header bar (template picker & loading phases only) */}
-      {phase !== "editor" && (
-        <motion.header
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="shrink-0 flex items-center justify-between border-b border-gray-800/50 bg-gray-900/40 px-4 py-2 backdrop-blur-sm"
-        >
-          <p className="text-sm font-medium text-gray-300">Certificate Designer</p>
-          <div className="flex items-center gap-3">
-            {documentSnapshot && (
-              <button
-                onClick={() => setPhase("editor")}
-                className="text-xs text-primary-400 hover:text-primary-300 transition-colors"
-              >
-                Back to Editor
-              </button>
-            )}
-            {phase !== "pick" && (
-              <button
-                onClick={handleStartOver}
-                className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
-              >
-                Start Over
-              </button>
-            )}
-          </div>
-        </motion.header>
-      )}
-
-      {/* Phase content */}
-      <div className="flex-1 overflow-hidden relative">
-        <AnimatePresence mode="wait">
-          {phase === "pick" && (
-            <motion.div
-              key="pick"
-              variants={fadeVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              className="h-full overflow-y-auto py-6"
-            >
-              <CertificateTemplatePicker
-                onSelect={handleTemplateSelect}
-                onStartBlank={handleStartBlank}
-              />
-            </motion.div>
-          )}
-
-          {phase === "loading" && (
-            <motion.div
-              key="loading"
-              variants={fadeVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              className="h-full"
-            >
-              <LoadingSkeleton
-                templateName={activeTemplate?.name ?? "Certificate"}
-              />
-            </motion.div>
-          )}
-
-          {phase === "editor" && (
-            <motion.div
-              key="editor"
-              variants={fadeVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              className="h-full"
-            >
-              <CertificateEditor onTemplateChange={handleTemplateChange} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+    <div className="flex h-full w-full flex-col overflow-hidden">
+      <FabricEditor
+        config={CERTIFICATE_CONFIG}
+        defaultState={fabricJson ?? undefined}
+        onSave={handleSave}
+      />
     </div>
   );
 }

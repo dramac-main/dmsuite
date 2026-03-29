@@ -1,36 +1,81 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Fabric.js Editor Revamp — PLANNING
+**Phase:** Fabric.js Editor Revamp — Phase 6 COMPLETE (Cleanup & Old Engine Deletion)
 
-### Session 152+: Fabric.js Editor Migration — CRITICAL ARCHITECTURE CHANGE
+### Fabric.js Migration — FULLY COMPLETE ✅
 
-#### Decision
-Replacing the entire custom Canvas 2D rendering engine (DesignDocumentV2 + renderer.ts + hit-test.ts + interaction.ts + snapping.ts + commands.ts) with **Fabric.js v5** — the same library used by the Canva clone (github.com/Davronov-Alimardon/canva-clone).
+All 21 visual design tools now use Fabric.js v5. The entire old Canvas 2D engine has been deleted.
 
-#### Why
-The custom Canvas 2D system we built is a one-way rendering pipeline. Users cannot click, drag, resize, or edit individual elements on the canvas. Templates are code-generated through adapter functions — they produce pixel output, not editable objects. This is fundamentally broken for a design tool.
+#### Phase 5 Batch 2 (Session 156+): 9 Remaining Visual Tools ✅
+Migrated brochure, sticker, coupon, envelope, signage, infographic, calendar, apparel, packaging to Fabric.js.
+Each got: templates file → thin workspace wrapper → Chiko manifest → store adapter → barrel export.
+Shared `makeFabricAdapter(defaultW, defaultH)` helper added to store-adapters.ts.
 
-Fabric.js provides everything we built from scratch (hit-testing, interaction, snapping, undo/redo, object model, serialization) as a mature, battle-tested open-source library.
+#### Banner Ad Migration (Phase 6 prerequisite) ✅
+BannerAdWorkspace was the last tool using old Canvas 2D engine.
+Migrated: banner-ad-fabric-templates.ts (10 templates, 300×250), new workspace wrapper, manifest, adapter.
 
-#### Impact
-- 20+ visual design tools will use Fabric.js (certificate, business card, ticket, badge, menu, poster, etc.)
-- HTML/CSS document tools are UNAFFECTED (resume, invoice, contract, worksheet)
-- Templates become Fabric.js JSON (fully editable) instead of code-generated LayerV2
-- Chiko AI gets direct Fabric object manipulation instead of complex ai-patch protocol
-- See `FABRIC-EDITOR-REVAMP-GUIDE.md` for full plan
+#### Phase 6: Cleanup — Old Engine Deletion ✅
 
-#### Files to Delete (Old Custom Engine)
-- `src/lib/editor/renderer.ts`, `hit-test.ts`, `interaction.ts`, `snapping.ts`, `commands.ts`, `schema.ts`, `ai-patch.ts`, `business-card-adapter.ts`, `certificate-adapter.ts`, `certificate-design-generator.ts`, `template-generator.ts`, `card-template-helpers.ts`, `ai-design-generator.ts`, `v1-migration.ts`, `align-distribute.ts`, `design-rules.ts`
-- `src/components/editor/` (all files)
-- `src/stores/editor.ts`, `certificate-editor.ts`, `diploma-canvas.ts`
+**Deleted Files (total ~70+):**
+- `src/lib/editor/` — ENTIRE DIRECTORY deleted (schema.ts, renderer.ts, hit-test.ts, interaction.ts, snapping.ts, commands.ts, ai-patch.ts, business-card-adapter.ts, certificate-adapter.ts, certificate-design-generator.ts, template-generator.ts, card-template-helpers.ts, ai-design-generator.ts, v1-migration.ts, align-distribute.ts, design-rules.ts, abstract-library.ts, font-loader.ts, pdf-renderer.ts, svg-renderer.ts)
+- `src/components/editor/` — ENTIRE DIRECTORY deleted (13 old editor components)
+- `src/components/workspaces/business-card/` — 9 old wizard step files deleted
+- 5 old Chiko manifests deleted (certificate, diploma, id-badge, ticket-designer, menu-designer)
+- 7 old stores deleted (editor, certificate-editor, business-card-wizard, diploma-editor, id-badge-editor, ticket-editor, menu-designer-editor)
+- `BannerAdWorkspace.tsx.OLD` backup deleted
+- 9 Phase 5 Batch 2 `.OLD` backups deleted
 
-#### Files to Keep
-- `src/lib/editor/font-loader.ts` (adapt)
-- `src/lib/editor/pdf-renderer.ts` (adapt for Fabric data)
-- `src/lib/editor/svg-renderer.ts` (thumbnails)
-- `src/lib/editor/abstract-library.ts` (adapt to produce Fabric objects)
-- All HTML/CSS tool systems (resume, invoice, contract, worksheet) — UNTOUCHED
+**Fixed Files:**
+- `src/lib/chiko/field-mapper.ts` — Inlined UserDetails interface (was importing from deleted store)
+- `src/stores/index.ts` — Removed editor store re-exports
+- `src/data/banner-ad-fabric-templates.ts` — Fixed template structure (canvas+objects → width+height+json)
+- `src/lib/chiko/manifests/index.ts` — Removed 5 old manifest barrel exports
+
+**TypeScript:** 0 errors ✅
+
+#### Architecture Summary (Post-Migration)
+- **Visual tools (21)**: All use Fabric.js v5 via `FabricEditor` component
+- **Document tools (9)**: HTML/CSS editors — resume, invoice, contract, cover-letter, worksheet, business-plan, sales-book, business-memory, workflow-engine — UNTOUCHED
+- **Engine location**: `src/lib/fabric-editor/` (13 engine files)
+- **Editor UI**: `src/components/fabric-editor/` (18 component files)
+- **State**: `src/stores/fabric-project.ts` (shared Zustand store)
+- **Templates pattern**: `src/data/*-fabric-templates.ts` → Fabric.js JSON strings with named objects
+- **Workspace pattern**: ~70-line thin FabricEditor wrappers with quick-edit fields
+- **Old `src/lib/editor/`**: Deleted entirely — no longer exists
+
+#### Next Steps
+- Phase 7: New visual tools can be added following the established pattern
+- Consider building remaining ~90 tools from the 116-tool registry
+
+#### Phase 4: Remaining Tool Migrations to Fabric.js ✅
+
+**Ticket Designer** (816×336 px, 10 templates):
+- `src/data/ticket-fabric-templates.ts` — 10 templates with tkt-* named objects
+- `src/components/workspaces/ticket-designer/TicketDesignerWorkspace.tsx` — thin FabricEditor wrapper
+- `src/lib/chiko/manifests/ticket-designer-fabric.ts` — update_ticket_details action
+- Store adapter: useFabricProjectStore (816×336 defaults)
+
+**ID Badge Designer** (1013×638 px CR80, 10 templates):
+- `src/data/id-badge-fabric-templates.ts` — 10 templates with badge-* named objects
+- `src/components/workspaces/id-badge-designer/IDBadgeDesignerWorkspace.tsx` — thin FabricEditor wrapper
+- `src/lib/chiko/manifests/id-badge-fabric.ts` — update_badge_details action (15 fields)
+- Store adapter: useFabricProjectStore (1013×638 defaults)
+
+**Diploma Designer** (1123×794 px A4 landscape, 10 templates):
+- `src/data/diploma-fabric-templates.ts` — 10 templates with dip-* named objects, signatory blocks, seal
+- `src/components/workspaces/diploma-designer/DiplomaDesignerWorkspace.tsx` — thin FabricEditor wrapper
+- `src/lib/chiko/manifests/diploma-fabric.ts` — update_diploma_details + update_signatories actions
+- Store adapter: useFabricProjectStore (1123×794 defaults)
+
+**Menu Designer** (794×1123 px A4 portrait, 12 templates):
+- `src/data/menu-fabric-templates.ts` — 12 templates with menu-* named objects, 3 section blocks
+- `src/components/workspaces/menu-designer/MenuDesignerWorkspace.tsx` — thin FabricEditor wrapper
+- `src/lib/chiko/manifests/menu-designer-fabric.ts` — update_menu_header + update_menu_section actions
+- Store adapter: useFabricProjectStore (794×1123 defaults)
+
+**All 4 migrations:** 0 TypeScript errors, old files removed, barrel exports updated.
 
 ---
 

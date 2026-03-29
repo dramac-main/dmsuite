@@ -4,8 +4,6 @@ export type { ChatMessage, ChatConversation } from "./chat";
 export { usePreferencesStore } from "./preferences";
 export { useAdvancedSettingsStore } from "./advanced-settings";
 export type { AdvancedDesignSettings, TypographySettings, ColorEffectsSettings, SpacingLayoutSettings, IconGraphicSettings, BorderDividerSettings, ExportQualitySettings } from "./advanced-settings";
-export { useEditorStore } from "./editor";
-export type { InteractionMode, DragState, ViewportState, AIRevisionState } from "./editor";
 export { useChikoStore } from "./chiko";
 export type { ChikoMessage, ChikoAction, ChikoContext } from "./chiko";
 export { useActivityLog, withActivityLogging } from "./activity-log";

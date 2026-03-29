@@ -1,377 +1,77 @@
 // =============================================================================
-// DMSuite — Diploma Designer Workspace
-// Tabbed editor (Content/Details/Style/Format)
-// Mobile: full-screen tabs + bottom action bar
-// Tablet: slim editor + preview
-// Desktop: editor panel + preview canvas + layers panel
-// Follows the CertificateDesignerWorkspace.tsx architecture exactly.
+// DMSuite — Diploma & Accreditation Designer Workspace (Fabric.js Editor)
+// Thin wrapper around the universal FabricEditor for diploma/degree design.
+// Replaces the legacy tab-based workspace with a direct canvas editor.
 // =============================================================================
 
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  useDiplomaEditor,
-  useDiplomaUndo,
-  DIPLOMA_TEMPLATES,
-  DIPLOMA_TYPES,
-  type DiplomaType,
-} from "@/stores/diploma-editor";
-import { printHTML } from "@/lib/print";
-import { useChikoActions } from "@/hooks/useChikoActions";
-import { createDiplomaManifest } from "@/lib/chiko/manifests/diploma";
-import { dispatchDirty, dispatchProgress } from "@/lib/workspace-events";
-import { ZOOM_MIN, ZOOM_MAX, ZOOM_STEP, ZOOM_DEFAULT } from "@/lib/workspace-constants";
-import "@/styles/workspace-canvas.css";
-import DiplomaRenderer, { PAGE_PX, getGoogleFontUrl } from "./DiplomaRenderer";
-import DiplomaContentTab from "./tabs/DiplomaContentTab";
-import DiplomaDetailsTab from "./tabs/DiplomaDetailsTab";
-import DiplomaStyleTab from "./tabs/DiplomaStyleTab";
-import DiplomaFormatTab from "./tabs/DiplomaFormatTab";
-import DiplomaLayersPanel from "./DiplomaLayersPanel";
-import {
-  EditorTabNav,
-  BottomBar,
-  WorkspaceHeader,
-  IconButton,
-  ActionButton,
-  ConfirmDialog,
-  Icons,
-  SIcon,
-} from "@/components/workspaces/shared/WorkspaceUIKit";
-import WorkspaceErrorBoundary from "@/components/workspaces/shared/WorkspaceErrorBoundary";
+import { useCallback, useEffect, useRef } from "react";
+import { FabricEditor } from "@/components/fabric-editor";
+import { useFabricProjectStore } from "@/stores/fabric-project";
+import { DIPLOMA_FABRIC_TEMPLATES } from "@/data/diploma-fabric-templates";
+import type { FabricEditorConfig, QuickEditField } from "@/lib/fabric-editor";
 
-// =============================================================================
-// Editor tab definitions
-// =============================================================================
+// ── Quick-edit fields for diploma details ───────────────────────────────────
+const QUICK_EDIT_FIELDS: QuickEditField[] = [
+  { key: "institution", label: "Institution", type: "text", targetLayer: "dip-institution", placeholder: "University Name" },
+  { key: "institution-subtitle", label: "Faculty / School", type: "text", targetLayer: "dip-institution-subtitle", placeholder: "School of Graduate Studies" },
+  { key: "institution-motto", label: "Motto", type: "text", targetLayer: "dip-institution-motto", placeholder: "Excellence in Education" },
+  { key: "recipient", label: "Recipient Name", type: "text", targetLayer: "dip-recipient", placeholder: "Full Legal Name" },
+  { key: "recipient-id", label: "Student ID", type: "text", targetLayer: "dip-recipient-id", placeholder: "Student ID: 000000" },
+  { key: "program", label: "Degree / Program", type: "text", targetLayer: "dip-program", placeholder: "Bachelor of Science" },
+  { key: "field-of-study", label: "Field of Study", type: "text", targetLayer: "dip-field-of-study", placeholder: "in Computer Science" },
+  { key: "honors", label: "Honors", type: "text", targetLayer: "dip-honors", placeholder: "Cum Laude" },
+  { key: "conferral", label: "Conferral Text", type: "text", targetLayer: "dip-conferral", placeholder: "This is to certify that" },
+  { key: "resolution", label: "Resolution Text", type: "text", targetLayer: "dip-resolution", placeholder: "having completed all requirements..." },
+  { key: "date-conferred", label: "Date Conferred", type: "text", targetLayer: "dip-date-conferred", placeholder: "Conferred: January 1, 2025" },
+  { key: "graduation-date", label: "Graduation Date", type: "text", targetLayer: "dip-graduation-date", placeholder: "Graduation: December 15, 2024" },
+  { key: "accreditation-body", label: "Accreditation Body", type: "text", targetLayer: "dip-accreditation-body", placeholder: "Accredited by..." },
+  { key: "accreditation-number", label: "Accreditation No.", type: "text", targetLayer: "dip-accreditation-number", placeholder: "ACC-2025-001" },
+  { key: "registration", label: "Reg. Number", type: "text", targetLayer: "dip-registration", placeholder: "Reg. No: REG-2025-00001" },
+  { key: "serial", label: "Serial Number", type: "text", targetLayer: "dip-serial", placeholder: "Serial: DIP-2025-00001" },
+];
 
-const TAB_ICONS = {
-  content: <SIcon d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />,
-  details: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" />
-    </svg>
-  ),
-  style: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="13.5" cy="6.5" r="2.5" /><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="12" r="2.5" /><circle cx="13.5" cy="17.5" r="2.5" />
-    </svg>
-  ),
-  format: <SIcon d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z" />,
+// ── Editor config ───────────────────────────────────────────────────────────
+// A4 Landscape: 1123 × 794 px (297 × 210 mm @ 96 DPI)
+const DIPLOMA_CONFIG: FabricEditorConfig = {
+  toolId: "diploma-designer",
+  defaultWidth: 1123,
+  defaultHeight: 794,
+  templates: DIPLOMA_FABRIC_TEMPLATES,
+  quickEditFields: QUICK_EDIT_FIELDS,
+  exportOptions: ["png", "jpg", "svg", "pdf", "json"],
 };
 
-const EDITOR_TABS = [
-  { key: "content", label: "Content", icon: TAB_ICONS.content },
-  { key: "details", label: "Details", icon: TAB_ICONS.details },
-  { key: "style", label: "Style", icon: TAB_ICONS.style },
-  { key: "format", label: "Format", icon: TAB_ICONS.format },
-] as const;
-
-type EditorTabKey = (typeof EDITOR_TABS)[number]["key"];
-
-// Section-to-tab mapping for layers panel
-const SECTION_TO_TAB: Record<string, EditorTabKey> = {
-  institution: "content",
-  program: "content",
-  conferral: "content",
-  recipient: "content",
-  resolution: "content",
-  accreditation: "content",
-  date: "content",
-  signatories: "details",
-  seal: "details",
-  reference: "content",
-};
-
-// =============================================================================
-// Main Workspace
-// =============================================================================
+// ── Main Workspace ──────────────────────────────────────────────────────────
 
 export default function DiplomaDesignerWorkspace() {
-  const form = useDiplomaEditor((s) => s.form);
-  const setDiplomaType = useDiplomaEditor((s) => s.setDiplomaType);
-  const setTemplate = useDiplomaEditor((s) => s.setTemplate);
-  const resetForm = useDiplomaEditor((s) => s.resetForm);
-  const { undo, redo, canUndo, canRedo } = useDiplomaUndo();
+  const { fabricJson, setFabricState } = useFabricProjectStore();
+  const hasDispatchedRef = useRef(false);
 
-  const printAreaRef = useRef<HTMLDivElement>(null);
-  const previewScrollRef = useRef<HTMLDivElement>(null);
-  const chikoOnPrintRef = useRef<(() => void) | null>(null);
-
-  // Active editor tab
-  const [activeTab, setActiveTab] = useState<EditorTabKey>("content");
-
-  // Mobile view mode
-  const [mobileView, setMobileView] = useState<"editor" | "preview">("editor");
-
-  // Zoom
-  const [zoom, setZoom] = useState(ZOOM_DEFAULT);
-
-  // Layers panel
-  const [layersCollapsed, setLayersCollapsed] = useState(false);
-  const [hoveredSection, setHoveredSection] = useState<string | null>(null);
-
-  // Confirm dialog for "Start Over"
-  const [showStartOverDialog, setShowStartOverDialog] = useState(false);
-
-  // Derived
-  const typeConfig = DIPLOMA_TYPES.find((t) => t.id === form.diplomaType);
-  const pageDim = PAGE_PX[`${form.format.pageSize}-${form.format.orientation}`] ?? PAGE_PX["a4-landscape"];
-
-  // Dispatch workspace:dirty on form changes
-  const formRef = useRef(form);
+  // Dispatch progress milestones on mount
   useEffect(() => {
-    if (formRef.current === form) return;
-    formRef.current = form;
-    dispatchDirty();
-  }, [form]);
-
-  // Dispatch milestone progress based on content state
-  const prevMilestonesRef = useRef<string>("");
-  useEffect(() => {
-    const milestones: string[] = [];
-    const hasInput = form.programName.trim().length > 0 || form.recipientName.trim().length > 0;
-    if (hasInput) milestones.push("input");
-    if (form.institutionName.trim().length > 0) milestones.push("content");
-    const key = milestones.join(",");
-    if (key !== prevMilestonesRef.current) {
-      prevMilestonesRef.current = key;
-      milestones.forEach((m) => dispatchProgress(m as "input" | "content"));
-    }
-  }, [form.programName, form.recipientName, form.institutionName]);
-
-  // Highlight elements on canvas when hovering a layer
-  useEffect(() => {
-    const container = printAreaRef.current;
-    if (!container) return;
-    container.querySelectorAll(".cert-layer-highlight").forEach((el) => el.classList.remove("cert-layer-highlight"));
-    if (hoveredSection && /^[a-z-]+$/.test(hoveredSection)) {
-      container.querySelectorAll(`[data-cert-section="${hoveredSection}"]`).forEach((el) => el.classList.add("cert-layer-highlight"));
-    }
-  }, [hoveredSection]);
-
-  const handlePrint = useCallback(() => {
-    const printEl = document.getElementById("cert-print-area");
-    if (!printEl) return;
-
-    const isLandscape = form.format.orientation === "landscape";
-    const pageSize = form.format.pageSize === "a4" ? "A4" : form.format.pageSize === "letter" ? "letter" : "A5";
-    const fontLink = `<link rel="stylesheet" href="${getGoogleFontUrl(form.style.fontPairing)}" />`;
-    const html = `<!DOCTYPE html><html><head>
-      <title>${form.programName || "Diploma"} - ${form.recipientName || "Diploma"}</title>
-      ${fontLink}
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        @page { size: ${pageSize} ${isLandscape ? "landscape" : "portrait"}; margin: 0; }
-        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      </style></head><body>${printEl.innerHTML}</body></html>`;
-    printHTML(html);
-    dispatchProgress("exported");
-  }, [form.programName, form.recipientName, form.format.pageSize, form.format.orientation, form.style.fontPairing]);
-
-  // Keep Chiko's print ref in sync
-  useEffect(() => {
-    chikoOnPrintRef.current = handlePrint;
-  }, [handlePrint]);
-
-  // Register Chiko manifest
-  useChikoActions(() => createDiplomaManifest({ onPrintRef: chikoOnPrintRef }));
-
-  const handleStartOver = useCallback(() => {
-    resetForm();
-    setShowStartOverDialog(false);
-    setActiveTab("content");
-  }, [resetForm]);
-
-  // Tab-to-section mapping for layers panel click
-  const handleLayerOpenSection = useCallback((section: string) => {
-    setActiveTab(SECTION_TO_TAB[section] ?? "content");
-    setMobileView("editor");
+    if (hasDispatchedRef.current) return;
+    hasDispatchedRef.current = true;
+    window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { progress: 70 } }));
+    window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "content" } }));
   }, []);
 
-  // Click-to-edit on preview
-  const handlePreviewClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const target = (e.target as HTMLElement).closest<HTMLElement>("[data-cert-section]");
-    if (!target) return;
-    const section = target.dataset.certSection;
-    if (!section) return;
-    handleLayerOpenSection(section);
-  }, [handleLayerOpenSection]);
-
-  // ── Tab Content ──
-  const tabContent = (
-    <div className="flex-1 overflow-y-auto scrollbar-thin">
-      <WorkspaceErrorBoundary>
-        {activeTab === "content" && <DiplomaContentTab />}
-        {activeTab === "details" && <DiplomaDetailsTab />}
-        {activeTab === "style" && <DiplomaStyleTab />}
-        {activeTab === "format" && <DiplomaFormatTab />}
-      </WorkspaceErrorBoundary>
-
-      {/* Start Over */}
-      <div className="p-4 pb-8">
-        <button
-          onClick={() => setShowStartOverDialog(true)}
-          className="w-full py-2 text-[11px] font-medium text-gray-600 hover:text-gray-400 border border-gray-800/50 hover:border-gray-700/60 rounded-xl transition-all active:scale-[0.98]"
-        >
-          Start Over
-        </button>
-      </div>
-    </div>
+  // Save callback — stores Fabric JSON in the project store for persistence
+  const handleSave = useCallback(
+    (json: string, width: number, height: number) => {
+      setFabricState(json, width, height);
+      window.dispatchEvent(new CustomEvent("workspace:dirty"));
+    },
+    [setFabricState],
   );
 
-  // ── Editor Panel ──
-  const editorPanel = (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <WorkspaceHeader
-        title={typeConfig?.label ?? "Diploma"}
-        subtitle={form.recipientName || "No recipient set"}
-      >
-        <IconButton onClick={() => undo()} disabled={!canUndo} icon={Icons.undo} tooltip="Undo" />
-        <IconButton onClick={() => redo()} disabled={!canRedo} icon={Icons.redo} tooltip="Redo" />
-      </WorkspaceHeader>
-
-      {/* Tab navigation */}
-      <EditorTabNav
-        tabs={EDITOR_TABS.map((t) => ({ key: t.key, label: t.label, icon: t.icon }))}
-        activeTab={activeTab}
-        onTabChange={(k) => setActiveTab(k as EditorTabKey)}
-      />
-
-      {/* Tab content */}
-      {tabContent}
-    </div>
-  );
-
-  // ── Preview Panel ──
-  const previewPanel = (
-    <div className="flex flex-col h-full bg-gray-950/40">
-      {/* Preview toolbar */}
-      <div className="shrink-0 flex items-center justify-between h-10 px-3 border-b border-gray-800/40">
-        <div className="flex items-center gap-1">
-          <IconButton onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z - ZOOM_STEP))} icon={Icons.zoomOut} tooltip="Zoom out" />
-          <span className="text-[10px] text-gray-500 w-9 text-center font-mono tabular-nums">{zoom}%</span>
-          <IconButton onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z + ZOOM_STEP))} icon={Icons.zoomIn} tooltip="Zoom in" />
-          <button onClick={() => setZoom(ZOOM_DEFAULT)} className="text-[10px] text-gray-600 hover:text-gray-400 px-1.5 py-0.5 rounded-md hover:bg-white/4 transition-colors">
-            Reset
-          </button>
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          <ActionButton variant="primary" size="sm" icon={Icons.print} onClick={handlePrint}>
-            Print
-          </ActionButton>
-        </div>
-      </div>
-
-      {/* Template quick-switch strip */}
-      <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 border-b border-gray-800/30 overflow-x-auto scrollbar-none">
-        <span className="text-[8px] text-gray-600 shrink-0 mr-0.5 uppercase tracking-widest font-bold">TPL</span>
-        {DIPLOMA_TEMPLATES.map((tpl) => (
-          <button
-            key={tpl.id}
-            onClick={() => setTemplate(tpl.id)}
-            className={`shrink-0 flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium transition-all ${
-              form.style.template === tpl.id
-                ? "border-primary-500/50 bg-primary-500/10 text-primary-300"
-                : "border-gray-700/40 text-gray-500 hover:border-gray-600 hover:text-gray-400"
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full shrink-0 ring-1 ring-white/10" style={{ backgroundColor: tpl.accent }} />
-            {tpl.name}
-          </button>
-        ))}
-      </div>
-
-      {/* Preview canvas */}
-      <div
-        ref={previewScrollRef}
-        className="flex-1 overflow-auto"
-        onClick={handlePreviewClick}
-        style={{ backgroundColor: "#374151" }}
-      >
-        <div
-          className="cert-canvas-root flex justify-center py-6 px-4"
-          style={{ minHeight: "100%" }}
-        >
-          <div style={{ position: "relative" }}>
-            <div
-              id="cert-print-area"
-              ref={printAreaRef}
-              style={{
-                transform: `scale(${zoom / 100})`,
-                transformOrigin: "top center",
-              }}
-            >
-              <DiplomaRenderer form={form} />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ── Layout ──
   return (
-    <div className="flex flex-col h-full bg-gray-950 text-white overflow-hidden">
-      {/* Mobile bottom action bar */}
-      <div className="lg:hidden order-last">
-        <BottomBar
-          actions={[
-            { key: "editor", label: "Edit", icon: Icons.edit },
-            { key: "preview", label: "Preview", icon: Icons.preview },
-            { key: "print", label: "Print", icon: Icons.print, primary: true },
-          ]}
-          activeKey={mobileView}
-          onAction={(key) => {
-            if (key === "print") handlePrint();
-            else setMobileView(key as "editor" | "preview");
-          }}
-        />
-      </div>
-
-      {/* Main content area */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Editor panel */}
-        <div
-          className={`${
-            mobileView === "editor" ? "flex" : "hidden"
-          } lg:flex w-full lg:w-80 xl:w-96 lg:min-w-72 shrink-0 flex-col border-r border-gray-800/40 bg-gray-950 overflow-hidden`}
-        >
-          {editorPanel}
-        </div>
-
-        {/* Preview + layers */}
-        <div
-          className={`${
-            mobileView === "preview" ? "flex" : "hidden"
-          } lg:flex flex-1 overflow-hidden`}
-        >
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {previewPanel}
-          </div>
-          <div className="hidden lg:flex">
-            <DiplomaLayersPanel
-              onOpenSection={handleLayerOpenSection}
-              onHoverSection={setHoveredSection}
-              collapsed={layersCollapsed}
-              onToggleCollapse={() => setLayersCollapsed((p) => !p)}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Confirm dialog for Start Over */}
-      <ConfirmDialog
-        open={showStartOverDialog}
-        title="Start Over?"
-        description="This will reset all your diploma content and settings. You cannot undo this action."
-        confirmLabel="Reset Everything"
-        onConfirm={handleStartOver}
-        onCancel={() => setShowStartOverDialog(false)}
-        variant="danger"
+    <div className="flex h-full w-full flex-col overflow-hidden">
+      <FabricEditor
+        config={DIPLOMA_CONFIG}
+        defaultState={fabricJson ?? undefined}
+        onSave={handleSave}
       />
     </div>
   );
