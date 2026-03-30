@@ -531,6 +531,27 @@ function getVoiceFlowAdapter(): StoreAdapter {
   };
 }
 
+function getAudioTranscriptionAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useAudioTranscriptionEditor } = require("@/stores/audio-transcription-editor");
+  return {
+    getSnapshot: () => {
+      const { form } = useAudioTranscriptionEditor.getState();
+      return { form };
+    },
+    restoreSnapshot: (data) => {
+      if (data.form) {
+        useAudioTranscriptionEditor.getState().setForm(data.form as never);
+      }
+    },
+    resetStore: () => {
+      useAudioTranscriptionEditor.getState().resetForm();
+      nukePersistStorage("dmsuite-audio-transcription");
+    },
+    subscribe: (cb) => useAudioTranscriptionEditor.subscribe(cb),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Generic adapter for tools that don't have dedicated stores
 // ---------------------------------------------------------------------------
@@ -590,8 +611,11 @@ const ADAPTER_FACTORIES: Record<string, () => StoreAdapter> = {
   "tshirt-merch": getApparelAdapter,
   "packaging-design": getPackagingAdapter,
   "banner-ad": () => makeFabricAdapter(300, 250),
+  // Presentation
+  "presentation": () => makeFabricAdapter(960, 540),
   // Audio & Voice
   "voice-flow": getVoiceFlowAdapter,
+  "audio-transcription": getAudioTranscriptionAdapter,
 };
 
 /**

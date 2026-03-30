@@ -38,7 +38,7 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   "poster": dynamic(() => import("@/components/workspaces/PosterFlyerWorkspace")),
   "flyer": dynamic(() => import("@/components/workspaces/PosterFlyerWorkspace")),
   "banner-ad": dynamic(() => import("@/components/workspaces/BannerAdWorkspace")),
-  "presentation": dynamic(() => import("@/components/workspaces/PresentationWorkspace")),
+  "presentation": dynamic(() => import("@/components/workspaces/presentation-designer/PresentationDesignerWorkspace")),
   "resume-cv": dynamic(() => import("@/components/workspaces/ResumeCVWorkspaceV2")),
   "invoice-designer": dynamic(() => import("@/components/workspaces/SalesBookWrappers").then((m) => ({ default: m.InvoiceBookWorkspace }))),
   "email-template": dynamic(() => import("@/components/workspaces/EmailTemplateWorkspace")),
@@ -121,7 +121,7 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   "voice-cloning": dynamic(() => import("@/components/workspaces/VoiceClonerWorkspace")),
   "podcast-editor": dynamic(() => import("@/components/workspaces/PodcastToolsWorkspace")),
   "music-generator": dynamic(() => import("@/components/workspaces/MusicGeneratorWorkspace")),
-  "audio-transcription": dynamic(() => import("@/components/workspaces/TranscriptionWorkspace")),
+  "audio-transcription": dynamic(() => import("@/components/workspaces/audio-transcription/AudioTranscriptionWorkspace")),
   "voice-flow": dynamic(() => import("@/components/workspaces/voice-flow/VoiceFlowWorkspace")),
 
   // ── Phase 4: Content Writing ──

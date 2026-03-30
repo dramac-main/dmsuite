@@ -133,6 +133,9 @@ export const CREDIT_COSTS: Record<string, number> = {
   "audio-generation":       25,
   "voice-transcription":     3,
   "voice-transcription-long": 8,
+  "audio-transcription-short":    5,
+  "audio-transcription-standard": 12,
+  "audio-transcription-long":     20,
 };
 
 /** Get credit cost for an operation. Returns 5 as default for unknown ops. */
@@ -224,7 +227,7 @@ export const TOOL_CREDIT_MAP: Record<string, string> = {
 
   /* ── Audio & Voice Studio ───────────────────────────── */
   "voice-cloning":         "audio-generation",
-  "audio-transcription":   "audio-generation",
+  "audio-transcription":   "audio-transcription-standard",
   "music-generator":       "audio-generation",
   "podcast-editor":        "audio-generation",
   "voice-flow":            "voice-transcription",
