@@ -122,6 +122,7 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   "podcast-editor": dynamic(() => import("@/components/workspaces/PodcastToolsWorkspace")),
   "music-generator": dynamic(() => import("@/components/workspaces/MusicGeneratorWorkspace")),
   "audio-transcription": dynamic(() => import("@/components/workspaces/TranscriptionWorkspace")),
+  "voice-flow": dynamic(() => import("@/components/workspaces/voice-flow/VoiceFlowWorkspace")),
 
   // ── Phase 4: Content Writing ──
   "blog-writer": dynamic(() => import("@/components/workspaces/BlogWriterWorkspace")),

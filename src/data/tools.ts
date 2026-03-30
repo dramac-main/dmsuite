@@ -1720,6 +1720,18 @@ export const toolCategories: ToolCategory[] = [
         tags: ["convert", "format", "audio", "MP3", "WAV"],
         outputs: ["mp3", "wav"],
       },
+      {
+        id: "voice-flow",
+        name: "VoiceFlow AI Dictation",
+        description:
+          "Record voice and get AI-cleaned transcripts instantly \u2014 dictate notes, emails, and content hands-free",
+        icon: "mic",
+        status: "ready",
+        devStatus: "scaffold",
+        tags: ["dictation", "voice", "transcription", "speech-to-text", "AI"],
+        aiProviders: ["whisper", "claude"],
+        outputs: ["txt", "clipboard"],
+      },
     ],
   },
 

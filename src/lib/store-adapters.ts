@@ -507,6 +507,31 @@ function getApparelAdapter(): StoreAdapter { return makeFabricAdapter(500, 600);
 function getPackagingAdapter(): StoreAdapter { return makeFabricAdapter(900, 700); }
 
 // ---------------------------------------------------------------------------
+// VoiceFlow dictation adapter
+// ---------------------------------------------------------------------------
+
+function getVoiceFlowAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useVoiceFlowEditor } = require("@/stores/voice-flow-editor");
+  return {
+    getSnapshot: () => {
+      const { form } = useVoiceFlowEditor.getState();
+      return { form };
+    },
+    restoreSnapshot: (data) => {
+      if (data.form) {
+        useVoiceFlowEditor.getState().setForm(data.form as never);
+      }
+    },
+    resetStore: () => {
+      useVoiceFlowEditor.getState().resetForm();
+      nukePersistStorage("dmsuite-voice-flow");
+    },
+    subscribe: (cb) => useVoiceFlowEditor.subscribe(cb),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Generic adapter for tools that don't have dedicated stores
 // ---------------------------------------------------------------------------
 
@@ -565,6 +590,8 @@ const ADAPTER_FACTORIES: Record<string, () => StoreAdapter> = {
   "tshirt-merch": getApparelAdapter,
   "packaging-design": getPackagingAdapter,
   "banner-ad": () => makeFabricAdapter(300, 250),
+  // Audio & Voice
+  "voice-flow": getVoiceFlowAdapter,
 };
 
 /**

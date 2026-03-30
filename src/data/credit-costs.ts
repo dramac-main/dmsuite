@@ -131,6 +131,8 @@ export const CREDIT_COSTS: Record<string, number> = {
   /* ── Premium tier (future — multi-model) ───────────────── */
   "video-generation":       50,
   "audio-generation":       25,
+  "voice-transcription":     3,
+  "voice-transcription-long": 8,
 };
 
 /** Get credit cost for an operation. Returns 5 as default for unknown ops. */
@@ -225,6 +227,7 @@ export const TOOL_CREDIT_MAP: Record<string, string> = {
   "audio-transcription":   "audio-generation",
   "music-generator":       "audio-generation",
   "podcast-editor":        "audio-generation",
+  "voice-flow":            "voice-transcription",
 
   /* ── Content Creation ───────────────────────────────── */
   "social-caption":        "chat-message",
