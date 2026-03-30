@@ -1730,7 +1730,6 @@ export const toolCategories: ToolCategory[] = [
         devStatus: "scaffold",
         tags: ["dictation", "voice", "transcription", "speech-to-text", "AI"],
         aiProviders: ["whisper", "claude"],
-        outputs: ["txt", "clipboard"],
       },
     ],
   },
