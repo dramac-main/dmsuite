@@ -147,7 +147,10 @@ export async function POST(request: NextRequest) {
     if (!GROQ_API_KEY) {
       await refundCredits(user.id, cost, "VoiceFlow: GROQ_API_KEY not configured");
       return NextResponse.json(
-        { error: "Transcription service not configured" },
+        {
+          error: "Transcription service is not configured. The GROQ_API_KEY environment variable is missing — please contact the administrator.",
+          errorCode: "SERVICE_NOT_CONFIGURED",
+        },
         { status: 500 }
       );
     }

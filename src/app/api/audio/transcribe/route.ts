@@ -201,7 +201,10 @@ export async function POST(request: NextRequest) {
         "Audio Transcription: GROQ_API_KEY not configured"
       );
       return NextResponse.json(
-        { error: "Transcription service not configured" },
+        {
+          error: "Transcription service is not configured. The GROQ_API_KEY environment variable is missing — please contact the administrator.",
+          errorCode: "SERVICE_NOT_CONFIGURED",
+        },
         { status: 500 }
       );
     }
@@ -238,11 +241,16 @@ export async function POST(request: NextRequest) {
         cost,
         "Audio Transcription failed (network)"
       );
-      const message =
-        err instanceof Error && err.name === "AbortError"
-          ? "Transcription timed out (60s). Try a shorter file."
-          : "Failed to reach transcription service";
-      return NextResponse.json({ error: message }, { status: 502 });
+      const isTimeout = err instanceof Error && err.name === "AbortError";
+      return NextResponse.json(
+        {
+          error: isTimeout
+            ? "Transcription timed out after 60 seconds. Try a shorter or smaller file."
+            : "Could not reach the transcription service. Please check your internet connection and try again.",
+          errorCode: isTimeout ? "TIMEOUT" : "NETWORK_ERROR",
+        },
+        { status: 502 }
+      );
     } finally {
       clearTimeout(timeout);
     }
@@ -250,9 +258,17 @@ export async function POST(request: NextRequest) {
     /* 11. Handle Groq errors */
     if (!groqRes.ok) {
       await refundCredits(user.id, cost, "Audio Transcription failed");
-      await groqRes.text().catch(() => {});
+      const errBody = await groqRes.text().catch(() => "");
+      let detail = `Transcription service returned error ${groqRes.status}.`;
+      if (groqRes.status === 413) {
+        detail = "File is too large for the transcription service. Please use a file under 25 MB.";
+      } else if (groqRes.status === 429) {
+        detail = "Transcription service is temporarily overloaded. Please wait a moment and try again.";
+      } else if (groqRes.status >= 500) {
+        detail = "Transcription service is temporarily unavailable. Please try again in a few minutes.";
+      }
       return NextResponse.json(
-        { error: `Transcription failed: ${groqRes.status}` },
+        { error: detail, errorCode: "PROVIDER_ERROR" },
         { status: 502 }
       );
     }
@@ -304,7 +320,10 @@ export async function POST(request: NextRequest) {
     });
   } catch {
     return NextResponse.json(
-      { error: "Internal server error" },
+      {
+        error: "An unexpected error occurred while processing your transcription. Please try again.",
+        errorCode: "INTERNAL_ERROR",
+      },
       { status: 500 }
     );
   }

@@ -60,6 +60,7 @@ export default function AudioTranscriptionWorkspace() {
   const updateTranscription = useAudioTranscriptionEditor((s) => s.updateTranscription);
   const setUploadProgress = useAudioTranscriptionEditor((s) => s.setUploadProgress);
   const resetForm = useAudioTranscriptionEditor((s) => s.resetForm);
+  const removeTranscription = useAudioTranscriptionEditor((s) => s.removeTranscription);
 
   const [activeTab, setActiveTab] = useState<string>("history");
   const [settingsPanelCollapsed, setSettingsPanelCollapsed] = useState(false);
@@ -211,6 +212,15 @@ export default function AudioTranscriptionWorkspace() {
 
   /* ── Keyboard shortcuts ────────────────────────────────────── */
 
+  const handleRetry = useCallback(() => {
+    const state = useAudioTranscriptionEditor.getState();
+    const activeId = state.form.activeTranscriptionId;
+    if (activeId) {
+      removeTranscription(activeId);
+    }
+    setMobileView("upload");
+  }, [removeTranscription]);
+
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       const ctrl = e.ctrlKey || e.metaKey;
@@ -307,7 +317,7 @@ export default function AudioTranscriptionWorkspace() {
           mobileView !== "transcript" ? "hidden lg:flex" : "flex"
         }`}
       >
-        <TranscriptViewer />
+        <TranscriptViewer onRetry={handleRetry} />
       </div>
 
       {/* ── Right Panel — Settings (desktop only) ────────────── */}

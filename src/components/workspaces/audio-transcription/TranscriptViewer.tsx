@@ -107,7 +107,11 @@ function downloadBlob(content: string, filename: string, mimeType: string) {
 
 /* ── Component ───────────────────────────────────────────────── */
 
-export default function TranscriptViewer() {
+interface TranscriptViewerProps {
+  onRetry?: () => void;
+}
+
+export default function TranscriptViewer({ onRetry }: TranscriptViewerProps) {
   const transcriptions = useAudioTranscriptionEditor(
     (s) => s.form.transcriptions
   );
@@ -221,25 +225,34 @@ export default function TranscriptViewer() {
   if (activeEntry.status === "error") {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
-        <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4">
+        <div className="w-14 h-14 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4">
           <svg
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
             strokeWidth={2}
-            className="w-6 h-6 text-red-400"
+            className="w-7 h-7 text-red-400"
           >
             <circle cx="12" cy="12" r="10" />
-            <line x1="15" y1="9" x2="9" y2="15" />
-            <line x1="9" y1="9" x2="15" y2="15" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
         </div>
-        <p className="text-[13px] text-red-400 font-medium">
+        <p className="text-sm text-red-400 font-semibold">
           Transcription Failed
         </p>
-        <p className="text-[11px] text-gray-500 mt-1">
-          {activeEntry.errorMessage || "An unknown error occurred"}
+        <p className="text-[12px] text-gray-400 mt-2 max-w-sm leading-relaxed">
+          {activeEntry.errorMessage || "An unknown error occurred. Please try uploading the file again."}
         </p>
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-4 px-4 py-2 rounded-lg text-[12px] font-medium bg-primary-500/10 text-primary-400 border border-primary-500/20 hover:bg-primary-500/20 transition-colors"
+          >
+            Try Again
+          </button>
+        )}
       </div>
     );
   }
