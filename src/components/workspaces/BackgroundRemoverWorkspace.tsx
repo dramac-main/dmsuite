@@ -119,17 +119,33 @@ export default function BackgroundRemoverWorkspace() {
 
   const activeImage = images.find((img) => img.id === selectedImageId) ?? images[0] ?? null;
 
-  /* -- Load the removal model lazily ----------------------- */
+  /* -- Load the removal model lazily via CDN --------------- */
   const ensureModel = useCallback(async () => {
     if (removeBackgroundRef.current) return removeBackgroundRef.current;
     setModelLoading(true);
     setErrorMsg(null);
     try {
-      const mod = await import("@imgly/background-removal");
-      removeBackgroundRef.current = mod.removeBackground;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const w = window as any;
+
+      // If the ESM module is already loaded, reuse it
+      if (w.__imglyBgRemoval) {
+        removeBackgroundRef.current = w.__imglyBgRemoval;
+        setModelReady(true);
+        return w.__imglyBgRemoval;
+      }
+
+      // Dynamically load from CDN – avoids npm/WASM bundling issues entirely
+      const cdnUrl =
+        "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/dist/index.js";
+      const mod = await import(/* webpackIgnore: true */ cdnUrl);
+      const fn = mod.default || mod.removeBackground;
+      w.__imglyBgRemoval = fn;
+      removeBackgroundRef.current = fn;
       setModelReady(true);
-      return mod.removeBackground;
-    } catch {
+      return fn;
+    } catch (err) {
+      console.error("Background removal load error:", err);
       setErrorMsg("Failed to load the AI model. Please refresh and try again.");
       return null;
     } finally {
