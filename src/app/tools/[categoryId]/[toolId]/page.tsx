@@ -151,7 +151,7 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   "batch-processor": dynamic(() => import("@/components/workspaces/BatchProcessorWorkspace")),
   "background-remover": dynamic(() => import("@/components/workspaces/BackgroundRemoverWorkspace")),
   "image-enhancer": dynamic(() => import("@/components/workspaces/ImageEnhancerWorkspace")),
-  "pdf-tools": dynamic(() => import("@/components/workspaces/PDFToolsWorkspace")),
+  "pdf-tools": dynamic(() => import("@/components/workspaces/pdf-tools/PDFToolsWorkspace")),
 };
 
 export default function ToolWorkspacePage() {

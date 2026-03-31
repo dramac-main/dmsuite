@@ -260,6 +260,9 @@ export const TOOL_CREDIT_MAP: Record<string, string> = {
   "color-palette":         "chat-message",
   "photo-retoucher":       "image-analysis",
   "presentation":          "presentation-design",
+
+  /* ── Utilities ─── PDF Tools (free — all client-side) ──── */
+  "pdf-tools":             "image-search",
 };
 
 /**
