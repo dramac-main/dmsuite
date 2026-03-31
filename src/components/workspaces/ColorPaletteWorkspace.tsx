@@ -1,631 +1,893 @@
 "use client";
 
-import { useState, useCallback } from "react";
+// =============================================================================
+// DMSuite — Color Palette Generator Workspace (Realtime Colors Inspired)
+// Visualise your 5-colour palette on a real website layout in real time.
+// Text · Background · Primary · Secondary · Accent + Font pairing.
+// =============================================================================
+
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import {
-  IconSparkles,
-  IconWand,
-  IconLoader,
-  IconDownload,
+  IconRefresh,
   IconCopy,
   IconCheck,
+  IconDownload,
+  IconChevronDown,
+  IconEye,
+  IconType,
+  IconDroplet,
+  IconPalette,
+  IconSparkles,
   IconPlus,
   IconTrash,
-  IconFilter,
+  IconStar,
 } from "@/components/icons";
-import { cleanAIText } from "@/lib/canvas-utils";
+import { useChikoActions } from "@/hooks/useChikoActions";
+import { createColorPaletteManifest } from "@/lib/chiko/manifests/color-palette";
+import {
+  useColorPaletteStore,
+  PRESET_PALETTES,
+  FONT_OPTIONS,
+  type ColorRoles,
+  type PreviewMode,
+} from "@/stores/color-palette";
 
-/* ── Types ─────────────────────────────────────────────────── */
+// ---------------------------------------------------------------------------
+// Google Fonts loader
+// ---------------------------------------------------------------------------
 
-type PaletteMode =
-  | "ai"
-  | "manual"
-  | "complementary"
-  | "analogous"
-  | "triadic"
-  | "monochromatic"
-  | "from-image";
+const loadedFonts = new Set<string>();
 
-type Mood = "vibrant" | "pastel" | "earth" | "neon" | "corporate" | "luxury";
-type ExportFormat = "css" | "tailwind" | "json" | "ase";
-
-interface ColorSwatch {
-  hex: string;
-  rgb: string;
-  hsl: string;
+function loadGoogleFont(family: string) {
+  if (loadedFonts.has(family)) return;
+  loadedFonts.add(family);
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@400;500;600;700&display=swap`;
+  document.head.appendChild(link);
 }
 
-interface SavedPalette {
-  id: string;
-  name: string;
-  colors: string[];
-  createdAt: number;
-}
+// ---------------------------------------------------------------------------
+// WCAG contrast helpers
+// ---------------------------------------------------------------------------
 
-const PALETTE_MODES: { id: PaletteMode; label: string }[] = [
-  { id: "ai", label: "AI Generated" },
-  { id: "from-image", label: "From Image" },
-  { id: "manual", label: "Manual" },
-  { id: "complementary", label: "Complementary" },
-  { id: "analogous", label: "Analogous" },
-  { id: "triadic", label: "Triadic" },
-  { id: "monochromatic", label: "Monochromatic" },
-];
-
-const MOODS: { id: Mood; label: string }[] = [
-  { id: "vibrant", label: "Vibrant" },
-  { id: "pastel", label: "Pastel" },
-  { id: "earth", label: "Earth" },
-  { id: "neon", label: "Neon" },
-  { id: "corporate", label: "Corporate" },
-  { id: "luxury", label: "Luxury" },
-];
-
-function uid() {
-  return Math.random().toString(36).slice(2, 10);
-}
-
-/* ── Color utilities ──────────────────────────────────────── */
-
-function hexToRgbArr(hex: string): [number, number, number] {
+function hexToLuminance(hex: string): number {
   const h = hex.replace("#", "");
-  return [
-    parseInt(h.slice(0, 2), 16),
-    parseInt(h.slice(2, 4), 16),
-    parseInt(h.slice(4, 6), 16),
-  ];
-}
-
-function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  const l = (max + min) / 2;
-  if (max === min) return [0, 0, Math.round(l * 100)];
-  const d = max - min;
-  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-  let h = 0;
-  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-  else if (max === g) h = ((b - r) / d + 2) / 6;
-  else h = ((r - g) / d + 4) / 6;
-  return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
-}
-
-function hslToHex(h: number, s: number, l: number): string {
-  s /= 100; l /= 100;
-  const a = s * Math.min(l, 1 - l);
-  const f = (n: number) => {
-    const k = (n + h / 30) % 12;
-    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-    return Math.round(255 * color).toString(16).padStart(2, "0");
-  };
-  return `#${f(0)}${f(8)}${f(4)}`;
-}
-
-function hexToSwatch(hex: string): ColorSwatch {
-  const [r, g, b] = hexToRgbArr(hex);
-  const [h, s, l] = rgbToHsl(r, g, b);
-  return {
-    hex,
-    rgb: `rgb(${r}, ${g}, ${b})`,
-    hsl: `hsl(${h}, ${s}%, ${l}%)`,
-  };
-}
-
-function generateHarmony(base: string, mode: PaletteMode): string[] {
-  const [r, g, b] = hexToRgbArr(base);
-  const [h, s, l] = rgbToHsl(r, g, b);
-
-  switch (mode) {
-    case "complementary":
-      return [base, hslToHex((h + 180) % 360, s, l), hslToHex((h + 150) % 360, s, l), hslToHex((h + 210) % 360, s, l), hslToHex(h, s, Math.min(90, l + 20))];
-    case "analogous":
-      return [hslToHex((h - 30 + 360) % 360, s, l), hslToHex((h - 15 + 360) % 360, s, l), base, hslToHex((h + 15) % 360, s, l), hslToHex((h + 30) % 360, s, l)];
-    case "triadic":
-      return [base, hslToHex((h + 120) % 360, s, l), hslToHex((h + 240) % 360, s, l), hslToHex(h, s, Math.min(90, l + 20)), hslToHex(h, s, Math.max(10, l - 20))];
-    case "monochromatic":
-      return [hslToHex(h, s, 90), hslToHex(h, s, 70), hslToHex(h, s, 50), hslToHex(h, s, 30), hslToHex(h, s, 15)];
-    default:
-      return [base, "#3b82f6", "#8b5cf6", "#06b6d4", "#f59e0b"];
-  }
-}
-
-function generateTintsShades(hex: string): string[] {
-  const [r, g, b] = hexToRgbArr(hex);
-  const [h, s] = rgbToHsl(r, g, b);
-  return [95, 85, 70, 55, 40, 30, 20, 10].map((l) => hslToHex(h, s, l));
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  const toLinear = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
 }
 
 function contrastRatio(hex1: string, hex2: string): number {
-  const lum = (hex: string) => {
-    const [r, g, b] = hexToRgbArr(hex).map((c) => {
-      const s = c / 255;
-      return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-    });
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  };
-  const l1 = lum(hex1), l2 = lum(hex2);
-  const lighter = Math.max(l1, l2), darker = Math.min(l1, l2);
+  const l1 = hexToLuminance(hex1);
+  const l2 = hexToLuminance(hex2);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-/* ── Component ─────────────────────────────────────────────── */
+function wcagBadge(fg: string, bg: string) {
+  const ratio = contrastRatio(fg, bg);
+  if (ratio >= 7) return { label: "AAA", color: "#16a34a" };
+  if (ratio >= 4.5) return { label: "AA", color: "#2563eb" };
+  if (ratio >= 3) return { label: "AA18", color: "#f59e0b" };
+  return { label: "Fail", color: "#dc2626" };
+}
+
+// ---------------------------------------------------------------------------
+// Export generators
+// ---------------------------------------------------------------------------
+
+function exportCSS(c: ColorRoles, fonts: { heading: string; body: string }) {
+  return `:root {
+  --color-text: ${c.text};
+  --color-background: ${c.background};
+  --color-primary: ${c.primary};
+  --color-secondary: ${c.secondary};
+  --color-accent: ${c.accent};
+  --font-heading: '${fonts.heading}', sans-serif;
+  --font-body: '${fonts.body}', sans-serif;
+}`;
+}
+
+function exportTailwind(c: ColorRoles) {
+  return `@theme inline {
+  --color-text: ${c.text};
+  --color-background: ${c.background};
+  --color-primary: ${c.primary};
+  --color-secondary: ${c.secondary};
+  --color-accent: ${c.accent};
+}`;
+}
+
+function exportSCSS(c: ColorRoles, fonts: { heading: string; body: string }) {
+  return `$color-text: ${c.text};
+$color-background: ${c.background};
+$color-primary: ${c.primary};
+$color-secondary: ${c.secondary};
+$color-accent: ${c.accent};
+$font-heading: '${fonts.heading}', sans-serif;
+$font-body: '${fonts.body}', sans-serif;`;
+}
+
+function exportJSON(c: ColorRoles, fonts: { heading: string; body: string }) {
+  return JSON.stringify({ colors: c, fonts }, null, 2);
+}
+
+// ---------------------------------------------------------------------------
+// Tiny color swatch component
+// ---------------------------------------------------------------------------
+
+function ColorSwatch({ color, role, onChange }: { color: string; role: string; onChange: (hex: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [hex, setHex] = useState(color);
+  const [copied, setCopied] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setHex(color); }, [color]);
+
+  const handleHexChange = (v: string) => {
+    setHex(v);
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) onChange(v);
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(color);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <button
+        onClick={() => inputRef.current?.click()}
+        className="relative w-14 h-14 rounded-xl border-2 border-white/10 shadow-lg transition-transform hover:scale-110 cursor-pointer"
+        style={{ backgroundColor: color }}
+        title={`Pick ${role} color`}
+      >
+        <input
+          ref={inputRef}
+          type="color"
+          value={color}
+          onChange={(e) => onChange(e.target.value)}
+          className="absolute inset-0 opacity-0 cursor-pointer"
+        />
+      </button>
+      <span className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-medium">
+        {role}
+      </span>
+      {editing ? (
+        <input
+          className="w-20 text-center text-xs font-mono bg-transparent border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 text-gray-800 dark:text-gray-200 outline-none"
+          value={hex}
+          onChange={(e) => handleHexChange(e.target.value)}
+          onBlur={() => setEditing(false)}
+          onKeyDown={(e) => e.key === "Enter" && setEditing(false)}
+          autoFocus
+        />
+      ) : (
+        <button
+          onClick={() => setEditing(true)}
+          onContextMenu={(e) => { e.preventDefault(); handleCopy(); }}
+          className="text-xs font-mono text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors cursor-text"
+          title="Click to edit · Right-click to copy"
+        >
+          {color.toUpperCase()}
+        </button>
+      )}
+      <button
+        onClick={handleCopy}
+        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+        title="Copy hex"
+      >
+        {copied ? <IconCheck className="w-3.5 h-3.5 text-green-500" /> : <IconCopy className="w-3.5 h-3.5" />}
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Preview Layouts
+// ---------------------------------------------------------------------------
+
+function LandingPreview({ c, fonts }: { c: ColorRoles; fonts: { heading: string; body: string } }) {
+  return (
+    <div className="w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: c.background, fontFamily: `'${fonts.body}', sans-serif` }}>
+      {/* Nav */}
+      <nav className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: c.secondary }}>
+        <span className="text-lg font-bold" style={{ color: c.primary, fontFamily: `'${fonts.heading}', sans-serif` }}>YourBrand</span>
+        <div className="flex gap-4 text-sm" style={{ color: c.text }}>
+          <span>Features</span><span>Pricing</span><span>About</span>
+        </div>
+        <button className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: c.background }}>
+          Sign Up
+        </button>
+      </nav>
+      {/* Hero */}
+      <section className="px-8 py-16 text-center">
+        <h1 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: c.text, fontFamily: `'${fonts.heading}', sans-serif` }}>
+          Build something beautiful
+        </h1>
+        <p className="max-w-lg mx-auto mb-8 leading-relaxed" style={{ color: c.text, opacity: 0.75 }}>
+          A modern toolkit for designers and developers. Ship fast, look great, delight every user on every device.
+        </p>
+        <div className="flex justify-center gap-3">
+          <button className="px-6 py-2.5 rounded-lg font-semibold transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: c.background }}>
+            Get Started
+          </button>
+          <button className="px-6 py-2.5 rounded-lg font-semibold border-2 transition-opacity hover:opacity-90" style={{ borderColor: c.accent, color: c.accent }}>
+            Learn More
+          </button>
+        </div>
+      </section>
+      {/* Feature Cards */}
+      <section className="px-8 pb-12 grid grid-cols-1 md:grid-cols-3 gap-4">
+        {["Fast Performance", "Beautiful Design", "Easy Integration"].map((t, i) => (
+          <div key={i} className="p-5 rounded-xl" style={{ backgroundColor: c.secondary }}>
+            <div className="w-8 h-8 rounded-lg mb-3 flex items-center justify-center text-xs font-bold" style={{ backgroundColor: i === 2 ? c.accent : c.primary, color: c.background }}>
+              {["⚡", "🎨", "🔗"][i]}
+            </div>
+            <h3 className="font-semibold mb-1.5" style={{ color: c.text, fontFamily: `'${fonts.heading}', sans-serif` }}>{t}</h3>
+            <p className="text-sm leading-relaxed" style={{ color: c.text, opacity: 0.7 }}>
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor.
+            </p>
+          </div>
+        ))}
+      </section>
+      {/* CTA Banner */}
+      <section className="mx-8 mb-8 p-8 rounded-xl text-center" style={{ backgroundColor: c.primary }}>
+        <h2 className="text-xl font-bold mb-2" style={{ color: c.background, fontFamily: `'${fonts.heading}', sans-serif` }}>Ready to get started?</h2>
+        <p className="text-sm mb-4" style={{ color: c.background, opacity: 0.85 }}>Join thousands of creators building with our platform.</p>
+        <button className="px-6 py-2 rounded-lg font-semibold transition-opacity hover:opacity-90" style={{ backgroundColor: c.background, color: c.primary }}>
+          Start Free Trial
+        </button>
+      </section>
+      {/* Footer */}
+      <footer className="px-8 py-6 text-center text-xs border-t" style={{ color: c.text, opacity: 0.5, borderColor: c.secondary }}>
+        © 2025 YourBrand. All rights reserved.
+      </footer>
+    </div>
+  );
+}
+
+function DashboardPreview({ c, fonts }: { c: ColorRoles; fonts: { heading: string; body: string } }) {
+  return (
+    <div className="w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: c.background, fontFamily: `'${fonts.body}', sans-serif` }}>
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-5 py-3 border-b" style={{ borderColor: c.secondary }}>
+        <span className="font-bold" style={{ color: c.primary, fontFamily: `'${fonts.heading}', sans-serif` }}>Dashboard</span>
+        <div className="flex gap-2">
+          <div className="w-7 h-7 rounded-full" style={{ backgroundColor: c.accent }} />
+        </div>
+      </div>
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3 p-5">
+        {[["Revenue", "$42,580", "+12%"], ["Users", "8,429", "+5%"], ["Orders", "1,243", "+18%"]].map(([label, val, delta], i) => (
+          <div key={i} className="p-4 rounded-xl" style={{ backgroundColor: c.secondary }}>
+            <p className="text-xs mb-1" style={{ color: c.text, opacity: 0.6 }}>{label}</p>
+            <p className="text-xl font-bold" style={{ color: c.text, fontFamily: `'${fonts.heading}', sans-serif` }}>{val}</p>
+            <span className="text-xs font-medium" style={{ color: c.accent }}>{delta}</span>
+          </div>
+        ))}
+      </div>
+      {/* Table */}
+      <div className="mx-5 mb-5 rounded-xl overflow-hidden" style={{ backgroundColor: c.secondary }}>
+        <div className="grid grid-cols-4 px-4 py-2 text-xs font-semibold" style={{ color: c.text, opacity: 0.5 }}>
+          <span>Name</span><span>Email</span><span>Status</span><span>Amount</span>
+        </div>
+        {[
+          ["Alice Chen", "alice@mail.com", "Active", "$2,450"],
+          ["Bob Smith", "bob@mail.com", "Pending", "$1,820"],
+          ["Carol Wu", "carol@mail.com", "Active", "$3,100"],
+        ].map(([name, email, status, amount], i) => (
+          <div key={i} className="grid grid-cols-4 px-4 py-3 text-sm border-t" style={{ borderColor: c.background, color: c.text }}>
+            <span className="font-medium">{name}</span>
+            <span style={{ opacity: 0.7 }}>{email}</span>
+            <span>
+              <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: status === "Active" ? c.primary : c.accent, color: c.background }}>
+                {status}
+              </span>
+            </span>
+            <span className="font-semibold">{amount}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BlogPreview({ c, fonts }: { c: ColorRoles; fonts: { heading: string; body: string } }) {
+  return (
+    <div className="w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: c.background, fontFamily: `'${fonts.body}', sans-serif` }}>
+      {/* Header */}
+      <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: c.secondary }}>
+        <span className="font-bold" style={{ color: c.text, fontFamily: `'${fonts.heading}', sans-serif` }}>The Blog</span>
+        <div className="flex gap-3 text-sm" style={{ color: c.text, opacity: 0.6 }}>
+          <span>Home</span><span>Archive</span><span>About</span>
+        </div>
+      </div>
+      {/* Featured */}
+      <div className="p-6">
+        <div className="rounded-xl p-6 mb-4" style={{ backgroundColor: c.secondary }}>
+          <span className="text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded" style={{ backgroundColor: c.accent, color: c.background }}>Featured</span>
+          <h2 className="text-2xl font-bold mt-3 mb-2" style={{ color: c.text, fontFamily: `'${fonts.heading}', sans-serif` }}>
+            The Art of Color Theory in Modern Design
+          </h2>
+          <p className="text-sm leading-relaxed mb-4" style={{ color: c.text, opacity: 0.7 }}>
+            Explore how thoughtful color combinations can transform user experience and create lasting impressions across digital products.
+          </p>
+          <button className="text-sm font-semibold" style={{ color: c.primary }}>Read more →</button>
+        </div>
+        {/* Articles list */}
+        {["Typography Trends for 2025", "Building Accessible Interfaces"].map((title, i) => (
+          <div key={i} className="flex items-center gap-4 py-3 border-t" style={{ borderColor: c.secondary }}>
+            <div className="w-12 h-12 rounded-lg shrink-0" style={{ backgroundColor: i === 0 ? c.primary : c.accent, opacity: 0.3 }} />
+            <div>
+              <h3 className="text-sm font-semibold" style={{ color: c.text, fontFamily: `'${fonts.heading}', sans-serif` }}>{title}</h3>
+              <p className="text-xs" style={{ color: c.text, opacity: 0.5 }}>3 min read</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EcommercePreview({ c, fonts }: { c: ColorRoles; fonts: { heading: string; body: string } }) {
+  return (
+    <div className="w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: c.background, fontFamily: `'${fonts.body}', sans-serif` }}>
+      {/* Header */}
+      <div className="px-6 py-3 flex items-center justify-between border-b" style={{ borderColor: c.secondary }}>
+        <span className="font-bold" style={{ color: c.primary, fontFamily: `'${fonts.heading}', sans-serif` }}>Shop</span>
+        <div className="flex gap-4 text-sm" style={{ color: c.text }}>
+          <span>New</span><span>Sale</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: c.accent, color: c.background }}>3</div>
+        </div>
+      </div>
+      {/* Banner */}
+      <div className="p-6 text-center" style={{ backgroundColor: c.primary }}>
+        <h2 className="text-xl font-bold mb-1" style={{ color: c.background, fontFamily: `'${fonts.heading}', sans-serif` }}>Summer Sale — 30% Off</h2>
+        <p className="text-sm" style={{ color: c.background, opacity: 0.85 }}>Use code SUMMER30 at checkout</p>
+      </div>
+      {/* Products */}
+      <div className="grid grid-cols-2 gap-4 p-6">
+        {[
+          ["Premium Jacket", "$129.00", "$179.00"],
+          ["Canvas Sneakers", "$89.00", "$119.00"],
+          ["Designer Watch", "$299.00", "$399.00"],
+          ["Leather Bag", "$199.00", "$259.00"],
+        ].map(([name, price, orig], i) => (
+          <div key={i} className="rounded-lg overflow-hidden" style={{ backgroundColor: c.secondary }}>
+            <div className="h-24" style={{ backgroundColor: c.primary, opacity: 0.15 }} />
+            <div className="p-3">
+              <h3 className="text-sm font-semibold mb-1" style={{ color: c.text, fontFamily: `'${fonts.heading}', sans-serif` }}>{name}</h3>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold" style={{ color: c.accent }}>{price}</span>
+                <span className="text-xs line-through" style={{ color: c.text, opacity: 0.4 }}>{orig}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Mondrian panel — 60-30-10 color distribution
+// ---------------------------------------------------------------------------
+
+function MondrianPanel({ c }: { c: ColorRoles }) {
+  return (
+    <div className="grid grid-cols-6 grid-rows-4 gap-1 w-full aspect-3/2 rounded-lg overflow-hidden">
+      {/* Background – 60% */}
+      <div className="col-span-4 row-span-3" style={{ backgroundColor: c.background }} />
+      {/* Primary – 30% */}
+      <div className="col-span-2 row-span-2" style={{ backgroundColor: c.primary }} />
+      {/* Secondary */}
+      <div className="col-span-2 row-span-2" style={{ backgroundColor: c.secondary }} />
+      {/* Accent – 10% */}
+      <div className="col-span-1 row-span-1" style={{ backgroundColor: c.accent }} />
+      {/* Text */}
+      <div className="col-span-3 row-span-1" style={{ backgroundColor: c.text }} />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Contrast grid
+// ---------------------------------------------------------------------------
+
+function ContrastGrid({ c }: { c: ColorRoles }) {
+  const pairs: [string, string, string][] = [
+    ["Text / BG", c.text, c.background],
+    ["Primary / BG", c.primary, c.background],
+    ["Accent / BG", c.accent, c.background],
+    ["BG / Primary", c.background, c.primary],
+    ["BG / Accent", c.background, c.accent],
+    ["Text / Secondary", c.text, c.secondary],
+  ];
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+      {pairs.map(([label, fg, bg]) => {
+        const badge = wcagBadge(fg, bg);
+        const ratio = contrastRatio(fg, bg).toFixed(1);
+        return (
+          <div key={label} className="flex items-center gap-2 p-2 rounded-lg bg-white/5 dark:bg-white/5">
+            <div className="w-8 h-8 rounded flex items-center justify-center text-xs font-bold shrink-0" style={{ backgroundColor: bg, color: fg }}>
+              Aa
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{label}</p>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-mono text-gray-700 dark:text-gray-300">{ratio}</span>
+                <span className="text-[9px] font-bold px-1 py-0.5 rounded" style={{ backgroundColor: badge.color, color: "#fff" }}>
+                  {badge.label}
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main Workspace
+// ---------------------------------------------------------------------------
+
+const PREVIEW_MODES: { id: PreviewMode; label: string }[] = [
+  { id: "landing", label: "Landing" },
+  { id: "dashboard", label: "Dashboard" },
+  { id: "blog", label: "Blog" },
+  { id: "ecommerce", label: "E-commerce" },
+];
 
 export default function ColorPaletteWorkspace() {
-  const [loading, setLoading] = useState(false);
-  const [mobileTab, setMobileTab] = useState<"content" | "settings">("content");
-  const [copiedValue, setCopiedValue] = useState<string | null>(null);
+  const {
+    colors, fonts, previewMode, savedPalettes,
+    setColor, setPreviewMode, randomize, applyPreset,
+    swapTextAndBg, savePalette, deletePalette, loadPalette, setFont,
+  } = useColorPaletteStore();
 
-  const [mode, setMode] = useState<PaletteMode>("ai");
-  const [mood, setMood] = useState<Mood>("vibrant");
-  const [baseColor, setBaseColor] = useState("#84cc16");
-  const [palette, setPalette] = useState<string[]>([]);
-  const [savedPalettes, setSavedPalettes] = useState<SavedPalette[]>([]);
-  const [contrastPair, setContrastPair] = useState<[number, number]>([0, 1]);
-  const [showColorBlind, setShowColorBlind] = useState(false);
-  const [paletteName, setPaletteName] = useState("");
+  const [showPresets, setShowPresets] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [showFonts, setShowFonts] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const [tab, setTab] = useState<"preview" | "colors" | "export">("preview");
 
-  const swatches = palette.map(hexToSwatch);
-  const selectedTints = palette[0] ? generateTintsShades(palette[0]) : [];
+  // Load Google fonts
+  useEffect(() => {
+    loadGoogleFont(fonts.heading);
+    loadGoogleFont(fonts.body);
+  }, [fonts.heading, fonts.body]);
 
-  /* ── Copy color ─────────────────────────────────────────── */
-  const copyColor = async (value: string) => {
-    await navigator.clipboard.writeText(value);
-    setCopiedValue(value);
-    setTimeout(() => setCopiedValue(null), 2000);
-  };
-
-  /* ── Generate from mode ─────────────────────────────────── */
-  const generateFromMode = useCallback(() => {
-    if (mode === "manual") {
-      setPalette([baseColor]);
-      return;
-    }
-    if (mode === "ai" || mode === "from-image") return; // handled by AI call
-    setPalette(generateHarmony(baseColor, mode));
-  }, [baseColor, mode]);
-
-  /* ── AI: Generate Palette ───────────────────────────────── */
-  const generateAIPalette = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: "user",
-              content: `Generate a color palette with mood "${mood}". Base color hint: ${baseColor}. Return exactly 5 hex color codes as JSON: { "colors": ["#hex1", "#hex2", "#hex3", "#hex4", "#hex5"] }. Make the colors harmonious and suitable for a ${mood} design aesthetic. Return ONLY the JSON.`,
-            },
-          ],
-        }),
-      });
-      const text = await res.text();
-      const clean = cleanAIText(text);
-      const match = clean.match(/\{[\s\S]*\}/);
-      if (match) {
-        const data = JSON.parse(match[0]);
-        if (Array.isArray(data.colors) && data.colors.length > 0) {
-          setPalette(data.colors.slice(0, 5));
-        }
+  // Spacebar to randomize
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !["INPUT", "TEXTAREA", "SELECT"].includes((e.target as HTMLElement)?.tagName)) {
+        e.preventDefault();
+        randomize();
       }
-    } catch {
-      /* ignore */
-    }
-    setLoading(false);
-  };
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [randomize]);
 
-  /* ── Add manual color ───────────────────────────────────── */
-  const addManualColor = () => {
-    if (palette.length < 10) {
-      setPalette((p) => [...p, baseColor]);
-    }
-  };
+  // Chiko registration
+  useChikoActions(useCallback(() => createColorPaletteManifest(), []));
 
-  const removeColor = (idx: number) => {
-    setPalette((p) => p.filter((_, i) => i !== idx));
-  };
-
-  /* ── Save palette ───────────────────────────────────────── */
-  const savePalette = () => {
-    if (palette.length === 0) return;
-    setSavedPalettes((prev) => [
-      ...prev,
-      { id: uid(), name: paletteName || `Palette ${prev.length + 1}`, colors: [...palette], createdAt: Date.now() },
-    ]);
-    setPaletteName("");
-  };
-
-  const deleteSaved = (id: string) => {
-    setSavedPalettes((p) => p.filter((sp) => sp.id !== id));
-  };
-
-  const loadSaved = (sp: SavedPalette) => {
-    setPalette([...sp.colors]);
-  };
-
-  /* ── Accessibility ──────────────────────────────────────── */
-  const contrastResult = palette.length >= 2
-    ? contrastRatio(palette[contrastPair[0]] ?? "#000000", palette[contrastPair[1]] ?? "#ffffff")
-    : null;
-
-  /* ── Export ─────────────────────────────────────────────── */
-  const exportPalette = (format: ExportFormat) => {
+  // Export handler
+  const handleExport = useCallback((format: string) => {
     let content = "";
-    let ext = "txt";
+    let filename = "";
     let mime = "text/plain";
 
     switch (format) {
       case "css":
-        content = `:root {\n${palette.map((c, i) => `  --color-${i + 1}: ${c};`).join("\n")}\n}`;
-        ext = "css";
-        mime = "text/css";
-        break;
+        content = exportCSS(colors, fonts); filename = "palette.css"; mime = "text/css"; break;
       case "tailwind":
-        content = `// tailwind.config.js colors\nconst colors = {\n  palette: {\n${palette.map((c, i) => `    '${(i + 1) * 100}': '${c}',`).join("\n")}\n  }\n};`;
-        ext = "js";
-        mime = "text/javascript";
-        break;
+        content = exportTailwind(colors); filename = "palette-tailwind.css"; mime = "text/css"; break;
+      case "scss":
+        content = exportSCSS(colors, fonts); filename = "palette.scss"; break;
       case "json":
-        content = JSON.stringify({ palette: palette.map((hex, i) => ({ id: i + 1, ...hexToSwatch(hex) })) }, null, 2);
-        ext = "json";
-        mime = "application/json";
-        break;
-      case "ase":
-        content = palette.map((c) => `${c} ${hexToSwatch(c).rgb}`).join("\n");
-        ext = "txt";
-        break;
+        content = exportJSON(colors, fonts); filename = "palette.json"; mime = "application/json"; break;
+      default: return;
     }
 
     const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
-    a.download = `palette.${ext}`;
-    a.click();
+    a.href = url; a.download = filename; a.click();
     URL.revokeObjectURL(url);
-  };
+    setShowExport(false);
+  }, [colors, fonts]);
 
-  /* ── UI ──────────────────────────────────────────────────── */
+  // Copy link
+  const handleCopyLink = useCallback(() => {
+    const params = new URLSearchParams({
+      t: colors.text.replace("#", ""),
+      b: colors.background.replace("#", ""),
+      p: colors.primary.replace("#", ""),
+      s: colors.secondary.replace("#", ""),
+      a: colors.accent.replace("#", ""),
+      fh: fonts.heading,
+      fb: fonts.body,
+    });
+    navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?${params.toString()}`);
+  }, [colors, fonts]);
+
+  // Preview component
+  const PreviewComponent = useMemo(() => {
+    switch (previewMode) {
+      case "landing": return LandingPreview;
+      case "dashboard": return DashboardPreview;
+      case "blog": return BlogPreview;
+      case "ecommerce": return EcommercePreview;
+    }
+  }, [previewMode]);
+
   return (
-    <div>
-      {/* Mobile Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4 lg:hidden">
-        {(["content", "settings"] as const).map((t) => (
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
+      {/* ── Toolbar ──────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm flex-wrap">
+        {/* Randomize */}
+        <button
+          onClick={randomize}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          title="Randomize (Spacebar)"
+        >
+          <IconRefresh className="w-4 h-4" />
+          <span className="hidden sm:inline">Randomize</span>
+        </button>
+
+        {/* Swap Text ↔ BG */}
+        <button
+          onClick={swapTextAndBg}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          title="Swap Text & Background"
+        >
+          <span className="text-base">⇄</span>
+          <span className="hidden sm:inline">Swap</span>
+        </button>
+
+        {/* Presets dropdown */}
+        <div className="relative">
           <button
-            key={t}
-            onClick={() => setMobileTab(t)}
-            className={`flex-1 py-2.5 text-xs font-semibold capitalize ${mobileTab === t ? "text-primary-500 border-b-2 border-primary-500" : "text-gray-400"}`}
+            onClick={() => { setShowPresets(!showPresets); setShowExport(false); setShowFonts(false); setShowSaved(false); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
           >
-            {t}
+            <IconSparkles className="w-4 h-4" />
+            <span className="hidden sm:inline">Presets</span>
+            <IconChevronDown className="w-3 h-3" />
+          </button>
+          {showPresets && (
+            <div className="absolute top-full left-0 mt-1 w-64 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-80 overflow-y-auto">
+              {PRESET_PALETTES.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => { applyPreset(p); setShowPresets(false); }}
+                  className="flex items-center gap-3 w-full px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                >
+                  <div className="flex gap-0.5">
+                    {Object.values(p.colors).map((col, i) => (
+                      <div key={i} className="w-5 h-5 rounded-sm first:rounded-l-md last:rounded-r-md" style={{ backgroundColor: col }} />
+                    ))}
+                  </div>
+                  <span className="text-sm">{p.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Fonts toggle */}
+        <button
+          onClick={() => { setShowFonts(!showFonts); setShowPresets(false); setShowExport(false); setShowSaved(false); }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+        >
+          <IconType className="w-4 h-4" />
+          <span className="hidden sm:inline">Fonts</span>
+        </button>
+
+        {/* Preview mode tabs */}
+        <div className="hidden lg:flex items-center gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 ml-auto">
+          {PREVIEW_MODES.map((m) => (
+            <button
+              key={m.id}
+              onClick={() => setPreviewMode(m.id)}
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                previewMode === m.id
+                  ? "bg-white dark:bg-gray-700 shadow-sm"
+                  : "hover:bg-white/50 dark:hover:bg-gray-700/50"
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Saved palettes */}
+        <div className="relative">
+          <button
+            onClick={() => { setShowSaved(!showSaved); setShowPresets(false); setShowExport(false); setShowFonts(false); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          >
+            <IconStar className="w-4 h-4" />
+            <span className="hidden sm:inline">Saved</span>
+            {savedPalettes.length > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-500 text-white">{savedPalettes.length}</span>
+            )}
+          </button>
+          {showSaved && (
+            <div className="absolute top-full right-0 mt-1 w-72 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-80 overflow-y-auto">
+              {/* Save new */}
+              <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex gap-2">
+                  <input
+                    className="flex-1 px-2 py-1.5 text-sm rounded-lg bg-gray-100 dark:bg-gray-800 border-none outline-none"
+                    placeholder="Palette name…"
+                    value={saveName}
+                    onChange={(e) => setSaveName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && saveName.trim()) {
+                        savePalette(saveName.trim());
+                        setSaveName("");
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => { if (saveName.trim()) { savePalette(saveName.trim()); setSaveName(""); } }}
+                    className="px-3 py-1.5 rounded-lg text-sm font-medium bg-violet-500 text-white hover:bg-violet-600 transition-colors"
+                  >
+                    <IconPlus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              {savedPalettes.length === 0 ? (
+                <p className="p-4 text-sm text-gray-500 text-center">No saved palettes yet</p>
+              ) : (
+                savedPalettes.map((p) => (
+                  <div key={p.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
+                    <button onClick={() => { loadPalette(p); setShowSaved(false); }} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                      <div className="flex gap-0.5 shrink-0">
+                        {Object.values(p.colors).map((col, i) => (
+                          <div key={i} className="w-4 h-4 rounded-sm" style={{ backgroundColor: col }} />
+                        ))}
+                      </div>
+                      <span className="text-sm truncate">{p.name}</span>
+                    </button>
+                    <button
+                      onClick={() => deletePalette(p.id)}
+                      className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all"
+                    >
+                      <IconTrash className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Export dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => { setShowExport(!showExport); setShowPresets(false); setShowFonts(false); setShowSaved(false); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-violet-500 text-white hover:bg-violet-600 transition-colors"
+          >
+            <IconDownload className="w-4 h-4" />
+            <span className="hidden sm:inline">Export</span>
+            <IconChevronDown className="w-3 h-3" />
+          </button>
+          {showExport && (
+            <div className="absolute top-full right-0 mt-1 w-48 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50">
+              {[
+                { id: "css", label: "CSS Variables" },
+                { id: "tailwind", label: "Tailwind v4" },
+                { id: "scss", label: "SCSS Variables" },
+                { id: "json", label: "JSON" },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => handleExport(f.id)}
+                  className="w-full px-4 py-2.5 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  {f.label}
+                </button>
+              ))}
+              <hr className="border-gray-200 dark:border-gray-700" />
+              <button
+                onClick={() => { handleCopyLink(); setShowExport(false); }}
+                className="w-full px-4 py-2.5 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2"
+              >
+                <IconCopy className="w-3.5 h-3.5" /> Copy Share Link
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Fonts panel ──────────────────────────────────────────── */}
+      {showFonts && (
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm flex flex-wrap gap-4 items-center">
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Heading</label>
+            <select
+              value={fonts.heading}
+              onChange={(e) => setFont("heading", e.target.value)}
+              className="px-2 py-1 text-sm rounded-lg bg-gray-100 dark:bg-gray-800 border-none outline-none"
+            >
+              {FONT_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Body</label>
+            <select
+              value={fonts.body}
+              onChange={(e) => setFont("body", e.target.value)}
+              className="px-2 py-1 text-sm rounded-lg bg-gray-100 dark:bg-gray-800 border-none outline-none"
+            >
+              {FONT_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </div>
+          <div className="text-sm text-gray-600 dark:text-gray-400 ml-auto">
+            <span style={{ fontFamily: `'${fonts.heading}', sans-serif` }} className="font-semibold">Heading</span>
+            {" / "}
+            <span style={{ fontFamily: `'${fonts.body}', sans-serif` }}>Body text</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mobile tabs ──────────────────────────────────────────── */}
+      <div className="flex lg:hidden border-b border-gray-200 dark:border-gray-800">
+        {(["preview", "colors", "export"] as const).map((t2) => (
+          <button
+            key={t2}
+            onClick={() => setTab(t2)}
+            className={`flex-1 py-2.5 text-sm font-medium capitalize transition-colors ${
+              tab === t2
+                ? "border-b-2 border-violet-500 text-violet-600 dark:text-violet-400"
+                : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+            }`}
+          >
+            {t2}
           </button>
         ))}
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* ── Settings Panel ──────────────────────────────── */}
-        <div
-          className={`w-full lg:w-80 shrink-0 space-y-4 overflow-y-auto ${mobileTab !== "settings" ? "hidden lg:block" : ""}`}
-        >
-          {/* Mode */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <IconFilter className="size-4 text-primary-500" />
-              Palette Mode
-            </h3>
-            <div className="grid grid-cols-2 gap-1.5">
-              {PALETTE_MODES.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => setMode(m.id)}
-                  className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${mode === m.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
-                >
-                  {m.label}
-                </button>
-              ))}
+      {/* ── Main content ─────────────────────────────────────────── */}
+      <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+        {/* Left sidebar — Color swatches + contrast (desktop) or inline (mobile tab) */}
+        <aside className={`lg:w-72 xl:w-80 lg:border-r border-gray-200 dark:border-gray-800 overflow-y-auto bg-white/50 dark:bg-gray-900/50 ${tab !== "colors" ? "hidden lg:block" : ""}`}>
+          <div className="p-4 space-y-6">
+            {/* Color roles */}
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
+                <IconDroplet className="w-3.5 h-3.5" /> Colors
+              </h3>
+              <div className="flex justify-around">
+                {(["text", "background", "primary", "secondary", "accent"] as (keyof ColorRoles)[]).map((role) => (
+                  <ColorSwatch
+                    key={role}
+                    role={role === "background" ? "bg" : role === "secondary" ? "sec" : role === "text" ? "txt" : role}
+                    color={colors[role]}
+                    onChange={(hex) => setColor(role, hex)}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Base Color */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <label className="block text-xs text-gray-400">Base Color</label>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={baseColor}
-                onChange={(e) => setBaseColor(e.target.value)}
-                className="size-10 rounded-lg cursor-pointer bg-transparent border-0"
-              />
-              <input
-                className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-primary-500/50"
-                value={baseColor}
-                onChange={(e) => setBaseColor(e.target.value)}
-              />
-              <div className="size-10 rounded-lg border border-gray-700" style={{ backgroundColor: baseColor }} />
+            {/* Mondrian distribution */}
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
+                Color Distribution
+              </h3>
+              <MondrianPanel c={colors} />
             </div>
-          </div>
 
-          {/* Mood (AI mode) */}
-          {(mode === "ai" || mode === "from-image") && (
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-              <label className="block text-xs text-gray-400">Mood</label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {MOODS.map((m) => (
+            {/* Contrast checker */}
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
+                <IconEye className="w-3.5 h-3.5" /> Contrast
+              </h3>
+              <ContrastGrid c={colors} />
+            </div>
+
+            {/* Preview mode (mobile) */}
+            <div className="lg:hidden">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
+                Preview Mode
+              </h3>
+              <div className="grid grid-cols-2 gap-2">
+                {PREVIEW_MODES.map((m) => (
                   <button
                     key={m.id}
-                    onClick={() => setMood(m.id)}
-                    className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${mood === m.id ? "bg-primary-500 text-gray-950" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+                    onClick={() => { setPreviewMode(m.id); setTab("preview"); }}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      previewMode === m.id
+                        ? "bg-violet-500 text-white"
+                        : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+                    }`}
                   >
                     {m.label}
                   </button>
                 ))}
               </div>
             </div>
-          )}
-
-          {/* Color blindness toggle */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showColorBlind}
-                onChange={(e) => setShowColorBlind(e.target.checked)}
-                className="accent-primary-500"
-              />
-              Simulate Color Blindness (Deuteranopia)
-            </label>
           </div>
+        </aside>
 
-          {/* Generate / Add */}
-          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <IconSparkles className="size-4 text-primary-500" />
-              Generate
-            </h3>
-            {mode === "ai" || mode === "from-image" ? (
-              <button
-                onClick={generateAIPalette}
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 disabled:opacity-50 transition-colors"
-              >
-                {loading ? <IconLoader className="size-4 animate-spin" /> : <IconWand className="size-4" />}
-                {loading ? "Generating…" : "AI Generate Palette"}
-              </button>
-            ) : (
-              <button
-                onClick={generateFromMode}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 text-gray-950 text-sm font-semibold hover:bg-primary-400 transition-colors"
-              >
-                <IconWand className="size-4" />
-                Generate {PALETTE_MODES.find((m) => m.id === mode)?.label}
-              </button>
-            )}
-            {mode === "manual" && (
-              <button
-                onClick={addManualColor}
-                disabled={palette.length >= 10}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
-              >
-                <IconPlus className="size-4" />
-                Add Color
-              </button>
-            )}
+        {/* Center — Live preview */}
+        <main className={`flex-1 overflow-y-auto p-4 lg:p-8 ${tab !== "preview" ? "hidden lg:block" : ""}`}>
+          <div className="max-w-3xl mx-auto">
+            <PreviewComponent c={colors} fonts={fonts} />
           </div>
+        </main>
 
-          {/* Save Palette */}
-          {palette.length > 0 && (
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-              <label className="block text-xs text-gray-400">Save Palette</label>
-              <div className="flex gap-2">
-                <input
-                  className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50"
-                  placeholder="Palette name…"
-                  value={paletteName}
-                  onChange={(e) => setPaletteName(e.target.value)}
-                />
-                <button
-                  onClick={savePalette}
-                  className="px-3 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-semibold hover:bg-primary-400 transition-colors"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Export */}
-          {palette.length > 0 && (
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
-              <label className="block text-xs text-gray-400 mb-2">Export As</label>
+        {/* Right panel — Export (mobile only shows in export tab) */}
+        <aside className={`lg:w-72 xl:w-80 lg:border-l border-gray-200 dark:border-gray-800 overflow-y-auto bg-white/50 dark:bg-gray-900/50 ${tab !== "export" ? "hidden lg:block" : ""}`}>
+          <div className="p-4 space-y-6">
+            {/* Quick Export */}
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
+                <IconDownload className="w-3.5 h-3.5" /> Export
+              </h3>
               <div className="grid grid-cols-2 gap-2">
-                {(["css", "tailwind", "json", "ase"] as ExportFormat[]).map((f) => (
+                {[
+                  { id: "css", label: "CSS" },
+                  { id: "tailwind", label: "Tailwind v4" },
+                  { id: "scss", label: "SCSS" },
+                  { id: "json", label: "JSON" },
+                ].map((f) => (
                   <button
-                    key={f}
-                    onClick={() => exportPalette(f)}
-                    className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors uppercase"
+                    key={f.id}
+                    onClick={() => handleExport(f.id)}
+                    className="px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                   >
-                    <IconDownload className="size-3.5" />
-                    {f}
+                    {f.label}
                   </button>
                 ))}
               </div>
+              <button
+                onClick={handleCopyLink}
+                className="w-full mt-2 px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <IconCopy className="w-3.5 h-3.5" /> Copy Share Link
+              </button>
             </div>
-          )}
-        </div>
 
-        {/* ── Content Area ─────────────────────────────────── */}
-        <div
-          className={`flex-1 min-w-0 space-y-4 ${mobileTab !== "content" ? "hidden lg:block" : ""}`}
-        >
-          {/* Palette Swatches */}
-          {palette.length > 0 && (
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-4">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                Palette ({palette.length} colors)
+            {/* CSS Preview */}
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
+                CSS Preview
               </h3>
-              <div className={`flex gap-2 ${showColorBlind ? "grayscale" : ""}`}>
-                {swatches.map((sw, i) => (
-                  <div key={i} className="flex-1 space-y-2">
-                    <div
-                      className="aspect-square rounded-xl border border-gray-700 cursor-pointer hover:scale-105 transition-transform relative group"
-                      style={{ backgroundColor: sw.hex }}
-                      onClick={() => copyColor(sw.hex)}
-                    >
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 rounded-xl">
-                        {copiedValue === sw.hex ? (
-                          <IconCheck className="size-5 text-white" />
-                        ) : (
-                          <IconCopy className="size-5 text-white" />
-                        )}
-                      </div>
-                      {mode === "manual" && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); removeColor(i); }}
-                          className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <IconTrash className="size-3" />
-                        </button>
-                      )}
-                    </div>
-                    <div className="space-y-0.5">
-                      <button onClick={() => copyColor(sw.hex)} className="block w-full text-left text-[11px] font-mono text-gray-900 dark:text-white hover:text-primary-500 transition-colors truncate">
-                        {sw.hex}
-                      </button>
-                      <button onClick={() => copyColor(sw.rgb)} className="block w-full text-left text-[10px] font-mono text-gray-500 hover:text-primary-500 transition-colors truncate">
-                        {sw.rgb}
-                      </button>
-                      <button onClick={() => copyColor(sw.hsl)} className="block w-full text-left text-[10px] font-mono text-gray-500 hover:text-primary-500 transition-colors truncate">
-                        {sw.hsl}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {showColorBlind && (
-                <p className="text-[10px] text-gray-400 text-center">Simulated Deuteranopia (green-blind) view</p>
-              )}
+              <pre className="text-xs font-mono p-3 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 overflow-x-auto whitespace-pre-wrap">
+                {exportCSS(colors, fonts)}
+              </pre>
             </div>
-          )}
 
-          {/* Accessibility Checker */}
-          {palette.length >= 2 && (
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Accessibility Checker</h3>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-gray-400">Foreground</label>
-                  <select
-                    value={contrastPair[0]}
-                    onChange={(e) => setContrastPair([Number(e.target.value), contrastPair[1]])}
-                    className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 py-1 text-xs text-gray-900 dark:text-white focus:outline-none"
-                  >
-                    {palette.map((c, i) => (
-                      <option key={i} value={i}>{c}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-gray-400">Background</label>
-                  <select
-                    value={contrastPair[1]}
-                    onChange={(e) => setContrastPair([contrastPair[0], Number(e.target.value)])}
-                    className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 py-1 text-xs text-gray-900 dark:text-white focus:outline-none"
-                  >
-                    {palette.map((c, i) => (
-                      <option key={i} value={i}>{c}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              {contrastResult !== null && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <div className="size-16 rounded-lg flex items-center justify-center text-sm font-bold" style={{ backgroundColor: palette[contrastPair[1]], color: palette[contrastPair[0]] }}>
-                      Aa
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                        Ratio: {contrastResult.toFixed(2)}:1
-                      </p>
-                      <div className="flex gap-2 mt-1">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${contrastResult >= 4.5 ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
-                          AA {contrastResult >= 4.5 ? "PASS" : "FAIL"}
-                        </span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${contrastResult >= 7 ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
-                          AAA {contrastResult >= 7 ? "PASS" : "FAIL"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Tints & Shades */}
-          {palette.length > 0 && (
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Tints & Shades</h3>
-              <div className="flex gap-1">
-                {selectedTints.map((hex, i) => (
-                  <div
-                    key={i}
-                    onClick={() => copyColor(hex)}
-                    className="flex-1 aspect-square rounded-lg cursor-pointer hover:scale-105 transition-transform relative group"
-                    style={{ backgroundColor: hex }}
-                  >
-                    <span className="absolute bottom-0.5 left-0 right-0 text-[8px] font-mono text-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ color: i < 4 ? "#000" : "#fff" }}
-                    >
-                      {hex}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Saved Palettes */}
-          {savedPalettes.length > 0 && (
-            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Saved Palettes</h3>
-              <div className="space-y-2">
-                {savedPalettes.map((sp) => (
-                  <div
-                    key={sp.id}
-                    className="flex items-center gap-3 p-2 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-                    onClick={() => loadSaved(sp)}
-                  >
-                    <div className="flex gap-0.5">
-                      {sp.colors.map((c, i) => (
-                        <div key={i} className="size-5 rounded" style={{ backgroundColor: c }} />
-                      ))}
-                    </div>
-                    <span className="flex-1 text-xs font-medium text-gray-900 dark:text-white truncate">{sp.name}</span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); deleteSaved(sp.id); }}
-                      className="text-gray-400 hover:text-red-400"
-                    >
-                      <IconTrash className="size-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Empty State */}
-          {palette.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <IconFilter className="size-12 text-gray-300 dark:text-gray-600 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Generate a Color Palette
+            {/* Palette info */}
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
+                <IconPalette className="w-3.5 h-3.5" /> Tips
               </h3>
-              <p className="text-sm text-gray-400 max-w-md">
-                Choose a palette mode, set your base color, and generate harmonious color palettes with AI or color theory rules.
-              </p>
+              <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1.5 leading-relaxed">
+                <li>• Press <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-[10px] font-mono">Space</kbd> to randomize</li>
+                <li>• Right-click a hex code to copy it</li>
+                <li>• Background = 60%, Primary = 30%, Accent = 10%</li>
+                <li>• Aim for AA (4.5:1) contrast on all text</li>
+                <li>• Ask Chiko for mood or industry palettes</li>
+              </ul>
             </div>
-          )}
-        </div>
+          </div>
+        </aside>
       </div>
     </div>
   );

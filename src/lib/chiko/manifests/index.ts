@@ -33,3 +33,5 @@ export { createApparelFabricManifest } from "./apparel-fabric";
 export { createPackagingFabricManifest } from "./packaging-fabric";
 export { createBannerAdFabricManifest } from "./banner-ad-fabric";
 export { createPresentationManifest } from "./presentation-chiko";
+export { createColorPaletteManifest } from "./color-palette";
+export { createPDFToolsManifest } from "./pdf-tools";

@@ -3,9 +3,9 @@
 > **Last updated:** 2026-03-31
 > **Total tools registered:** 195+
 > **Tools with workspace UI:** 98
-> **Tools fully complete:** 18
-> **Tools available (ready):** 15
-> **Tools coming soon:** 182
+> **Tools fully complete:** 19
+> **Tools available (ready):** 16
+> **Tools coming soon:** 181
 
 ---
 
@@ -88,6 +88,12 @@ All 9 route to `SalesBookDesignerWorkspace` with different `initialDocumentType`
 |---|---------|-----------|-----------|-------|
 | 17 | `worksheet-designer` | Worksheet & Form Designer | worksheet-designer/WorksheetDesignerWorkspace | 12 document types (educational-worksheet/quiz/exam/survey/feedback-form/registration-form/application-form/order-form/checklist/evaluation-form/sign-in-sheet/generic-form), 8 visual templates, 27 element types across 6 categories, educational specialization (subject/grade/answer key/student fields), answer key page generation, branding & confidentiality, multi-column sections, 6 header styles, 4-tab editor (Content/Elements/Style/Format), Figma-style layers panel, Chiko AI manifest (20+ actions + activity logging), print-ready (A4/Letter/Legal/A5) |
 
+### Color Palette Generator
+
+| # | Tool ID | Tool Name | Workspace | Notes |
+|---|---------|-----------|-----------|-------|
+| 18 | `color-palette` | Color Palette Generator | ColorPaletteWorkspace | Realtime Colors-inspired. 5 color roles (text/bg/primary/secondary/accent), font pairing (27 Google Fonts), 4 live website previews (Landing/Dashboard/Blog/E-commerce), Mondrian 60-30-10 distribution, WCAG contrast grid, 10 curated presets, save/load palettes, export (CSS/Tailwind v4/SCSS/JSON), share link, spacebar randomize, Chiko AI manifest (25+ actions: harmonies/moods/industries/contrast fixing), Zustand+Immer+persist store |
+
 **Shared architecture (Sales Book):**
 - Store: `useSalesBookEditor` (Zustand + Immer + Zundo undo)
 - Renderer: `BlankFormRenderer` (HTML → print pipeline)
@@ -119,7 +125,7 @@ These have real workspace code (state management, canvas/editor, templates) but 
 | 11 | `icon-illustration` | Icon & Illustration | IconGeneratorWorkspace | `SCAFFOLD` |
 | 12 | `background-remover` | Background Remover | BackgroundRemoverWorkspace | `COMPLETE` |
 | 13 | `image-enhancer` | Image Enhancer | ImageEnhancerWorkspace | `SCAFFOLD` |
-| 14 | `color-palette` | Color Palette | ColorPaletteWorkspace | `SCAFFOLD` |
+| 14 | `color-palette` | Color Palette | ColorPaletteWorkspace | `COMPLETE` |
 | 15 | `mockup-generator` | Mockup Generator | MockupGeneratorWorkspace | `SCAFFOLD` |
 | 16 | `presentation` | Presentation Designer | PresentationDesignerWorkspace | `SCAFFOLD` (Fabric.js + multi-slide) |
 
@@ -231,7 +237,7 @@ These have real workspace code (state management, canvas/editor, templates) but 
 |---|---------|-----------|---------------------|------------|
 | 1 | `file-converter` | File Converter | FileConverterWorkspace | `SCAFFOLD` |
 | 2 | `batch-processor` | Batch Processor | BatchProcessorWorkspace | `SCAFFOLD` |
-| 3 | `pdf-tools` | PDF Tools | PDFToolsWorkspace | `SCAFFOLD` |
+| 3 | `pdf-tools` | PDF Tools Suite | PDFToolsWorkspace (pdf-tools/) | `COMPLETE` |
 
 ---
 
@@ -347,3 +353,5 @@ These already have substantial workspace code and would benefit most from a poli
 | 2025-07-22 | presentation (Presentation Designer) | Fabric.js multi-slide scaffold: 10 Fabric.js JSON templates (Midnight Title/Content/Bullets/TwoColumn/Quote, Corporate Title/Content, Sunset Title, Green Section Divider, Blank) at 960×540 (16:9). Multi-slide workspace with SlideData interface, slide CRUD (add/duplicate/delete/move/select), slideJsonCache ref for slide switching, FabricEditor remount via key prop. 6 aspect ratios (16:9/4:3/16:10/A4-L/A4-P/Letter-L). AspectRatioPicker dropdown. Collapsible slides panel (w-56/w-10). SlideThumbnail with Framer Motion. Chiko manifest via createFabricManifest() + update_slide_details action (18 field mappings). Store adapter (960×540). Named objects (pres-title/subtitle/body/company/author/date/bullet1-4/headingLeft/Right/bodyLeft/Right/quoteText/quoteAuthor/sectionTitle/slideNumber). 0 TS errors. | Drake |
 | 2025-07-23 | audio-transcription (Audio Transcription) | Full build: Zustand+Immer+Zundo store, Groq Whisper Large V3 verbose_json transcription API (segments with timestamps), 17 languages + auto-detect, translate-to-English, drag-and-drop file upload (audio+video: MP3/MP4/M4A/WAV/OGG/WebM/MOV/FLAC/AAC/AVI/MKV), 3-tier credit system (short 5cr/standard 12cr/long 20cr based on file size), 4 export formats (TXT/SRT/VTT/JSON), 3-panel responsive layout (upload+history-settings/transcript-viewer/settings-panel), Chiko AI manifest (7 actions + activity logging), store adapter, 25MB max file size, 60s API timeout, 20 req/min rate limit | Drake |
 | 2026-03-31 | background-remover (Background Remover) | Full production build: Real AI-powered background removal using @imgly/background-removal (ONNX model, runs 100% client-side). Lazy-loaded model with progress tracking. 5 background replacement modes (transparent/solid color with 10 presets/gradient with 5 directions/custom image/blur original). Interactive before/after comparison slider with draggable handle (mouse+touch). Full-resolution canvas composite rendering for export. 3 export formats (PNG/JPEG/WebP) with quality control. Batch mode for multi-image processing. Real progress bar with percentage. Workspace events integration (workspace:dirty/save/progress). Responsive mobile tabs. No server required — all processing in-browser. | Drake |
+| 2025-07-27 | pdf-tools (PDF Tools Suite) | Full production build inspired by Stirling-PDF: 18 client-side PDF operations (merge/split/extract/rotate/delete-pages/reorder/reverse/compress/watermark/page-numbers/stamp/protect/metadata/convert/multi-page-layout/overlay/scale/info). pdf-lib engine (20+ functions in src/lib/pdf/pdf-engine.ts). Chiko AI manifest (18 actions, 9 categories: Navigation/Page Ops/Optimize/Content/Security/Convert/Advanced/Actions/Read). Dark-first responsive workspace with tool grid (5 categories), settings panels per tool, drag-drop file upload, multi-file merge/overlay, real-time progress, compression results display, PDF info viewer with metadata+page sizes. Free tier (no AI cost, all processing client-side). 0 TS errors. | Drake |
+| 2025-07-28 | color-palette (Color Palette Generator) | Full build: Realtime Colors-inspired palette generator. Zustand+Immer+persist store. 5 color roles (text/background/primary/secondary/accent). Font pairing (27 Google Fonts, heading+body). 4 live website preview layouts (Landing/Dashboard/Blog/E-commerce) with real-time color/font application. Mondrian 60-30-10 color distribution panel. WCAG contrast grid (6 pairs, AA/AAA/Fail badges). 10 curated preset palettes (Midnight Aurora/Sunrise Warm/Ocean Breeze/Forest Canopy/Cyber Neon/Elegant Mono/Coral Sunset/Royal Purple/Fresh Mint/Classic Professional). Save/load user palettes. Export (CSS Variables/Tailwind v4/SCSS/JSON). Share link generator. Spacebar randomize shortcut. Swap text↔background. Chiko AI manifest (25+ actions: set colors, apply presets, generate harmonies [6 modes], generate from mood [12 moods], generate for industry [10 industries], check WCAG contrast, fix contrast issues, manage saved palettes, export). 3-column responsive layout (color sidebar/live preview/export panel) with mobile tabs. 0 TS errors. | Drake |

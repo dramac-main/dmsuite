@@ -651,11 +651,13 @@ export const toolCategories: ToolCategory[] = [
         id: "color-palette",
         name: "Color Palette Generator",
         description:
-          "Generate harmonious palettes from images, moods, keywords, or industry with WCAG contrast checks",
+          "Visualize your color palette on a real website in real time. 5 color roles, font pairing, WCAG contrast, presets, AI harmonies. Export to CSS, Tailwind, SCSS, JSON.",
         icon: "droplet",
-        status: "coming-soon",
-        tags: ["color", "palette", "harmony", "WCAG", "accessibility"],
-        outputs: ["png", "json", "svg"],
+        status: "ready",
+        devStatus: "complete",
+        tags: ["color", "palette", "harmony", "WCAG", "accessibility", "realtime", "fonts"],
+        aiProviders: ["claude"],
+        outputs: ["css", "json", "scss"],
       },
       {
         id: "typography-pairing",
@@ -2459,11 +2461,13 @@ export const toolCategories: ToolCategory[] = [
         id: "pdf-tools",
         name: "PDF Tools Suite",
         description:
-          "Merge, split, compress, convert, protect, and sign PDFs with smart processing",
+          "Merge, split, extract, rotate, compress, watermark, page-numbers, stamp, protect, metadata, convert, overlay — 18 powerful PDF operations, all client-side",
         icon: "fileText",
-        status: "coming-soon",
-        tags: ["PDF", "merge", "split", "compress", "sign"],
+        status: "ready",
+        devStatus: "complete",
+        tags: ["PDF", "merge", "split", "extract", "rotate", "compress", "watermark", "page-numbers", "stamp", "protect", "metadata", "convert", "overlay", "scale", "reorder", "reverse", "delete-pages", "multi-page-layout"],
         outputs: ["pdf"],
+        aiProviders: ["claude"],
       },
       // Ã¢â€â‚¬Ã¢â€â‚¬ Brand & Asset Management Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
