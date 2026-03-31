@@ -1,11 +1,11 @@
 # DMSuite — Tool Development Status Tracker
 
-> **Last updated:** 2026-03-28
+> **Last updated:** 2026-03-31
 > **Total tools registered:** 195+
 > **Tools with workspace UI:** 98
-> **Tools fully complete:** 17
-> **Tools available (ready):** 14
-> **Tools coming soon:** 183
+> **Tools fully complete:** 18
+> **Tools available (ready):** 15
+> **Tools coming soon:** 182
 
 ---
 
@@ -117,7 +117,7 @@ These have real workspace code (state management, canvas/editor, templates) but 
 | 9 | `flyer` | Flyer Maker | PosterFlyerWorkspace | `SCAFFOLD` |
 | 10 | `banner-ad` | Banner Ad | BannerAdWorkspace | `SCAFFOLD` |
 | 11 | `icon-illustration` | Icon & Illustration | IconGeneratorWorkspace | `SCAFFOLD` |
-| 12 | `background-remover` | Background Remover | BackgroundRemoverWorkspace | `SCAFFOLD` |
+| 12 | `background-remover` | Background Remover | BackgroundRemoverWorkspace | `COMPLETE` |
 | 13 | `image-enhancer` | Image Enhancer | ImageEnhancerWorkspace | `SCAFFOLD` |
 | 14 | `color-palette` | Color Palette | ColorPaletteWorkspace | `SCAFFOLD` |
 | 15 | `mockup-generator` | Mockup Generator | MockupGeneratorWorkspace | `SCAFFOLD` |
@@ -346,3 +346,4 @@ These already have substantial workspace code and would benefit most from a poli
 | 2025-07-22 | voice-flow (VoiceFlow AI Dictation) | Full build: Zustand+Immer+Zundo store, Groq Whisper Large V3 transcription API, Anthropic Claude Haiku 4.5 post-processing API, 6 tones (natural/professional/casual/technical/academic/creative), 14 languages, hold/tap recording modes, waveform visualization (Web Audio AnalyserNode), auto-copy, custom vocabulary, 3-panel responsive layout (recorder+history/transcript-editor/settings), Chiko AI manifest (10 actions + activity logging), store adapter, credit system (3cr short/8cr long), 0 hardcoded colors | Drake |
 | 2025-07-22 | presentation (Presentation Designer) | Fabric.js multi-slide scaffold: 10 Fabric.js JSON templates (Midnight Title/Content/Bullets/TwoColumn/Quote, Corporate Title/Content, Sunset Title, Green Section Divider, Blank) at 960×540 (16:9). Multi-slide workspace with SlideData interface, slide CRUD (add/duplicate/delete/move/select), slideJsonCache ref for slide switching, FabricEditor remount via key prop. 6 aspect ratios (16:9/4:3/16:10/A4-L/A4-P/Letter-L). AspectRatioPicker dropdown. Collapsible slides panel (w-56/w-10). SlideThumbnail with Framer Motion. Chiko manifest via createFabricManifest() + update_slide_details action (18 field mappings). Store adapter (960×540). Named objects (pres-title/subtitle/body/company/author/date/bullet1-4/headingLeft/Right/bodyLeft/Right/quoteText/quoteAuthor/sectionTitle/slideNumber). 0 TS errors. | Drake |
 | 2025-07-23 | audio-transcription (Audio Transcription) | Full build: Zustand+Immer+Zundo store, Groq Whisper Large V3 verbose_json transcription API (segments with timestamps), 17 languages + auto-detect, translate-to-English, drag-and-drop file upload (audio+video: MP3/MP4/M4A/WAV/OGG/WebM/MOV/FLAC/AAC/AVI/MKV), 3-tier credit system (short 5cr/standard 12cr/long 20cr based on file size), 4 export formats (TXT/SRT/VTT/JSON), 3-panel responsive layout (upload+history-settings/transcript-viewer/settings-panel), Chiko AI manifest (7 actions + activity logging), store adapter, 25MB max file size, 60s API timeout, 20 req/min rate limit | Drake |
+| 2026-03-31 | background-remover (Background Remover) | Full production build: Real AI-powered background removal using @imgly/background-removal (ONNX model, runs 100% client-side). Lazy-loaded model with progress tracking. 5 background replacement modes (transparent/solid color with 10 presets/gradient with 5 directions/custom image/blur original). Interactive before/after comparison slider with draggable handle (mouse+touch). Full-resolution canvas composite rendering for export. 3 export formats (PNG/JPEG/WebP) with quality control. Batch mode for multi-image processing. Real progress bar with percentage. Workspace events integration (workspace:dirty/save/progress). Responsive mobile tabs. No server required — all processing in-browser. | Drake |

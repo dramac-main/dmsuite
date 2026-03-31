@@ -458,10 +458,11 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Remove, replace, and composite backgrounds from any image with pixel-perfect edge detection",
         icon: "scissors",
-        status: "coming-soon",
+        status: "ready",
         tags: ["background", "remove", "cutout", "composite"],
         aiProviders: ["built-in"],
         outputs: ["png", "webp"],
+        devStatus: "complete",
       },
       {
         id: "image-enhancer",
