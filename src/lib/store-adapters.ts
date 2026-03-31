@@ -507,6 +507,31 @@ function getApparelAdapter(): StoreAdapter { return makeFabricAdapter(500, 600);
 function getPackagingAdapter(): StoreAdapter { return makeFabricAdapter(900, 700); }
 
 // ---------------------------------------------------------------------------
+// Presentation adapter (non-Fabric, Zustand store)
+// ---------------------------------------------------------------------------
+
+function getPresentationAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { usePresentationEditor } = require("@/stores/presentation-editor");
+  return {
+    getSnapshot: () => {
+      const { form } = usePresentationEditor.getState();
+      return { form };
+    },
+    restoreSnapshot: (data) => {
+      if (data.form) {
+        usePresentationEditor.getState().setForm(data.form as never);
+      }
+    },
+    resetStore: () => {
+      usePresentationEditor.getState().resetForm();
+      nukePersistStorage("dmsuite-presentation");
+    },
+    subscribe: (cb) => usePresentationEditor.subscribe(cb),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // VoiceFlow dictation adapter
 // ---------------------------------------------------------------------------
 
@@ -612,7 +637,7 @@ const ADAPTER_FACTORIES: Record<string, () => StoreAdapter> = {
   "packaging-design": getPackagingAdapter,
   "banner-ad": () => makeFabricAdapter(300, 250),
   // Presentation
-  "presentation": () => makeFabricAdapter(960, 540),
+  "presentation": getPresentationAdapter,
   // Audio & Voice
   "voice-flow": getVoiceFlowAdapter,
   "audio-transcription": getAudioTranscriptionAdapter,

@@ -32,4 +32,4 @@ export { createCalendarFabricManifest } from "./calendar-fabric";
 export { createApparelFabricManifest } from "./apparel-fabric";
 export { createPackagingFabricManifest } from "./packaging-fabric";
 export { createBannerAdFabricManifest } from "./banner-ad-fabric";
-export { createPresentationFabricManifest } from "./presentation-fabric";
+export { createPresentationManifest } from "./presentation-chiko";
