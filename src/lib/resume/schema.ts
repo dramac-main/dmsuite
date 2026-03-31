@@ -36,10 +36,55 @@ export const basicsSchema = z.object({
   location: z.string().default(""),
   website: urlSchema.default({ url: "", label: "" }),
   linkedin: z.string().default(""),
+  photo: z.string().default(""),
   customFields: z.array(customFieldSchema).default([]),
 });
 
 export type Basics = z.infer<typeof basicsSchema>;
+
+// ---------------------------------------------------------------------------
+// Profiles — Social links (GitHub, LinkedIn, Twitter, etc.)
+// ---------------------------------------------------------------------------
+
+export const profileItemSchema = z.object({
+  id: idSchema,
+  hidden: z.boolean().default(false),
+  network: z.string().default(""),
+  username: z.string().default(""),
+  url: z.string().default(""),
+  icon: z.string().default(""),
+});
+
+export type ProfileItem = z.infer<typeof profileItemSchema>;
+
+// ---------------------------------------------------------------------------
+// Publications — Academic papers, articles, blog posts
+// ---------------------------------------------------------------------------
+
+export const publicationItemSchema = z.object({
+  id: idSchema,
+  hidden: z.boolean().default(false),
+  name: z.string().default(""),
+  publisher: z.string().default(""),
+  date: z.string().default(""),
+  url: z.string().default(""),
+  description: z.string().default(""),
+});
+
+export type PublicationItem = z.infer<typeof publicationItemSchema>;
+
+// ---------------------------------------------------------------------------
+// Interests — Hobbies, passions
+// ---------------------------------------------------------------------------
+
+export const interestItemSchema = z.object({
+  id: idSchema,
+  hidden: z.boolean().default(false),
+  name: z.string().default(""),
+  keywords: z.array(z.string()).default([]),
+});
+
+export type InterestItem = z.infer<typeof interestItemSchema>;
 
 // ---------------------------------------------------------------------------
 // Section item schemas
@@ -211,6 +256,21 @@ export const sectionsSchema = z.object({
     items: z.array(referenceItemSchema).default([]),
     hidden: z.boolean().default(false),
   }).default({ title: "References", items: [], hidden: false }),
+  profiles: z.object({
+    title: z.string().default("Profiles"),
+    items: z.array(profileItemSchema).default([]),
+    hidden: z.boolean().default(false),
+  }).default({ title: "Profiles", items: [], hidden: false }),
+  publications: z.object({
+    title: z.string().default("Publications"),
+    items: z.array(publicationItemSchema).default([]),
+    hidden: z.boolean().default(false),
+  }).default({ title: "Publications", items: [], hidden: false }),
+  interests: z.object({
+    title: z.string().default("Interests"),
+    items: z.array(interestItemSchema).default([]),
+    hidden: z.boolean().default(false),
+  }).default({ title: "Interests", items: [], hidden: false }),
 });
 
 export type Sections = z.infer<typeof sectionsSchema>;
@@ -383,6 +443,7 @@ export const resumeDataSchema = z.object({
     location: "",
     website: { url: "", label: "" },
     linkedin: "",
+    photo: "",
     customFields: [],
   }),
   sections: sectionsSchema.default({
@@ -396,6 +457,9 @@ export const resumeDataSchema = z.object({
     projects: { title: "Projects", items: [], hidden: false },
     awards: { title: "Awards", items: [], hidden: false },
     references: { title: "References", items: [], hidden: false },
+    profiles: { title: "Profiles", items: [], hidden: false },
+    publications: { title: "Publications", items: [], hidden: false },
+    interests: { title: "Interests", items: [], hidden: false },
   }),
   customSections: z.array(customSectionSchema).default([]),
   metadata: metadataSchema.default({
@@ -589,7 +653,7 @@ export type ExperienceLevel = "entry" | "mid" | "senior" | "executive";
 export const BUILT_IN_SECTIONS = [
   "summary", "experience", "education", "skills",
   "certifications", "languages", "volunteer", "projects",
-  "awards", "references",
+  "awards", "references", "profiles", "publications", "interests",
 ] as const;
 
 export type BuiltInSectionId = typeof BUILT_IN_SECTIONS[number];

@@ -1,9 +1,8 @@
-// @ts-nocheck � Scaffold: store API in progress
 "use client";
 
 import { useState, useMemo } from "react";
 import { useInvoiceAccountingEditor, formatCurrency, calculateInvoiceTotals, calculatePAYE, calculateNAPSA } from "@/stores/invoice-accounting-editor";
-import { PageHeader, Btn, StatCard, TabStrip, Select, Field, Input, SectionDivider } from "../shared";
+import { PageHeader, Btn, StatCard, TabStrip, Field, Input, SectionDivider } from "../shared";
 
 type ReportKey = "revenue" | "profit-loss" | "tax-summary" | "aging" | "paye" | "napsa" | "client-revenue" | "expense-breakdown";
 
@@ -18,6 +17,8 @@ const REPORT_TABS: { key: ReportKey; label: string }[] = [
   { key: "expense-breakdown", label: "Expenses" },
 ];
 
+const ZERO_DISCOUNT = { type: "fixed" as const, value: 0 };
+
 export default function ReportsView() {
   const form = useInvoiceAccountingEditor((s) => s.form);
   const [activeReport, setActiveReport] = useState<ReportKey>("revenue");
@@ -26,7 +27,6 @@ export default function ReportsView() {
 
   const inRange = (date: string) => date >= dateFrom && date <= dateTo;
 
-  // Compute all metrics
   const metrics = useMemo(() => {
     const periodInvoices = form.invoices.filter((inv) => inRange(inv.date));
     const periodExpenses = form.expenses.filter((exp) => inRange(exp.date));
@@ -34,28 +34,26 @@ export default function ReportsView() {
 
     const totalRevenue = periodPayments.reduce((s, p) => s + p.amount, 0);
     const totalInvoiced = periodInvoices.reduce((s, inv) => {
-      const t = calculateInvoiceTotals(inv.lineItems, form.taxRates, inv.discount, inv.discount > 0 ? "fixed" : "fixed");
+      const t = calculateInvoiceTotals(inv.lineItems, inv.taxMode, inv.discount);
       return s + t.total;
     }, 0);
     const totalExpenses = periodExpenses.reduce((s, e) => s + e.amount, 0);
     const netProfit = totalRevenue - totalExpenses;
 
-    // Tax breakdown
     const taxCollected = periodInvoices.reduce((s, inv) => {
-      const t = calculateInvoiceTotals(inv.lineItems, form.taxRates, 0, "fixed");
-      return s + t.tax;
+      const t = calculateInvoiceTotals(inv.lineItems, inv.taxMode, ZERO_DISCOUNT);
+      return s + t.taxTotal;
     }, 0);
     const taxPaidOnExpenses = periodExpenses.reduce((s, exp) => {
       if (!exp.taxRateId) return s;
-      const tr = form.taxRates.find((t) => t.id === exp.taxRateId);
+      const tr = form.taxes.find((t) => t.id === exp.taxRateId);
       return s + (tr ? exp.amount * (tr.rate / 100) : 0);
     }, 0);
 
-    // Aging buckets
     const today = new Date();
     const aging = { current: 0, thirtyDays: 0, sixtyDays: 0, ninetyDays: 0, overNinety: 0 };
     form.invoices.filter((inv) => inv.status === "sent" || inv.status === "partial").forEach((inv) => {
-      const t = calculateInvoiceTotals(inv.lineItems, form.taxRates, inv.discount, inv.discount > 0 ? "fixed" : "fixed");
+      const t = calculateInvoiceTotals(inv.lineItems, inv.taxMode, inv.discount);
       const paid = form.payments.filter((p) => p.invoiceId === inv.id).reduce((s, p) => s + p.amount, 0);
       const balance = t.total - paid;
       if (balance <= 0) return;
@@ -68,17 +66,15 @@ export default function ReportsView() {
       else aging.overNinety += balance;
     });
 
-    // Client revenue
     const clientRevenue = form.clients.map((c) => {
       const clientInvs = periodInvoices.filter((inv) => inv.clientId === c.id);
       const rev = clientInvs.reduce((s, inv) => {
-        const t = calculateInvoiceTotals(inv.lineItems, form.taxRates, 0, "fixed");
+        const t = calculateInvoiceTotals(inv.lineItems, inv.taxMode, ZERO_DISCOUNT);
         return s + t.total;
       }, 0);
       return { name: c.name, revenue: rev, count: clientInvs.length };
     }).filter((c) => c.revenue > 0).sort((a, b) => b.revenue - a.revenue);
 
-    // Expense breakdown
     const expenseByCategory: Record<string, number> = {};
     periodExpenses.forEach((e) => {
       expenseByCategory[e.category] = (expenseByCategory[e.category] || 0) + e.amount;
@@ -86,6 +82,7 @@ export default function ReportsView() {
     const expenseBreakdown = Object.entries(expenseByCategory).map(([cat, amount]) => ({ category: cat, amount })).sort((a, b) => b.amount - a.amount);
 
     return { totalRevenue, totalInvoiced, totalExpenses, netProfit, taxCollected, taxPaidOnExpenses, aging, clientRevenue, expenseBreakdown, periodInvoices, periodPayments };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, dateFrom, dateTo]);
 
   const renderReport = () => {
@@ -97,19 +94,19 @@ export default function ReportsView() {
               <StatCard label="Total Invoiced" value={formatCurrency(metrics.totalInvoiced)} color="blue" />
               <StatCard label="Revenue (Paid)" value={formatCurrency(metrics.totalRevenue)} color="green" />
               <StatCard label="Payments" value={String(metrics.periodPayments.length)} color="purple" />
-              <StatCard label="Invoices" value={String(metrics.periodInvoices.length)} color="cyan" />
+              <StatCard label="Invoices" value={String(metrics.periodInvoices.length)} color="amber" />
             </div>
-            <SectionDivider label="Invoice Breakdown" />
+            <SectionDivider title="Invoice Breakdown" />
             <table className="w-full text-[11px]">
               <thead><tr className="text-gray-500 border-b border-gray-800/40"><th className="text-left py-2">Invoice</th><th className="text-left py-2">Client</th><th className="text-left py-2">Date</th><th className="text-right py-2">Amount</th><th className="text-left py-2">Status</th></tr></thead>
               <tbody>
                 {metrics.periodInvoices.slice(0, 50).map((inv) => {
-                  const t = calculateInvoiceTotals(inv.lineItems, form.taxRates, 0, "fixed");
+                  const t = calculateInvoiceTotals(inv.lineItems, inv.taxMode, inv.discount);
                   const client = form.clients.find((c) => c.id === inv.clientId);
                   return (
                     <tr key={inv.id} className="border-b border-gray-800/20">
-                      <td className="py-1.5 text-gray-300">{inv.invoiceNumber}</td>
-                      <td className="py-1.5 text-gray-400">{client?.name || "—"}</td>
+                      <td className="py-1.5 text-gray-300">{inv.number}</td>
+                      <td className="py-1.5 text-gray-400">{client?.name || "\u2014"}</td>
                       <td className="py-1.5 text-gray-500">{inv.date}</td>
                       <td className="py-1.5 text-right text-gray-300 tabular-nums">{formatCurrency(t.total)}</td>
                       <td className="py-1.5"><span className={`px-1.5 py-0.5 rounded-full text-[9px] ${inv.status === "paid" ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"}`}>{inv.status}</span></td>
@@ -129,7 +126,7 @@ export default function ReportsView() {
               <StatCard label="Expenses" value={formatCurrency(metrics.totalExpenses)} color="red" />
               <StatCard label="Net Profit" value={formatCurrency(metrics.netProfit)} color={metrics.netProfit >= 0 ? "green" : "red"} />
             </div>
-            <SectionDivider label="Expense Breakdown" />
+            <SectionDivider title="Expense Breakdown" />
             <div className="space-y-2">
               {metrics.expenseBreakdown.map((e) => (
                 <div key={e.category} className="flex items-center justify-between py-1.5 border-b border-gray-800/20">
@@ -150,14 +147,14 @@ export default function ReportsView() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <StatCard label="VAT Collected" value={formatCurrency(metrics.taxCollected)} color="blue" />
               <StatCard label="Tax on Expenses" value={formatCurrency(metrics.taxPaidOnExpenses)} color="purple" />
-              <StatCard label="Net Tax Payable" value={formatCurrency(metrics.taxCollected - metrics.taxPaidOnExpenses)} color="cyan" />
+              <StatCard label="Net Tax Payable" value={formatCurrency(metrics.taxCollected - metrics.taxPaidOnExpenses)} color="amber" />
             </div>
-            <SectionDivider label="Tax Rates Applied" />
+            <SectionDivider title="Tax Rates Applied" />
             <div className="space-y-2">
-              {form.taxRates.map((tr) => (
+              {form.taxes.map((tr) => (
                 <div key={tr.id} className="flex items-center justify-between py-1.5 border-b border-gray-800/20">
                   <div><span className="text-[11px] text-gray-300">{tr.name}</span><span className="text-[10px] text-gray-500 ml-2">{tr.rate}%</span></div>
-                  <span className="text-[10px] text-gray-500">{tr.type === "inclusive" ? "Inclusive" : "Exclusive"}</span>
+                  <span className="text-[10px] text-gray-500">{tr.isDefault ? "Default" : ""}</span>
                 </div>
               ))}
             </div>
@@ -272,7 +269,6 @@ export default function ReportsView() {
     <div className="flex flex-col h-full">
       <PageHeader title="Reports & Insights" subtitle="Financial analytics for your business" />
 
-      {/* Date range */}
       <div className="shrink-0 flex items-center gap-3 px-4 sm:px-6 py-3 border-b border-gray-800/40">
         <Field label="From"><Input type="date" value={dateFrom} onChange={setDateFrom} /></Field>
         <Field label="To"><Input type="date" value={dateTo} onChange={setDateTo} /></Field>
@@ -280,7 +276,7 @@ export default function ReportsView() {
         <Btn variant="ghost" size="xs" onClick={() => { const d = new Date(); d.setMonth(d.getMonth() - 1); setDateFrom(d.toISOString().split("T")[0]); setDateTo(new Date().toISOString().split("T")[0]); }}>Last 30d</Btn>
       </div>
 
-      <TabStrip tabs={REPORT_TABS} activeKey={activeReport} onChange={(k) => setActiveReport(k as ReportKey)} />
+      <TabStrip tabs={REPORT_TABS} active={activeReport} onChange={(k) => setActiveReport(k as ReportKey)} />
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         {renderReport()}
@@ -289,7 +285,6 @@ export default function ReportsView() {
   );
 }
 
-/* ─── Mini Calculators ───────────────────── */
 function PAYECalculator() {
   const [salary, setSalary] = useState("");
   const gross = Number(salary) || 0;

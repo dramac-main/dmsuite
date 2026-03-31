@@ -1,4 +1,4 @@
-// @ts-nocheck � Scaffold: store API in progress
+
 "use client";
 
 import { useMemo } from "react";
@@ -7,7 +7,6 @@ import {
   formatCurrency,
   calculateInvoiceTotals,
   getInvoiceBalance,
-  type Invoice,
 } from "@/stores/invoice-accounting-editor";
 import { StatCard, StatusBadge, Btn, formatDate } from "../shared";
 
@@ -66,7 +65,7 @@ export default function DashboardView() {
     <div className="h-full overflow-y-auto scrollbar-thin">
       <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
         {/* Welcome banner */}
-        <div className="rounded-xl border border-gray-800/40 bg-gradient-to-br from-primary-500/5 via-gray-900/50 to-gray-900/50 p-5">
+        <div className="rounded-xl border border-gray-800/40 bg-linear-to-br from-primary-500/5 via-gray-900/50 to-gray-900/50 p-5">
           <h2 className="text-base font-bold text-gray-100 mb-1">
             {form.business.name || "Your Business"}
           </h2>
@@ -166,7 +165,7 @@ export default function DashboardView() {
                     <button
                       key={inv.id}
                       onClick={() => setView("invoice-edit", inv.id)}
-                      className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors text-left"
+                      className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/2 transition-colors text-left"
                     >
                       <div>
                         <div className="text-[11px] font-medium text-gray-300">{inv.number}</div>

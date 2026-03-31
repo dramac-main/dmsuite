@@ -1,23 +1,32 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Color Palette Generator V2 Overhaul — COMPLETE
+**Phase:** Invoice & Accounting Hub — COMPLETE
 
-### Session: Color Palette Generator — Major V2 Rewrite
+### Session: Invoice Ninja-Inspired Invoice & Accounting Hub
 
-Complete rewrite of all 3 color palette files from scratch for professional-grade quality.
+Full build of Invoice Ninja-inspired invoicing & accounting platform, tailored for Zambian users.
 
-#### Rewritten Files (all deleted and recreated)
-- `src/stores/color-palette.ts` — New store: 36 curated presets (Realtime Default, GitHub Dark, Vercel Dark, Stripe Dark, Vaporwave, Aurora Borealis, etc.), 45+ Google Fonts with FontMeta, 20 professional font pairings with vibe tags, golden-angle random generation (AAA contrast guaranteed), intelligent dark↔light swap (adjusts all 5 roles), HSL/RGB utilities.
-- `src/lib/chiko/manifests/color-palette.ts` — Updated manifest: 25+ actions matching new store API, applyFontPairing action, harmony generators (6 modes), mood (12) and industry (10) palettes, contrast checking/fixing, full CRUD for saved palettes.
-- `src/components/workspaces/ColorPaletteWorkspace.tsx` — Complete UI overhaul: sidebar+preview layout with 6 tabs (Colors/Presets/Fonts/A11y/Saved/Export), professional toolbar with dark/light toggle, preview mode selector, mobile responsive with tab toggle, color strip header, typography preview section, polished color swatches with inline editing.
+#### Files Created
+- `src/stores/invoice-accounting-editor.ts` — Zustand+Immer+persist+temporal store (~1500 lines). All entity types (Invoice, Quote, CreditNote, PurchaseOrder, Payment, Expense, Client, Vendor, Product, Project, TimeEntry). Tax engine (calculateLineItemAmount, calculateInvoiceTotals). Zambian compliance (ZRA VAT 16%, PAYE brackets, NAPSA 5%+5%).
+- `src/components/workspaces/invoice-accounting/InvoiceAccountingWorkspace.tsx` — Main workspace with sidebar navigation + ViewRouter for 23 views. Chiko AI integration via chikoOnPrintRef + useChikoActions.
+- `src/components/workspaces/invoice-accounting/shared.tsx` — 15+ shared UI components (StatusBadge, PageHeader, TabStrip, StatCard, Field, Input, Textarea, Select, Btn, ClientPicker, VendorPicker, ProductPicker, TaxRatePicker, SectionDivider, BackButton, DeleteBtn, formatDate).
+- `src/components/workspaces/invoice-accounting/InvoiceAccountingRenderer.tsx` — Print renderer for 4 doc types (invoice/quote/credit-note/purchase-order) with 5 templates each (clean/corporate/minimal/bold/classic). ZRA TPIN, bank details, mobile money, signature lines.
+- `src/components/workspaces/invoice-accounting/views/` — 23 view files (DashboardView, InvoiceListView, InvoiceEditView, QuoteListView, QuoteEditView, CreditNoteListView, CreditNoteEditView, PurchaseOrderListView, PurchaseOrderEditView, PaymentListView, ExpenseListView, ExpenseEditView, ClientListView, ClientEditView, VendorListView, VendorEditView, ProductListView, ProductEditView, ProjectListView, ProjectEditView, TimeTrackingView, ReportsView, SettingsView).
+- `src/lib/chiko/manifests/invoice-accounting.ts` — Chiko manifest with 35+ actions across Navigation, CRUD, Line Items, Document Actions, Reports, and Settings categories. Registered in barrel index.ts.
 
-#### Key Improvements
-- **Palette Quality**: 36 curated presets (was 10). Golden-angle hue generation with perceptual lightness rules.
-- **Swap = Dark/Light Mode**: Intelligent `deriveSwappedPalette()` that adjusts all 5 color roles (boosts/darkens primary+accent, derives new secondary).
-- **Font System**: 45+ fonts with metadata (was 27). 20 curated pairings with vibe labels (was none). Search/filter for pairings.
-- **UI/UX**: Clean sidebar+preview layout replacing 3-column. Professional toolbar. Mobile-first responsive design.
-- **Chiko**: Full awareness of all new features including font pairings, expanded presets, and new swap behavior.
+#### Files Modified
+- `src/app/tools/[categoryId]/[toolId]/page.tsx` — Added `invoice-tracker` dynamic import
+- `src/data/tools.ts` — Changed invoice-tracker to status: "ready", devStatus: "complete"
+- `src/lib/store-adapters.ts` — Added `getInvoiceAccountingAdapter()` + ADAPTER_FACTORIES entry
+- `TOOL-STATUS.md` — Added COMPLETE #20, updated counts, changelog entry
+
+#### Key Features
+- **Zambian Tax**: ZRA VAT 16%, PAYE brackets (0-5100: 0%, 5101-7100: 20%, 7101-9200: 30%, 9200+: 37%), NAPSA 5%+5% capped K1,221.80/mo, Turnover Tax 4% for <K800,000
+- **Multi-currency**: ZMW, USD, EUR, GBP, ZAR
+- **Mobile Money**: MTN MoMo, Airtel Money, Zamtel Kwacha
+- **Print**: 5 templates × 4 document types = 20 print layouts
+- **Reports**: Revenue, P&L, Tax Summary, Aging, Client Statement, Expense Summary, PAYE Report, NAPSA Report
 
 ### Previous Session: Document Signer & Form Filler — COMPLETE
 

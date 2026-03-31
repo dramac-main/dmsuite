@@ -1,11 +1,11 @@
 # DMSuite — Tool Development Status Tracker
 
-> **Last updated:** 2026-03-31
+> **Last updated:** 2025-07-29
 > **Total tools registered:** 195+
-> **Tools with workspace UI:** 98
-> **Tools fully complete:** 20
-> **Tools available (ready):** 17
-> **Tools coming soon:** 181
+> **Tools with workspace UI:** 99
+> **Tools fully complete:** 21
+> **Tools available (ready):** 18
+> **Tools coming soon:** 180
 
 ---
 
@@ -99,6 +99,12 @@ All 9 route to `SalesBookDesignerWorkspace` with different `initialDocumentType`
 | # | Tool ID | Tool Name | Workspace | Notes |
 |---|---------|-----------|-----------|-------|
 | 19 | `document-signer` | Document Signer & Form Filler | document-signer/DocumentSignerWorkspace | DocuSeal-inspired. 14 field types (signature/initials/date/text/number/email/phone/checkbox/radio/select/textarea/file/stamp/image), multiple signers with color-coding, signature capture (draw/type/upload), 9 document templates (blank/nda/employment-contract/rental-agreement/service-agreement/sales-contract/freelancer-agreement/partnership-agreement/custom-upload), PDF upload, audit trail, email workflows, branding, 5-tab editor (Document/Fields/Signers/Style/Settings), Figma-style layers, Chiko AI manifest (24 actions + activity logging), Zustand+Immer+persist+Zundo store, print-ready |
+
+### Invoice & Accounting Hub
+
+| # | Tool ID | Tool Name | Workspace | Notes |
+|---|---------|-----------|-----------|-------|
+| 20 | `invoice-tracker` | Invoice & Accounting Hub | invoice-accounting/InvoiceAccountingWorkspace | Invoice Ninja-inspired. Full invoicing, quoting, payments, expense tracking, time tracking, credit notes, purchase orders, client/vendor management, project management, reporting (revenue/P&L/tax summary/aging/client statement/expense/PAYE/NAPSA). Zambian localization (ZMW, ZRA VAT 16%, PAYE brackets, NAPSA 5%+5% capped K1,221.80/mo, Turnover Tax 4%). 23 views (Dashboard/InvoiceList/InvoiceEdit/QuoteList/QuoteEdit/CreditNoteList/CreditNoteEdit/PurchaseOrderList/PurchaseOrderEdit/PaymentList/ExpenseList/ExpenseEdit/ClientList/ClientEdit/VendorList/VendorEdit/ProductList/ProductEdit/ProjectList/ProjectEdit/TimeTracking/Reports/Settings). Zustand+Immer+persist+temporal store (~1500 lines). 4-doc print renderer (invoice/quote/credit-note/purchase-order) with 5 templates (clean/corporate/minimal/bold/classic). Chiko AI manifest (35+ actions). Store adapter. Mobile money support (MTN/Airtel/Zamtel). Multi-currency (ZMW/USD/EUR/GBP/ZAR). 0 TS errors. |
 
 **Shared architecture (Sales Book):**
 - Store: `useSalesBookEditor` (Zustand + Immer + Zundo undo)
@@ -292,7 +298,7 @@ These are registered in `src/data/tools.ts` but have no workspace component in t
 ### Utilities & Workflow
 - `ai-image-chat`, `image-compression`, `brand-kit-manager`, `asset-library`
 - `style-guide`, `project-manager`, `client-brief`, `feedback-collector`
-- `invoice-tracker`, `barcode-generator`, `watermark-tool`
+- `barcode-generator`, `watermark-tool`
 - `color-converter`, `unit-converter`, `contrast-checker`
 
 </details>
@@ -363,3 +369,4 @@ These already have substantial workspace code and would benefit most from a poli
 | 2025-07-28 | color-palette (Color Palette Generator) | Full build: Realtime Colors-inspired palette generator. Zustand+Immer+persist store. 5 color roles (text/background/primary/secondary/accent). Font pairing (27 Google Fonts, heading+body). 4 live website preview layouts (Landing/Dashboard/Blog/E-commerce) with real-time color/font application. Mondrian 60-30-10 color distribution panel. WCAG contrast grid (6 pairs, AA/AAA/Fail badges). 10 curated preset palettes (Midnight Aurora/Sunrise Warm/Ocean Breeze/Forest Canopy/Cyber Neon/Elegant Mono/Coral Sunset/Royal Purple/Fresh Mint/Classic Professional). Save/load user palettes. Export (CSS Variables/Tailwind v4/SCSS/JSON). Share link generator. Spacebar randomize shortcut. Swap text↔background. Chiko AI manifest (25+ actions: set colors, apply presets, generate harmonies [6 modes], generate from mood [12 moods], generate for industry [10 industries], check WCAG contrast, fix contrast issues, manage saved palettes, export). 3-column responsive layout (color sidebar/live preview/export panel) with mobile tabs. 0 TS errors. | Drake |
 | 2025-07-28 | color-palette (Color Palette Generator) | **V2 Major Overhaul**: Rewrote all 3 files from scratch. 36 curated presets (Realtime Default, Indigo Dream, Cyber Neon, GitHub Dark, Vercel Dark, Stripe Dark, Vaporwave, Aurora Borealis, etc.). 45+ Google Fonts with FontMeta (name, category, weights). 20 professional font pairings with vibe tags (Modern Clean, Editorial, Startup, Elegant Serif, etc.). Golden-angle random palette generation engine with perceptual lightness rules and AAA contrast guarantee. Intelligent dark↔light mode swap (derives new values for all 5 color roles, not just text/bg flip). Polished sidebar+preview layout with 6 tabs (Colors, Presets, Fonts, A11y, Saved, Export). Rich previews (Landing/Dashboard/Blog/E-commerce). Font pairing selector with search and vibe labels. WCAG contrast checker (5 pairs with visual badges). Auto-fix contrast issues. Mobile-responsive (tab toggle between Controls and Preview). Chiko manifest updated (25+ actions including applyFontPairing). 0 TS errors. | Drake |
 | 2025-07-29 | document-signer (Document Signer & Form Filler) | Full build: DocuSeal-inspired document filling & signing platform. Zustand+Immer+persist+Zundo store. 14 field types (signature/initials/date/text/number/email/phone/checkbox/radio/select/textarea/file/stamp/image). Multiple signers with color-coding. Signature capture (draw canvas with color/width controls, type with 6 font choices, upload mode). 9 document templates (blank/nda/employment-contract/rental-agreement/service-agreement/sales-contract/freelancer-agreement/partnership-agreement/custom-upload). PDF upload support. Audit trail with timestamped entries. Email workflows (subject templates, reminders, CC, reply-to). Branding (company name/logo/brand color). 5-tab editor (Document/Fields/Signers/Style/Settings). Figma-style layers panel. Chiko AI manifest (24 actions + activity logging). Store adapter. Print-ready PDF export. 0 TS errors. | Drake |
+| 2025-07-29 | invoice-tracker (Invoice & Accounting Hub) | Full build: Invoice Ninja-inspired invoicing & accounting platform. Zambian localization (ZMW, ZRA VAT 16%, PAYE brackets, NAPSA 5%+5% capped K1,221.80/mo, Turnover Tax 4%). Zustand+Immer+persist+temporal store (~1500 lines). 23 views (Dashboard/InvoiceList+Edit/QuoteList+Edit/CreditNoteList+Edit/PurchaseOrderList+Edit/PaymentList/ExpenseList+Edit/ClientList+Edit/VendorList+Edit/ProductList+Edit/ProjectList+Edit/TimeTracking/Reports/Settings). 4-doc print renderer (invoice/quote/credit-note/purchase-order) with 5 templates each (clean/corporate/minimal/bold/classic). Shared UI components (StatusBadge/PageHeader/TabStrip/StatCard/ClientPicker/VendorPicker/ProductPicker/TaxRatePicker/SectionDivider). Multi-currency (ZMW/USD/EUR/GBP/ZAR). Mobile money (MTN MoMo/Airtel Money/Zamtel Kwacha). Chiko AI manifest (35+ actions: create/edit all document types, add line items, set tax rates, generate reports, manage clients/vendors/products). Store adapter. 0 TS errors. | Drake |

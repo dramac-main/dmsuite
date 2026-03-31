@@ -2549,6 +2549,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Full invoicing & accounting platform — invoices, quotes, payments, expenses, time tracking, credit notes, purchase orders, and ZRA/NAPSA compliance for Zambian businesses",
         icon: "receipt",
+        status: "ready",
         devStatus: "complete",
         tags: ["invoice", "accounting", "payment", "tracking", "freelance", "ZRA", "NAPSA", "Zambia"],
       },

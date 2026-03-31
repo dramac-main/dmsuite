@@ -1,4 +1,4 @@
-// @ts-nocheck � Scaffold: store API in progress
+
 "use client";
 
 import { useMemo, useState } from "react";
