@@ -153,6 +153,7 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   "image-enhancer": dynamic(() => import("@/components/workspaces/ImageEnhancerWorkspace")),
   "pdf-tools": dynamic(() => import("@/components/workspaces/pdf-tools/PDFToolsWorkspace")),
   "document-signer": dynamic(() => import("@/components/workspaces/document-signer/DocumentSignerWorkspace")),
+  "invoice-tracker": dynamic(() => import("@/components/workspaces/invoice-accounting/InvoiceAccountingWorkspace")),
 };
 
 export default function ToolWorkspacePage() {

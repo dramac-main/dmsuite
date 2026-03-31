@@ -104,6 +104,9 @@ export const CREDIT_COSTS: Record<string, number> = {
   "image-search":            0,
   "file-upload":             0,
 
+  /* ── Nominal tier (client-side tools, no API cost) ─────── */
+  "palette-project":         1,
+
   /* ── Micro tier ────────────────────────────────────────── */
   "chat-message":            5,
   "image-analysis":          5,
@@ -258,7 +261,7 @@ export const TOOL_CREDIT_MAP: Record<string, string> = {
   "ai-image-generator":    "logo-generation",
   "image-enhancer":        "image-analysis",
   "background-remover":    "image-analysis",
-  "color-palette":         "chat-message",
+  "color-palette":         "palette-project",
   "photo-retoucher":       "image-analysis",
   "presentation":          "presentation-design",
 

@@ -2545,12 +2545,12 @@ export const toolCategories: ToolCategory[] = [
       },
       {
         id: "invoice-tracker",
-        name: "Invoice & Payment Tracker",
+        name: "Invoice & Accounting Hub",
         description:
-          "Track invoices, payments, and outstanding balances for freelance and agency work",
+          "Full invoicing & accounting platform — invoices, quotes, payments, expenses, time tracking, credit notes, purchase orders, and ZRA/NAPSA compliance for Zambian businesses",
         icon: "receipt",
-        status: "coming-soon",
-        tags: ["invoice", "payment", "tracking", "freelance"],
+        devStatus: "complete",
+        tags: ["invoice", "accounting", "payment", "tracking", "freelance", "ZRA", "NAPSA", "Zambia"],
       },
       // Ã¢â€â‚¬Ã¢â€â‚¬ Design Utilities Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {

@@ -599,6 +599,31 @@ function getDocumentSignerAdapter(): StoreAdapter {
 }
 
 // ---------------------------------------------------------------------------
+// Invoice & Accounting Hub adapter
+// ---------------------------------------------------------------------------
+
+function getInvoiceAccountingAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useInvoiceAccountingEditor } = require("@/stores/invoice-accounting-editor");
+  return {
+    getSnapshot: () => {
+      const { form } = useInvoiceAccountingEditor.getState();
+      return { form };
+    },
+    restoreSnapshot: (data) => {
+      if (data.form) {
+        useInvoiceAccountingEditor.getState().setForm(data.form as never);
+      }
+    },
+    resetStore: () => {
+      useInvoiceAccountingEditor.getState().resetForm();
+      nukePersistStorage("dmsuite-invoice-tracker");
+    },
+    subscribe: (cb) => useInvoiceAccountingEditor.subscribe(cb),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Generic adapter for tools that don't have dedicated stores
 // ---------------------------------------------------------------------------
 
@@ -664,6 +689,8 @@ const ADAPTER_FACTORIES: Record<string, () => StoreAdapter> = {
   "audio-transcription": getAudioTranscriptionAdapter,
   // Document Signing
   "document-signer": getDocumentSignerAdapter,
+  // Invoice & Accounting
+  "invoice-tracker": getInvoiceAccountingAdapter,
 };
 
 /**
