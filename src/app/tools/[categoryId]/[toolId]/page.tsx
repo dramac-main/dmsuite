@@ -39,7 +39,7 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   "flyer": dynamic(() => import("@/components/workspaces/PosterFlyerWorkspace")),
   "banner-ad": dynamic(() => import("@/components/workspaces/BannerAdWorkspace")),
   "presentation": dynamic(() => import("@/components/workspaces/presentation-designer/PresentationDesignerWorkspace")),
-  "resume-cv": dynamic(() => import("@/components/workspaces/ResumeCVWorkspaceV2")),
+  "resume-cv": dynamic(() => import("@/components/workspaces/resume-cv/ResumeBuilderWorkspace")),
   "invoice-designer": dynamic(() => import("@/components/workspaces/SalesBookWrappers").then((m) => ({ default: m.InvoiceBookWorkspace }))),
   "email-template": dynamic(() => import("@/components/workspaces/EmailTemplateWorkspace")),
 

@@ -72,7 +72,7 @@ function KeywordsInput({
               onClick={() => removeKeyword(i)}
               className="text-primary-400/50 hover:text-primary-400 transition-colors"
             >
-              <SIcon d="M6 18L18 6M6 6l12 12" className="w-2.5 h-2.5" />
+              <SIcon d="M6 18L18 6M6 6l12 12" />
             </button>
           </span>
         ))}
@@ -237,7 +237,7 @@ export default function ListSection({
             >
               {/* Drag handle */}
               <span className="text-gray-600 cursor-grab active:cursor-grabbing">
-                <SIcon d="M4 8h16M4 16h16" className="w-3 h-3" />
+                <SIcon d="M4 8h16M4 16h16" />
               </span>
 
               {/* Label */}
@@ -263,9 +263,9 @@ export default function ListSection({
                   className="p-1 text-gray-600 hover:text-gray-400"
                 >
                   {isHidden ? (
-                    <SIcon d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M3 3l18 18" className="w-3 h-3" />
+                    <SIcon d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M3 3l18 18" />
                   ) : (
-                    <SIcon d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" className="w-3 h-3" />
+                    <SIcon d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   )}
                 </button>
                 <button
@@ -276,13 +276,12 @@ export default function ListSection({
                   title="Delete"
                   className="p-1 text-gray-600 hover:text-red-400"
                 >
-                  <SIcon d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" className="w-3 h-3" />
+                  <SIcon d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </button>
               </div>
 
               <SIcon
                 d={isExpanded ? "M19 9l-7 7-7-7" : "M9 5l7 7-7 7"}
-                className="w-3 h-3 text-gray-600"
               />
             </div>
 
@@ -300,8 +299,8 @@ export default function ListSection({
                           <FormTextarea
                             label={field.label}
                             value={(val as string) ?? ""}
-                            onChange={(v) =>
-                              handleFieldChange(index, field.key, v)
+                            onChange={(e) =>
+                              handleFieldChange(index, field.key, e.target.value)
                             }
                             placeholder={field.placeholder}
                             rows={3}
@@ -316,11 +315,16 @@ export default function ListSection({
                           <FormSelect
                             label={field.label}
                             value={(val as string) ?? ""}
-                            onChange={(v) =>
-                              handleFieldChange(index, field.key, v)
+                            onChange={(e) =>
+                              handleFieldChange(index, field.key, e.target.value)
                             }
-                            options={field.options}
-                          />
+                          >
+                            {field.options.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </FormSelect>
                         </div>
                       );
                     }
@@ -350,8 +354,8 @@ export default function ListSection({
                         <FormInput
                           label={field.label}
                           value={(val as string) ?? ""}
-                          onChange={(v) =>
-                            handleFieldChange(index, field.key, v)
+                          onChange={(e) =>
+                            handleFieldChange(index, field.key, e.target.value)
                           }
                           placeholder={field.placeholder}
                         />
@@ -371,7 +375,7 @@ export default function ListSection({
           onClick={handleAdd}
           className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-primary-400 hover:text-primary-300 bg-primary-500/5 hover:bg-primary-500/10 rounded-md border border-primary-500/20 transition-colors flex-1 justify-center"
         >
-          <SIcon d="M12 4v16m8-8H4" className="w-3 h-3" />
+          <SIcon d="M12 4v16m8-8H4" />
           Add Item
         </button>
         {isCustom && (
@@ -380,7 +384,7 @@ export default function ListSection({
             className="px-2 py-1.5 text-[11px] text-red-400/60 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
             title="Remove section"
           >
-            <SIcon d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" className="w-3.5 h-3.5" />
+            <SIcon d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </button>
         )}
       </div>

@@ -125,7 +125,7 @@ export function createResumeManifest(options?: ResumeManifestOptions): ChikoActi
       {
         name: "addSectionItem",
         description:
-          "Add a new item to a resume section. sectionKey can be: experience, education, skills, certifications, languages, volunteer, projects, awards, references",
+          "Add a new item to a resume section. sectionKey can be: experience, education, skills, certifications, languages, volunteer, projects, awards, references, profiles, publications, interests",
         parameters: {
           type: "object",
           properties: {
@@ -135,7 +135,7 @@ export function createResumeManifest(options?: ResumeManifestOptions): ChikoActi
             },
             item: {
               type: "object",
-              description: "Item data — fields depend on section type. For experience: { company, position, location, startDate, endDate, description }. For education: { institution, degree, field, graduationYear }. For skills: { name, keywords: [], proficiency }.",
+              description: "Item data — fields depend on section type. For experience: { company, position, location, startDate, endDate, description }. For education: { institution, degree, field, graduationYear }. For skills: { name, keywords: [], proficiency }. For profiles: { network, username, url }. For publications: { name, publisher, date, url, description }. For interests: { name, keywords: [] }.",
             },
           },
           required: ["sectionKey", "item"],

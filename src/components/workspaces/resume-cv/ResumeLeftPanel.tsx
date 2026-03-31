@@ -331,7 +331,6 @@ export default function ResumeLeftPanel({ onStartOver, onOpenDesign }: ResumeLef
               >
                 <SIcon
                   d={meta.icon}
-                  className="w-4 h-4 text-gray-500 mr-2.5 shrink-0"
                 />
                 <span className="text-[13px] font-medium text-gray-200 flex-1">
                   {section?.title || meta.label}
@@ -357,16 +356,15 @@ export default function ResumeLeftPanel({ onStartOver, onOpenDesign }: ResumeLef
                   className="p-1 text-gray-600 hover:text-gray-400 transition-colors"
                 >
                   {isHidden ? (
-                    <SIcon d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" className="w-3.5 h-3.5" />
+                    <SIcon d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                   ) : (
-                    <SIcon d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" className="w-3.5 h-3.5" />
+                    <SIcon d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   )}
                 </button>
 
                 {/* Expand chevron */}
                 <SIcon
                   d={isExpanded ? "M19 9l-7 7-7-7" : "M9 5l7 7-7 7"}
-                  className="w-3.5 h-3.5 text-gray-600 ml-1"
                 />
               </button>
 
@@ -401,7 +399,6 @@ export default function ResumeLeftPanel({ onStartOver, onOpenDesign }: ResumeLef
             >
               <SIcon
                 d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                className="w-4 h-4 text-gray-500 mr-2.5 shrink-0"
               />
               <span className="text-[13px] font-medium text-gray-200 flex-1">
                 {cs.title}
@@ -411,7 +408,6 @@ export default function ResumeLeftPanel({ onStartOver, onOpenDesign }: ResumeLef
               </span>
               <SIcon
                 d={expandedSections.has(cs.id) ? "M19 9l-7 7-7-7" : "M9 5l7 7-7 7"}
-                className="w-3.5 h-3.5 text-gray-600"
               />
             </button>
             {expandedSections.has(cs.id) && (
@@ -439,7 +435,7 @@ export default function ResumeLeftPanel({ onStartOver, onOpenDesign }: ResumeLef
           onClick={() => addCustomSection("Custom Section")}
           className="flex items-center justify-center gap-2 w-full py-2.5 text-[12px] text-gray-500 hover:text-gray-300 hover:bg-gray-800/40 rounded-lg border border-dashed border-gray-700/30 hover:border-gray-600/40 transition-colors"
         >
-          <SIcon d="M12 4v16m8-8H4" className="w-3.5 h-3.5" />
+          <SIcon d="M12 4v16m8-8H4" />
           Add Custom Section
         </button>
 

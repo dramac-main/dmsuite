@@ -158,7 +158,6 @@ export default function ResumeDesignDrawer({
                     <span className="absolute top-1.5 right-1.5">
                       <SIcon
                         d="M5 13l4 4L19 7"
-                        className="w-3 h-3 text-primary-400"
                       />
                     </span>
                   )}
@@ -231,9 +230,14 @@ export default function ResumeDesignDrawer({
             <FormSelect
               label="Font Pairing"
               value={meta.typography.fontPairing}
-              onChange={(v) => setFontPairing(v)}
-              options={fontOptions}
-            />
+              onChange={(e) => setFontPairing(e.target.value)}
+            >
+              {fontOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </FormSelect>
             <div className="mt-3">
               <span className="text-[11px] text-gray-500 mb-1.5 block">
                 Font Scale
@@ -264,14 +268,13 @@ export default function ResumeDesignDrawer({
             <FormSelect
               label="Page Format"
               value={meta.page.format}
-              onChange={setPageFormat}
-              options={[
-                { label: "A4", value: "a4" },
-                { label: "US Letter", value: "letter" },
-                { label: "A5", value: "a5" },
-                { label: "B5", value: "b5" },
-              ]}
-            />
+              onChange={(e) => setPageFormat(e.target.value)}
+            >
+              <option value="a4">A4</option>
+              <option value="letter">US Letter</option>
+              <option value="a5">A5</option>
+              <option value="b5">B5</option>
+            </FormSelect>
           </section>
 
           {/* ── Margins ── */}

@@ -29,7 +29,7 @@ export default function SummarySection() {
       <FormTextarea
         label="Professional Summary"
         value={summary.content}
-        onChange={updateContent}
+        onChange={(e) => updateContent(e.target.value)}
         placeholder="A brief 2-3 sentence summary highlighting your career objectives, key skills, and what you bring to potential employers..."
         rows={5}
       />

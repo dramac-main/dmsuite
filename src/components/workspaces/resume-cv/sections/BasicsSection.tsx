@@ -80,12 +80,11 @@ export default function BasicsSection() {
             <div className="flex items-center justify-center w-full h-full">
               <SIcon
                 d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                className="w-5 h-5 text-gray-500"
               />
             </div>
           )}
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <SIcon d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z M15 13a3 3 0 11-6 0 3 3 0 016 0z" className="w-4 h-4 text-white" />
+            <SIcon d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
           </div>
         </button>
         <div className="flex-1 space-y-1">
@@ -113,13 +112,13 @@ export default function BasicsSection() {
         <FormInput
           label="Full Name"
           value={basics.name}
-          onChange={(v) => update("name", v)}
+          onChange={(e) => update("name", e.target.value)}
           placeholder="John Doe"
         />
         <FormInput
           label="Headline"
           value={basics.headline}
-          onChange={(v) => update("headline", v)}
+          onChange={(e) => update("headline", e.target.value)}
           placeholder="Senior Software Engineer"
         />
       </div>
@@ -129,13 +128,13 @@ export default function BasicsSection() {
         <FormInput
           label="Email"
           value={basics.email}
-          onChange={(v) => update("email", v)}
+          onChange={(e) => update("email", e.target.value)}
           placeholder="john@example.com"
         />
         <FormInput
           label="Phone"
           value={basics.phone}
-          onChange={(v) => update("phone", v)}
+          onChange={(e) => update("phone", e.target.value)}
           placeholder="+1 234 567 890"
         />
       </div>
@@ -144,7 +143,7 @@ export default function BasicsSection() {
       <FormInput
         label="Location"
         value={basics.location}
-        onChange={(v) => update("location", v)}
+        onChange={(e) => update("location", e.target.value)}
         placeholder="City, Country"
       />
 
@@ -153,13 +152,13 @@ export default function BasicsSection() {
         <FormInput
           label="Website URL"
           value={basics.website.url}
-          onChange={(v) => updateWebsite("url", v)}
+          onChange={(e) => updateWebsite("url", e.target.value)}
           placeholder="https://johndoe.com"
         />
         <FormInput
           label="Website Label"
           value={basics.website.label}
-          onChange={(v) => updateWebsite("label", v)}
+          onChange={(e) => updateWebsite("label", e.target.value)}
           placeholder="Portfolio"
         />
       </div>
@@ -168,7 +167,7 @@ export default function BasicsSection() {
       <FormInput
         label="LinkedIn"
         value={basics.linkedin}
-        onChange={(v) => update("linkedin", v)}
+        onChange={(e) => update("linkedin", e.target.value)}
         placeholder="https://linkedin.com/in/johndoe"
       />
     </div>

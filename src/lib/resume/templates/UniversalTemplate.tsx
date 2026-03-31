@@ -3838,6 +3838,18 @@ function ExtraSections({
     shouldShow("references", pageLayout) &&
     vis(sections.references?.items).length > 0;
 
+  const showProfiles =
+    shouldShow("profiles", pageLayout) &&
+    vis(sections.profiles?.items).length > 0;
+
+  const showPublications =
+    shouldShow("publications", pageLayout) &&
+    vis(sections.publications?.items).length > 0;
+
+  const showInterests =
+    shouldShow("interests", pageLayout) &&
+    vis(sections.interests?.items).length > 0;
+
   // Custom sections: always render (no template natively handles them)
   const visibleCustom = customSections.filter(
     (cs) => !cs.hidden && cs.items?.length > 0 && shouldShow(cs.id, pageLayout)
@@ -3846,6 +3858,7 @@ function ExtraSections({
   const hasAnything =
     showProjects || showCertifications || showLanguages ||
     showVolunteer || showAwards || showReferences ||
+    showProfiles || showPublications || showInterests ||
     visibleCustom.length > 0;
 
   if (!hasAnything) return null;
@@ -4006,6 +4019,81 @@ function ExtraSections({
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Profiles (social links) */}
+      {showProfiles && (
+        <div className="section">
+          <div className="section-title">
+            {sections.profiles.title || "Profiles"}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 16px" }}>
+            {vis(sections.profiles.items).map((p, i) => (
+              <div key={i} style={{ minWidth: 140, marginBottom: 4 }}>
+                <span style={{ fontWeight: 600 }}>{p.network}</span>
+                {p.username && (
+                  <span style={{ opacity: 0.7, marginLeft: 6, fontSize: "0.9em" }}>
+                    {p.username}
+                  </span>
+                )}
+                {p.url && (
+                  <div style={{ fontSize: "0.8em", opacity: 0.6 }}>
+                    {p.url}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Publications */}
+      {showPublications && (
+        <div className="section">
+          <div className="section-title">
+            {sections.publications.title || "Publications"}
+          </div>
+          {vis(sections.publications.items).map((pub, i) => (
+            <div key={i} className="exp-item publication-item">
+              <div className="exp-header">
+                <div className="exp-role">{pub.name}</div>
+                {pub.date && <div className="exp-date">{pub.date}</div>}
+              </div>
+              {pub.publisher && (
+                <div className="exp-company">{pub.publisher}</div>
+              )}
+              {pub.description && (
+                <div className="exp-desc">{pub.description}</div>
+              )}
+              {pub.url && (
+                <div className="exp-desc" style={{ opacity: 0.7, fontSize: "0.85em" }}>
+                  {pub.url}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Interests */}
+      {showInterests && (
+        <div className="section">
+          <div className="section-title">
+            {sections.interests.title || "Interests"}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 16px" }}>
+            {vis(sections.interests.items).map((interest, i) => (
+              <div key={i} style={{ minWidth: 100, marginBottom: 4 }}>
+                <span style={{ fontWeight: 600 }}>{interest.name}</span>
+                {interest.keywords && interest.keywords.length > 0 && (
+                  <div style={{ fontSize: "0.85em", opacity: 0.7 }}>
+                    {interest.keywords.join(", ")}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

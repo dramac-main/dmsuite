@@ -82,7 +82,7 @@ export default function ResumeBuilderWorkspace() {
     () => createResumeManifest(),
     []
   );
-  useChikoActions(manifest);
+  useChikoActions(() => manifest);
 
   // ── Dispatch workspace events on resume changes ──
   const resumeRef = useRef(resume);
@@ -168,7 +168,7 @@ export default function ResumeBuilderWorkspace() {
   const bottomActions = useMemo(
     () => [
       { key: "editor", label: "Edit", icon: <SIcon d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /> },
-      { key: "preview", label: "Preview", icon: <Icons.eye /> },
+      { key: "preview", label: "Preview", icon: Icons.preview },
       { key: "design", label: "Design", icon: <SIcon d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z" /> },
     ],
     []
@@ -177,29 +177,10 @@ export default function ResumeBuilderWorkspace() {
   // ── Export handler ──
   const handleExport = useCallback(
     async (format: string) => {
-      const expMod = await import("@/lib/resume/export");
-      const container = printAreaRef.current;
-      if (!container) return;
-      switch (format) {
-        case "pdf":
-          await expMod.exportToPdf(container, resume);
-          break;
-        case "docx":
-          expMod.exportToDocx(resume);
-          break;
-        case "txt":
-          expMod.exportToTxt(resume);
-          break;
-        case "json":
-          expMod.exportToJson(resume);
-          break;
-        case "clipboard":
-          expMod.copyToClipboard(resume);
-          break;
-        case "print":
-          expMod.printResume(container);
-          break;
-      }
+      const { exportResume } = await import("@/lib/resume/export");
+      await exportResume(format as import("@/lib/resume/export").ExportFormat, {
+        resume,
+      });
       dispatchProgress("exported");
     },
     [resume]
@@ -224,13 +205,13 @@ export default function ResumeBuilderWorkspace() {
             </div>
             <div className="flex items-center gap-1">
               <IconButton
-                icon={<Icons.undo />}
+                icon={Icons.undo}
                 title="Undo (Ctrl+Z)"
                 onClick={() => undo()}
                 disabled={pastStates.length === 0}
               />
               <IconButton
-                icon={<Icons.redo />}
+                icon={Icons.redo}
                 title="Redo (Ctrl+Y)"
                 onClick={() => redo()}
                 disabled={futureStates.length === 0}

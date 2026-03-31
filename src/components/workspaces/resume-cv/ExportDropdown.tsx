@@ -53,12 +53,10 @@ export default function ExportDropdown({ onExport }: ExportDropdownProps) {
       >
         <SIcon
           d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-          className="w-3.5 h-3.5"
         />
         Export
         <SIcon
           d={open ? "M19 9l-7 7-7-7" : "M19 15l-7-7-7 7"}
-          className="w-2.5 h-2.5 text-gray-500"
         />
       </button>
 
@@ -70,7 +68,7 @@ export default function ExportDropdown({ onExport }: ExportDropdownProps) {
               onClick={() => handleExport(opt.key)}
               className="flex items-center gap-2.5 w-full px-3 py-2 text-[12px] text-gray-400 hover:text-gray-200 hover:bg-gray-800/60 transition-colors"
             >
-              <SIcon d={opt.icon} className="w-3.5 h-3.5 shrink-0" />
+              <SIcon d={opt.icon} />
               {opt.label}
             </button>
           ))}

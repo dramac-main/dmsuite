@@ -56,7 +56,7 @@ All 9 route to `SalesBookDesignerWorkspace` with different `initialDocumentType`
 
 | # | Tool ID | Tool Name | Workspace | Notes |
 |---|---------|-----------|-----------|-------|
-| 12 | `resume-cv` | Resume & CV Builder | ResumeCVWorkspaceV2 | 8-step wizard, multi-template, ATS optimization, 3-panel layout |
+| 12 | `resume-cv` | Resume & CV Builder | ResumeBuilderWorkspace | Reactive Resume-inspired two-panel editor, 20 pro templates, 13 sections + custom sections, drag-drop reorder, design drawer, live A4 preview |
 
 ### Certificate Designer
 
@@ -186,7 +186,7 @@ These have real workspace code (state management, canvas/editor, templates) but 
 | 40 | `portfolio-builder` | Portfolio Builder | PortfolioBuilderWorkspace | `SCAFFOLD` |
 | 41 | `greeting-card` | Greeting Card | GreetingCardWorkspace | `SCAFFOLD` |
 | 42 | `presentation` | Presentation | PresentationWorkspace | `SCAFFOLD` |
-| 43 | `resume-cv` | Resume / CV | ResumeCVWorkspaceV2 | `COMPLETE` |
+| 43 | `resume-cv` | Resume / CV | ResumeBuilderWorkspace | `COMPLETE` |
 | 44 | `email-template` | Email Template | EmailTemplateWorkspace | `SCAFFOLD` |
 
 ### Video & Motion Studio
@@ -328,7 +328,7 @@ These are registered in `src/data/tools.ts` but have no workspace component in t
 
 These already have substantial workspace code and would benefit most from a polish pass:
 
-1. **`resume-cv`** — ResumeCVWorkspaceV2 (8-step wizard, multi-template, ATS optimization)
+1. **`resume-cv`** — ResumeBuilderWorkspace (Reactive Resume-inspired two-panel editor, 20 pro templates, 13 sections + custom, drag-drop reorder)
 2. **`business-card`** — BusinessCardWorkspace (7-step wizard, logo upload, generation)
 3. **`presentation`** — PresentationWorkspace (slide management, PptxGenJS export)
 4. **`brochure`** — BrochureDesignerWorkspace (bi/tri/z/gate folds, panel content)
@@ -370,3 +370,4 @@ These already have substantial workspace code and would benefit most from a poli
 | 2025-07-28 | color-palette (Color Palette Generator) | **V2 Major Overhaul**: Rewrote all 3 files from scratch. 36 curated presets (Realtime Default, Indigo Dream, Cyber Neon, GitHub Dark, Vercel Dark, Stripe Dark, Vaporwave, Aurora Borealis, etc.). 45+ Google Fonts with FontMeta (name, category, weights). 20 professional font pairings with vibe tags (Modern Clean, Editorial, Startup, Elegant Serif, etc.). Golden-angle random palette generation engine with perceptual lightness rules and AAA contrast guarantee. Intelligent dark↔light mode swap (derives new values for all 5 color roles, not just text/bg flip). Polished sidebar+preview layout with 6 tabs (Colors, Presets, Fonts, A11y, Saved, Export). Rich previews (Landing/Dashboard/Blog/E-commerce). Font pairing selector with search and vibe labels. WCAG contrast checker (5 pairs with visual badges). Auto-fix contrast issues. Mobile-responsive (tab toggle between Controls and Preview). Chiko manifest updated (25+ actions including applyFontPairing). 0 TS errors. | Drake |
 | 2025-07-29 | document-signer (Document Signer & Form Filler) | Full build: DocuSeal-inspired document filling & signing platform. Zustand+Immer+persist+Zundo store. 14 field types (signature/initials/date/text/number/email/phone/checkbox/radio/select/textarea/file/stamp/image). Multiple signers with color-coding. Signature capture (draw canvas with color/width controls, type with 6 font choices, upload mode). 9 document templates (blank/nda/employment-contract/rental-agreement/service-agreement/sales-contract/freelancer-agreement/partnership-agreement/custom-upload). PDF upload support. Audit trail with timestamped entries. Email workflows (subject templates, reminders, CC, reply-to). Branding (company name/logo/brand color). 5-tab editor (Document/Fields/Signers/Style/Settings). Figma-style layers panel. Chiko AI manifest (24 actions + activity logging). Store adapter. Print-ready PDF export. 0 TS errors. | Drake |
 | 2025-07-29 | invoice-tracker (Invoice & Accounting Hub) | Full build: Invoice Ninja-inspired invoicing & accounting platform. Zambian localization (ZMW, ZRA VAT 16%, PAYE brackets, NAPSA 5%+5% capped K1,221.80/mo, Turnover Tax 4%). Zustand+Immer+persist+temporal store (~1500 lines). 23 views (Dashboard/InvoiceList+Edit/QuoteList+Edit/CreditNoteList+Edit/PurchaseOrderList+Edit/PaymentList/ExpenseList+Edit/ClientList+Edit/VendorList+Edit/ProductList+Edit/ProjectList+Edit/TimeTracking/Reports/Settings). 4-doc print renderer (invoice/quote/credit-note/purchase-order) with 5 templates each (clean/corporate/minimal/bold/classic). Shared UI components (StatusBadge/PageHeader/TabStrip/StatCard/ClientPicker/VendorPicker/ProductPicker/TaxRatePicker/SectionDivider). Multi-currency (ZMW/USD/EUR/GBP/ZAR). Mobile money (MTN MoMo/Airtel Money/Zamtel Kwacha). Chiko AI manifest (35+ actions: create/edit all document types, add line items, set tax rates, generate reports, manage clients/vendors/products). Store adapter. 0 TS errors. | Drake |
+| 2025-07-30 | resume-cv (Resume & CV Builder) | **Complete Reactive Resume-inspired rebuild**: Replaced 8-step wizard with two-panel editor (left scrollable sections + right live A4 preview). 7 new components (ResumeBuilderWorkspace, ResumeLeftPanel, BasicsSection, SummarySection, ListSection, ResumeDesignDrawer, ExportDropdown). 13 built-in sections (basics/summary/profiles/experience/education/skills/certifications/languages/projects/volunteer/awards/publications/interests/references) + custom sections. Schema enhanced with 3 new sections (profiles/publications/interests) + photo field. ListSection: generic drag-drop reorder, per-item expand/collapse, keywords chip editor, text/textarea/select/keywords field types. Design drawer: 20 pro template grid, accent color swatches + custom picker, color intensity, font pairing selector, font scale, page format, margins, section/line spacing, sidebar width. Mobile: bottom bar toggles editor/preview/design views. Keyboard shortcuts (Ctrl+Z/Y). Chiko manifest updated. AI generator types inlined (removed wizard dependency). 0 TS errors. | Drake |

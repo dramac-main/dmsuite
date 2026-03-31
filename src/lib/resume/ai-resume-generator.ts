@@ -16,14 +16,54 @@ import {
   FONT_PAIRINGS,
   ACCENT_COLORS,
 } from "./schema";
-import type {
-  PersonalInfo,
-  TargetRole,
-  ExperienceEntry,
-  EducationEntry,
-  BriefPreferences,
-  OptionalSections,
-} from "@/stores/resume-cv-wizard";
+// Inline types — previously imported from deleted resume-cv-wizard store
+export interface PersonalInfo {
+  name: string;
+  email: string;
+  phone: string;
+  location: string;
+  linkedin: string;
+  website: string;
+}
+
+export interface TargetRole {
+  jobTitle: string;
+  experienceLevel: "entry" | "mid" | "senior" | "executive";
+  industry: string;
+  additionalContext: string;
+}
+
+export interface ExperienceEntry {
+  company: string;
+  position: string;
+  startDate: string;
+  endDate: string;
+  isCurrent: boolean;
+  description: string;
+}
+
+export interface EducationEntry {
+  institution: string;
+  degree: string;
+  field: string;
+  graduationYear: string;
+}
+
+export interface BriefPreferences {
+  style: ResumeStyle;
+  pageCount: number;
+  accentColor: string;
+  contentFidelityMode: string;
+  jobDescription: string;
+  description: string;
+}
+
+export interface OptionalSections {
+  certifications: { name: string; issuer: string; year: string }[];
+  languages: { name: string; proficiency: string }[];
+  volunteer: { organization: string; role: string; description: string }[];
+  projects: { name: string; description: string; url: string }[];
+}
 
 // ---------------------------------------------------------------------------
 // Input type (matches what StepGeneration sends)
@@ -899,7 +939,7 @@ export function buildFallbackResume(input: ResumeGenerationInput): ResumeData {
         id: createItemId(),
         hidden: false,
         name: l.name,
-        proficiency: l.proficiency,
+        proficiency: l.proficiency as "native" | "fluent" | "intermediate" | "basic",
       }));
       data.sections.languages.hidden = false;
     }

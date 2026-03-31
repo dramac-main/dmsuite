@@ -1,34 +1,42 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Invoice & Accounting Hub — COMPLETE
+**Phase:** Resume & CV Builder — COMPLETE (Reactive Resume-inspired rebuild)
 
-### Session: Invoice Ninja-Inspired Invoice & Accounting Hub
+### Session: Resume Builder Complete Rebuild
 
-Full build of Invoice Ninja-inspired invoicing & accounting platform, tailored for Zambian users.
+Replaced 8-step wizard with Reactive Resume-inspired two-panel editor.
 
 #### Files Created
-- `src/stores/invoice-accounting-editor.ts` — Zustand+Immer+persist+temporal store (~1500 lines). All entity types (Invoice, Quote, CreditNote, PurchaseOrder, Payment, Expense, Client, Vendor, Product, Project, TimeEntry). Tax engine (calculateLineItemAmount, calculateInvoiceTotals). Zambian compliance (ZRA VAT 16%, PAYE brackets, NAPSA 5%+5%).
-- `src/components/workspaces/invoice-accounting/InvoiceAccountingWorkspace.tsx` — Main workspace with sidebar navigation + ViewRouter for 23 views. Chiko AI integration via chikoOnPrintRef + useChikoActions.
-- `src/components/workspaces/invoice-accounting/shared.tsx` — 15+ shared UI components (StatusBadge, PageHeader, TabStrip, StatCard, Field, Input, Textarea, Select, Btn, ClientPicker, VendorPicker, ProductPicker, TaxRatePicker, SectionDivider, BackButton, DeleteBtn, formatDate).
-- `src/components/workspaces/invoice-accounting/InvoiceAccountingRenderer.tsx` — Print renderer for 4 doc types (invoice/quote/credit-note/purchase-order) with 5 templates each (clean/corporate/minimal/bold/classic). ZRA TPIN, bank details, mobile money, signature lines.
-- `src/components/workspaces/invoice-accounting/views/` — 23 view files (DashboardView, InvoiceListView, InvoiceEditView, QuoteListView, QuoteEditView, CreditNoteListView, CreditNoteEditView, PurchaseOrderListView, PurchaseOrderEditView, PaymentListView, ExpenseListView, ExpenseEditView, ClientListView, ClientEditView, VendorListView, VendorEditView, ProductListView, ProductEditView, ProjectListView, ProjectEditView, TimeTrackingView, ReportsView, SettingsView).
-- `src/lib/chiko/manifests/invoice-accounting.ts` — Chiko manifest with 35+ actions across Navigation, CRUD, Line Items, Document Actions, Reports, and Settings categories. Registered in barrel index.ts.
+- `src/components/workspaces/resume-cv/ResumeBuilderWorkspace.tsx` — Main two-panel workspace (left scrollable sections + right live A4 preview). Chiko manifest, keyboard shortcuts (Ctrl+Z/Y), Google Fonts loading, mobile bottom bar.
+- `src/components/workspaces/resume-cv/ResumeLeftPanel.tsx` — 13 section accordion editors with field definitions, import/clear, custom section support.
+- `src/components/workspaces/resume-cv/sections/BasicsSection.tsx` — Name, headline, photo upload (base64, 2MB limit), contact details.
+- `src/components/workspaces/resume-cv/sections/SummarySection.tsx` — Professional summary textarea.
+- `src/components/workspaces/resume-cv/sections/ListSection.tsx` — Generic list editor for all list-type sections. Drag-drop reorder, expand/collapse, KeywordsInput (chip-style tags), text/textarea/select/keywords field types.
+- `src/components/workspaces/resume-cv/ResumeDesignDrawer.tsx` — Slide-over panel: 20-template grid, accent colors + custom picker, color intensity, font pairing selector, font scale, page format, margins, spacing, sidebar width.
+- `src/components/workspaces/resume-cv/ExportDropdown.tsx` — Export menu (PDF/DOCX/TXT/JSON/clipboard/print).
 
 #### Files Modified
-- `src/app/tools/[categoryId]/[toolId]/page.tsx` — Added `invoice-tracker` dynamic import
-- `src/data/tools.ts` — Changed invoice-tracker to status: "ready", devStatus: "complete"
-- `src/lib/store-adapters.ts` — Added `getInvoiceAccountingAdapter()` + ADAPTER_FACTORIES entry
-- `TOOL-STATUS.md` — Added COMPLETE #20, updated counts, changelog entry
+- `src/lib/resume/schema.ts` — Added profiles/publications/interests sections + photo field (previous session).
+- `src/lib/resume/templates/UniversalTemplate.tsx` — Profiles/publications/interests rendering in ExtraSections.
+- `src/lib/chiko/manifests/resume.ts` — Updated section descriptions for new sections.
+- `src/app/tools/[categoryId]/[toolId]/page.tsx` — Updated dynamic import to ResumeBuilderWorkspace.
+- `src/lib/resume/ai-resume-generator.ts` — Inlined 6 wizard types (PersonalInfo, TargetRole, etc.) since wizard store was deleted.
+- `TOOL-STATUS.md` — Updated workspace name, notes, and changelog.
 
-#### Key Features
-- **Zambian Tax**: ZRA VAT 16%, PAYE brackets (0-5100: 0%, 5101-7100: 20%, 7101-9200: 30%, 9200+: 37%), NAPSA 5%+5% capped K1,221.80/mo, Turnover Tax 4% for <K800,000
-- **Multi-currency**: ZMW, USD, EUR, GBP, ZAR
-- **Mobile Money**: MTN MoMo, Airtel Money, Zamtel Kwacha
-- **Print**: 5 templates × 4 document types = 20 print layouts
-- **Reports**: Revenue, P&L, Tax Summary, Aging, Client Statement, Expense Summary, PAYE Report, NAPSA Report
+#### Files Deleted (previous session)
+- 26+ old wizard/editor files from `src/components/workspaces/` (ResumeCVWorkspaceV2, ResumeCVSteps, etc.)
+- `src/stores/resume-cv-wizard.ts`
 
-### Previous Session: Document Signer & Form Filler — COMPLETE
+#### Key Decisions
+- Two-panel layout replaces 8-step wizard (Reactive Resume UX pattern)
+- SIcon component does NOT accept className (fixed all usages)
+- FormInput/FormTextarea/FormSelect use standard HTML event handlers (onChange receives event, not value)
+- Icons object contains pre-rendered Elements (not Components)
+- useChikoActions expects a function returning manifest, not the manifest directly
+- Export module uses single `exportResume(format, options)` API
+
+### Previous Session: Invoice & Accounting Hub — COMPLETE
 
 #### SVG Import Engine (use-editor.ts)
 - `loadSvg(svgString)` — replaces entire canvas with SVG content (scales to fit workspace)
