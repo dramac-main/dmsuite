@@ -1,35 +1,28 @@
 "use client";
 
 // =============================================================================
-// DMSuite — Color Palette Generator Workspace (Realtime Colors Inspired)
-// Visualise your 5-colour palette on a real website layout in real time.
-// Text · Background · Primary · Secondary · Accent + Font pairing.
+// DMSuite — Color Palette Generator Workspace (Realtime Colors–inspired)
+// Professional UI/UX, fully responsive, dark/light swap, rich previews.
 // =============================================================================
 
-import { useState, useCallback, useEffect, useMemo, useRef, type RefObject } from "react";
-import {
-  IconRefresh,
-  IconCopy,
-  IconCheck,
-  IconDownload,
-  IconChevronDown,
-  IconEye,
-  IconType,
-  IconDroplet,
-  IconPalette,
-  IconSparkles,
-  IconPlus,
-  IconTrash,
-  IconStar,
-} from "@/components/icons";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChikoActions } from "@/hooks/useChikoActions";
 import { createColorPaletteManifest } from "@/lib/chiko/manifests/color-palette";
 import {
   useColorPaletteStore,
   PRESET_PALETTES,
+  FONT_PAIRINGS,
   FONT_OPTIONS,
+  FONT_CATALOG,
+  contrastRatio,
+  hexToRgb,
+  hexToHsl,
+  hslToHex,
   type ColorRoles,
   type PreviewMode,
+  type ExportFormat,
+  type CuratedFontPairing,
+  type PresetPalette,
 } from "@/stores/color-palette";
 
 // ---------------------------------------------------------------------------
@@ -38,953 +31,996 @@ import {
 
 const loadedFonts = new Set<string>();
 
-function loadGoogleFont(family: string) {
-  if (loadedFonts.has(family)) return;
-  loadedFonts.add(family);
+function loadGoogleFont(name: string) {
+  if (typeof window === "undefined" || loadedFonts.has(name)) return;
+  loadedFonts.add(name);
+  const meta = FONT_CATALOG.find((f) => f.name === name);
+  const weights = meta?.weights || "400;700";
+  const id = `gf-${name.replace(/\s+/g, "-").toLowerCase()}`;
+  if (document.getElementById(id)) return;
   const link = document.createElement("link");
+  link.id = id;
   link.rel = "stylesheet";
-  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@400;500;600;700&display=swap`;
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(name)}:wght@${weights}&display=swap`;
   document.head.appendChild(link);
 }
 
 // ---------------------------------------------------------------------------
-// WCAG contrast helpers
+// Clipboard helper
 // ---------------------------------------------------------------------------
 
-function hexToLuminance(hex: string): number {
-  const h = hex.replace("#", "");
-  const r = parseInt(h.slice(0, 2), 16) / 255;
-  const g = parseInt(h.slice(2, 4), 16) / 255;
-  const b = parseInt(h.slice(4, 6), 16) / 255;
-  const toLinear = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
-}
-
-function contrastRatio(hex1: string, hex2: string): number {
-  const l1 = hexToLuminance(hex1);
-  const l2 = hexToLuminance(hex2);
-  const lighter = Math.max(l1, l2);
-  const darker = Math.min(l1, l2);
-  return (lighter + 0.05) / (darker + 0.05);
-}
-
-function wcagBadge(fg: string, bg: string) {
-  const ratio = contrastRatio(fg, bg);
-  if (ratio >= 7) return { label: "AAA", color: "#16a34a" };
-  if (ratio >= 4.5) return { label: "AA", color: "#2563eb" };
-  if (ratio >= 3) return { label: "AA18", color: "#f59e0b" };
-  return { label: "Fail", color: "#dc2626" };
-}
-
-// ---------------------------------------------------------------------------
-// Export generators
-// ---------------------------------------------------------------------------
-
-function exportCSS(c: ColorRoles, fonts: { heading: string; body: string }) {
-  return `:root {
-  --color-text: ${c.text};
-  --color-background: ${c.background};
-  --color-primary: ${c.primary};
-  --color-secondary: ${c.secondary};
-  --color-accent: ${c.accent};
-  --font-heading: '${fonts.heading}', sans-serif;
-  --font-body: '${fonts.body}', sans-serif;
-}`;
-}
-
-function exportTailwind(c: ColorRoles) {
-  return `@theme inline {
-  --color-text: ${c.text};
-  --color-background: ${c.background};
-  --color-primary: ${c.primary};
-  --color-secondary: ${c.secondary};
-  --color-accent: ${c.accent};
-}`;
-}
-
-function exportSCSS(c: ColorRoles, fonts: { heading: string; body: string }) {
-  return `$color-text: ${c.text};
-$color-background: ${c.background};
-$color-primary: ${c.primary};
-$color-secondary: ${c.secondary};
-$color-accent: ${c.accent};
-$font-heading: '${fonts.heading}', sans-serif;
-$font-body: '${fonts.body}', sans-serif;`;
-}
-
-function exportJSON(c: ColorRoles, fonts: { heading: string; body: string }) {
-  return JSON.stringify({ colors: c, fonts }, null, 2);
-}
-
-function exportSVG(c: ColorRoles) {
-  const roles = Object.entries(c);
-  const w = 60, gap = 4, pad = 16;
-  const totalW = pad * 2 + roles.length * w + (roles.length - 1) * gap;
-  const h = 100;
-  const rects = roles.map(([label, hex], i) => {
-    const x = pad + i * (w + gap);
-    return `  <rect x="${x}" y="${pad}" width="${w}" height="${h - 40}" rx="8" fill="${hex}" />
-  <text x="${x + w / 2}" y="${h - 8}" text-anchor="middle" font-size="9" font-family="sans-serif" fill="#666">${label}</text>
-  <text x="${x + w / 2}" y="${h + 4}" text-anchor="middle" font-size="8" font-family="monospace" fill="#999">${hex}</text>`;
-  });
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${h + 12}" width="${totalW}" height="${h + 12}">\n${rects.join("\n")}\n</svg>`;
-}
-
-// ---------------------------------------------------------------------------
-// Click-outside hook
-// ---------------------------------------------------------------------------
-
-function useClickOutside(ref: RefObject<HTMLElement | null>, handler: () => void) {
-  useEffect(() => {
-    const listener = (e: MouseEvent | TouchEvent) => {
-      if (!ref.current || ref.current.contains(e.target as Node)) return;
-      handler();
-    };
-    document.addEventListener("mousedown", listener);
-    document.addEventListener("touchstart", listener);
-    return () => {
-      document.removeEventListener("mousedown", listener);
-      document.removeEventListener("touchstart", listener);
-    };
-  }, [ref, handler]);
-}
-
-// ---------------------------------------------------------------------------
-// Safe clipboard write
-// ---------------------------------------------------------------------------
-
-async function copyToClipboard(text: string): Promise<boolean> {
-  try {
+async function copyToClipboard(text: string) {
+  if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    // Fallback for non-secure contexts
+  } else {
     const ta = document.createElement("textarea");
     ta.value = text;
-    ta.style.cssText = "position:fixed;left:-9999px";
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
     document.body.appendChild(ta);
     ta.select();
-    const ok = document.execCommand("copy");
+    document.execCommand("copy");
     document.body.removeChild(ta);
-    return ok;
   }
 }
 
 // ---------------------------------------------------------------------------
-// Tiny color swatch component
+// Tiny SVG icons (inline for performance — no extra imports needed)
 // ---------------------------------------------------------------------------
 
-function ColorSwatch({ color, role, onChange }: { color: string; role: string; onChange: (hex: string) => void }) {
-  const [editing, setEditing] = useState(false);
-  const [hex, setHex] = useState(color);
+const Ico = {
+  shuffle: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <polyline points="16 3 21 3 21 8" /><line x1="4" y1="20" x2="21" y2="3" /><polyline points="21 16 21 21 16 21" /><line x1="15" y1="15" x2="21" y2="21" /><line x1="4" y1="4" x2="9" y2="9" />
+    </svg>
+  ),
+  swap: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
+    </svg>
+  ),
+  copy: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+      <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  ),
+  check: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  ),
+  download: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  ),
+  save: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />
+    </svg>
+  ),
+  trash: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+      <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m5-3h4a1 1 0 0 1 1 1v1H9V4a1 1 0 0 1 1-1z" />
+    </svg>
+  ),
+  chevDown: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  ),
+  sun: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+    </svg>
+  ),
+  moon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  ),
+  type: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <polyline points="4 7 4 4 20 4 20 7" /><line x1="9" y1="20" x2="15" y2="20" /><line x1="12" y1="4" x2="12" y2="20" />
+    </svg>
+  ),
+  code: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
+    </svg>
+  ),
+  eye: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+    </svg>
+  ),
+  layers: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" />
+    </svg>
+  ),
+  heart: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  ),
+  close: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  ),
+  grid: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+    </svg>
+  ),
+  contrast: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <circle cx="12" cy="12" r="10" /><path d="M12 2v20" /><path d="M12 2a10 10 0 0 1 0 20" fill="currentColor" />
+    </svg>
+  ),
+};
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+/** Color swatch with interactive color picker */
+function ColorSwatch({
+  role,
+  hex,
+  label,
+  onChange,
+}: {
+  role: string;
+  hex: string;
+  label: string;
+  onChange: (hex: string) => void;
+}) {
   const [copied, setCopied] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [inputVal, setInputVal] = useState(hex);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { setHex(color); }, [color]);
+  useEffect(() => { setInputVal(hex); }, [hex]);
 
-  const handleHexChange = (v: string) => {
-    setHex(v);
-    if (/^#[0-9a-fA-F]{6}$/.test(v)) onChange(v);
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await copyToClipboard(hex);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
   };
 
-  const handleCopy = () => {
-    copyToClipboard(color).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1200);
-    });
+  const handleSubmit = () => {
+    const v = inputVal.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+      onChange(v);
+    } else if (/^[0-9a-fA-F]{6}$/.test(v)) {
+      onChange(`#${v}`);
+    }
+    setEditing(false);
   };
 
   return (
-    <div className="flex flex-col items-center gap-1.5">
-      <button
-        onClick={() => inputRef.current?.click()}
-        className="relative w-14 h-14 rounded-xl border-2 border-white/10 shadow-lg transition-transform hover:scale-110 cursor-pointer"
-        style={{ backgroundColor: color }}
-        title={`Pick ${role} color`}
-      >
-        <input
-          ref={inputRef}
-          type="color"
-          value={color}
-          onChange={(e) => onChange(e.target.value)}
-          className="absolute inset-0 opacity-0 cursor-pointer"
-        />
-      </button>
-      <span className="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-medium">
-        {role}
-      </span>
-      {editing ? (
-        <input
-          className="w-20 text-center text-xs font-mono bg-transparent border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 text-gray-800 dark:text-gray-200 outline-none"
-          value={hex}
-          onChange={(e) => handleHexChange(e.target.value)}
-          onBlur={() => setEditing(false)}
-          onKeyDown={(e) => e.key === "Enter" && setEditing(false)}
-          autoFocus
-        />
-      ) : (
+    <div className="group flex flex-col gap-2">
+      <div className="relative">
+        {/* Color preview circle */}
+        <label className="relative block w-full aspect-square rounded-2xl cursor-pointer overflow-hidden border-2 border-white/10 shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-xl">
+          <div className="absolute inset-0" style={{ backgroundColor: hex }} />
+          <input
+            type="color"
+            value={hex}
+            onChange={(e) => onChange(e.target.value)}
+            className="absolute inset-0 opacity-0 cursor-pointer"
+          />
+        </label>
+        {/* Copy button overlay */}
         <button
-          onClick={() => setEditing(true)}
-          onContextMenu={(e) => { e.preventDefault(); handleCopy(); }}
-          className="text-xs font-mono text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors cursor-text"
-          title="Click to edit · Right-click to copy"
+          onClick={handleCopy}
+          className="absolute top-1.5 right-1.5 p-1 rounded-md bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+          title="Copy hex"
         >
-          {color.toUpperCase()}
+          {copied ? Ico.check : Ico.copy}
         </button>
-      )}
-      <button
-        onClick={handleCopy}
-        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-        title="Copy hex"
+      </div>
+      {/* Label */}
+      <div className="text-center">
+        <p className="text-[11px] uppercase tracking-wider font-medium text-gray-400 dark:text-gray-500 mb-0.5">{label}</p>
+        {editing ? (
+          <input
+            ref={inputRef}
+            value={inputVal}
+            onChange={(e) => setInputVal(e.target.value)}
+            onBlur={handleSubmit}
+            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            className="w-full text-center text-xs font-mono bg-transparent border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 outline-none focus:border-primary-500"
+            autoFocus
+          />
+        ) : (
+          <button
+            onClick={() => setEditing(true)}
+            className="text-xs font-mono text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
+          >
+            {hex.toUpperCase()}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Contrast badge */
+function ContrastBadge({ ratio, small }: { ratio: number; small?: boolean }) {
+  const label = ratio >= 7 ? "AAA" : ratio >= 4.5 ? "AA" : "FAIL";
+  const color =
+    ratio >= 7
+      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+      : ratio >= 4.5
+        ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+        : "bg-red-500/20 text-red-400 border-red-500/30";
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border font-medium ${color} ${small ? "text-[10px] px-1.5 py-0" : "text-xs px-2 py-0.5"}`}>
+      {label} <span className={small ? "text-[9px]" : "text-[11px]"}>{ratio.toFixed(1)}</span>
+    </span>
+  );
+}
+
+/** Dropdown selector */
+function Dropdown({
+  label,
+  value,
+  options,
+  onChange,
+  icon,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => void;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      {icon && <span className="text-gray-400">{icon}</span>}
+      <label className="text-[11px] uppercase tracking-wider font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
+        {label}
+      </label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="flex-1 min-w-0 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 transition-colors appearance-none cursor-pointer"
       >
-        {copied ? <IconCheck className="w-3.5 h-3.5 text-green-500" /> : <IconCopy className="w-3.5 h-3.5" />}
-      </button>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Preview Layouts
+// Preview layouts
 // ---------------------------------------------------------------------------
 
-function LandingPreview({ c, fonts }: { c: ColorRoles; fonts: { heading: string; body: string } }) {
+function PreviewLanding({ colors, fonts }: { colors: ColorRoles; fonts: { heading: string; body: string } }) {
   return (
-    <div className="w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: c.background, fontFamily: `'${fonts.body}', sans-serif` }}>
+    <div className="rounded-xl overflow-hidden border" style={{ backgroundColor: colors.background, borderColor: colors.secondary, fontFamily: `'${fonts.body}', sans-serif` }}>
       {/* Nav */}
-      <nav className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: c.secondary }}>
-        <span className="text-lg font-bold" style={{ color: c.primary, fontFamily: `'${fonts.heading}', sans-serif` }}>YourBrand</span>
-        <div className="flex gap-4 text-sm" style={{ color: c.text }}>
+      <nav className="flex items-center justify-between px-4 sm:px-6 py-3 border-b" style={{ borderColor: colors.secondary }}>
+        <span className="font-bold text-sm sm:text-base" style={{ color: colors.primary, fontFamily: `'${fonts.heading}', sans-serif` }}>Brand</span>
+        <div className="hidden sm:flex gap-4 text-xs" style={{ color: colors.text }}>
           <span>Features</span><span>Pricing</span><span>About</span>
         </div>
-        <button className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: c.background }}>
-          Sign Up
-        </button>
+        <button className="px-3 py-1 rounded-lg text-xs font-medium" style={{ backgroundColor: colors.primary, color: colors.background }}>Get Started</button>
       </nav>
       {/* Hero */}
-      <section className="px-8 py-16 text-center">
-        <h1 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: c.text, fontFamily: `'${fonts.heading}', sans-serif` }}>
-          Build something beautiful
+      <div className="px-4 sm:px-8 py-8 sm:py-12 text-center">
+        <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold mb-3 leading-tight" style={{ color: colors.text, fontFamily: `'${fonts.heading}', sans-serif` }}>
+          Build something amazing today
         </h1>
-        <p className="max-w-lg mx-auto mb-8 leading-relaxed" style={{ color: c.text, opacity: 0.75 }}>
-          A modern toolkit for designers and developers. Ship fast, look great, delight every user on every device.
+        <p className="text-sm sm:text-base max-w-lg mx-auto mb-6 leading-relaxed" style={{ color: `${colors.text}cc` }}>
+          The all-in-one platform for teams who want to ship faster. Start free, scale as you grow.
         </p>
         <div className="flex justify-center gap-3">
-          <button className="px-6 py-2.5 rounded-lg font-semibold transition-opacity hover:opacity-90" style={{ backgroundColor: c.primary, color: c.background }}>
-            Get Started
+          <button className="px-5 py-2.5 rounded-lg text-sm font-semibold transition-transform hover:scale-105" style={{ backgroundColor: colors.primary, color: colors.background }}>
+            Start Free Trial
           </button>
-          <button className="px-6 py-2.5 rounded-lg font-semibold border-2 transition-opacity hover:opacity-90" style={{ borderColor: c.accent, color: c.accent }}>
+          <button className="px-5 py-2.5 rounded-lg text-sm font-semibold border" style={{ color: colors.primary, borderColor: colors.primary }}>
             Learn More
           </button>
         </div>
-      </section>
-      {/* Feature Cards */}
-      <section className="px-8 pb-12 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {["Fast Performance", "Beautiful Design", "Easy Integration"].map((t, i) => (
-          <div key={i} className="p-5 rounded-xl" style={{ backgroundColor: c.secondary }}>
-            <div className="w-8 h-8 rounded-lg mb-3 flex items-center justify-center text-xs font-bold" style={{ backgroundColor: i === 2 ? c.accent : c.primary, color: c.background }}>
-              {["⚡", "🎨", "🔗"][i]}
+      </div>
+      {/* Feature cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 px-4 sm:px-8 pb-8">
+        {[
+          { title: "Lightning Fast", desc: "Optimized for speed at every level" },
+          { title: "Secure by Default", desc: "Enterprise-grade security built in" },
+          { title: "Always Available", desc: "99.99% uptime guaranteed SLA" },
+        ].map((f) => (
+          <div key={f.title} className="p-4 rounded-xl" style={{ backgroundColor: colors.secondary }}>
+            <div className="w-8 h-8 rounded-lg mb-3 flex items-center justify-center" style={{ backgroundColor: colors.accent }}>
+              <span className="text-xs font-bold" style={{ color: colors.background }}>✦</span>
             </div>
-            <h3 className="font-semibold mb-1.5" style={{ color: c.text, fontFamily: `'${fonts.heading}', sans-serif` }}>{t}</h3>
-            <p className="text-sm leading-relaxed" style={{ color: c.text, opacity: 0.7 }}>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor.
-            </p>
+            <h3 className="text-sm font-semibold mb-1" style={{ color: colors.text, fontFamily: `'${fonts.heading}', sans-serif` }}>{f.title}</h3>
+            <p className="text-xs leading-relaxed" style={{ color: `${colors.text}99` }}>{f.desc}</p>
           </div>
         ))}
-      </section>
-      {/* CTA Banner */}
-      <section className="mx-8 mb-8 p-8 rounded-xl text-center" style={{ backgroundColor: c.primary }}>
-        <h2 className="text-xl font-bold mb-2" style={{ color: c.background, fontFamily: `'${fonts.heading}', sans-serif` }}>Ready to get started?</h2>
-        <p className="text-sm mb-4" style={{ color: c.background, opacity: 0.85 }}>Join thousands of creators building with our platform.</p>
-        <button className="px-6 py-2 rounded-lg font-semibold transition-opacity hover:opacity-90" style={{ backgroundColor: c.background, color: c.primary }}>
-          Start Free Trial
-        </button>
-      </section>
-      {/* Footer */}
-      <footer className="px-8 py-6 text-center text-xs border-t" style={{ color: c.text, opacity: 0.5, borderColor: c.secondary }}>
-        © 2025 YourBrand. All rights reserved.
-      </footer>
+      </div>
     </div>
   );
 }
 
-function DashboardPreview({ c, fonts }: { c: ColorRoles; fonts: { heading: string; body: string } }) {
+function PreviewDashboard({ colors, fonts }: { colors: ColorRoles; fonts: { heading: string; body: string } }) {
   return (
-    <div className="w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: c.background, fontFamily: `'${fonts.body}', sans-serif` }}>
+    <div className="rounded-xl overflow-hidden border" style={{ backgroundColor: colors.background, borderColor: colors.secondary, fontFamily: `'${fonts.body}', sans-serif` }}>
       {/* Top bar */}
-      <div className="flex items-center justify-between px-5 py-3 border-b" style={{ borderColor: c.secondary }}>
-        <span className="font-bold" style={{ color: c.primary, fontFamily: `'${fonts.heading}', sans-serif` }}>Dashboard</span>
-        <div className="flex gap-2">
-          <div className="w-7 h-7 rounded-full" style={{ backgroundColor: c.accent }} />
+      <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: colors.secondary }}>
+        <span className="font-bold text-sm" style={{ color: colors.primary, fontFamily: `'${fonts.heading}', sans-serif` }}>Dashboard</span>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-full" style={{ backgroundColor: colors.accent }} />
         </div>
       </div>
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 p-5">
-        {[["Revenue", "$42,580", "+12%"], ["Users", "8,429", "+5%"], ["Orders", "1,243", "+18%"]].map(([label, val, delta], i) => (
-          <div key={i} className="p-4 rounded-xl" style={{ backgroundColor: c.secondary }}>
-            <p className="text-xs mb-1" style={{ color: c.text, opacity: 0.6 }}>{label}</p>
-            <p className="text-xl font-bold" style={{ color: c.text, fontFamily: `'${fonts.heading}', sans-serif` }}>{val}</p>
-            <span className="text-xs font-medium" style={{ color: c.accent }}>{delta}</span>
+      <div className="flex">
+        {/* Sidebar */}
+        <div className="hidden sm:block w-40 border-r p-3 space-y-1" style={{ borderColor: colors.secondary }}>
+          {["Overview", "Analytics", "Projects", "Settings"].map((item, i) => (
+            <div
+              key={item}
+              className="px-2.5 py-1.5 rounded-md text-xs font-medium"
+              style={{
+                backgroundColor: i === 0 ? colors.primary : "transparent",
+                color: i === 0 ? colors.background : colors.text,
+              }}
+            >
+              {item}
+            </div>
+          ))}
+        </div>
+        {/* Main */}
+        <div className="flex-1 p-4">
+          <h2 className="text-base font-bold mb-3" style={{ color: colors.text, fontFamily: `'${fonts.heading}', sans-serif` }}>Overview</h2>
+          {/* Stat cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+            {[
+              { label: "Revenue", value: "$24,500" },
+              { label: "Users", value: "1,248" },
+              { label: "Growth", value: "+18.2%" },
+            ].map((s) => (
+              <div key={s.label} className="p-3 rounded-lg" style={{ backgroundColor: colors.secondary }}>
+                <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: `${colors.text}88` }}>{s.label}</p>
+                <p className="text-sm sm:text-lg font-bold" style={{ color: colors.text }}>{s.value}</p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      {/* Table */}
-      <div className="mx-5 mb-5 rounded-xl overflow-hidden" style={{ backgroundColor: c.secondary }}>
-        <div className="grid grid-cols-4 px-4 py-2 text-xs font-semibold" style={{ color: c.text, opacity: 0.5 }}>
-          <span>Name</span><span>Email</span><span>Status</span><span>Amount</span>
-        </div>
-        {[
-          ["Alice Chen", "alice@mail.com", "Active", "$2,450"],
-          ["Bob Smith", "bob@mail.com", "Pending", "$1,820"],
-          ["Carol Wu", "carol@mail.com", "Active", "$3,100"],
-        ].map(([name, email, status, amount], i) => (
-          <div key={i} className="grid grid-cols-4 px-4 py-3 text-sm border-t" style={{ borderColor: c.background, color: c.text }}>
-            <span className="font-medium">{name}</span>
-            <span style={{ opacity: 0.7 }}>{email}</span>
-            <span>
-              <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: status === "Active" ? c.primary : c.accent, color: c.background }}>
-                {status}
-              </span>
-            </span>
-            <span className="font-semibold">{amount}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function BlogPreview({ c, fonts }: { c: ColorRoles; fonts: { heading: string; body: string } }) {
-  return (
-    <div className="w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: c.background, fontFamily: `'${fonts.body}', sans-serif` }}>
-      {/* Header */}
-      <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: c.secondary }}>
-        <span className="font-bold" style={{ color: c.text, fontFamily: `'${fonts.heading}', sans-serif` }}>The Blog</span>
-        <div className="flex gap-3 text-sm" style={{ color: c.text, opacity: 0.6 }}>
-          <span>Home</span><span>Archive</span><span>About</span>
-        </div>
-      </div>
-      {/* Featured */}
-      <div className="p-6">
-        <div className="rounded-xl p-6 mb-4" style={{ backgroundColor: c.secondary }}>
-          <span className="text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded" style={{ backgroundColor: c.accent, color: c.background }}>Featured</span>
-          <h2 className="text-2xl font-bold mt-3 mb-2" style={{ color: c.text, fontFamily: `'${fonts.heading}', sans-serif` }}>
-            The Art of Color Theory in Modern Design
-          </h2>
-          <p className="text-sm leading-relaxed mb-4" style={{ color: c.text, opacity: 0.7 }}>
-            Explore how thoughtful color combinations can transform user experience and create lasting impressions across digital products.
-          </p>
-          <button className="text-sm font-semibold" style={{ color: c.primary }}>Read more →</button>
-        </div>
-        {/* Articles list */}
-        {["Typography Trends for 2025", "Building Accessible Interfaces"].map((title, i) => (
-          <div key={i} className="flex items-center gap-4 py-3 border-t" style={{ borderColor: c.secondary }}>
-            <div className="w-12 h-12 rounded-lg shrink-0" style={{ backgroundColor: i === 0 ? c.primary : c.accent, opacity: 0.3 }} />
-            <div>
-              <h3 className="text-sm font-semibold" style={{ color: c.text, fontFamily: `'${fonts.heading}', sans-serif` }}>{title}</h3>
-              <p className="text-xs" style={{ color: c.text, opacity: 0.5 }}>3 min read</p>
+          {/* Chart placeholder */}
+          <div className="rounded-lg p-4 h-28" style={{ backgroundColor: colors.secondary }}>
+            <div className="flex items-end gap-1.5 h-full">
+              {[40, 65, 45, 80, 55, 70, 90, 60, 75, 85, 50, 95].map((h, i) => (
+                <div
+                  key={i}
+                  className="flex-1 rounded-t-sm transition-all"
+                  style={{
+                    height: `${h}%`,
+                    backgroundColor: i === 11 ? colors.accent : colors.primary,
+                    opacity: i === 11 ? 1 : 0.6 + (i * 0.03),
+                  }}
+                />
+              ))}
             </div>
           </div>
-        ))}
+        </div>
       </div>
     </div>
   );
 }
 
-function EcommercePreview({ c, fonts }: { c: ColorRoles; fonts: { heading: string; body: string } }) {
+function PreviewBlog({ colors, fonts }: { colors: ColorRoles; fonts: { heading: string; body: string } }) {
   return (
-    <div className="w-full rounded-xl overflow-hidden shadow-2xl" style={{ backgroundColor: c.background, fontFamily: `'${fonts.body}', sans-serif` }}>
-      {/* Header */}
-      <div className="px-6 py-3 flex items-center justify-between border-b" style={{ borderColor: c.secondary }}>
-        <span className="font-bold" style={{ color: c.primary, fontFamily: `'${fonts.heading}', sans-serif` }}>Shop</span>
-        <div className="flex gap-4 text-sm" style={{ color: c.text }}>
-          <span>New</span><span>Sale</span>
+    <div className="rounded-xl overflow-hidden border" style={{ backgroundColor: colors.background, borderColor: colors.secondary, fontFamily: `'${fonts.body}', sans-serif` }}>
+      <div className="px-4 sm:px-8 py-4 border-b flex items-center justify-between" style={{ borderColor: colors.secondary }}>
+        <span className="font-bold text-sm" style={{ color: colors.text, fontFamily: `'${fonts.heading}', sans-serif` }}>The Blog</span>
+        <span className="text-xs" style={{ color: colors.primary }}>Subscribe</span>
+      </div>
+      <div className="px-4 sm:px-8 py-6 max-w-2xl">
+        <div className="mb-4">
+          <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: colors.accent, color: colors.background }}>Featured</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: c.accent, color: c.background }}>3</div>
+        <h1 className="text-lg sm:text-2xl font-bold mb-2 leading-tight" style={{ color: colors.text, fontFamily: `'${fonts.heading}', sans-serif` }}>
+          The Future of Design Systems in 2025
+        </h1>
+        <p className="text-xs mb-4" style={{ color: `${colors.text}88` }}>
+          January 15, 2025 · 8 min read
+        </p>
+        <p className="text-sm leading-relaxed mb-4" style={{ color: `${colors.text}dd` }}>
+          Design systems have evolved from simple style guides to comprehensive frameworks that define how organizations build digital products. In this article, we explore the emerging trends shaping the future of design at scale.
+        </p>
+        <p className="text-sm leading-relaxed mb-4" style={{ color: `${colors.text}dd` }}>
+          From AI-powered theming to component-level analytics, the landscape is changing rapidly. Here's what you need to know about staying ahead.
+        </p>
+        <blockquote className="border-l-4 pl-4 my-4 py-1" style={{ borderColor: colors.primary }}>
+          <p className="text-sm italic" style={{ color: colors.text }}>"Good design is about making complex things simple."</p>
+        </blockquote>
+        <div className="flex gap-2 mt-4">
+          {["Design", "Systems", "Trends"].map((tag) => (
+            <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full border" style={{ color: colors.primary, borderColor: colors.secondary }}>
+              {tag}
+            </span>
+          ))}
         </div>
       </div>
-      {/* Banner */}
-      <div className="p-6 text-center" style={{ backgroundColor: c.primary }}>
-        <h2 className="text-xl font-bold mb-1" style={{ color: c.background, fontFamily: `'${fonts.heading}', sans-serif` }}>Summer Sale — 30% Off</h2>
-        <p className="text-sm" style={{ color: c.background, opacity: 0.85 }}>Use code SUMMER30 at checkout</p>
+    </div>
+  );
+}
+
+function PreviewEcommerce({ colors, fonts }: { colors: ColorRoles; fonts: { heading: string; body: string } }) {
+  return (
+    <div className="rounded-xl overflow-hidden border" style={{ backgroundColor: colors.background, borderColor: colors.secondary, fontFamily: `'${fonts.body}', sans-serif` }}>
+      <div className="px-4 sm:px-6 py-3 border-b flex items-center justify-between" style={{ borderColor: colors.secondary }}>
+        <span className="font-bold text-sm" style={{ color: colors.text, fontFamily: `'${fonts.heading}', sans-serif` }}>Store</span>
+        <div className="flex gap-3 text-xs" style={{ color: colors.text }}>
+          <span>Shop</span><span>Cart (2)</span>
+        </div>
       </div>
-      {/* Products */}
-      <div className="grid grid-cols-2 gap-4 p-6">
-        {[
-          ["Premium Jacket", "$129.00", "$179.00"],
-          ["Canvas Sneakers", "$89.00", "$119.00"],
-          ["Designer Watch", "$299.00", "$399.00"],
-          ["Leather Bag", "$199.00", "$259.00"],
-        ].map(([name, price, orig], i) => (
-          <div key={i} className="rounded-lg overflow-hidden" style={{ backgroundColor: c.secondary }}>
-            <div className="h-24" style={{ backgroundColor: c.primary, opacity: 0.15 }} />
-            <div className="p-3">
-              <h3 className="text-sm font-semibold mb-1" style={{ color: c.text, fontFamily: `'${fonts.heading}', sans-serif` }}>{name}</h3>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold" style={{ color: c.accent }}>{price}</span>
-                <span className="text-xs line-through" style={{ color: c.text, opacity: 0.4 }}>{orig}</span>
+      <div className="p-4 sm:p-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {[
+            { name: "Premium Headphones", price: "$349", badge: "New" },
+            { name: "Wireless Keyboard", price: "$129", badge: null },
+            { name: "Smart Watch Pro", price: "$499", badge: "Sale" },
+          ].map((product) => (
+            <div key={product.name} className="rounded-lg overflow-hidden" style={{ backgroundColor: colors.secondary }}>
+              <div className="aspect-square relative" style={{ backgroundColor: `${colors.primary}15` }}>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-xl" style={{ backgroundColor: `${colors.primary}30` }} />
+                </div>
+                {product.badge && (
+                  <span
+                    className="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                    style={{
+                      backgroundColor: product.badge === "Sale" ? colors.accent : colors.primary,
+                      color: colors.background,
+                    }}
+                  >
+                    {product.badge}
+                  </span>
+                )}
+              </div>
+              <div className="p-3">
+                <h3 className="text-xs font-semibold mb-1" style={{ color: colors.text, fontFamily: `'${fonts.heading}', sans-serif` }}>{product.name}</h3>
+                <p className="text-sm font-bold mb-2" style={{ color: colors.primary }}>{product.price}</p>
+                <button className="w-full py-1.5 rounded-md text-[10px] font-semibold" style={{ backgroundColor: colors.primary, color: colors.background }}>
+                  Add to Cart
+                </button>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Mondrian panel — 60-30-10 color distribution
+// Export code generators
 // ---------------------------------------------------------------------------
 
-function MondrianPanel({ c }: { c: ColorRoles }) {
-  return (
-    <div className="grid grid-cols-6 grid-rows-4 gap-1 w-full aspect-3/2 rounded-lg overflow-hidden">
-      {/* Background – 60% */}
-      <div className="col-span-4 row-span-3" style={{ backgroundColor: c.background }} />
-      {/* Primary – 30% */}
-      <div className="col-span-2 row-span-2" style={{ backgroundColor: c.primary }} />
-      {/* Secondary */}
-      <div className="col-span-2 row-span-2" style={{ backgroundColor: c.secondary }} />
-      {/* Accent – 10% */}
-      <div className="col-span-1 row-span-1" style={{ backgroundColor: c.accent }} />
-      {/* Text */}
-      <div className="col-span-3 row-span-1" style={{ backgroundColor: c.text }} />
-    </div>
-  );
+function generateExportCode(colors: ColorRoles, fonts: { heading: string; body: string }, format: ExportFormat): string {
+  switch (format) {
+    case "css":
+      return `:root {\n  --color-text: ${colors.text};\n  --color-background: ${colors.background};\n  --color-primary: ${colors.primary};\n  --color-secondary: ${colors.secondary};\n  --color-accent: ${colors.accent};\n\n  --font-heading: '${fonts.heading}', sans-serif;\n  --font-body: '${fonts.body}', sans-serif;\n}`;
+    case "scss":
+      return `$color-text: ${colors.text};\n$color-background: ${colors.background};\n$color-primary: ${colors.primary};\n$color-secondary: ${colors.secondary};\n$color-accent: ${colors.accent};\n\n$font-heading: '${fonts.heading}', sans-serif;\n$font-body: '${fonts.body}', sans-serif;`;
+    case "tailwind":
+      return `// tailwind.config.js\nmodule.exports = {\n  theme: {\n    extend: {\n      colors: {\n        text: '${colors.text}',\n        background: '${colors.background}',\n        primary: '${colors.primary}',\n        secondary: '${colors.secondary}',\n        accent: '${colors.accent}',\n      },\n      fontFamily: {\n        heading: ['${fonts.heading}', 'sans-serif'],\n        body: ['${fonts.body}', 'sans-serif'],\n      },\n    },\n  },\n};`;
+    case "json":
+      return JSON.stringify({ colors, fonts }, null, 2);
+    default:
+      return JSON.stringify({ colors, fonts }, null, 2);
+  }
 }
 
 // ---------------------------------------------------------------------------
-// Contrast grid
+// Tab types
 // ---------------------------------------------------------------------------
 
-function ContrastGrid({ c }: { c: ColorRoles }) {
-  const pairs: [string, string, string][] = [
-    ["Text / BG", c.text, c.background],
-    ["Primary / BG", c.primary, c.background],
-    ["Accent / BG", c.accent, c.background],
-    ["BG / Primary", c.background, c.primary],
-    ["BG / Accent", c.background, c.accent],
-    ["Text / Secondary", c.text, c.secondary],
-  ];
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-      {pairs.map(([label, fg, bg]) => {
-        const badge = wcagBadge(fg, bg);
-        const ratio = contrastRatio(fg, bg).toFixed(1);
+type SidebarTab = "colors" | "presets" | "fonts" | "contrast" | "saved" | "export";
+
+const SIDEBAR_TABS: { id: SidebarTab; label: string; icon: React.ReactNode }[] = [
+  { id: "colors", label: "Colors", icon: Ico.grid },
+  { id: "presets", label: "Presets", icon: Ico.layers },
+  { id: "fonts", label: "Fonts", icon: Ico.type },
+  { id: "contrast", label: "A11y", icon: Ico.contrast },
+  { id: "saved", label: "Saved", icon: Ico.heart },
+  { id: "export", label: "Export", icon: Ico.code },
+];
+
+// ---------------------------------------------------------------------------
+// Main workspace component
+// ---------------------------------------------------------------------------
+
+export default function ColorPaletteWorkspace() {
+  // Chiko manifest
+  useChikoActions(useCallback(() => createColorPaletteManifest(), []));
+
+  // Store
+  const colors = useColorPaletteStore((s) => s.colors);
+  const fonts = useColorPaletteStore((s) => s.fonts);
+  const previewMode = useColorPaletteStore((s) => s.previewMode);
+  const savedPalettes = useColorPaletteStore((s) => s.savedPalettes);
+  const setColor = useColorPaletteStore((s) => s.setColor);
+  const setFont = useColorPaletteStore((s) => s.setFont);
+  const setFonts = useColorPaletteStore((s) => s.setFonts);
+  const setPreviewMode = useColorPaletteStore((s) => s.setPreviewMode);
+  const randomize = useColorPaletteStore((s) => s.randomize);
+  const swapTextAndBg = useColorPaletteStore((s) => s.swapTextAndBg);
+  const applyPreset = useColorPaletteStore((s) => s.applyPreset);
+  const savePalette = useColorPaletteStore((s) => s.savePalette);
+  const deletePalette = useColorPaletteStore((s) => s.deletePalette);
+  const loadPalette = useColorPaletteStore((s) => s.loadPalette);
+  const reset = useColorPaletteStore((s) => s.reset);
+
+  // Local state
+  const [activeTab, setActiveTab] = useState<SidebarTab>("colors");
+  const [copiedExport, setCopiedExport] = useState(false);
+  const [exportFormat, setExportFormat] = useState<ExportFormat>("css");
+  const [saveName, setSaveName] = useState("");
+  const [presetSearch, setPresetSearch] = useState("");
+  const [fontPairingSearch, setFontPairingSearch] = useState("");
+  const [mobilePanel, setMobilePanel] = useState<"sidebar" | "preview">("preview");
+
+  // Load fonts
+  useEffect(() => {
+    loadGoogleFont(fonts.heading);
+    loadGoogleFont(fonts.body);
+  }, [fonts]);
+
+  // Detect dark palette
+  const isDarkPalette = useMemo(() => {
+    const [, , l] = hexToHsl(colors.background);
+    return l < 50;
+  }, [colors.background]);
+
+  // Contrast pairs
+  const contrastPairs = useMemo(() => [
+    { label: "Text / BG", fg: colors.text, bg: colors.background },
+    { label: "Primary / BG", fg: colors.primary, bg: colors.background },
+    { label: "Accent / BG", fg: colors.accent, bg: colors.background },
+    { label: "Text / Secondary", fg: colors.text, bg: colors.secondary },
+    { label: "Primary / Secondary", fg: colors.primary, bg: colors.secondary },
+  ], [colors]);
+
+  // Export code
+  const exportCode = useMemo(
+    () => generateExportCode(colors, fonts, exportFormat),
+    [colors, fonts, exportFormat]
+  );
+
+  // Filter presets
+  const filteredPresets = useMemo(() => {
+    if (!presetSearch.trim()) return PRESET_PALETTES;
+    const q = presetSearch.toLowerCase();
+    return PRESET_PALETTES.filter((p) => p.id.includes(q) || p.name.toLowerCase().includes(q));
+  }, [presetSearch]);
+
+  // Filter font pairings
+  const filteredPairings = useMemo(() => {
+    if (!fontPairingSearch.trim()) return FONT_PAIRINGS;
+    const q = fontPairingSearch.toLowerCase();
+    return FONT_PAIRINGS.filter(
+      (p) => p.name.toLowerCase().includes(q) || p.vibe.toLowerCase().includes(q) || p.heading.toLowerCase().includes(q) || p.body.toLowerCase().includes(q)
+    );
+  }, [fontPairingSearch]);
+
+  // Handle save
+  const handleSave = () => {
+    if (!saveName.trim()) {
+      savePalette(`Palette ${savedPalettes.length + 1}`);
+    } else {
+      savePalette(saveName.trim());
+    }
+    setSaveName("");
+  };
+
+  // Handle copy export
+  const handleCopyExport = async () => {
+    await copyToClipboard(exportCode);
+    setCopiedExport(true);
+    setTimeout(() => setCopiedExport(false), 1500);
+  };
+
+  // ---------------------------------------------------------------------------
+  // Sidebar panel content
+  // ---------------------------------------------------------------------------
+
+  const renderSidebarContent = () => {
+    switch (activeTab) {
+      case "colors":
         return (
-          <div key={label} className="flex items-center gap-2 p-2 rounded-lg bg-gray-100 dark:bg-white/5">
-            <div className="w-8 h-8 rounded flex items-center justify-center text-xs font-bold shrink-0" style={{ backgroundColor: bg, color: fg }}>
-              Aa
+          <div className="space-y-5">
+            {/* Color swatches */}
+            <div className="grid grid-cols-5 gap-3">
+              {(["text", "background", "primary", "secondary", "accent"] as const).map((role) => (
+                <ColorSwatch
+                  key={role}
+                  role={role}
+                  hex={colors[role]}
+                  label={role === "background" ? "BG" : role.slice(0, 3).toUpperCase()}
+                  onChange={(hex) => setColor(role, hex)}
+                />
+              ))}
             </div>
-            <div className="min-w-0">
-              <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{label}</p>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-mono text-gray-700 dark:text-gray-300">{ratio}</span>
-                <span className="text-[9px] font-bold px-1 py-0.5 rounded" style={{ backgroundColor: badge.color, color: "#fff" }}>
-                  {badge.label}
-                </span>
+            {/* Quick contrast check */}
+            <div className="p-3 rounded-xl bg-gray-100 dark:bg-gray-800/50 space-y-2">
+              <p className="text-[11px] uppercase tracking-wider font-medium text-gray-500 dark:text-gray-400">Quick Contrast</p>
+              {contrastPairs.slice(0, 3).map((pair) => {
+                const ratio = contrastRatio(pair.fg, pair.bg);
+                return (
+                  <div key={pair.label} className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600 dark:text-gray-400">{pair.label}</span>
+                    <ContrastBadge ratio={ratio} small />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+
+      case "presets":
+        return (
+          <div className="space-y-3">
+            <input
+              type="text"
+              placeholder="Search presets..."
+              value={presetSearch}
+              onChange={(e) => setPresetSearch(e.target.value)}
+              className="w-full text-sm bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 outline-none focus:border-primary-500 transition-colors"
+            />
+            <div className="space-y-1.5 max-h-[calc(100vh-20rem)] overflow-y-auto pr-1 scrollbar-thin">
+              {filteredPresets.map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => applyPreset(preset)}
+                  className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/60 transition-colors text-left group"
+                >
+                  {/* Mini palette preview */}
+                  <div className="flex gap-0.5 shrink-0">
+                    {(["text", "background", "primary", "secondary", "accent"] as const).map((role) => (
+                      <div
+                        key={role}
+                        className="w-4 h-8 first:rounded-l-md last:rounded-r-md"
+                        style={{ backgroundColor: preset.colors[role] }}
+                      />
+                    ))}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium truncate text-gray-800 dark:text-gray-200">{preset.name}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+
+      case "fonts":
+        return (
+          <div className="space-y-4">
+            {/* Individual selectors */}
+            <Dropdown
+              label="Heading"
+              value={fonts.heading}
+              options={FONT_OPTIONS.map((f) => ({ value: f, label: f }))}
+              onChange={(v) => setFont("heading", v)}
+              icon={Ico.type}
+            />
+            <Dropdown
+              label="Body"
+              value={fonts.body}
+              options={FONT_OPTIONS.map((f) => ({ value: f, label: f }))}
+              onChange={(v) => setFont("body", v)}
+              icon={Ico.type}
+            />
+            {/* Font pairings */}
+            <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-[11px] uppercase tracking-wider font-medium text-gray-500 dark:text-gray-400 mb-2">Curated Pairings</p>
+              <input
+                type="text"
+                placeholder="Search pairings..."
+                value={fontPairingSearch}
+                onChange={(e) => setFontPairingSearch(e.target.value)}
+                className="w-full text-sm bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 outline-none focus:border-primary-500 transition-colors mb-2"
+              />
+              <div className="space-y-1 max-h-[calc(100vh-28rem)] overflow-y-auto pr-1 scrollbar-thin">
+                {filteredPairings.map((fp) => {
+                  const isActive = fonts.heading === fp.heading && fonts.body === fp.body;
+                  return (
+                    <button
+                      key={fp.id}
+                      onClick={() => {
+                        setFonts({ heading: fp.heading, body: fp.body });
+                        loadGoogleFont(fp.heading);
+                        loadGoogleFont(fp.body);
+                      }}
+                      className={`w-full text-left p-2.5 rounded-lg transition-colors ${isActive ? "bg-primary-500/10 border border-primary-500/30" : "hover:bg-gray-100 dark:hover:bg-gray-800/60 border border-transparent"}`}
+                    >
+                      <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">{fp.name}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
+                        {fp.heading} / {fp.body} — <span className="italic">{fp.vibe}</span>
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
         );
-      })}
-    </div>
-  );
-}
 
-// ---------------------------------------------------------------------------
-// Main Workspace
-// ---------------------------------------------------------------------------
-
-const PREVIEW_MODES: { id: PreviewMode; label: string }[] = [
-  { id: "landing", label: "Landing" },
-  { id: "dashboard", label: "Dashboard" },
-  { id: "blog", label: "Blog" },
-  { id: "ecommerce", label: "E-commerce" },
-];
-
-export default function ColorPaletteWorkspace() {
-  const {
-    colors, fonts, previewMode, savedPalettes,
-    setColor, setPreviewMode, randomize, applyPreset,
-    swapTextAndBg, savePalette, deletePalette, loadPalette, setFont,
-  } = useColorPaletteStore();
-
-  const [showPresets, setShowPresets] = useState(false);
-  const [showExport, setShowExport] = useState(false);
-  const [showFonts, setShowFonts] = useState(false);
-  const [showSaved, setShowSaved] = useState(false);
-  const [saveName, setSaveName] = useState("");
-  const [tab, setTab] = useState<"preview" | "colors" | "export">("preview");
-  const [linkCopied, setLinkCopied] = useState(false);
-
-  // Click-outside refs for dropdowns
-  const presetsRef = useRef<HTMLDivElement>(null);
-  const exportRef = useRef<HTMLDivElement>(null);
-  const savedRef = useRef<HTMLDivElement>(null);
-  useClickOutside(presetsRef, useCallback(() => setShowPresets(false), []));
-  useClickOutside(exportRef, useCallback(() => setShowExport(false), []));
-  useClickOutside(savedRef, useCallback(() => setShowSaved(false), []));
-
-  // Load Google fonts
-  useEffect(() => {
-    loadGoogleFont(fonts.heading);
-    loadGoogleFont(fonts.body);
-  }, [fonts.heading, fonts.body]);
-
-  // Parse share URL params on mount
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const t = params.get("t"), b = params.get("b"), p = params.get("p"), s = params.get("s"), a = params.get("a");
-    if (t && b && p && s && a) {
-      const hexRe = /^[0-9a-fA-F]{6}$/;
-      if ([t, b, p, s, a].every((v) => hexRe.test(v))) {
-        setColor("text", `#${t}`);
-        setColor("background", `#${b}`);
-        setColor("primary", `#${p}`);
-        setColor("secondary", `#${s}`);
-        setColor("accent", `#${a}`);
-      }
-    }
-    const fh = params.get("fh"), fb = params.get("fb");
-    if (fh) setFont("heading", fh);
-    if (fb) setFont("body", fb);
-    // Clean URL after parsing
-    if (params.toString()) {
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Spacebar to randomize
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.code === "Space" && !["INPUT", "TEXTAREA", "SELECT"].includes((e.target as HTMLElement)?.tagName)) {
-        e.preventDefault();
-        randomize();
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [randomize]);
-
-  // Chiko registration
-  useChikoActions(useCallback(() => createColorPaletteManifest(), []));
-
-  // Export handler
-  const handleExport = useCallback((format: string) => {
-    let content = "";
-    let filename = "";
-    let mime = "text/plain";
-
-    switch (format) {
-      case "css":
-        content = exportCSS(colors, fonts); filename = "palette.css"; mime = "text/css"; break;
-      case "tailwind":
-        content = exportTailwind(colors); filename = "palette-tailwind.css"; mime = "text/css"; break;
-      case "scss":
-        content = exportSCSS(colors, fonts); filename = "palette.scss"; break;
-      case "json":
-        content = exportJSON(colors, fonts); filename = "palette.json"; mime = "application/json"; break;
-      case "svg":
-        content = exportSVG(colors); filename = "palette.svg"; mime = "image/svg+xml"; break;
-      default: return;
-    }
-
-    const blob = new Blob([content], { type: mime });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = filename; a.click();
-    URL.revokeObjectURL(url);
-    setShowExport(false);
-  }, [colors, fonts]);
-
-  // Copy link
-  const handleCopyLink = useCallback(() => {
-    const params = new URLSearchParams({
-      t: colors.text.replace("#", ""),
-      b: colors.background.replace("#", ""),
-      p: colors.primary.replace("#", ""),
-      s: colors.secondary.replace("#", ""),
-      a: colors.accent.replace("#", ""),
-      fh: fonts.heading,
-      fb: fonts.body,
-    });
-    copyToClipboard(`${window.location.origin}${window.location.pathname}?${params.toString()}`).then((ok) => {
-      if (ok) {
-        setLinkCopied(true);
-        setTimeout(() => setLinkCopied(false), 2000);
-      }
-    });
-  }, [colors, fonts]);
-
-  // Preview component
-  const PreviewComponent = useMemo(() => {
-    switch (previewMode) {
-      case "landing": return LandingPreview;
-      case "dashboard": return DashboardPreview;
-      case "blog": return BlogPreview;
-      case "ecommerce": return EcommercePreview;
-    }
-  }, [previewMode]);
-
-  return (
-    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
-      {/* ── Toolbar ──────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm flex-wrap">
-        {/* Randomize */}
-        <button
-          onClick={randomize}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-          title="Randomize (Spacebar)"
-        >
-          <IconRefresh className="w-4 h-4" />
-          <span className="hidden sm:inline">Randomize</span>
-        </button>
-
-        {/* Swap Text ↔ BG */}
-        <button
-          onClick={swapTextAndBg}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-          title="Swap Text & Background"
-        >
-          <span className="text-base">⇄</span>
-          <span className="hidden sm:inline">Swap</span>
-        </button>
-
-        {/* Presets dropdown */}
-        <div className="relative" ref={presetsRef}>
-          <button
-            onClick={() => { setShowPresets(!showPresets); setShowExport(false); setShowFonts(false); setShowSaved(false); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-          >
-            <IconSparkles className="w-4 h-4" />
-            <span className="hidden sm:inline">Presets</span>
-            <IconChevronDown className="w-3 h-3" />
-          </button>
-          {showPresets && (
-            <div className="absolute top-full left-0 mt-1 w-64 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-80 overflow-y-auto">
-              {PRESET_PALETTES.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => { applyPreset(p); setShowPresets(false); }}
-                  className="flex items-center gap-3 w-full px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
-                >
-                  <div className="flex gap-0.5">
-                    {Object.values(p.colors).map((col, i) => (
-                      <div key={i} className="w-5 h-5 rounded-sm first:rounded-l-md last:rounded-r-md" style={{ backgroundColor: col }} />
-                    ))}
+      case "contrast":
+        return (
+          <div className="space-y-3">
+            <p className="text-[11px] uppercase tracking-wider font-medium text-gray-500 dark:text-gray-400">WCAG Contrast Ratios</p>
+            {contrastPairs.map((pair) => {
+              const ratio = contrastRatio(pair.fg, pair.bg);
+              return (
+                <div key={pair.label} className="p-3 rounded-xl bg-gray-100 dark:bg-gray-800/50">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{pair.label}</span>
+                    <ContrastBadge ratio={ratio} />
                   </div>
-                  <span className="text-sm">{p.name}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-md border border-white/10" style={{ backgroundColor: pair.bg }}>
+                      <div className="w-full h-full flex items-center justify-center text-[10px] font-bold" style={{ color: pair.fg }}>Aa</div>
+                    </div>
+                    <span className="text-[10px] font-mono text-gray-500">{ratio.toFixed(2)}:1</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+
+      case "saved":
+        return (
+          <div className="space-y-3">
+            {/* Save form */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Palette name..."
+                value={saveName}
+                onChange={(e) => setSaveName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSave()}
+                className="flex-1 text-sm bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 outline-none focus:border-primary-500"
+              />
+              <button
+                onClick={handleSave}
+                className="px-3 py-2 rounded-lg bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 transition-colors"
+              >
+                {Ico.save}
+              </button>
+            </div>
+            {/* List */}
+            {savedPalettes.length === 0 ? (
+              <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-8">No saved palettes yet</p>
+            ) : (
+              <div className="space-y-1.5 max-h-[calc(100vh-18rem)] overflow-y-auto pr-1 scrollbar-thin">
+                {savedPalettes.map((pal) => (
+                  <div
+                    key={pal.id}
+                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/60 transition-colors group"
+                  >
+                    <button onClick={() => loadPalette(pal)} className="flex-1 flex items-center gap-2 text-left min-w-0">
+                      <div className="flex gap-0.5 shrink-0">
+                        {(["text", "background", "primary", "secondary", "accent"] as const).map((role) => (
+                          <div key={role} className="w-3 h-6 first:rounded-l last:rounded-r" style={{ backgroundColor: pal.colors[role] }} />
+                        ))}
+                      </div>
+                      <span className="text-xs font-medium truncate text-gray-800 dark:text-gray-200">{pal.name}</span>
+                    </button>
+                    <button
+                      onClick={() => deletePalette(pal.id)}
+                      className="p-1 rounded text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                    >
+                      {Ico.trash}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+
+      case "export":
+        return (
+          <div className="space-y-3">
+            <div className="flex gap-1.5">
+              {(["css", "tailwind", "scss", "json"] as ExportFormat[]).map((fmt) => (
+                <button
+                  key={fmt}
+                  onClick={() => setExportFormat(fmt)}
+                  className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${exportFormat === fmt ? "bg-primary-500 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+                >
+                  {fmt.toUpperCase()}
                 </button>
               ))}
             </div>
-          )}
-        </div>
+            <div className="relative">
+              <pre className="text-xs font-mono bg-gray-900 text-gray-200 rounded-xl p-4 overflow-x-auto max-h-64 scrollbar-thin">
+                {exportCode}
+              </pre>
+              <button
+                onClick={handleCopyExport}
+                className="absolute top-2 right-2 p-1.5 rounded-md bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors"
+              >
+                {copiedExport ? Ico.check : Ico.copy}
+              </button>
+            </div>
+          </div>
+        );
+    }
+  };
 
-        {/* Fonts toggle */}
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+
+  return (
+    <div className="h-full flex flex-col overflow-hidden bg-white dark:bg-gray-950">
+      {/* ── Top toolbar ── */}
+      <div className="shrink-0 flex items-center gap-2 px-3 py-2.5 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/80">
+        {/* Randomize */}
         <button
-          onClick={() => { setShowFonts(!showFonts); setShowPresets(false); setShowExport(false); setShowSaved(false); }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          onClick={randomize}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-white text-xs font-semibold hover:bg-primary-600 active:scale-95 transition-all shadow-sm"
+          title="Generate random palette"
         >
-          <IconType className="w-4 h-4" />
-          <span className="hidden sm:inline">Fonts</span>
+          {Ico.shuffle}
+          <span className="hidden sm:inline">Randomize</span>
         </button>
 
-        {/* Preview mode tabs */}
-        <div className="hidden lg:flex items-center gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 ml-auto">
-          {PREVIEW_MODES.map((m) => (
+        {/* Swap (dark/light toggle) */}
+        <button
+          onClick={swapTextAndBg}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-300 dark:hover:bg-gray-700 active:scale-95 transition-all"
+          title={isDarkPalette ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {isDarkPalette ? Ico.sun : Ico.moon}
+          <span className="hidden sm:inline">{isDarkPalette ? "Light" : "Dark"}</span>
+        </button>
+
+        {/* Preview mode selector */}
+        <div className="hidden md:flex items-center gap-1 ml-2 px-1 py-0.5 rounded-lg bg-gray-200 dark:bg-gray-800">
+          {(["landing", "dashboard", "blog", "ecommerce"] as PreviewMode[]).map((mode) => (
             <button
-              key={m.id}
-              onClick={() => setPreviewMode(m.id)}
-              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                previewMode === m.id
-                  ? "bg-white dark:bg-gray-700 shadow-sm"
-                  : "hover:bg-white/50 dark:hover:bg-gray-700/50"
+              key={mode}
+              onClick={() => setPreviewMode(mode)}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium capitalize transition-colors ${
+                previewMode === mode
+                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
               }`}
             >
-              {m.label}
+              {mode === "ecommerce" ? "Shop" : mode}
             </button>
           ))}
         </div>
 
-        {/* Saved palettes */}
-        <div className="relative" ref={savedRef}>
-          <button
-            onClick={() => { setShowSaved(!showSaved); setShowPresets(false); setShowExport(false); setShowFonts(false); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-          >
-            <IconStar className="w-4 h-4" />
-            <span className="hidden sm:inline">Saved</span>
-            {savedPalettes.length > 0 && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-500 text-white">{savedPalettes.length}</span>
-            )}
-          </button>
-          {showSaved && (
-            <div className="absolute top-full right-0 mt-1 w-72 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-80 overflow-y-auto">
-              {/* Save new */}
-              <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex gap-2">
-                  <input
-                    className="flex-1 px-2 py-1.5 text-sm rounded-lg bg-gray-100 dark:bg-gray-800 border-none outline-none"
-                    placeholder="Palette name…"
-                    value={saveName}
-                    onChange={(e) => setSaveName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && saveName.trim()) {
-                        savePalette(saveName.trim());
-                        setSaveName("");
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={() => { if (saveName.trim()) { savePalette(saveName.trim()); setSaveName(""); } }}
-                    className="px-3 py-1.5 rounded-lg text-sm font-medium bg-violet-500 text-white hover:bg-violet-600 transition-colors"
+        {/* Mobile preview mode */}
+        <select
+          value={previewMode}
+          onChange={(e) => setPreviewMode(e.target.value as PreviewMode)}
+          className="md:hidden ml-1 text-xs bg-gray-200 dark:bg-gray-800 border-none rounded-lg px-2 py-1.5 outline-none appearance-none text-gray-700 dark:text-gray-300"
+        >
+          <option value="landing">Landing</option>
+          <option value="dashboard">Dashboard</option>
+          <option value="blog">Blog</option>
+          <option value="ecommerce">Shop</option>
+        </select>
+
+        <div className="flex-1" />
+
+        {/* Reset */}
+        <button
+          onClick={reset}
+          className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+          title="Reset to defaults"
+        >
+          Reset
+        </button>
+      </div>
+
+      {/* ── Mobile tab toggle ── */}
+      <div className="md:hidden flex border-b border-gray-200 dark:border-gray-800">
+        <button
+          onClick={() => setMobilePanel("preview")}
+          className={`flex-1 py-2 text-xs font-medium text-center transition-colors ${mobilePanel === "preview" ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-b-2 border-primary-500" : "text-gray-500 dark:text-gray-400"}`}
+        >
+          {Ico.eye} Preview
+        </button>
+        <button
+          onClick={() => setMobilePanel("sidebar")}
+          className={`flex-1 py-2 text-xs font-medium text-center transition-colors ${mobilePanel === "sidebar" ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-b-2 border-primary-500" : "text-gray-500 dark:text-gray-400"}`}
+        >
+          {Ico.grid} Controls
+        </button>
+      </div>
+
+      {/* ── Main body ── */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* ── Sidebar (left panel) ── */}
+        <div className={`w-full md:w-80 lg:w-[22rem] shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden bg-white dark:bg-gray-950 ${mobilePanel === "sidebar" ? "flex" : "hidden md:flex"}`}>
+          {/* Sidebar tabs */}
+          <div className="flex border-b border-gray-200 dark:border-gray-800 px-2 shrink-0 overflow-x-auto scrollbar-thin">
+            {SIDEBAR_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium whitespace-nowrap transition-colors border-b-2 ${
+                  activeTab === tab.id
+                    ? "border-primary-500 text-primary-500"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
+              >
+                {tab.icon}
+                <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+          {/* Panel content */}
+          <div className="flex-1 overflow-y-auto p-4 scrollbar-thin">
+            {renderSidebarContent()}
+          </div>
+        </div>
+
+        {/* ── Preview (right panel) ── */}
+        <div className={`flex-1 overflow-y-auto bg-gray-100 dark:bg-gray-900/50 ${mobilePanel === "preview" ? "block" : "hidden md:block"}`}>
+          <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
+            {/* Color strip header */}
+            <div className="flex rounded-xl overflow-hidden mb-6 shadow-lg h-12 sm:h-16">
+              {(["text", "background", "primary", "secondary", "accent"] as const).map((role) => (
+                <div key={role} className="flex-1 relative group" style={{ backgroundColor: colors[role] }}>
+                  <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-mono font-bold"
+                    style={{ color: contrastRatio("#ffffff", colors[role]) > 3 ? "#ffffff" : "#000000" }}
                   >
-                    <IconPlus className="w-4 h-4" />
-                  </button>
+                    {colors[role].toUpperCase()}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Preview layout */}
+            {previewMode === "landing" && <PreviewLanding colors={colors} fonts={fonts} />}
+            {previewMode === "dashboard" && <PreviewDashboard colors={colors} fonts={fonts} />}
+            {previewMode === "blog" && <PreviewBlog colors={colors} fonts={fonts} />}
+            {previewMode === "ecommerce" && <PreviewEcommerce colors={colors} fonts={fonts} />}
+
+            {/* Font preview section */}
+            <div className="mt-6 p-4 sm:p-6 rounded-xl border" style={{ backgroundColor: colors.background, borderColor: colors.secondary }}>
+              <p className="text-[10px] uppercase tracking-wider font-medium mb-3 text-gray-400 dark:text-gray-500">Typography Preview</p>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: `${colors.text}66` }}>Heading — {fonts.heading}</p>
+                  <h2 className="text-xl sm:text-2xl font-bold" style={{ color: colors.text, fontFamily: `'${fonts.heading}', sans-serif` }}>
+                    The quick brown fox jumps over the lazy dog
+                  </h2>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: `${colors.text}66` }}>Body — {fonts.body}</p>
+                  <p className="text-sm leading-relaxed" style={{ color: `${colors.text}dd`, fontFamily: `'${fonts.body}', sans-serif` }}>
+                    Typography is the art and technique of arranging type to make written language legible, readable, and appealing when displayed. The arrangement of type involves selecting typefaces, point sizes, line lengths, line-spacing, and letter-spacing.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: colors.primary, color: colors.background }}>Primary Button</span>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: colors.accent, color: colors.background }}>Accent Button</span>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold border" style={{ borderColor: colors.primary, color: colors.primary }}>Outlined</span>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: colors.secondary, color: colors.text }}>Secondary</span>
                 </div>
               </div>
-              {savedPalettes.length === 0 ? (
-                <p className="p-4 text-sm text-gray-500 text-center">No saved palettes yet</p>
-              ) : (
-                savedPalettes.map((p) => (
-                  <div key={p.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
-                    <button onClick={() => { loadPalette(p); setShowSaved(false); }} className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                      <div className="flex gap-0.5 shrink-0">
-                        {Object.values(p.colors).map((col, i) => (
-                          <div key={i} className="w-4 h-4 rounded-sm" style={{ backgroundColor: col }} />
-                        ))}
-                      </div>
-                      <span className="text-sm truncate">{p.name}</span>
-                    </button>
-                    <button
-                      onClick={() => deletePalette(p.id)}
-                      className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all"
-                    >
-                      <IconTrash className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))
-              )}
             </div>
-          )}
-        </div>
-
-        {/* Export dropdown */}
-        <div className="relative" ref={exportRef}>
-          <button
-            onClick={() => { setShowExport(!showExport); setShowPresets(false); setShowFonts(false); setShowSaved(false); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-violet-500 text-white hover:bg-violet-600 transition-colors"
-          >
-            <IconDownload className="w-4 h-4" />
-            <span className="hidden sm:inline">Export</span>
-            <IconChevronDown className="w-3 h-3" />
-          </button>
-          {showExport && (
-            <div className="absolute top-full right-0 mt-1 w-48 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50">
-              {[
-                { id: "css", label: "CSS Variables" },
-                { id: "tailwind", label: "Tailwind v4" },
-                { id: "scss", label: "SCSS Variables" },
-                { id: "json", label: "JSON" },
-                { id: "svg", label: "SVG Swatches" },
-              ].map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => handleExport(f.id)}
-                  className="w-full px-4 py-2.5 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  {f.label}
-                </button>
-              ))}
-              <hr className="border-gray-200 dark:border-gray-700" />
-              <button
-                onClick={() => { handleCopyLink(); setShowExport(false); }}
-                className="w-full px-4 py-2.5 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2"
-              >
-                <IconCopy className="w-3.5 h-3.5" /> {linkCopied ? "Copied!" : "Copy Share Link"}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Fonts panel ──────────────────────────────────────────── */}
-      {showFonts && (
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm flex flex-wrap gap-4 items-center">
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Heading</label>
-            <select
-              value={fonts.heading}
-              onChange={(e) => setFont("heading", e.target.value)}
-              className="px-2 py-1 text-sm rounded-lg bg-gray-100 dark:bg-gray-800 border-none outline-none"
-            >
-              {FONT_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Body</label>
-            <select
-              value={fonts.body}
-              onChange={(e) => setFont("body", e.target.value)}
-              className="px-2 py-1 text-sm rounded-lg bg-gray-100 dark:bg-gray-800 border-none outline-none"
-            >
-              {FONT_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
-            </select>
-          </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400 ml-auto">
-            <span style={{ fontFamily: `'${fonts.heading}', sans-serif` }} className="font-semibold">Heading</span>
-            {" / "}
-            <span style={{ fontFamily: `'${fonts.body}', sans-serif` }}>Body text</span>
           </div>
         </div>
-      )}
-
-      {/* ── Mobile tabs ──────────────────────────────────────────── */}
-      <div className="flex lg:hidden border-b border-gray-200 dark:border-gray-800">
-        {(["preview", "colors", "export"] as const).map((t2) => (
-          <button
-            key={t2}
-            onClick={() => setTab(t2)}
-            className={`flex-1 py-2.5 text-sm font-medium capitalize transition-colors ${
-              tab === t2
-                ? "border-b-2 border-violet-500 text-violet-600 dark:text-violet-400"
-                : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-            }`}
-          >
-            {t2}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Main content ─────────────────────────────────────────── */}
-      <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
-        {/* Left sidebar — Color swatches + contrast (desktop) or inline (mobile tab) */}
-        <aside className={`lg:w-72 xl:w-80 lg:border-r border-gray-200 dark:border-gray-800 overflow-y-auto bg-white/50 dark:bg-gray-900/50 ${tab !== "colors" ? "hidden lg:block" : ""}`}>
-          <div className="p-4 space-y-6">
-            {/* Color roles */}
-            <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
-                <IconDroplet className="w-3.5 h-3.5" /> Colors
-              </h3>
-              <div className="flex justify-around">
-                {(["text", "background", "primary", "secondary", "accent"] as (keyof ColorRoles)[]).map((role) => (
-                  <ColorSwatch
-                    key={role}
-                    role={role === "background" ? "bg" : role === "secondary" ? "sec" : role === "text" ? "txt" : role}
-                    color={colors[role]}
-                    onChange={(hex) => setColor(role, hex)}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Mondrian distribution */}
-            <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
-                Color Distribution
-              </h3>
-              <MondrianPanel c={colors} />
-            </div>
-
-            {/* Contrast checker */}
-            <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
-                <IconEye className="w-3.5 h-3.5" /> Contrast
-              </h3>
-              <ContrastGrid c={colors} />
-            </div>
-
-            {/* Preview mode (mobile) */}
-            <div className="lg:hidden">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
-                Preview Mode
-              </h3>
-              <div className="grid grid-cols-2 gap-2">
-                {PREVIEW_MODES.map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => { setPreviewMode(m.id); setTab("preview"); }}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      previewMode === m.id
-                        ? "bg-violet-500 text-white"
-                        : "bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
-                    }`}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        {/* Center — Live preview */}
-        <main className={`flex-1 overflow-y-auto p-4 lg:p-8 ${tab !== "preview" ? "hidden lg:block" : ""}`}>
-          <div className="max-w-3xl mx-auto">
-            <PreviewComponent c={colors} fonts={fonts} />
-          </div>
-        </main>
-
-        {/* Right panel — Export (mobile only shows in export tab) */}
-        <aside className={`lg:w-72 xl:w-80 lg:border-l border-gray-200 dark:border-gray-800 overflow-y-auto bg-white/50 dark:bg-gray-900/50 ${tab !== "export" ? "hidden lg:block" : ""}`}>
-          <div className="p-4 space-y-6">
-            {/* Quick Export */}
-            <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
-                <IconDownload className="w-3.5 h-3.5" /> Export
-              </h3>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: "css", label: "CSS" },
-                  { id: "tailwind", label: "Tailwind v4" },
-                  { id: "scss", label: "SCSS" },
-                  { id: "json", label: "JSON" },
-                  { id: "svg", label: "SVG" },
-                ].map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => handleExport(f.id)}
-                    className="px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={handleCopyLink}
-                className="w-full mt-2 px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
-              >
-                <IconCopy className="w-3.5 h-3.5" /> {linkCopied ? "Copied!" : "Copy Share Link"}
-              </button>
-            </div>
-
-            {/* CSS Preview */}
-            <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
-                CSS Preview
-              </h3>
-              <pre className="text-xs font-mono p-3 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 overflow-x-auto whitespace-pre-wrap">
-                {exportCSS(colors, fonts)}
-              </pre>
-            </div>
-
-            {/* Palette info */}
-            <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
-                <IconPalette className="w-3.5 h-3.5" /> Tips
-              </h3>
-              <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1.5 leading-relaxed">
-                <li>• Press <kbd className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-[10px] font-mono">Space</kbd> to randomize</li>
-                <li>• Right-click a hex code to copy it</li>
-                <li>• Background = 60%, Primary = 30%, Accent = 10%</li>
-                <li>• Aim for AA (4.5:1) contrast on all text</li>
-                <li>• Ask Chiko for mood or industry palettes</li>
-              </ul>
-            </div>
-          </div>
-        </aside>
       </div>
     </div>
   );

@@ -1,33 +1,25 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Document Signer & Form Filler — COMPLETE
+**Phase:** Color Palette Generator V2 Overhaul — COMPLETE
 
-### Session: DocuSeal-Inspired Document Signer & Form Filler — COMPLETE
+### Session: Color Palette Generator — Major V2 Rewrite
 
-Built a full DocuSeal-inspired Document Signer & Form Filler tool (`document-signer`).
+Complete rewrite of all 3 color palette files from scratch for professional-grade quality.
 
-#### New Files
-- `src/stores/document-signer-editor.ts` — Zustand+Immer+persist+Zundo store. 14 field types, multiple signers with color-coding, signature capture (draw/type/upload), 9 document templates, audit trail, email workflows, branding.
-- `src/lib/chiko/manifests/document-signer.ts` — 24 Chiko actions + activity logging. Full document creation, field management, signer workflows, signature capture, style, validation, and export.
-- `src/components/workspaces/document-signer/DocumentSignerWorkspace.tsx` — Main workspace. 5-tab editor (Document/Fields/Signers/Style/Settings), zoom controls, page navigation, template strip, mobile BottomBar.
-- `src/components/workspaces/document-signer/DocumentSignerRenderer.tsx` — Preview renderer with field overlays, drag-to-reposition, signer color coding, buildPrintHTML() for PDF export.
-- `src/components/workspaces/document-signer/DocumentSignerLayersPanel.tsx` — Figma-style layers panel showing document structure, signers, fields grouped by page.
-- `src/components/workspaces/document-signer/tabs/DocumentSignerDocumentTab.tsx` — Document setup, template selection grid, PDF upload, page management.
-- `src/components/workspaces/document-signer/tabs/DocumentSignerFieldsTab.tsx` — Field palette (14 types), field list per page, field properties editor.
-- `src/components/workspaces/document-signer/tabs/DocumentSignerSignersTab.tsx` — Signer management with expandable cards, field assignments, workflow info.
-- `src/components/workspaces/document-signer/tabs/DocumentSignerStyleTab.tsx` — Accent color presets, font family, font size, field border style, branding.
-- `src/components/workspaces/document-signer/tabs/DocumentSignerSettingsTab.tsx` — Signature config (draw/type/upload), email workflows, audit trail viewer.
+#### Rewritten Files (all deleted and recreated)
+- `src/stores/color-palette.ts` — New store: 36 curated presets (Realtime Default, GitHub Dark, Vercel Dark, Stripe Dark, Vaporwave, Aurora Borealis, etc.), 45+ Google Fonts with FontMeta, 20 professional font pairings with vibe tags, golden-angle random generation (AAA contrast guaranteed), intelligent dark↔light swap (adjusts all 5 roles), HSL/RGB utilities.
+- `src/lib/chiko/manifests/color-palette.ts` — Updated manifest: 25+ actions matching new store API, applyFontPairing action, harmony generators (6 modes), mood (12) and industry (10) palettes, contrast checking/fixing, full CRUD for saved palettes.
+- `src/components/workspaces/ColorPaletteWorkspace.tsx` — Complete UI overhaul: sidebar+preview layout with 6 tabs (Colors/Presets/Fonts/A11y/Saved/Export), professional toolbar with dark/light toggle, preview mode selector, mobile responsive with tab toggle, color strip header, typography preview section, polished color swatches with inline editing.
 
-#### Modified Files
-- `src/lib/chiko/manifests/index.ts` — Added document-signer barrel export
-- `src/app/tools/[categoryId]/[toolId]/page.tsx` — Added document-signer workspace route
-- `src/lib/store-adapters.ts` — Added getDocumentSignerAdapter() + registry entry
-- `src/data/tools.ts` — Added document-signer tool entry (status: ready, devStatus: complete)
-- `src/data/credit-costs.ts` — Added document-signer credit mapping (invoice-fill, 10 credits)
-- `TOOL-STATUS.md` — Added #19 COMPLETE entry, updated counts (20 complete, 17 ready), added change log entry
+#### Key Improvements
+- **Palette Quality**: 36 curated presets (was 10). Golden-angle hue generation with perceptual lightness rules.
+- **Swap = Dark/Light Mode**: Intelligent `deriveSwappedPalette()` that adjusts all 5 color roles (boosts/darkens primary+accent, derives new secondary).
+- **Font System**: 45+ fonts with metadata (was 27). 20 curated pairings with vibe labels (was none). Search/filter for pairings.
+- **UI/UX**: Clean sidebar+preview layout replacing 3-column. Professional toolbar. Mobile-first responsive design.
+- **Chiko**: Full awareness of all new features including font pairings, expanded presets, and new swap behavior.
 
-### Previous Session: Color Palette Generator — COMPLETE (commit 6434026)
+### Previous Session: Document Signer & Form Filler — COMPLETE
 
 #### SVG Import Engine (use-editor.ts)
 - `loadSvg(svgString)` — replaces entire canvas with SVG content (scales to fit workspace)
