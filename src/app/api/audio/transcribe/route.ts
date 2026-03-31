@@ -195,6 +195,7 @@ export async function POST(request: NextRequest) {
 
     /* 9. Build Groq API request */
     if (!GROQ_API_KEY) {
+      console.error("[audio-transcription] GROQ_API_KEY is not set");
       await refundCredits(
         user.id,
         cost,
@@ -202,7 +203,7 @@ export async function POST(request: NextRequest) {
       );
       return NextResponse.json(
         {
-          error: "Transcription service is not configured. The GROQ_API_KEY environment variable is missing — please contact the administrator.",
+          error: "The transcription service is temporarily unavailable. Please try again later or contact support if the issue persists.",
           errorCode: "SERVICE_NOT_CONFIGURED",
         },
         { status: 500 }
@@ -259,7 +260,8 @@ export async function POST(request: NextRequest) {
     if (!groqRes.ok) {
       await refundCredits(user.id, cost, "Audio Transcription failed");
       const errBody = await groqRes.text().catch(() => "");
-      let detail = `Transcription service returned error ${groqRes.status}.`;
+      console.error(`[audio-transcription] Groq ${groqRes.status}:`, errBody);
+      let detail = "Transcription failed. Please try again.";
       if (groqRes.status === 413) {
         detail = "File is too large for the transcription service. Please use a file under 25 MB.";
       } else if (groqRes.status === 429) {

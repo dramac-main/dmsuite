@@ -145,10 +145,11 @@ export async function POST(request: NextRequest) {
 
     /* 9. Build Groq API request */
     if (!GROQ_API_KEY) {
+      console.error("[voice-flow] GROQ_API_KEY is not set");
       await refundCredits(user.id, cost, "VoiceFlow: GROQ_API_KEY not configured");
       return NextResponse.json(
         {
-          error: "Transcription service is not configured. The GROQ_API_KEY environment variable is missing — please contact the administrator.",
+          error: "The transcription service is temporarily unavailable. Please try again later or contact support if the issue persists.",
           errorCode: "SERVICE_NOT_CONFIGURED",
         },
         { status: 500 }
