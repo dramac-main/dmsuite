@@ -3,8 +3,8 @@
 > **Last updated:** 2026-03-31
 > **Total tools registered:** 195+
 > **Tools with workspace UI:** 98
-> **Tools fully complete:** 19
-> **Tools available (ready):** 16
+> **Tools fully complete:** 20
+> **Tools available (ready):** 17
 > **Tools coming soon:** 181
 
 ---
@@ -93,6 +93,12 @@ All 9 route to `SalesBookDesignerWorkspace` with different `initialDocumentType`
 | # | Tool ID | Tool Name | Workspace | Notes |
 |---|---------|-----------|-----------|-------|
 | 18 | `color-palette` | Color Palette Generator | ColorPaletteWorkspace | Realtime Colors-inspired. 5 color roles (text/bg/primary/secondary/accent), font pairing (27 Google Fonts), 4 live website previews (Landing/Dashboard/Blog/E-commerce), Mondrian 60-30-10 distribution, WCAG contrast grid, 10 curated presets, save/load palettes, export (CSS/Tailwind v4/SCSS/JSON), share link, spacebar randomize, Chiko AI manifest (25+ actions: harmonies/moods/industries/contrast fixing), Zustand+Immer+persist store |
+
+### Document Signer & Form Filler
+
+| # | Tool ID | Tool Name | Workspace | Notes |
+|---|---------|-----------|-----------|-------|
+| 19 | `document-signer` | Document Signer & Form Filler | document-signer/DocumentSignerWorkspace | DocuSeal-inspired. 14 field types (signature/initials/date/text/number/email/phone/checkbox/radio/select/textarea/file/stamp/image), multiple signers with color-coding, signature capture (draw/type/upload), 9 document templates (blank/nda/employment-contract/rental-agreement/service-agreement/sales-contract/freelancer-agreement/partnership-agreement/custom-upload), PDF upload, audit trail, email workflows, branding, 5-tab editor (Document/Fields/Signers/Style/Settings), Figma-style layers, Chiko AI manifest (24 actions + activity logging), Zustand+Immer+persist+Zundo store, print-ready |
 
 **Shared architecture (Sales Book):**
 - Store: `useSalesBookEditor` (Zustand + Immer + Zundo undo)
@@ -297,10 +303,10 @@ These are registered in `src/data/tools.ts` but have no workspace component in t
 
 | Status | Count | Description |
 |--------|-------|-------------|
-| **COMPLETE** | 12 | Sales Books (9) + Statement of Account + Contract & Agreement + Resume/CV |
+| **COMPLETE** | 13 | Sales Books (9) + Statement of Account + Contract & Agreement + Resume/CV + Document Signer |
 | **SCAFFOLD** | 85 | Has workspace UI but untested/unpolished — all set to "coming-soon" |
 | **NO-UI** | 100+ | Placeholder page only — all set to "coming-soon" |
-| **READY** | 10 | Available to users (complete tools only) |
+| **READY** | 11 | Available to users (complete tools only) |
 | **COMING-SOON** | 185 | Grayed out in dashboard |
 | **TOTAL** | 195+ | Registered in tools.ts |
 
@@ -355,3 +361,4 @@ These already have substantial workspace code and would benefit most from a poli
 | 2026-03-31 | background-remover (Background Remover) | Full production build: Real AI-powered background removal using @imgly/background-removal (ONNX model, runs 100% client-side). Lazy-loaded model with progress tracking. 5 background replacement modes (transparent/solid color with 10 presets/gradient with 5 directions/custom image/blur original). Interactive before/after comparison slider with draggable handle (mouse+touch). Full-resolution canvas composite rendering for export. 3 export formats (PNG/JPEG/WebP) with quality control. Batch mode for multi-image processing. Real progress bar with percentage. Workspace events integration (workspace:dirty/save/progress). Responsive mobile tabs. No server required — all processing in-browser. | Drake |
 | 2025-07-27 | pdf-tools (PDF Tools Suite) | Full production build inspired by Stirling-PDF: 18 client-side PDF operations (merge/split/extract/rotate/delete-pages/reorder/reverse/compress/watermark/page-numbers/stamp/protect/metadata/convert/multi-page-layout/overlay/scale/info). pdf-lib engine (20+ functions in src/lib/pdf/pdf-engine.ts). Chiko AI manifest (18 actions, 9 categories: Navigation/Page Ops/Optimize/Content/Security/Convert/Advanced/Actions/Read). Dark-first responsive workspace with tool grid (5 categories), settings panels per tool, drag-drop file upload, multi-file merge/overlay, real-time progress, compression results display, PDF info viewer with metadata+page sizes. Free tier (no AI cost, all processing client-side). 0 TS errors. | Drake |
 | 2025-07-28 | color-palette (Color Palette Generator) | Full build: Realtime Colors-inspired palette generator. Zustand+Immer+persist store. 5 color roles (text/background/primary/secondary/accent). Font pairing (27 Google Fonts, heading+body). 4 live website preview layouts (Landing/Dashboard/Blog/E-commerce) with real-time color/font application. Mondrian 60-30-10 color distribution panel. WCAG contrast grid (6 pairs, AA/AAA/Fail badges). 10 curated preset palettes (Midnight Aurora/Sunrise Warm/Ocean Breeze/Forest Canopy/Cyber Neon/Elegant Mono/Coral Sunset/Royal Purple/Fresh Mint/Classic Professional). Save/load user palettes. Export (CSS Variables/Tailwind v4/SCSS/JSON). Share link generator. Spacebar randomize shortcut. Swap text↔background. Chiko AI manifest (25+ actions: set colors, apply presets, generate harmonies [6 modes], generate from mood [12 moods], generate for industry [10 industries], check WCAG contrast, fix contrast issues, manage saved palettes, export). 3-column responsive layout (color sidebar/live preview/export panel) with mobile tabs. 0 TS errors. | Drake |
+| 2025-07-29 | document-signer (Document Signer & Form Filler) | Full build: DocuSeal-inspired document filling & signing platform. Zustand+Immer+persist+Zundo store. 14 field types (signature/initials/date/text/number/email/phone/checkbox/radio/select/textarea/file/stamp/image). Multiple signers with color-coding. Signature capture (draw canvas with color/width controls, type with 6 font choices, upload mode). 9 document templates (blank/nda/employment-contract/rental-agreement/service-agreement/sales-contract/freelancer-agreement/partnership-agreement/custom-upload). PDF upload support. Audit trail with timestamped entries. Email workflows (subject templates, reminders, CC, reply-to). Branding (company name/logo/brand color). 5-tab editor (Document/Fields/Signers/Style/Settings). Figma-style layers panel. Chiko AI manifest (24 actions + activity logging). Store adapter. Print-ready PDF export. 0 TS errors. | Drake |

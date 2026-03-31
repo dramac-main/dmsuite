@@ -577,6 +577,27 @@ function getAudioTranscriptionAdapter(): StoreAdapter {
   };
 }
 
+function getDocumentSignerAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useDocumentSignerEditor } = require("@/stores/document-signer-editor");
+  return {
+    getSnapshot: () => {
+      const { form } = useDocumentSignerEditor.getState();
+      return { form };
+    },
+    restoreSnapshot: (data) => {
+      if (data.form) {
+        useDocumentSignerEditor.getState().setForm(data.form as never);
+      }
+    },
+    resetStore: () => {
+      useDocumentSignerEditor.getState().resetForm();
+      nukePersistStorage("dmsuite-document-signer");
+    },
+    subscribe: (cb) => useDocumentSignerEditor.subscribe(cb),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Generic adapter for tools that don't have dedicated stores
 // ---------------------------------------------------------------------------
@@ -641,6 +662,8 @@ const ADAPTER_FACTORIES: Record<string, () => StoreAdapter> = {
   // Audio & Voice
   "voice-flow": getVoiceFlowAdapter,
   "audio-transcription": getAudioTranscriptionAdapter,
+  // Document Signing
+  "document-signer": getDocumentSignerAdapter,
 };
 
 /**

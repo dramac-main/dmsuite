@@ -152,6 +152,7 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   "background-remover": dynamic(() => import("@/components/workspaces/BackgroundRemoverWorkspace")),
   "image-enhancer": dynamic(() => import("@/components/workspaces/ImageEnhancerWorkspace")),
   "pdf-tools": dynamic(() => import("@/components/workspaces/pdf-tools/PDFToolsWorkspace")),
+  "document-signer": dynamic(() => import("@/components/workspaces/document-signer/DocumentSignerWorkspace")),
 };
 
 export default function ToolWorkspacePage() {

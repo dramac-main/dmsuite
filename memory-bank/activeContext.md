@@ -1,9 +1,61 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Template loading fixed — templates render correctly on canvas
+**Phase:** Document Signer & Form Filler — COMPLETE
 
-### Session: Fix Template Loading Crash — RESOLVED
+### Session: DocuSeal-Inspired Document Signer & Form Filler — COMPLETE
+
+Built a full DocuSeal-inspired Document Signer & Form Filler tool (`document-signer`).
+
+#### New Files
+- `src/stores/document-signer-editor.ts` — Zustand+Immer+persist+Zundo store. 14 field types, multiple signers with color-coding, signature capture (draw/type/upload), 9 document templates, audit trail, email workflows, branding.
+- `src/lib/chiko/manifests/document-signer.ts` — 24 Chiko actions + activity logging. Full document creation, field management, signer workflows, signature capture, style, validation, and export.
+- `src/components/workspaces/document-signer/DocumentSignerWorkspace.tsx` — Main workspace. 5-tab editor (Document/Fields/Signers/Style/Settings), zoom controls, page navigation, template strip, mobile BottomBar.
+- `src/components/workspaces/document-signer/DocumentSignerRenderer.tsx` — Preview renderer with field overlays, drag-to-reposition, signer color coding, buildPrintHTML() for PDF export.
+- `src/components/workspaces/document-signer/DocumentSignerLayersPanel.tsx` — Figma-style layers panel showing document structure, signers, fields grouped by page.
+- `src/components/workspaces/document-signer/tabs/DocumentSignerDocumentTab.tsx` — Document setup, template selection grid, PDF upload, page management.
+- `src/components/workspaces/document-signer/tabs/DocumentSignerFieldsTab.tsx` — Field palette (14 types), field list per page, field properties editor.
+- `src/components/workspaces/document-signer/tabs/DocumentSignerSignersTab.tsx` — Signer management with expandable cards, field assignments, workflow info.
+- `src/components/workspaces/document-signer/tabs/DocumentSignerStyleTab.tsx` — Accent color presets, font family, font size, field border style, branding.
+- `src/components/workspaces/document-signer/tabs/DocumentSignerSettingsTab.tsx` — Signature config (draw/type/upload), email workflows, audit trail viewer.
+
+#### Modified Files
+- `src/lib/chiko/manifests/index.ts` — Added document-signer barrel export
+- `src/app/tools/[categoryId]/[toolId]/page.tsx` — Added document-signer workspace route
+- `src/lib/store-adapters.ts` — Added getDocumentSignerAdapter() + registry entry
+- `src/data/tools.ts` — Added document-signer tool entry (status: ready, devStatus: complete)
+- `src/data/credit-costs.ts` — Added document-signer credit mapping (invoice-fill, 10 credits)
+- `TOOL-STATUS.md` — Added #19 COMPLETE entry, updated counts (20 complete, 17 ready), added change log entry
+
+### Previous Session: Color Palette Generator — COMPLETE (commit 6434026)
+
+#### SVG Import Engine (use-editor.ts)
+- `loadSvg(svgString)` — replaces entire canvas with SVG content (scales to fit workspace)
+- `addSvgElements(svgString)` — adds SVG objects to existing canvas as a group
+- ImageSidebar now imports uploaded SVGs as editable vector objects (not raster)
+
+#### Chiko AI Access — Fixed for ALL 21 Fabric Tools
+**Problem:** No Fabric workspace called `useChikoActions()` — Chiko had zero access to any canvas.
+**Fix:** Added centralized auto-registration in `FabricEditor.tsx`:
+- New `chikoManifestFactory` prop: `(editor: Editor) => ChikoActionManifest`
+- useEffect registers tool-specific manifest (or default core-only manifest) when editor mounts
+- All 21 workspace files now pass their `createXxxFabricManifest` factory function
+
+#### Chiko Bridge Actions (chiko-bridge.ts)
+- Added `load_svg` and `add_svg` to CORE_ACTIONS (now 27+ total)
+- `load_svg` calls `editor.loadSvg(svg)`, `add_svg` calls `editor.addSvgElements(svg)`
+
+#### SVG Template Support
+- Added `svgUrl?: string` field to FabricTemplate type
+- TemplateSidebar now supports 3 template types: `tpl.svg` (inline), `tpl.svgUrl` (async fetch), `tpl.json` (loadJson)
+- Added Vecteezy creative certificate as first URL-based SVG template: `public/templates/certificates/vecteezy-creative.svg`
+
+#### Canva Clone Analysis
+- User provided a Canva clone codebase for comparison
+- Thorough analysis: basic student project (no undo/redo, no hotkeys, no clipboard, no workspace clip, no templates, no AI, plain JS)
+- Conclusion: DMSuite is significantly more advanced. Nothing useful to adopt.
+
+### Previous Session: Fix Template Loading Crash — RESOLVED
 
 #### ROOT CAUSE #3: Fabric.js `stylesToArray` crash on textbox serialization — FIXED
 When a template was selected from the sidebar, loading it crashed the canvas:

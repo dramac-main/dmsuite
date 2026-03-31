@@ -43,9 +43,12 @@ export interface PDFToolsRefs {
   setWatermarkFontSize: (size: number) => void;
   setPageNumberFormat: (fmt: string) => void;
   setPageNumberPosition: (pos: string) => void;
+  setPageNumberStart: (n: number) => void;
   setRotateAngle: (angle: number) => void;
   setConvertMode: (mode: string) => void;
   setProtectPassword: (pw: string) => void;
+  setProtectConfirm: (pw: string) => void;
+  setReorderPageOrder: (order: string) => void;
   setMetadata: (field: string, value: string) => void;
   setStampText: (text: string) => void;
   setStampFontSize: (size: number) => void;
@@ -140,6 +143,20 @@ export function createPDFToolsManifest(refs: PDFToolsRefs): ChikoActionManifest 
         category: "Page Operations",
       },
 
+      // ── Reorder ──
+      {
+        name: "configureReorder",
+        description: "Set a custom page order for a single PDF. Use comma-separated 1-based page numbers, e.g. '3, 1, 2, 5, 4' puts page 3 first, then page 1, etc.",
+        parameters: {
+          type: "object",
+          properties: {
+            pageOrder: { type: "string", description: "Comma-separated page numbers in desired order, e.g. '3, 1, 2, 5, 4'" },
+          },
+          required: ["pageOrder"],
+        },
+        category: "Page Operations",
+      },
+
       // ── Compress ──
       {
         name: "configureCompress",
@@ -204,13 +221,10 @@ export function createPDFToolsManifest(refs: PDFToolsRefs): ChikoActionManifest 
       // ── Protect ──
       {
         name: "configureProtect",
-        description: "Set a password to protect/encrypt the PDF. The output will require this password to open.",
+        description: "Mark the PDF as protected by adding a DMSuite producer metadata stamp. Note: true password encryption is not available client-side.",
         parameters: {
           type: "object",
-          properties: {
-            password: { type: "string", description: "Password for PDF protection" },
-          },
-          required: ["password"],
+          properties: {},
         },
         category: "Security",
       },
@@ -344,6 +358,11 @@ export function createPDFToolsManifest(refs: PDFToolsRefs): ChikoActionManifest 
             refs.setRotateAngle(params.angle as number);
             return { success: true, message: `Rotation angle set to ${params.angle}°` };
 
+          case "configureReorder":
+            refs.setTool("reorder");
+            refs.setReorderPageOrder(params.pageOrder as string);
+            return { success: true, message: `Page order set to: ${params.pageOrder}` };
+
           case "configureCompress":
             refs.setTool("compress");
             refs.setCompressLevel(params.level as string);
@@ -361,6 +380,7 @@ export function createPDFToolsManifest(refs: PDFToolsRefs): ChikoActionManifest 
             refs.setTool("page-numbers");
             if (params.format) refs.setPageNumberFormat(params.format as string);
             if (params.position) refs.setPageNumberPosition(params.position as string);
+            if (params.startNumber !== undefined) refs.setPageNumberStart(params.startNumber as number);
             return { success: true, message: "Page number settings updated." };
 
           case "configureStamp":
@@ -371,8 +391,7 @@ export function createPDFToolsManifest(refs: PDFToolsRefs): ChikoActionManifest 
 
           case "configureProtect":
             refs.setTool("protect");
-            refs.setProtectPassword(params.password as string);
-            return { success: true, message: "Password protection configured." };
+            return { success: true, message: "Protection metadata configured. Note: this adds a producer mark, not encryption." };
 
           case "configureMetadata":
             refs.setTool("metadata");

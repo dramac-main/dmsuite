@@ -1,0 +1,62 @@
+﻿≡ƒÜÇ Starting E2E test...
+
+≡ƒôï Step 1: Navigate to login page...
+  Screenshot: 01-login-page.png
+  Filling email and password...
+  Screenshot: 02-login-filled.png
+  Clicking login button...
+  Waiting for redirect after login...
+  Current URL after login: http://localhost:6006/dashboard
+  Screenshot: 03-after-login.png
+
+≡ƒôï Step 2: Check dashboard...
+  Screenshot: 04-dashboard.png
+
+≡ƒôï Dismissing Chiko tour if present...
+  Tour dismissed: true
+  Set tour localStorage flags
+
+≡ƒôï Step 3: Opening certificate...
+  URL: http://localhost:6006/tools/documents/certificate#main-content
+  Canvas elements: 0
+  Screenshot: 05-certificate.png
+
+≡ƒôï Step 4: Opening business-card...
+  URL: http://localhost:6006/tools/design/business-card#main-content
+  Canvas elements: 0
+  Screenshot: 06-business-card.png
+
+≡ƒôï Step 5: Opening poster...
+  URL: http://localhost:6006/tools/design/poster#main-content
+  Canvas elements: 0
+  Screenshot: 07-poster.png
+
+≡ƒôï Step 6: Opening diploma...
+  URL: http://localhost:6006/tools/documents/diploma-designer#main-content
+  Canvas elements: 0
+  Screenshot: 08-diploma.png
+
+≡ƒôï Step 7: Opening invoice...
+  URL: http://localhost:6006/tools/documents/invoice-designer#main-content
+  Canvas elements: 0
+  Screenshot: 09-invoice.png
+
+≡ƒôï Step 8: Opening resume...
+  URL: http://localhost:6006/tools/documents/resume-cv#main-content
+  Canvas elements: 0
+  Screenshot: 10-resume.png
+
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+≡ƒôè Test Summary
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+Console errors: 6
+  [console.error] Failed to load resource: the server responded with a status of 404 (Not Found)
+  [console.error] Failed to load resource: the server responded with a status of 404 (Not Found)
+  [console.error] Failed to load resource: the server responded with a status of 404 (Not Found)
+  [console.error] Failed to load resource: the server responded with a status of 404 (Not Found)
+  [console.error] Failed to load resource: the server responded with a status of 404 (Not Found)
+  [console.error] Failed to load resource: the server responded with a status of 404 (Not Found)
+Page errors: 0
+Screenshots saved to: D:\dramac-ai-suite\e2e-screenshots
+
+Γ£à Browser closed. Test complete.

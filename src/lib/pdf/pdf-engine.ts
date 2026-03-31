@@ -7,17 +7,10 @@
 
 import {
   PDFDocument,
-  PDFName,
-  PDFPage,
   StandardFonts,
   rgb,
   degrees,
   PageSizes,
-  PDFDict,
-  PDFArray,
-  PDFStream,
-  PDFHexString,
-  PDFString,
 } from "pdf-lib";
 
 /* ── Types ─────────────────────────────────────────────────── */
@@ -51,11 +44,6 @@ export interface PageNumberOptions {
   format?: "plain" | "page-of-total" | "dash" | "parentheses";
   marginX?: number;
   marginY?: number;
-}
-
-export interface ProtectOptions {
-  userPassword?: string;
-  ownerPassword?: string;
 }
 
 export interface PDFMetadata {
@@ -126,12 +114,6 @@ export async function loadPDFFile(file: File): Promise<PDFFileEntry> {
     pageCount: doc.getPageCount(),
     bytes,
   };
-}
-
-/** Get page count without keeping doc in memory */
-export async function getPageCount(bytes: Uint8Array): Promise<number> {
-  const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
-  return doc.getPageCount();
 }
 
 /* ── Core Operations ───────────────────────────────────────── */
@@ -543,54 +525,6 @@ export async function imagesToPDF(
     });
   }
 
-  return doc.save();
-}
-
-/** Render each page of a PDF to a canvas-based PNG image */
-export async function pdfToImages(
-  bytes: Uint8Array,
-  scale: number = 2
-): Promise<Array<{ pageNum: number; dataUrl: string }>> {
-  // We use a minimal approach: extract page dimensions and attempt to
-  // re-render. For full rendering we'd need pdf.js — for now we return
-  // placeholder data indicating the system can handle this via pdf.js integration.
-  // This is a hook for future pdf.js integration.
-  const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
-  const pages = doc.getPages();
-  const results: Array<{ pageNum: number; dataUrl: string }> = [];
-
-  // pdf-lib can't render to images directly — flag for client-side pdf.js usage
-  for (let i = 0; i < pages.length; i++) {
-    results.push({
-      pageNum: i + 1,
-      dataUrl: "", // Will be rendered client-side via pdf.js canvas
-    });
-  }
-
-  return results;
-}
-
-/** Add a background color to all pages */
-export async function addBackground(
-  bytes: Uint8Array,
-  color: { r: number; g: number; b: number }
-): Promise<Uint8Array> {
-  const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
-  const pages = doc.getPages();
-  for (const page of pages) {
-    const { width, height } = page.getSize();
-    // Draw background rect behind existing content
-    page.drawRectangle({
-      x: 0,
-      y: 0,
-      width,
-      height,
-      color: rgb(color.r, color.g, color.b),
-    });
-    // Move rect to back — pdf-lib adds to content stream end, but visually
-    // we can't easily reorder. For true background we'd need to prepend to stream.
-    // This is a known limitation — watermark-style BG overlay.
-  }
   return doc.save();
 }
 

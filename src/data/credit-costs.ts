@@ -213,6 +213,7 @@ export const TOOL_CREDIT_MAP: Record<string, string> = {
   "gift-voucher":          "invoice-fill",
   "real-estate-listing":   "sales-book-fill",
   "worksheet-designer":    "invoice-fill",
+  "document-signer":       "invoice-fill",
   "white-paper":           "sales-book-fill",
   "case-study":            "sales-book-fill",
   "portfolio-builder":     "brochure-design",
