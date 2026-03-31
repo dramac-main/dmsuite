@@ -46,25 +46,122 @@ function PromptPhase() {
     setAspectRatio,
     setAuthor,
     setCompany,
+    setTitle,
+    setSlides,
+    setPhase,
+    setActiveSlideIndex,
     form,
   } = usePresentationEditor();
 
   const [topic, setTopic] = useState("");
   const [author, setAuthorLocal] = useState("");
   const [company, setCompanyLocal] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiWarning, setAiWarning] = useState<string | null>(null);
+  const [creditError, setCreditError] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  const handleGenerate = () => {
-    if (!topic.trim()) return;
+  // Clean up abort controller on unmount
+  useEffect(() => {
+    return () => { abortRef.current?.abort(); };
+  }, []);
+
+  const handleGenerate = async () => {
+    const trimmed = topic.trim();
+    if (!trimmed || isGenerating) return;
+
+    // Reset warnings
+    setAiWarning(null);
+    setCreditError(false);
+    setIsGenerating(true);
+
+    // Persist metadata
     if (author) setAuthor(author);
     if (company) setCompany(company);
-    generateFromTopic(topic.trim());
-    dispatchProgress({ progress: 70 });
-    dispatchProgress({ milestone: "content" });
+
+    // Try AI generation first
+    abortRef.current = new AbortController();
+
+    try {
+      const res = await fetch("/api/chat/presentation/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic: trimmed, author, company }),
+        signal: abortRef.current.signal,
+      });
+
+      // Credit error — open purchase modal
+      if (res.status === 402) {
+        const { handleCreditError } = await import("@/lib/credit-error");
+        setCreditError(true);
+        setAiWarning(handleCreditError());
+        setIsGenerating(false);
+        return;
+      }
+
+      // AI unavailable (503) or other error — show soft warning
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setAiWarning(
+          data.error || "AI is temporarily unavailable. You can try again or start with a basic template.",
+        );
+        setIsGenerating(false);
+        return;
+      }
+
+      // AI success — parse slides and populate store
+      const data = await res.json();
+      if (data.slides && Array.isArray(data.slides) && data.slides.length > 0) {
+        const slides = data.slides.map((s: Record<string, unknown>, i: number) => ({
+          id: `s-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 5)}`,
+          layout: s.layout || "content",
+          title: s.title || "",
+          subtitle: s.subtitle || "",
+          body: s.body || "",
+          bullets: Array.isArray(s.bullets) ? s.bullets : [],
+          leftHeading: s.leftHeading || "",
+          leftBody: s.leftBody || "",
+          rightHeading: s.rightHeading || "",
+          rightBody: s.rightBody || "",
+          quoteText: s.quoteText || "",
+          quoteAuthor: s.quoteAuthor || "",
+          bigNumber: s.bigNumber || "",
+          bigNumberLabel: s.bigNumberLabel || "",
+          sectionNumber: s.sectionNumber || "",
+          imageUrl: s.imageUrl || "",
+          notes: s.notes || "",
+        }));
+
+        setTitle(trimmed);
+        setSlides(slides);
+        setPhase("editor");
+        setActiveSlideIndex(0);
+        dispatchProgress({ progress: 70 });
+        dispatchProgress({ milestone: "content" });
+      } else {
+        setAiWarning("AI returned unexpected data. Please try again or start with a basic template.");
+      }
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
+      console.error("[Presentation] AI generation error:", err);
+      setAiWarning(
+        "Could not reach AI service. Check your connection and try again, or start with a basic template.",
+      );
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleFallbackGenerate = () => {
+    if (author) setAuthor(author);
+    if (company) setCompany(company);
+    generateFromTopic(topic.trim() || "Untitled Presentation");
+    dispatchProgress({ progress: 50 });
   };
 
   const handleBlankDeck = () => {
@@ -104,7 +201,8 @@ function PromptPhase() {
           }}
           placeholder="e.g. Q4 2026 Sales Strategy for a SaaS startup..."
           rows={3}
-          className="mt-6 w-full resize-none rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm text-gray-200 placeholder:text-gray-600 focus:border-primary-500/50 focus:outline-none focus:ring-1 focus:ring-primary-500/30"
+          disabled={isGenerating}
+          className="mt-6 w-full resize-none rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm text-gray-200 placeholder:text-gray-600 focus:border-primary-500/50 focus:outline-none focus:ring-1 focus:ring-primary-500/30 disabled:opacity-50"
         />
 
         {/* Theme picker */}
@@ -117,7 +215,8 @@ function PromptPhase() {
               <button
                 key={t.id}
                 onClick={() => setThemeId(t.id)}
-                className={`group relative h-8 w-8 rounded-lg transition-all ${
+                disabled={isGenerating}
+                className={`group relative h-8 w-8 rounded-lg transition-all disabled:opacity-50 ${
                   form.themeId === t.id
                     ? "ring-2 ring-primary-500 ring-offset-2 ring-offset-gray-950"
                     : "ring-1 ring-gray-700 hover:ring-gray-500"
@@ -156,7 +255,8 @@ function PromptPhase() {
             <button
               key={ar}
               onClick={() => setAspectRatio(ar)}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all ${
+              disabled={isGenerating}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-all disabled:opacity-50 ${
                 form.aspectRatio === ar
                   ? "border-primary-500/50 bg-primary-500/10 text-primary-400"
                   : "border-gray-800 text-gray-500 hover:border-gray-700 hover:text-gray-400"
@@ -173,33 +273,105 @@ function PromptPhase() {
             value={author}
             onChange={(e) => setAuthorLocal(e.target.value)}
             placeholder="Your name (optional)"
-            className="rounded-lg border border-gray-800 bg-gray-900 px-3 py-2 text-xs text-gray-300 placeholder:text-gray-600 focus:border-primary-500/50 focus:outline-none"
+            disabled={isGenerating}
+            className="rounded-lg border border-gray-800 bg-gray-900 px-3 py-2 text-xs text-gray-300 placeholder:text-gray-600 focus:border-primary-500/50 focus:outline-none disabled:opacity-50"
           />
           <input
             value={company}
             onChange={(e) => setCompanyLocal(e.target.value)}
             placeholder="Company (optional)"
-            className="rounded-lg border border-gray-800 bg-gray-900 px-3 py-2 text-xs text-gray-300 placeholder:text-gray-600 focus:border-primary-500/50 focus:outline-none"
+            disabled={isGenerating}
+            className="rounded-lg border border-gray-800 bg-gray-900 px-3 py-2 text-xs text-gray-300 placeholder:text-gray-600 focus:border-primary-500/50 focus:outline-none disabled:opacity-50"
           />
         </div>
+
+        {/* AI Warning Banner */}
+        <AnimatePresence>
+          {aiWarning && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-4 overflow-hidden"
+            >
+              <div className={`rounded-xl border p-4 ${
+                creditError
+                  ? "border-yellow-500/30 bg-yellow-500/5"
+                  : "border-orange-500/30 bg-orange-500/5"
+              }`}>
+                <div className="flex items-start gap-3">
+                  <svg className="mt-0.5 h-5 w-5 shrink-0 text-orange-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-orange-300">
+                      {creditError ? "Credits Required" : "AI Unavailable"}
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-gray-400">{aiWarning}</p>
+                    {!creditError && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <button
+                          onClick={handleGenerate}
+                          className="rounded-lg bg-orange-500/10 px-3 py-1.5 text-xs font-medium text-orange-300 transition-colors hover:bg-orange-500/20"
+                        >
+                          Try Again
+                        </button>
+                        <button
+                          onClick={handleFallbackGenerate}
+                          className="rounded-lg bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-400 transition-colors hover:bg-gray-700 hover:text-gray-300"
+                        >
+                          Use Basic Template Instead
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setAiWarning(null)}
+                    className="shrink-0 text-gray-600 transition-colors hover:text-gray-400"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Generate button */}
         <button
           onClick={handleGenerate}
-          disabled={!topic.trim()}
+          disabled={!topic.trim() || isGenerating}
           className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-primary-500 px-6 py-3 text-sm font-semibold text-gray-950 transition-all hover:bg-primary-400 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
-          </svg>
-          Generate Presentation
-          <span className="text-[10px] opacity-60">Ctrl+Enter</span>
+          {isGenerating ? (
+            <>
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Generating with AI&hellip;
+            </>
+          ) : (
+            <>
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+              </svg>
+              Generate Presentation
+              <span className="text-[10px] opacity-60">Ctrl+Enter</span>
+            </>
+          )}
         </button>
 
         {/* Or blank */}
         <button
           onClick={handleBlankDeck}
-          className="mt-3 w-full text-center text-xs text-gray-600 transition-colors hover:text-gray-400"
+          disabled={isGenerating}
+          className="mt-3 w-full text-center text-xs text-gray-600 transition-colors hover:text-gray-400 disabled:opacity-40"
         >
           or start with a blank deck
         </button>
