@@ -507,27 +507,27 @@ function getApparelAdapter(): StoreAdapter { return makeFabricAdapter(500, 600);
 function getPackagingAdapter(): StoreAdapter { return makeFabricAdapter(900, 700); }
 
 // ---------------------------------------------------------------------------
-// Presentation adapter (non-Fabric, Zustand store)
+// Presentation adapter (Slidev Presenter, Zustand store)
 // ---------------------------------------------------------------------------
 
 function getPresentationAdapter(): StoreAdapter {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { usePresentationEditor } = require("@/stores/presentation-editor");
+  const { useSlidevEditor } = require("@/stores/slidev-editor");
   return {
     getSnapshot: () => {
-      const { form } = usePresentationEditor.getState();
+      const { form } = useSlidevEditor.getState();
       return { form };
     },
     restoreSnapshot: (data) => {
       if (data.form) {
-        usePresentationEditor.getState().setForm(data.form as never);
+        useSlidevEditor.getState().setForm(data.form as never);
       }
     },
     resetStore: () => {
-      usePresentationEditor.getState().resetForm();
-      nukePersistStorage("dmsuite-presentation");
+      useSlidevEditor.getState().resetForm();
+      nukePersistStorage("dmsuite-slidev");
     },
-    subscribe: (cb) => usePresentationEditor.subscribe(cb),
+    subscribe: (cb) => useSlidevEditor.subscribe(cb),
   };
 }
 

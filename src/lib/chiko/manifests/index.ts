@@ -33,6 +33,7 @@ export { createApparelFabricManifest } from "./apparel-fabric";
 export { createPackagingFabricManifest } from "./packaging-fabric";
 export { createBannerAdFabricManifest } from "./banner-ad-fabric";
 export { createPresentationManifest } from "./presentation-chiko";
+export { createSlidevPresenterManifest } from "./slidev-presenter";
 export { createColorPaletteManifest } from "./color-palette";
 export { createPDFToolsManifest } from "./pdf-tools";
 export { createDocumentSignerManifest } from "./document-signer";
