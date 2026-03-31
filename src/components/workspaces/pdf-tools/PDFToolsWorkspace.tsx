@@ -11,14 +11,10 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import {
   IconFileText,
-  IconDownload,
   IconLoader,
   IconPlus,
   IconTrash,
   IconCheck,
-  IconSettings,
-  IconLayers,
-  IconRefresh,
 } from "@/components/icons";
 import { useChikoActions } from "@/hooks/useChikoActions";
 import { createPDFToolsManifest, type PDFToolsRefs } from "@/lib/chiko/manifests/pdf-tools";
@@ -46,13 +42,11 @@ import {
   downloadMultiple,
   parsePageRanges,
   type PDFFileEntry,
-  type PDFMetadata,
   type CompressLevel,
   type CompressResult,
   type RotationAngle,
   type WatermarkOptions,
   type PageNumberOptions,
-  type StampOptions,
 } from "@/lib/pdf/pdf-engine";
 
 /* ── Types ─────────────────────────────────────────────────── */
@@ -94,7 +88,7 @@ const PDF_TOOLS: ToolDef[] = [
   { id: "reorder", label: "Reorder", desc: "Rearrange page order", category: "pages", icon: "↕️" },
   { id: "reverse", label: "Reverse", desc: "Reverse all page order", category: "pages", icon: "🔃" },
   // Security
-  { id: "protect", label: "Protect", desc: "Add password encryption", category: "security", icon: "🔒" },
+  { id: "protect", label: "Protect", desc: "Add protection metadata mark", category: "security", icon: "🔒" },
   // Content & Editing
   { id: "watermark", label: "Watermark", desc: "Add text watermark", category: "content", icon: "💧" },
   { id: "page-numbers", label: "Page Numbers", desc: "Add page numbering", category: "content", icon: "🔢" },
@@ -153,6 +147,8 @@ const SCALE_PRESETS = [
   { label: "A3 Portrait", width: 841.89, height: 1190.55 },
 ] as const;
 
+const INPUT_CLS = "w-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary-500";
+
 function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
@@ -201,8 +197,10 @@ export default function PDFToolsWorkspace() {
   const [stampFontSize, setStampFontSize] = useState(14);
 
   // Protect settings
-  const [protectPassword, setProtectPassword] = useState("");
-  const [protectConfirm, setProtectConfirm] = useState("");
+  // Note: pdf-lib cannot encrypt — protect tool stamps metadata only
+
+  // Reorder settings
+  const [reorderPageOrder, setReorderPageOrder] = useState("");
 
   // Metadata settings
   const [metaTitle, setMetaTitle] = useState("");
@@ -226,7 +224,6 @@ export default function PDFToolsWorkspace() {
   const isMultiFile = activeToolDef?.multiFile || activeTool === "convert";
   const totalSize = useMemo(() => files.reduce((s, f) => s + f.size, 0), [files]);
   const totalPages = useMemo(() => files.reduce((s, f) => s + f.pageCount, 0), [files]);
-  const passwordsMatch = protectPassword === protectConfirm && protectPassword.length > 0;
 
   /* ── File Handling ───────────────────────────────────────── */
   const addFiles = useCallback(async (fileList: FileList | File[]) => {
@@ -298,11 +295,13 @@ export default function PDFToolsWorkspace() {
   const switchTool = useCallback((tool: PDFTool) => {
     setActiveTool(tool);
     clearFiles();
+    setReorderPageOrder("");
   }, []);
 
   // Auto-load metadata when file is loaded and tool is metadata/info
+  // Auto-populate reorder page sequence when file is loaded for reorder
   useEffect(() => {
-    if (files.length === 1 && (activeTool === "metadata" || activeTool === "info")) {
+    if (files.length === 1 && (activeTool === "metadata" || activeTool === "info" || activeTool === "reorder")) {
       (async () => {
         try {
           if (activeTool === "metadata") {
@@ -316,6 +315,11 @@ export default function PDFToolsWorkspace() {
           if (activeTool === "info") {
             const info = await getPDFInfo(files[0].bytes);
             setPdfInfo(info);
+          }
+          if (activeTool === "reorder") {
+            setReorderPageOrder(
+              Array.from({ length: files[0].pageCount }, (_, i) => i + 1).join(", ")
+            );
           }
         } catch {
           // Ignore metadata read errors
@@ -390,9 +394,13 @@ export default function PDFToolsWorkspace() {
         }
 
         case "reorder": {
-          // Use current file list order as new page order
-          const newOrder = files.map((_, i) => i + 1);
-          const result = await reorderPages(file.bytes, newOrder);
+          // Parse user's custom page order (1-based, comma-separated)
+          const orderNums = reorderPageOrder
+            .split(",")
+            .map((s) => parseInt(s.trim(), 10))
+            .filter((n) => !isNaN(n) && n >= 1 && n <= file.pageCount);
+          if (orderNums.length === 0) throw new Error("Enter a valid page order, e.g. '3, 1, 2'");
+          const result = await reorderPages(file.bytes, orderNums);
           setProgress(90);
           downloadBytes(result, `${baseName}_reordered.pdf`);
           break;
@@ -447,10 +455,7 @@ export default function PDFToolsWorkspace() {
         }
 
         case "protect": {
-          if (!passwordsMatch) throw new Error("Passwords don't match");
-          // pdf-lib encrypt is not supported directly, but we can set metadata
-          // For actual encryption, we'd need a different library
-          // We'll use pdf-lib's save with user-password conceptually
+          // pdf-lib doesn't support encryption — we add a producer metadata mark
           const result = await setMetadata(file.bytes, {
             producer: "DMSuite • Protected",
           });
@@ -532,7 +537,7 @@ export default function PDFToolsWorkspace() {
     files, activeTool, splitRange, compressLevel, rotateAngle, deletePageNums,
     watermarkText, watermarkPosition, watermarkOpacity, watermarkFontSize,
     pageNumberFormat, pageNumberPosition, pageNumberStart,
-    stampText, stampFontSize, protectPassword, passwordsMatch,
+    stampText, stampFontSize, reorderPageOrder,
     metaTitle, metaAuthor, metaSubject, metaKeywords, metaCreator,
     convertMode, pagesPerSheet, scaleWidth, scaleHeight,
   ]);
@@ -557,7 +562,7 @@ export default function PDFToolsWorkspace() {
       pageNumberPosition: pageNumberPosition ?? "bottom-center",
       rotateAngle,
       convertMode,
-      protectPassword,
+      protectPassword: "",
       metadataTitle: metaTitle,
       metadataAuthor: metaAuthor,
       stampText,
@@ -576,9 +581,12 @@ export default function PDFToolsWorkspace() {
     setWatermarkFontSize,
     setPageNumberFormat: (f: string) => setPageNumberFormat(f as PageNumberOptions["format"]),
     setPageNumberPosition: (p: string) => setPageNumberPosition(p as PageNumberOptions["position"]),
+    setPageNumberStart: (n: number) => setPageNumberStart(n || 1),
     setRotateAngle: (a: number) => setRotateAngle(a as RotationAngle),
     setConvertMode: (m: string) => setConvertMode(m as ConvertMode),
-    setProtectPassword,
+    setProtectPassword: () => {},  // no-op: protect stamps metadata only
+    setProtectConfirm: () => {},   // no-op: protect stamps metadata only
+    setReorderPageOrder,
     setMetadata: (field: string, value: string) => {
       switch (field) {
         case "title": setMetaTitle(value); break;
@@ -597,7 +605,7 @@ export default function PDFToolsWorkspace() {
     activeTool, files, totalSize, totalPages, processing, done,
     splitRange, compressLevel, watermarkText, watermarkPosition, watermarkOpacity,
     watermarkFontSize, pageNumberFormat, pageNumberPosition, rotateAngle,
-    convertMode, protectPassword, metaTitle, metaAuthor, stampText, stampFontSize,
+    convertMode, metaTitle, metaAuthor, stampText, stampFontSize,
     pagesPerSheet, compressResult, switchTool, runProcess,
   ]);
 
@@ -605,16 +613,16 @@ export default function PDFToolsWorkspace() {
 
   /* ── Compute accept types ────────────────────────────────── */
   const acceptTypes = activeTool === "convert" && convertMode === "images-to-pdf"
-    ? "image/png,image/jpeg,image/webp"
+    ? "image/png,image/jpeg"
     : "application/pdf,.pdf";
 
   /* ── Can Process? ────────────────────────────────────────── */
   const canProcess =
     files.length > 0 &&
     !processing &&
-    (activeTool !== "protect" || passwordsMatch) &&
     (activeTool !== "overlay" || files.length >= 2) &&
-    (activeTool !== "info" || !pdfInfo);
+    (activeTool !== "info" || !pdfInfo) &&
+    (activeTool !== "reorder" || reorderPageOrder.trim().length > 0);
 
   const processLabel = useMemo(() => {
     if (processing) return "Processing…";
@@ -727,7 +735,7 @@ export default function PDFToolsWorkspace() {
                   value={splitRange}
                   onChange={(e) => setSplitRange(e.target.value)}
                   placeholder="e.g., 1-3, 5, 7-10"
-                  className="input-field font-mono"
+                  className={`${INPUT_CLS} font-mono`}
                 />
                 <p className="text-[10px] text-gray-400 mt-1">
                   Separate ranges with commas. Each range creates a separate file when splitting.
@@ -742,7 +750,7 @@ export default function PDFToolsWorkspace() {
                   value={deletePageNums}
                   onChange={(e) => setDeletePageNums(e.target.value)}
                   placeholder="e.g., 1, 3, 5-7"
-                  className="input-field font-mono"
+                  className={`${INPUT_CLS} font-mono`}
                 />
                 <p className="text-[10px] text-gray-400 mt-1">
                   These pages will be removed from the PDF.
@@ -803,7 +811,7 @@ export default function PDFToolsWorkspace() {
                     value={watermarkText}
                     onChange={(e) => setWatermarkText(e.target.value)}
                     placeholder="CONFIDENTIAL"
-                    className="input-field"
+                    className={INPUT_CLS}
                   />
                 </SettingsCard>
                 <SettingsCard title="Position">
@@ -881,7 +889,7 @@ export default function PDFToolsWorkspace() {
                     min={1}
                     value={pageNumberStart}
                     onChange={(e) => setPageNumberStart(parseInt(e.target.value) || 1)}
-                    className="input-field w-24"
+                    className={`${INPUT_CLS} w-24`}
                   />
                 </SettingsCard>
               </>
@@ -895,7 +903,7 @@ export default function PDFToolsWorkspace() {
                     value={stampText}
                     onChange={(e) => setStampText(e.target.value)}
                     placeholder="APPROVED"
-                    className="input-field"
+                    className={INPUT_CLS}
                   />
                   <div className="flex flex-wrap gap-1 mt-2">
                     {["APPROVED", "REJECTED", "DRAFT", "SIGNED", "COPY", "VOID", "FINAL"].map((t) => (
@@ -930,26 +938,13 @@ export default function PDFToolsWorkspace() {
 
             {/* ── Protect Settings ── */}
             {activeTool === "protect" && (
-              <SettingsCard title="Password Protection">
-                <label className="block text-[10px] text-gray-400 mb-1">Password</label>
-                <input
-                  type="password"
-                  value={protectPassword}
-                  onChange={(e) => setProtectPassword(e.target.value)}
-                  placeholder="Enter password…"
-                  className="input-field"
-                />
-                <label className="block text-[10px] text-gray-400 mb-1 mt-2">Confirm Password</label>
-                <input
-                  type="password"
-                  value={protectConfirm}
-                  onChange={(e) => setProtectConfirm(e.target.value)}
-                  placeholder="Confirm password…"
-                  className={`input-field ${protectConfirm && !passwordsMatch ? "!border-red-500" : ""}`}
-                />
-                {protectConfirm && !passwordsMatch && (
-                  <p className="text-[10px] text-red-400 mt-1">Passwords do not match</p>
-                )}
+              <SettingsCard title="Protection Mark">
+                <p className="text-[10px] text-gray-400 leading-relaxed mb-2">
+                  Adds a <strong className="text-gray-300">DMSuite • Protected</strong> producer mark to the PDF metadata.
+                </p>
+                <p className="text-[10px] text-amber-400/80 leading-relaxed">
+                  Note: True password encryption requires a server-side solution. This stamps metadata only.
+                </p>
               </SettingsCard>
             )}
 
@@ -969,7 +964,7 @@ export default function PDFToolsWorkspace() {
                       value={field.value}
                       onChange={(e) => field.set(e.target.value)}
                       placeholder={field.label}
-                      className="input-field"
+                      className={INPUT_CLS}
                     />
                   </div>
                 ))}
@@ -1026,7 +1021,7 @@ export default function PDFToolsWorkspace() {
                         type="number"
                         value={Math.round(scaleWidth)}
                         onChange={(e) => setScaleWidth(parseFloat(e.target.value) || 595)}
-                        className="input-field"
+                        className={INPUT_CLS}
                       />
                     </div>
                     <div>
@@ -1035,7 +1030,7 @@ export default function PDFToolsWorkspace() {
                         type="number"
                         value={Math.round(scaleHeight)}
                         onChange={(e) => setScaleHeight(parseFloat(e.target.value) || 842)}
-                        className="input-field"
+                        className={INPUT_CLS}
                       />
                     </div>
                   </div>
@@ -1075,12 +1070,31 @@ export default function PDFToolsWorkspace() {
               </SettingsCard>
             )}
 
-            {/* ── Reorder Instructions ── */}
-            {activeTool === "reorder" && files.length > 0 && (
+            {/* ── Reorder Settings ── */}
+            {activeTool === "reorder" && (
               <SettingsCard title="Reorder Pages">
-                <p className="text-[10px] text-gray-400 leading-relaxed mb-2">
-                  Drag pages up/down in the file list to set the new order, then click &ldquo;Apply New Order&rdquo;.
+                <input
+                  value={reorderPageOrder}
+                  onChange={(e) => setReorderPageOrder(e.target.value)}
+                  placeholder="e.g., 3, 1, 2, 5, 4"
+                  className={`${INPUT_CLS} font-mono`}
+                />
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Enter page numbers in desired order, comma-separated.
+                  {files.length === 1 && files[0].pageCount > 1 && (
+                    <> This PDF has {files[0].pageCount} pages.</>
+                  )}
                 </p>
+                {files.length === 1 && files[0].pageCount > 1 && !reorderPageOrder && (
+                  <button
+                    onClick={() => setReorderPageOrder(
+                      Array.from({ length: files[0].pageCount }, (_, i) => i + 1).join(", ")
+                    )}
+                    className="mt-1.5 text-[10px] text-primary-400 hover:text-primary-300 font-medium transition-colors"
+                  >
+                    Auto-fill page sequence →
+                  </button>
+                )}
               </SettingsCard>
             )}
 
@@ -1147,7 +1161,7 @@ export default function PDFToolsWorkspace() {
               </p>
               <p className="text-xs text-gray-400 mt-1">
                 {activeTool === "convert" && convertMode === "images-to-pdf"
-                  ? "PNG, JPG, WebP • Multiple files allowed"
+                  ? "PNG, JPG • Multiple files allowed"
                   : isMultiFile
                     ? "Upload multiple PDFs"
                     : "Upload a PDF file"}
@@ -1158,7 +1172,7 @@ export default function PDFToolsWorkspace() {
                 multiple={isMultiFile}
                 accept={acceptTypes}
                 className="hidden"
-                onChange={(e) => e.target.files && addFiles(e.target.files)}
+                onChange={(e) => { if (e.target.files) { addFiles(e.target.files); e.target.value = ""; } }}
               />
             </div>
           </div>

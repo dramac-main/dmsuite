@@ -45,7 +45,9 @@ export type OutputFormat =
   | "pptx"
   | "xlsx"
   | "tiff"
-  | "bmp";
+  | "bmp"
+  | "css"
+  | "scss";
 
 /** Print size presets */
 export type PrintSize =
@@ -938,6 +940,19 @@ export const toolCategories: ToolCategory[] = [
         outputs: ["pdf", "docx"],
         supportsPartEdit: true,
         devStatus: "complete",
+      },
+      {
+        id: "document-signer",
+        name: "Document Signer & Form Filler",
+        description:
+          "DocuSeal-inspired document filling & signing. PDF form builder with 14 field types, multiple signers, signature capture (draw/type/upload), audit trail, and email workflows",
+        icon: "fileText",
+        status: "ready",
+        devStatus: "complete",
+        tags: ["document", "signature", "signing", "form", "PDF", "e-sign", "audit trail"],
+        outputs: ["pdf"],
+        printReady: true,
+        supportsPartEdit: true,
       },
       {
         id: "business-plan",

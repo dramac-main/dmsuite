@@ -42,6 +42,11 @@ function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
   return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
 }
 
+function hexToHsl(hex: string): [number, number, number] {
+  const [r, g, b] = hexToRgb(hex);
+  return rgbToHsl(r, g, b);
+}
+
 function hslToHex(h: number, s: number, l: number): string {
   s /= 100; l /= 100;
   const a = s * Math.min(l, 1 - l);
@@ -606,16 +611,33 @@ export function createColorPaletteManifest(): ChikoActionManifest {
         }
         case "fixContrastIssues": {
           const { colors } = useColorPaletteStore.getState();
-          const textOnBg = contrastRatio(colors.text, colors.background);
-          if (textOnBg < 4.5) {
-            const bgLum = relativeLuminance(colors.background);
-            if (bgLum > 0.5) {
-              store.setColor("text", "#1a1a2e");
-            } else {
-              store.setColor("text", "#e8e8f0");
-            }
+          const fixes: string[] = [];
+          const bgLum = relativeLuminance(colors.background);
+
+          // Fix text-on-background
+          if (contrastRatio(colors.text, colors.background) < 4.5) {
+            store.setColor("text", bgLum > 0.5 ? "#1a1a2e" : "#e8e8f0");
+            fixes.push("text");
           }
-          return ok("Contrast issues fixed — text now passes WCAG AA on background");
+
+          // Fix primary-on-background (need at least 3:1 for large text / UI)
+          if (contrastRatio(colors.primary, colors.background) < 3) {
+            const pHsl = hexToHsl(colors.primary);
+            pHsl[2] = bgLum > 0.5 ? Math.min(pHsl[2], 40) : Math.max(pHsl[2], 60);
+            store.setColor("primary", hslToHex(pHsl[0], pHsl[1], pHsl[2]));
+            fixes.push("primary");
+          }
+
+          // Fix accent-on-background (need at least 3:1)
+          if (contrastRatio(colors.accent, colors.background) < 3) {
+            const aHsl = hexToHsl(colors.accent);
+            aHsl[2] = bgLum > 0.5 ? Math.min(aHsl[2], 40) : Math.max(aHsl[2], 60);
+            store.setColor("accent", hslToHex(aHsl[0], aHsl[1], aHsl[2]));
+            fixes.push("accent");
+          }
+
+          if (fixes.length === 0) return ok("All colors already pass contrast checks");
+          return ok(`Fixed contrast for: ${fixes.join(", ")}. Text→AA (4.5:1), primary/accent→3:1 on background.`);
         }
 
         // ── Save / Load ──

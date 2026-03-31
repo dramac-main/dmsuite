@@ -6,7 +6,7 @@
 // Text · Background · Primary · Secondary · Accent + Font pairing.
 // =============================================================================
 
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef, type RefObject } from "react";
 import {
   IconRefresh,
   IconCopy,
@@ -116,6 +116,60 @@ function exportJSON(c: ColorRoles, fonts: { heading: string; body: string }) {
   return JSON.stringify({ colors: c, fonts }, null, 2);
 }
 
+function exportSVG(c: ColorRoles) {
+  const roles = Object.entries(c);
+  const w = 60, gap = 4, pad = 16;
+  const totalW = pad * 2 + roles.length * w + (roles.length - 1) * gap;
+  const h = 100;
+  const rects = roles.map(([label, hex], i) => {
+    const x = pad + i * (w + gap);
+    return `  <rect x="${x}" y="${pad}" width="${w}" height="${h - 40}" rx="8" fill="${hex}" />
+  <text x="${x + w / 2}" y="${h - 8}" text-anchor="middle" font-size="9" font-family="sans-serif" fill="#666">${label}</text>
+  <text x="${x + w / 2}" y="${h + 4}" text-anchor="middle" font-size="8" font-family="monospace" fill="#999">${hex}</text>`;
+  });
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${h + 12}" width="${totalW}" height="${h + 12}">\n${rects.join("\n")}\n</svg>`;
+}
+
+// ---------------------------------------------------------------------------
+// Click-outside hook
+// ---------------------------------------------------------------------------
+
+function useClickOutside(ref: RefObject<HTMLElement | null>, handler: () => void) {
+  useEffect(() => {
+    const listener = (e: MouseEvent | TouchEvent) => {
+      if (!ref.current || ref.current.contains(e.target as Node)) return;
+      handler();
+    };
+    document.addEventListener("mousedown", listener);
+    document.addEventListener("touchstart", listener);
+    return () => {
+      document.removeEventListener("mousedown", listener);
+      document.removeEventListener("touchstart", listener);
+    };
+  }, [ref, handler]);
+}
+
+// ---------------------------------------------------------------------------
+// Safe clipboard write
+// ---------------------------------------------------------------------------
+
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // Fallback for non-secure contexts
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.cssText = "position:fixed;left:-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Tiny color swatch component
 // ---------------------------------------------------------------------------
@@ -134,9 +188,10 @@ function ColorSwatch({ color, role, onChange }: { color: string; role: string; o
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(color);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1200);
+    copyToClipboard(color).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    });
   };
 
   return (
@@ -417,7 +472,7 @@ function ContrastGrid({ c }: { c: ColorRoles }) {
         const badge = wcagBadge(fg, bg);
         const ratio = contrastRatio(fg, bg).toFixed(1);
         return (
-          <div key={label} className="flex items-center gap-2 p-2 rounded-lg bg-white/5 dark:bg-white/5">
+          <div key={label} className="flex items-center gap-2 p-2 rounded-lg bg-gray-100 dark:bg-white/5">
             <div className="w-8 h-8 rounded flex items-center justify-center text-xs font-bold shrink-0" style={{ backgroundColor: bg, color: fg }}>
               Aa
             </div>
@@ -461,12 +516,45 @@ export default function ColorPaletteWorkspace() {
   const [showSaved, setShowSaved] = useState(false);
   const [saveName, setSaveName] = useState("");
   const [tab, setTab] = useState<"preview" | "colors" | "export">("preview");
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  // Click-outside refs for dropdowns
+  const presetsRef = useRef<HTMLDivElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
+  const savedRef = useRef<HTMLDivElement>(null);
+  useClickOutside(presetsRef, useCallback(() => setShowPresets(false), []));
+  useClickOutside(exportRef, useCallback(() => setShowExport(false), []));
+  useClickOutside(savedRef, useCallback(() => setShowSaved(false), []));
 
   // Load Google fonts
   useEffect(() => {
     loadGoogleFont(fonts.heading);
     loadGoogleFont(fonts.body);
   }, [fonts.heading, fonts.body]);
+
+  // Parse share URL params on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get("t"), b = params.get("b"), p = params.get("p"), s = params.get("s"), a = params.get("a");
+    if (t && b && p && s && a) {
+      const hexRe = /^[0-9a-fA-F]{6}$/;
+      if ([t, b, p, s, a].every((v) => hexRe.test(v))) {
+        setColor("text", `#${t}`);
+        setColor("background", `#${b}`);
+        setColor("primary", `#${p}`);
+        setColor("secondary", `#${s}`);
+        setColor("accent", `#${a}`);
+      }
+    }
+    const fh = params.get("fh"), fb = params.get("fb");
+    if (fh) setFont("heading", fh);
+    if (fb) setFont("body", fb);
+    // Clean URL after parsing
+    if (params.toString()) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Spacebar to randomize
   useEffect(() => {
@@ -498,6 +586,8 @@ export default function ColorPaletteWorkspace() {
         content = exportSCSS(colors, fonts); filename = "palette.scss"; break;
       case "json":
         content = exportJSON(colors, fonts); filename = "palette.json"; mime = "application/json"; break;
+      case "svg":
+        content = exportSVG(colors); filename = "palette.svg"; mime = "image/svg+xml"; break;
       default: return;
     }
 
@@ -520,7 +610,12 @@ export default function ColorPaletteWorkspace() {
       fh: fonts.heading,
       fb: fonts.body,
     });
-    navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?${params.toString()}`);
+    copyToClipboard(`${window.location.origin}${window.location.pathname}?${params.toString()}`).then((ok) => {
+      if (ok) {
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
+      }
+    });
   }, [colors, fonts]);
 
   // Preview component
@@ -558,7 +653,7 @@ export default function ColorPaletteWorkspace() {
         </button>
 
         {/* Presets dropdown */}
-        <div className="relative">
+        <div className="relative" ref={presetsRef}>
           <button
             onClick={() => { setShowPresets(!showPresets); setShowExport(false); setShowFonts(false); setShowSaved(false); }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
@@ -614,7 +709,7 @@ export default function ColorPaletteWorkspace() {
         </div>
 
         {/* Saved palettes */}
-        <div className="relative">
+        <div className="relative" ref={savedRef}>
           <button
             onClick={() => { setShowSaved(!showSaved); setShowPresets(false); setShowExport(false); setShowFonts(false); }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
@@ -677,7 +772,7 @@ export default function ColorPaletteWorkspace() {
         </div>
 
         {/* Export dropdown */}
-        <div className="relative">
+        <div className="relative" ref={exportRef}>
           <button
             onClick={() => { setShowExport(!showExport); setShowPresets(false); setShowFonts(false); setShowSaved(false); }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-violet-500 text-white hover:bg-violet-600 transition-colors"
@@ -693,6 +788,7 @@ export default function ColorPaletteWorkspace() {
                 { id: "tailwind", label: "Tailwind v4" },
                 { id: "scss", label: "SCSS Variables" },
                 { id: "json", label: "JSON" },
+                { id: "svg", label: "SVG Swatches" },
               ].map((f) => (
                 <button
                   key={f.id}
@@ -707,7 +803,7 @@ export default function ColorPaletteWorkspace() {
                 onClick={() => { handleCopyLink(); setShowExport(false); }}
                 className="w-full px-4 py-2.5 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2"
               >
-                <IconCopy className="w-3.5 h-3.5" /> Copy Share Link
+                <IconCopy className="w-3.5 h-3.5" /> {linkCopied ? "Copied!" : "Copy Share Link"}
               </button>
             </div>
           )}
@@ -845,6 +941,7 @@ export default function ColorPaletteWorkspace() {
                   { id: "tailwind", label: "Tailwind v4" },
                   { id: "scss", label: "SCSS" },
                   { id: "json", label: "JSON" },
+                  { id: "svg", label: "SVG" },
                 ].map((f) => (
                   <button
                     key={f.id}
@@ -859,7 +956,7 @@ export default function ColorPaletteWorkspace() {
                 onClick={handleCopyLink}
                 className="w-full mt-2 px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
               >
-                <IconCopy className="w-3.5 h-3.5" /> Copy Share Link
+                <IconCopy className="w-3.5 h-3.5" /> {linkCopied ? "Copied!" : "Copy Share Link"}
               </button>
             </div>
 
