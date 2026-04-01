@@ -43,7 +43,7 @@ export default function NAPSAReturnsView() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const returns = useMemo(() => form.napsaReturns ?? [], [form.napsaReturns]);
-  const employees = form.napsaEmployees;
+  const employees = form.napsaEmployees ?? [];
   const activeEmployees = employees.filter((e) => e.isActive);
 
   // Stats
