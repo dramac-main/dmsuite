@@ -94,6 +94,20 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
 // ── Main parser ─────────────────────────────────────────────────────────────
 
 export function parseSlidevMarkdown(markdown: string): ParsedDeck {
+  if (!markdown) {
+    return {
+      headmatter: {},
+      slides: [{
+        id: "slide-empty-0",
+        index: 0,
+        rawContent: "",
+        frontmatter: {},
+        content: "\n# Untitled\n\nStart writing...\n",
+        notes: "",
+        layout: "cover" as LayoutType,
+      }],
+    };
+  }
   const text = markdown.replace(/\r\n/g, "\n").trim();
 
   let headmatter: SlidevHeadmatter = {};

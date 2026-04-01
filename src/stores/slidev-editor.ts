@@ -436,6 +436,17 @@ export const useSlidevEditor = create<SlidevEditorState>()(
           form: state.form,
           phase: state.phase,
         }),
+        merge: (persisted, current) => {
+          const p = persisted as Partial<SlidevEditorState> | undefined;
+          if (!p) return current;
+          const merged = { ...current, ...p };
+          // Ensure form.markdown is always a valid string
+          if (!merged.form || typeof merged.form.markdown !== "string") {
+            merged.form = defaultForm();
+            merged.phase = "prompt";
+          }
+          return merged;
+        },
       },
     ),
     { equality: (a, b) => equal(a, b), limit: 50 },

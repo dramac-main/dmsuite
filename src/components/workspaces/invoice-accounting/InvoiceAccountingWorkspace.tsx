@@ -174,7 +174,7 @@ const NAV_GROUPS: NavGroup[] = [
         key: "napsa-employees",
         label: "NAPSA Employees",
         icon: <NAPSAIcon />,
-        badge: (f) => f.napsaEmployees.filter((e) => e.isActive).length,
+        badge: (f) => (f.napsaEmployees ?? []).filter((e) => e.isActive).length,
       },
       { key: "napsa-returns", label: "NAPSA Returns", icon: <NAPSAIcon /> },
     ],
