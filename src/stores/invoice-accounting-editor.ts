@@ -1662,6 +1662,7 @@ export const useInvoiceAccountingEditor = create<InvoiceAccountingEditorState>()
         addNAPSAEmployee: (data) => {
           const id = `napsa-emp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
           set((s) => {
+            if (!s.form.napsaEmployees) s.form.napsaEmployees = [];
             s.form.napsaEmployees.push({ ...data, id });
           });
           return id;
@@ -1680,7 +1681,7 @@ export const useInvoiceAccountingEditor = create<InvoiceAccountingEditorState>()
 
         generateNAPSAReturn: (month) => {
           const state = get();
-          const activeEmps = state.form.napsaEmployees.filter((e) => e.isActive);
+          const activeEmps = (state.form.napsaEmployees ?? []).filter((e) => e.isActive);
           const contributions = activeEmps.map((emp) => {
             const napsa = calculateNAPSA(emp.grossSalary);
             return {
@@ -1736,6 +1737,27 @@ export const useInvoiceAccountingEditor = create<InvoiceAccountingEditorState>()
         name: "dmsuite-invoice-tracker",
         storage: createJSONStorage(() => localStorage),
         partialize: (s) => ({ form: s.form, accentColorLocked: s.accentColorLocked }),
+        merge: (persisted, current) => {
+          const p = persisted as Record<string, unknown> | undefined;
+          if (!p) return current;
+          const pForm = (p.form ?? {}) as Record<string, unknown>;
+          const cForm = (current as unknown as Record<string, unknown>).form as Record<string, unknown>;
+          // Deep-merge form so new fields (napsaEmployees, napsaReturns, etc.) get defaults
+          const mergedForm: Record<string, unknown> = { ...cForm, ...pForm };
+          // Ensure new array fields exist even if not in persisted data
+          if (!Array.isArray(mergedForm.napsaEmployees)) mergedForm.napsaEmployees = [];
+          if (!Array.isArray(mergedForm.napsaReturns)) mergedForm.napsaReturns = [];
+          // Ensure business has ZRA fields
+          const biz = mergedForm.business as Record<string, unknown> | undefined;
+          if (biz) {
+            if (biz.zraEnabled === undefined) biz.zraEnabled = false;
+            if (!biz.zraVsdcUrl) biz.zraVsdcUrl = "http://localhost:8080";
+            if (!biz.zraBranchId) biz.zraBranchId = "000";
+            if (!biz.zraDeviceSerialNo) biz.zraDeviceSerialNo = "";
+            if (biz.zraAutoSubmit === undefined) biz.zraAutoSubmit = false;
+          }
+          return { ...current, ...p, form: mergedForm as unknown as InvoiceAccountingForm };
+        },
       }
     ),
     {

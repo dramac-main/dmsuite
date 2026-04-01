@@ -34,7 +34,7 @@ export default function NAPSAEmployeesView() {
     isActive: true,
   });
 
-  const employees = form.napsaEmployees;
+  const employees = form.napsaEmployees ?? [];
   const filtered = employees.filter(
     (e) =>
       e.name.toLowerCase().includes(search.toLowerCase()) ||
