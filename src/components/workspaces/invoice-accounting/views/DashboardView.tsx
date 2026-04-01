@@ -13,7 +13,7 @@ import { StatCard, StatusBadge, Btn, formatDate } from "../shared";
 export default function DashboardView() {
   const form = useInvoiceAccountingEditor((s) => s.form);
   const setView = useInvoiceAccountingEditor((s) => s.setView);
-  const currency = form.business.currency;
+  const currency = form.business?.currency ?? "ZMW";
 
   // ── Computed stats ──
   const stats = useMemo(() => {
@@ -25,17 +25,17 @@ export default function DashboardView() {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    for (const inv of form.invoices) {
+    for (const inv of (form.invoices ?? [])) {
       if (inv.status === "cancelled" || inv.status === "draft") continue;
       const totals = calculateInvoiceTotals(inv.lineItems, inv.taxMode, inv.discount);
-      const balance = getInvoiceBalance(inv, form.payments);
+      const balance = getInvoiceBalance(inv, form.payments ?? []);
       totalRevenue += totals.total;
       totalOutstanding += balance;
       if (inv.status === "overdue") totalOverdue += balance;
       if (inv.status === "paid") totalPaid += totals.total;
     }
 
-    const recentExpenses = form.expenses.filter(
+    const recentExpenses = (form.expenses ?? []).filter(
       (e) => new Date(e.date) >= thirtyDaysAgo
     );
     totalExpenses = recentExpenses.reduce((s, e) => s + e.amount, 0);
@@ -46,7 +46,7 @@ export default function DashboardView() {
   // ── Recent invoices ──
   const recentInvoices = useMemo(
     () =>
-      [...form.invoices]
+      [...(form.invoices ?? [])]
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
         .slice(0, 5),
     [form.invoices]
@@ -55,7 +55,7 @@ export default function DashboardView() {
   // ── Recent payments ──
   const recentPayments = useMemo(
     () =>
-      [...form.payments]
+      [...(form.payments ?? [])]
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
         .slice(0, 5),
     [form.payments]
@@ -67,10 +67,10 @@ export default function DashboardView() {
         {/* Welcome banner */}
         <div className="rounded-xl border border-gray-800/40 bg-linear-to-br from-primary-500/5 via-gray-900/50 to-gray-900/50 p-5">
           <h2 className="text-base font-bold text-gray-100 mb-1">
-            {form.business.name || "Your Business"}
+            {form.business?.name || "Your Business"}
           </h2>
           <p className="text-[11px] text-gray-500 mb-4">
-            {form.business.name
+            {form.business?.name
               ? `Welcome back! Here's your financial overview.`
               : "Set up your business details in Settings to get started."}
           </p>
@@ -81,7 +81,7 @@ export default function DashboardView() {
             <Btn variant="secondary" size="sm" onClick={() => setView("quotes")}>
               New Quote
             </Btn>
-            {!form.business.name && (
+            {!form.business?.name && (
               <Btn variant="ghost" size="sm" onClick={() => setView("settings")}>
                 Set Up Business →
               </Btn>
@@ -107,7 +107,7 @@ export default function DashboardView() {
             label="Overdue"
             value={formatCurrency(stats.totalOverdue, currency)}
             color="red"
-            subValue={`${form.invoices.filter((i) => i.status === "overdue").length} invoices`}
+            subValue={`${(form.invoices ?? []).filter((i) => i.status === "overdue").length} invoices`}
             onClick={() => setView("invoices")}
           />
           <StatCard
@@ -127,22 +127,22 @@ export default function DashboardView() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard
             label="Clients"
-            value={form.clients.length}
+            value={(form.clients ?? []).length}
             onClick={() => setView("clients")}
           />
           <StatCard
             label="Products"
-            value={form.products.length}
+            value={(form.products ?? []).length}
             onClick={() => setView("products")}
           />
           <StatCard
             label="Open Quotes"
-            value={form.quotes.filter((q) => q.status === "sent" || q.status === "draft").length}
+            value={(form.quotes ?? []).filter((q) => q.status === "sent" || q.status === "draft").length}
             onClick={() => setView("quotes")}
           />
           <StatCard
             label="Projects"
-            value={form.projects.length}
+            value={(form.projects ?? []).length}
             onClick={() => setView("projects")}
           />
         </div>
@@ -159,7 +159,7 @@ export default function DashboardView() {
             ) : (
               <div className="divide-y divide-gray-800/20">
                 {recentInvoices.map((inv) => {
-                  const client = form.clients.find((c) => c.id === inv.clientId);
+                  const client = (form.clients ?? []).find((c) => c.id === inv.clientId);
                   const totals = calculateInvoiceTotals(inv.lineItems, inv.taxMode, inv.discount);
                   return (
                     <button
@@ -195,8 +195,8 @@ export default function DashboardView() {
             ) : (
               <div className="divide-y divide-gray-800/20">
                 {recentPayments.map((pay) => {
-                  const client = form.clients.find((c) => c.id === pay.clientId);
-                  const inv = form.invoices.find((i) => i.id === pay.invoiceId);
+                  const client = (form.clients ?? []).find((c) => c.id === pay.clientId);
+                  const inv = (form.invoices ?? []).find((i) => i.id === pay.invoiceId);
                   return (
                     <div key={pay.id} className="flex items-center justify-between px-4 py-2.5">
                       <div>

@@ -127,13 +127,13 @@ const NAV_GROUPS: NavGroup[] = [
         key: "invoices",
         label: "Invoices",
         icon: <InvIcon />,
-        badge: (f) => f.invoices.filter((i) => i.status === "draft" || i.status === "overdue").length,
+        badge: (f) => (f.invoices ?? []).filter((i) => i.status === "draft" || i.status === "overdue").length,
       },
       {
         key: "quotes",
         label: "Quotes",
         icon: <QuoteIcon />,
-        badge: (f) => f.quotes.filter((q) => q.status === "draft" || q.status === "sent").length,
+        badge: (f) => (f.quotes ?? []).filter((q) => q.status === "draft" || q.status === "sent").length,
       },
       { key: "payments", label: "Payments", icon: <PayIcon /> },
       { key: "credit-notes", label: "Credit Notes", icon: <CreditIcon /> },
@@ -142,7 +142,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     group: "Contacts",
     items: [
-      { key: "clients", label: "Clients", icon: <ClientIcon />, badge: (f) => f.clients.length },
+      { key: "clients", label: "Clients", icon: <ClientIcon />, badge: (f) => (f.clients ?? []).length },
       { key: "vendors", label: "Vendors", icon: <VendorIcon /> },
     ],
   },
@@ -276,20 +276,23 @@ export default function InvoiceAccountingWorkspace() {
 
   // ── Progress milestones
   const prevMilestones = useRef("");
+  const businessName = form.business?.name ?? "";
+  const invoiceCount = (form.invoices ?? []).length;
+  const clientCount = (form.clients ?? []).length;
   useEffect(() => {
     const m: string[] = [];
-    if (form.business.name.trim()) m.push("input");
-    if (form.invoices.length > 0 || form.clients.length > 0) m.push("content");
+    if (businessName.trim()) m.push("input");
+    if (invoiceCount > 0 || clientCount > 0) m.push("content");
     const key = m.join(",");
     if (key !== prevMilestones.current) {
       prevMilestones.current = key;
       m.forEach((x) => dispatchProgress(x as "input" | "content"));
     }
-  }, [form.business.name, form.invoices.length, form.clients.length]);
+  }, [businessName, invoiceCount, clientCount]);
 
   // ── Quick stats for sidebar badges
   const overdueCount = useMemo(
-    () => form.invoices.filter((i) => i.status === "overdue").length,
+    () => (form.invoices ?? []).filter((i) => i.status === "overdue").length,
     [form.invoices]
   );
 
@@ -342,7 +345,8 @@ export default function InvoiceAccountingWorkspace() {
               )}
               {group.items.map((item) => {
                 const isActive = activeNavKey === item.key;
-                const badgeCount = item.badge ? item.badge(form) : 0;
+                let badgeCount = 0;
+                try { badgeCount = item.badge ? item.badge(form) : 0; } catch { /* stale persist state */ }
                 return (
                   <button
                     key={item.key}

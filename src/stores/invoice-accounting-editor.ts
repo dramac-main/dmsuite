@@ -1742,11 +1742,24 @@ export const useInvoiceAccountingEditor = create<InvoiceAccountingEditorState>()
           if (!p) return current;
           const pForm = (p.form ?? {}) as Record<string, unknown>;
           const cForm = (current as unknown as Record<string, unknown>).form as Record<string, unknown>;
-          // Deep-merge form so new fields (napsaEmployees, napsaReturns, etc.) get defaults
+          // Deep-merge form so new fields get defaults
           const mergedForm: Record<string, unknown> = { ...cForm, ...pForm };
-          // Ensure new array fields exist even if not in persisted data
-          if (!Array.isArray(mergedForm.napsaEmployees)) mergedForm.napsaEmployees = [];
-          if (!Array.isArray(mergedForm.napsaReturns)) mergedForm.napsaReturns = [];
+          // Ensure ALL array fields are arrays (guards stale/corrupt persisted data)
+          const arrayKeys = [
+            "taxes", "clients", "products", "vendors", "invoices", "quotes",
+            "creditNotes", "purchaseOrders", "payments", "expenses", "projects",
+            "timeEntries", "napsaEmployees", "napsaReturns", "selectedIds",
+          ];
+          for (const k of arrayKeys) {
+            if (!Array.isArray(mergedForm[k])) mergedForm[k] = cForm[k] ?? [];
+          }
+          // Ensure nested objects exist
+          if (!mergedForm.business || typeof mergedForm.business !== "object") {
+            mergedForm.business = cForm.business;
+          }
+          if (!mergedForm.style || typeof mergedForm.style !== "object") {
+            mergedForm.style = cForm.style;
+          }
           // Ensure business has ZRA fields
           const biz = mergedForm.business as Record<string, unknown> | undefined;
           if (biz) {
