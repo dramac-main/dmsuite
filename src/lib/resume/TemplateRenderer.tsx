@@ -167,7 +167,7 @@ function renderEducationSection(data: ResumeData, color: string, textColor: stri
             </div>
             <div style={{ color: muted(textColor, "soft"), fontSize: pt(typo.body.fontSize * 0.92) }}>
               {item.school}{item.location ? `, ${item.location}` : ""}
-              {item.grade && <span> â€” GPA: {item.grade}</span>}
+              {item.grade && <span> — GPA: {item.grade}</span>}
             </div>
             {item.description && <RichText html={item.description} bodySize={typo.body.fontSize} />}
           </div>
