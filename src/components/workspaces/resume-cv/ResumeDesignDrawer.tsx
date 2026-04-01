@@ -8,7 +8,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { useResumeEditor } from "@/stores/resume-editor";
 import type { TemplateId, LevelType } from "@/lib/resume/schema";
-import { FONT_PAIRINGS, POPULAR_FONTS } from "@/lib/resume/schema";
+import { FONT_PAIRINGS, POPULAR_FONTS, createDefaultResumeData } from "@/lib/resume/schema";
 import { TEMPLATE_CONFIGS, TEMPLATE_LIST } from "@/lib/resume/templates";
 import { FormSelect, Toggle } from "@/components/workspaces/shared/WorkspaceUIKit";
 
@@ -49,7 +49,9 @@ interface ResumeDesignDrawerProps {
 }
 
 export default function ResumeDesignDrawer({ open, onClose }: ResumeDesignDrawerProps) {
-  const meta = useResumeEditor((s) => s.resume?.metadata);
+  const _raw = useResumeEditor((s) => s.resume?.metadata);
+  const _defaults = useMemo(() => createDefaultResumeData().metadata, []);
+  const meta = _raw ?? _defaults;
   const changeTemplate = useResumeEditor((s) => s.changeTemplate);
   const setPrimaryColor = useResumeEditor((s) => s.setPrimaryColor);
   const setTextColor = useResumeEditor((s) => s.setTextColor);
@@ -104,11 +106,6 @@ export default function ResumeDesignDrawer({ open, onClose }: ResumeDesignDrawer
   );
 
   if (!open) return null;
-
-  // Safety guard: meta must be fully populated before rendering controls
-  if (!meta?.typography?.heading || !meta?.typography?.body || !meta?.design?.colors || !meta?.page || !meta?.layout || !meta?.css) {
-    return null;
-  }
 
   return (
     <>

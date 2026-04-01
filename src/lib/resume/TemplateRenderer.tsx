@@ -8,7 +8,7 @@
 
 import React, { useMemo } from "react";
 import type { ResumeData, SectionKey, PageLayout, TemplateId, LevelType } from "./schema";
-import { SECTION_META, PAGE_DIMENSIONS, mmToPx } from "./schema";
+import { SECTION_META, PAGE_DIMENSIONS, mmToPx, createDefaultResumeData } from "./schema";
 import { getTemplateConfig, type TemplateConfig } from "./templates";
 
 // ---------------------------------------------------------------------------
@@ -426,7 +426,7 @@ function ResumeHeader({
 // ---------------------------------------------------------------------------
 
 function ResumePage({
-  pageIndex, pageLayout, data, color, cfg, typo, meta, levelType, pageWidthPx, pageHeightPx,
+  pageIndex, pageLayout, data, color, cfg, typo, designColors, pageCfg, sidebarWidth, levelType, pageWidthPx, pageHeightPx,
 }: {
   pageIndex: number;
   pageLayout: PageLayout;
@@ -434,12 +434,14 @@ function ResumePage({
   color: string;
   cfg: TemplateConfig;
   typo: ResumeData["metadata"]["typography"];
-  meta: ResumeData["metadata"];
+  designColors: ResumeData["metadata"]["design"]["colors"];
+  pageCfg: ResumeData["metadata"]["page"];
+  sidebarWidth: number;
   levelType: LevelType;
   pageWidthPx: number;
   pageHeightPx: number;
 }) {
-  const sidebarPct = meta.layout.sidebarWidth;
+  const sidebarPct = sidebarWidth;
   const hasSidebar = sidebarPct > 0 && pageLayout.sidebar.length > 0;
 
   const mainSections = pageLayout.main.map((sid) => (
@@ -451,10 +453,10 @@ function ResumePage({
   )) : null;
 
   const sidebarBg = cfg.style.hasSidebarBg ? `${color}08` : "transparent";
-  const gapX = mmToPx(meta.page.gapX);
-  const marginX = mmToPx(meta.page.marginX);
-  const marginY = mmToPx(meta.page.marginY);
-  const gapY = mmToPx(meta.page.gapY);
+  const gapX = mmToPx(pageCfg.gapX);
+  const marginX = mmToPx(pageCfg.marginX);
+  const marginY = mmToPx(pageCfg.marginY);
+  const gapY = mmToPx(pageCfg.gapY);
 
   return (
     <div
@@ -462,8 +464,8 @@ function ResumePage({
       style={{
         width: pageWidthPx,
         minHeight: pageHeightPx,
-        backgroundColor: meta.design.colors.background,
-        color: meta.design.colors.text,
+        backgroundColor: designColors.background,
+        color: designColors.text,
         fontFamily: typo.body.fontFamily,
         fontSize: typo.body.fontSize,
         lineHeight: typo.body.lineHeight,
@@ -514,30 +516,37 @@ interface TemplateRendererProps {
 }
 
 export default function TemplateRenderer({ data, zoom = 1, className, printMode }: TemplateRendererProps) {
-  const meta = data.metadata;
-  if (!meta?.typography?.heading || !meta?.typography?.body || !meta?.design?.colors || !meta?.layout?.pages) {
-    return <div className="p-8 text-center text-gray-400">Loading resume…</div>;
-  }
+  // Provide fallback metadata so the preview always renders even with partial data
+  const _defaults = useMemo(() => createDefaultResumeData().metadata, []);
+  const meta = data?.metadata ?? _defaults;
+  const typoHeading = meta.typography?.heading ?? _defaults.typography.heading;
+  const typoBody = meta.typography?.body ?? _defaults.typography.body;
+  const designColors = meta.design?.colors ?? _defaults.design.colors;
+  const designLevel = meta.design?.level ?? _defaults.design.level;
+  const pageCfg = meta.page ?? _defaults.page;
+  const layoutCfg = meta.layout ?? _defaults.layout;
+  const cssCfg = meta.css ?? _defaults.css;
+
   const templateId = (meta.template || "onyx") as TemplateId;
   const cfg = getTemplateConfig(templateId);
-  const color = meta.design.colors.primary;
-  const typo = meta.typography;
-  const levelType = meta.design.level.type;
+  const color = designColors.primary;
+  const typo = { heading: typoHeading, body: typoBody };
+  const levelType = designLevel.type;
 
-  const pageDims = PAGE_DIMENSIONS[meta.page.format] ?? PAGE_DIMENSIONS.a4;
+  const pageDims = PAGE_DIMENSIONS[pageCfg.format] ?? PAGE_DIMENSIONS.a4;
   const pageWidthPx = mmToPx(pageDims.width);
   const pageHeightPx = mmToPx(pageDims.height);
 
   const pages = useMemo(() => {
-    if (meta.layout.pages.length === 0) {
+    if (!layoutCfg.pages || layoutCfg.pages.length === 0) {
       return [{ fullWidth: false, main: ["summary", "experience", "education", "projects"], sidebar: ["skills", "languages"] }];
     }
-    return meta.layout.pages;
-  }, [meta.layout.pages]);
+    return layoutCfg.pages;
+  }, [layoutCfg.pages]);
 
   // Custom CSS injection
-  const customCSSStyle = meta.css.enabled && meta.css.value ? (
-    <style dangerouslySetInnerHTML={{ __html: meta.css.value }} />
+  const customCSSStyle = cssCfg.enabled && cssCfg.value ? (
+    <style dangerouslySetInnerHTML={{ __html: cssCfg.value }} />
   ) : null;
 
   // Heading font style
@@ -547,7 +556,7 @@ export default function TemplateRenderer({ data, zoom = 1, className, printMode 
       font-weight: ${typo.heading.fontWeight};
       line-height: ${typo.heading.lineHeight};
     }
-    .resume-page .resume-section { margin-bottom: ${mmToPx(meta.page.gapY)}px; }
+    .resume-page .resume-section { margin-bottom: ${mmToPx(pageCfg.gapY)}px; }
     .resume-page .resume-rich-text p { margin: 0.2em 0; }
     .resume-page .resume-rich-text ul { margin: 0.2em 0; padding-left: 1.2em; }
     .resume-page .resume-rich-text li { margin: 0.1em 0; }
@@ -566,7 +575,9 @@ export default function TemplateRenderer({ data, zoom = 1, className, printMode 
           color={color}
           cfg={cfg}
           typo={typo}
-          meta={meta}
+          designColors={designColors}
+          pageCfg={pageCfg}
+          sidebarWidth={layoutCfg.sidebarWidth}
           levelType={levelType}
           pageWidthPx={pageWidthPx}
           pageHeightPx={pageHeightPx}
