@@ -73,14 +73,14 @@ export default function ResumeBuilderWorkspace() {
   const prevMilestonesRef = useRef<string>("");
   useEffect(() => {
     const milestones: string[] = [];
-    if (resume.basics.name.trim()) milestones.push("input");
-    if (resume.summary.content.trim()) milestones.push("content");
+    if (resume.basics?.name?.trim()) milestones.push("input");
+    if (resume.summary?.content?.trim()) milestones.push("content");
     const key = milestones.join(",");
     if (key !== prevMilestonesRef.current) {
       prevMilestonesRef.current = key;
       milestones.forEach((m) => dispatchProgress(m as "input" | "content"));
     }
-  }, [resume.basics.name, resume.summary.content]);
+  }, [resume.basics?.name, resume.summary?.content]);
 
   // ── Print handler ──
   const handlePrint = useCallback(() => {
@@ -141,7 +141,7 @@ export default function ResumeBuilderWorkspace() {
             } lg:flex flex-col w-full lg:w-80 xl:w-96 border-r border-gray-800 bg-gray-900 overflow-hidden`}
           >
             {/* Header */}
-            <WorkspaceHeader title="Resume & CV" subtitle={resume.metadata.template}>
+            <WorkspaceHeader title="Resume & CV" subtitle={resume.metadata?.template ?? "onyx"}>
               <IconButton
                 onClick={undo}
                 disabled={!canUndo}

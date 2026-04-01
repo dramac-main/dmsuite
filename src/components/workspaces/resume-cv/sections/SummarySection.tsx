@@ -9,7 +9,7 @@ import { useResumeEditor } from "@/stores/resume-editor";
 import { FormTextarea } from "@/components/workspaces/shared/WorkspaceUIKit";
 
 export default function SummarySection() {
-  const summary = useResumeEditor((s) => s.resume.summary);
+  const summary = useResumeEditor((s) => s.resume?.summary);
   const updateSummary = useResumeEditor((s) => s.updateSummary);
 
   const onChange = useCallback(
@@ -24,7 +24,7 @@ export default function SummarySection() {
       <FormTextarea
         label="Professional Summary"
         placeholder="Write a brief summary of your professional background, key skills, and career objectives..."
-        value={summary.content}
+        value={summary?.content ?? ""}
         onChange={onChange}
         rows={6}
       />

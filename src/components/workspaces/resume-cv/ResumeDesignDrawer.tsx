@@ -49,7 +49,7 @@ interface ResumeDesignDrawerProps {
 }
 
 export default function ResumeDesignDrawer({ open, onClose }: ResumeDesignDrawerProps) {
-  const meta = useResumeEditor((s) => s.resume.metadata);
+  const meta = useResumeEditor((s) => s.resume?.metadata);
   const changeTemplate = useResumeEditor((s) => s.changeTemplate);
   const setPrimaryColor = useResumeEditor((s) => s.setPrimaryColor);
   const setTextColor = useResumeEditor((s) => s.setTextColor);
@@ -104,6 +104,11 @@ export default function ResumeDesignDrawer({ open, onClose }: ResumeDesignDrawer
   );
 
   if (!open) return null;
+
+  // Safety guard: meta must be fully populated before rendering controls
+  if (!meta?.typography?.heading || !meta?.typography?.body || !meta?.design?.colors || !meta?.page || !meta?.layout || !meta?.css) {
+    return null;
+  }
 
   return (
     <>

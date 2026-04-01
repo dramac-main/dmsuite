@@ -75,8 +75,8 @@ function RichText({ html }: { html: string }) {
 // ---------------------------------------------------------------------------
 
 function renderExperienceSection(data: ResumeData, color: string, cfg: TemplateConfig, typo: ResumeData["metadata"]["typography"]) {
-  const section = data.sections.experience;
-  if (section.hidden || section.items.length === 0) return null;
+  const section = data.sections?.experience;
+  if (!section || section.hidden || section.items.length === 0) return null;
   return (
     <div className="resume-section">
       <SectionTitle title={section.title || "Experience"} color={color} style={cfg.style} />
@@ -114,8 +114,8 @@ function renderExperienceSection(data: ResumeData, color: string, cfg: TemplateC
 }
 
 function renderEducationSection(data: ResumeData, color: string, cfg: TemplateConfig, typo: ResumeData["metadata"]["typography"]) {
-  const section = data.sections.education;
-  if (section.hidden || section.items.length === 0) return null;
+  const section = data.sections?.education;
+  if (!section || section.hidden || section.items.length === 0) return null;
   return (
     <div className="resume-section">
       <SectionTitle title={section.title || "Education"} color={color} style={cfg.style} />
@@ -139,8 +139,8 @@ function renderEducationSection(data: ResumeData, color: string, cfg: TemplateCo
 }
 
 function renderSkillsSection(data: ResumeData, color: string, cfg: TemplateConfig, typo: ResumeData["metadata"]["typography"], levelType: LevelType) {
-  const section = data.sections.skills;
-  if (section.hidden || section.items.length === 0) return null;
+  const section = data.sections?.skills;
+  if (!section || section.hidden || section.items.length === 0) return null;
 
   const skillStyle = cfg.style.skillStyle;
 
@@ -180,8 +180,8 @@ function renderSkillsSection(data: ResumeData, color: string, cfg: TemplateConfi
 }
 
 function renderLanguagesSection(data: ResumeData, color: string, cfg: TemplateConfig, typo: ResumeData["metadata"]["typography"], levelType: LevelType) {
-  const section = data.sections.languages;
-  if (section.hidden || section.items.length === 0) return null;
+  const section = data.sections?.languages;
+  if (!section || section.hidden || section.items.length === 0) return null;
   return (
     <div className="resume-section">
       <SectionTitle title={section.title || "Languages"} color={color} style={cfg.style} />
@@ -201,8 +201,8 @@ function renderLanguagesSection(data: ResumeData, color: string, cfg: TemplateCo
 }
 
 function renderProfilesSection(data: ResumeData, color: string, cfg: TemplateConfig, typo: ResumeData["metadata"]["typography"]) {
-  const section = data.sections.profiles;
-  if (section.hidden || section.items.length === 0) return null;
+  const section = data.sections?.profiles;
+  if (!section || section.hidden || section.items.length === 0) return null;
   return (
     <div className="resume-section">
       <SectionTitle title={section.title || "Profiles"} color={color} style={cfg.style} />
@@ -230,8 +230,8 @@ function renderGenericSection(
   cfg: TemplateConfig,
   typo: ResumeData["metadata"]["typography"],
 ) {
-  const section = data.sections[sectionKey];
-  if (section.hidden || section.items.length === 0) return null;
+  const section = data.sections?.[sectionKey];
+  if (!section || section.hidden || section.items.length === 0) return null;
 
   const meta = SECTION_META[sectionKey];
 
@@ -283,7 +283,7 @@ function renderSection(
 ): React.ReactNode {
   switch (sectionId) {
     case "summary":
-      if (data.summary.hidden || !data.summary.content) return null;
+      if (!data.summary || data.summary.hidden || !data.summary.content) return null;
       return (
         <div className="resume-section">
           <SectionTitle title={data.summary.title || "Summary"} color={color} style={cfg.style} />
@@ -305,7 +305,7 @@ function renderSection(
       return renderGenericSection(sectionId as SectionKey, data, color, cfg, typo);
     default: {
       // Custom section
-      const cs = data.customSections.find((c) => c.id === sectionId);
+      const cs = data.customSections?.find((c) => c.id === sectionId);
       if (!cs || cs.hidden || cs.items.length === 0) return null;
       return (
         <div className="resume-section">
@@ -329,7 +329,8 @@ function renderSection(
 function ResumeHeader({
   data, color, cfg, typo,
 }: { data: ResumeData; color: string; cfg: TemplateConfig; typo: ResumeData["metadata"]["typography"] }) {
-  const { basics, picture } = data;
+  const basics = data.basics ?? { name: "", headline: "", email: "", phone: "", location: "", website: { url: "", label: "" }, customFields: [] };
+  const picture = data.picture ?? { hidden: true, url: "", size: 80, aspectRatio: 1, borderRadius: 0, borderColor: "rgba(0,0,0,0.5)", borderWidth: 0 };
   const headerStyle = cfg.style.headerStyle;
   const hasPicture = !picture.hidden && picture.url;
 

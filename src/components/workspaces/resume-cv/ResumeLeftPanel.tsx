@@ -108,9 +108,9 @@ export default function ResumeLeftPanel({ className }: ResumeLeftPanelProps) {
   const getSectionBadge = useCallback(
     (key: string): string | undefined => {
       if (key === "basics" || key === "summary") return undefined;
-      const section = resume.sections[key as SectionKey];
+      const section = resume.sections?.[key as SectionKey];
       if (!section) return undefined;
-      const count = section.items.length;
+      const count = section.items?.length ?? 0;
       return count > 0 ? String(count) : undefined;
     },
     [resume.sections],
@@ -167,7 +167,7 @@ export default function ResumeLeftPanel({ className }: ResumeLeftPanelProps) {
         })}
 
         {/* Custom sections */}
-        {resume.customSections.map((cs) => (
+        {(resume.customSections ?? []).map((cs) => (
           <AccordionSection
             key={cs.id}
             title={cs.title}

@@ -16,6 +16,34 @@ import type {
 import { createDefaultResumeData, createBlankItem } from "@/lib/resume/schema";
 
 // ---------------------------------------------------------------------------
+// Deep-merge helper: recursively fills in missing keys from defaults
+// ---------------------------------------------------------------------------
+
+function deepMerge<T extends Record<string, unknown>>(target: T, defaults: T): T {
+  const result = { ...defaults };
+  for (const key in target) {
+    if (Object.prototype.hasOwnProperty.call(target, key)) {
+      const tVal = target[key];
+      const dVal = defaults[key];
+      if (
+        tVal !== null && tVal !== undefined &&
+        typeof tVal === "object" && !Array.isArray(tVal) &&
+        dVal !== null && dVal !== undefined &&
+        typeof dVal === "object" && !Array.isArray(dVal)
+      ) {
+        result[key] = deepMerge(
+          tVal as Record<string, unknown>,
+          dVal as Record<string, unknown>,
+        ) as T[Extract<keyof T, string>];
+      } else if (tVal !== undefined) {
+        result[key] = tVal;
+      }
+    }
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // AI Revision Types
 // ---------------------------------------------------------------------------
 
@@ -305,11 +333,17 @@ const useResumeEditorBase = create<ResumeEditorState>()(
           },
           merge: (persisted, current) => {
             const p = persisted as Partial<ResumeEditorState> | undefined;
-            if (!p?.resume?.metadata?.typography?.heading?.fontFamily) {
-              // Persisted data missing V2 structure — use defaults
+            if (!p?.resume || typeof p.resume !== "object") {
               return current;
             }
-            return { ...current, resume: p.resume };
+            // Deep-merge persisted resume with fresh defaults so every nested
+            // key is guaranteed to exist even if localStorage has partial/old data
+            const defaults = createDefaultResumeData();
+            const merged = deepMerge(
+              p.resume as unknown as Record<string, unknown>,
+              defaults as unknown as Record<string, unknown>,
+            ) as ResumeData;
+            return { ...current, resume: merged };
           },
         },
       ),

@@ -27,14 +27,14 @@ const EXPORT_OPTIONS: { format: ExportFormat; label: string; description: string
 
 function resumeToPlainText(data: ResumeData): string {
   const lines: string[] = [];
-  const b = data.basics;
-  if (b.name) lines.push(b.name.toUpperCase());
-  if (b.headline) lines.push(b.headline);
-  const contact = [b.email, b.phone, b.location, b.website?.url].filter(Boolean).join(" | ");
+  const b = data?.basics;
+  if (b?.name) lines.push(b.name.toUpperCase());
+  if (b?.headline) lines.push(b.headline);
+  const contact = [b?.email, b?.phone, b?.location, b?.website?.url].filter(Boolean).join(" | ");
   if (contact) lines.push(contact);
   lines.push("");
 
-  if (data.summary.content && !data.summary.hidden) {
+  if (data?.summary?.content && !data.summary.hidden) {
     lines.push("SUMMARY");
     lines.push("-".repeat(40));
     lines.push(stripHtml(data.summary.content));
@@ -47,8 +47,8 @@ function resumeToPlainText(data: ResumeData): string {
   ];
 
   for (const key of sectionOrder) {
-    const section = data.sections[key];
-    if (section.hidden || section.items.length === 0) continue;
+    const section = data?.sections?.[key];
+    if (!section || section.hidden || !section.items?.length) continue;
     lines.push((section.title || key).toUpperCase());
     lines.push("-".repeat(40));
     for (const item of section.items) {
@@ -124,7 +124,7 @@ export default function ExportDropdown({ printAreaRef }: ExportDropdownProps) {
   const handleExport = useCallback(
     async (format: ExportFormat) => {
       setExporting(format);
-      const name = resume.basics.name || "resume";
+      const name = resume?.basics?.name || "resume";
       const safeName = name.replace(/[^a-zA-Z0-9_-]/g, "_");
 
       try {
@@ -236,7 +236,7 @@ export async function exportResume(
   resume: ResumeData,
   format: ExportFormat,
 ): Promise<{ success: boolean; message: string }> {
-  const name = resume.basics.name || "resume";
+  const name = resume?.basics?.name || "resume";
   const safeName = name.replace(/[^a-zA-Z0-9_-]/g, "_");
 
   switch (format) {
