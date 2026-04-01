@@ -1,78 +1,204 @@
 // =============================================================================
-// DMSuite — List Section Editor
-// Generic, reusable section editor for all list-type resume sections.
-// Supports: add, edit, delete, reorder (drag), hide/show items.
-// Used for: experience, education, skills, certifications, languages,
-//           volunteer, projects, awards, publications, interests,
-//           references, profiles, and custom sections.
+// Resume & CV — Generic List Section Editor
+// Renders expandable item cards with fields tailored per section type.
+// Handles: experience, education, skills, languages, projects, awards,
+//   certifications, publications, volunteer, references, interests, profiles
 // =============================================================================
 
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useResumeEditor } from "@/stores/resume-editor";
-import { createItemId } from "@/lib/resume/schema";
-import type { FieldDef } from "../ResumeLeftPanel";
-import {
-  FormInput,
-  FormTextarea,
-  FormSelect,
-  SIcon,
-  IconButton,
-} from "@/components/workspaces/shared/WorkspaceUIKit";
+import type { SectionKey } from "@/lib/resume/schema";
+import { createBlankItem, SECTION_META } from "@/lib/resume/schema";
+import { FormInput, FormTextarea, Icons } from "@/components/workspaces/shared/WorkspaceUIKit";
 
-// =============================================================================
-// Keywords Input (for skills, technologies, etc.)
-// =============================================================================
+// ---------------------------------------------------------------------------
+// Field definitions per section type
+// ---------------------------------------------------------------------------
 
-function KeywordsInput({
-  value,
-  onChange,
-  placeholder,
-}: {
-  value: string[];
-  onChange: (v: string[]) => void;
+interface FieldDef {
+  key: string;
+  label: string;
+  type: "text" | "textarea" | "number" | "keywords" | "url" | "select";
   placeholder?: string;
+  options?: { value: string; label: string }[];
+  colSpan?: number; // 1 = half, 2 = full
+  min?: number;
+  max?: number;
+}
+
+const PROFICIENCY_OPTIONS = [
+  { value: "", label: "—" },
+  { value: "Beginner", label: "Beginner" },
+  { value: "Intermediate", label: "Intermediate" },
+  { value: "Advanced", label: "Advanced" },
+  { value: "Expert", label: "Expert" },
+];
+
+const FLUENCY_OPTIONS = [
+  { value: "", label: "—" },
+  { value: "Elementary", label: "Elementary" },
+  { value: "Limited Working", label: "Limited Working" },
+  { value: "Professional Working", label: "Professional Working" },
+  { value: "Full Professional", label: "Full Professional" },
+  { value: "Native", label: "Native / Bilingual" },
+];
+
+function getFieldsForSection(sectionKey: SectionKey): FieldDef[] {
+  switch (sectionKey) {
+    case "experience":
+      return [
+        { key: "company", label: "Company", type: "text", placeholder: "Acme Inc.", colSpan: 1 },
+        { key: "position", label: "Position", type: "text", placeholder: "Software Engineer", colSpan: 1 },
+        { key: "location", label: "Location", type: "text", placeholder: "San Francisco, CA", colSpan: 1 },
+        { key: "period", label: "Period", type: "text", placeholder: "Jan 2020 — Present", colSpan: 1 },
+        { key: "website.url", label: "Website", type: "text", placeholder: "https://...", colSpan: 2 },
+        { key: "description", label: "Description", type: "textarea", placeholder: "Key achievements and responsibilities...", colSpan: 2 },
+      ];
+    case "education":
+      return [
+        { key: "school", label: "School", type: "text", placeholder: "MIT", colSpan: 1 },
+        { key: "degree", label: "Degree", type: "text", placeholder: "Bachelor of Science", colSpan: 1 },
+        { key: "area", label: "Field of Study", type: "text", placeholder: "Computer Science", colSpan: 1 },
+        { key: "grade", label: "Grade / GPA", type: "text", placeholder: "3.9", colSpan: 1 },
+        { key: "location", label: "Location", type: "text", placeholder: "Cambridge, MA", colSpan: 1 },
+        { key: "period", label: "Period", type: "text", placeholder: "2016 — 2020", colSpan: 1 },
+        { key: "description", label: "Description", type: "textarea", placeholder: "Notable coursework, thesis, etc.", colSpan: 2 },
+      ];
+    case "skills":
+      return [
+        { key: "name", label: "Skill", type: "text", placeholder: "React", colSpan: 1 },
+        { key: "proficiency", label: "Proficiency", type: "select", options: PROFICIENCY_OPTIONS, colSpan: 1 },
+        { key: "level", label: "Level (0–5)", type: "number", min: 0, max: 5, colSpan: 1 },
+        { key: "keywords", label: "Keywords", type: "keywords", placeholder: "Type and press Enter", colSpan: 2 },
+      ];
+    case "languages":
+      return [
+        { key: "language", label: "Language", type: "text", placeholder: "English", colSpan: 1 },
+        { key: "fluency", label: "Fluency", type: "select", options: FLUENCY_OPTIONS, colSpan: 1 },
+        { key: "level", label: "Level (0–5)", type: "number", min: 0, max: 5, colSpan: 1 },
+      ];
+    case "projects":
+      return [
+        { key: "name", label: "Name", type: "text", placeholder: "Project Name", colSpan: 1 },
+        { key: "period", label: "Period", type: "text", placeholder: "2023 — Present", colSpan: 1 },
+        { key: "website.url", label: "URL", type: "text", placeholder: "https://...", colSpan: 2 },
+        { key: "description", label: "Description", type: "textarea", placeholder: "What was built and its impact...", colSpan: 2 },
+      ];
+    case "awards":
+      return [
+        { key: "title", label: "Title", type: "text", placeholder: "Best Paper Award", colSpan: 1 },
+        { key: "awarder", label: "Awarder", type: "text", placeholder: "IEEE", colSpan: 1 },
+        { key: "date", label: "Date", type: "text", placeholder: "2023", colSpan: 1 },
+        { key: "description", label: "Description", type: "textarea", placeholder: "Details...", colSpan: 2 },
+      ];
+    case "certifications":
+      return [
+        { key: "title", label: "Certification", type: "text", placeholder: "AWS Solutions Architect", colSpan: 1 },
+        { key: "issuer", label: "Issuer", type: "text", placeholder: "Amazon", colSpan: 1 },
+        { key: "date", label: "Date", type: "text", placeholder: "2023", colSpan: 1 },
+        { key: "description", label: "Notes", type: "textarea", placeholder: "Credential details...", colSpan: 2 },
+      ];
+    case "publications":
+      return [
+        { key: "title", label: "Title", type: "text", placeholder: "Paper Title", colSpan: 1 },
+        { key: "publisher", label: "Publisher", type: "text", placeholder: "Journal / Conference", colSpan: 1 },
+        { key: "date", label: "Date", type: "text", placeholder: "2023", colSpan: 1 },
+        { key: "description", label: "Summary", type: "textarea", placeholder: "Brief abstract...", colSpan: 2 },
+      ];
+    case "volunteer":
+      return [
+        { key: "organization", label: "Organization", type: "text", placeholder: "Red Cross", colSpan: 1 },
+        { key: "location", label: "Location", type: "text", placeholder: "New York, NY", colSpan: 1 },
+        { key: "period", label: "Period", type: "text", placeholder: "2020 — 2022", colSpan: 1 },
+        { key: "description", label: "Description", type: "textarea", placeholder: "Activities and impact...", colSpan: 2 },
+      ];
+    case "references":
+      return [
+        { key: "name", label: "Name", type: "text", placeholder: "Jane Smith", colSpan: 1 },
+        { key: "position", label: "Position", type: "text", placeholder: "CTO at Acme Inc.", colSpan: 1 },
+        { key: "phone", label: "Phone", type: "text", placeholder: "+1 (555) ...", colSpan: 1 },
+        { key: "description", label: "Note / Relationship", type: "textarea", placeholder: "How you know this person...", colSpan: 2 },
+      ];
+    case "interests":
+      return [
+        { key: "name", label: "Interest", type: "text", placeholder: "Open Source", colSpan: 1 },
+        { key: "keywords", label: "Details", type: "keywords", placeholder: "Type and press Enter", colSpan: 2 },
+      ];
+    case "profiles":
+      return [
+        { key: "network", label: "Network", type: "text", placeholder: "LinkedIn", colSpan: 1 },
+        { key: "username", label: "Username", type: "text", placeholder: "@johndoe", colSpan: 1 },
+        { key: "website.url", label: "URL", type: "text", placeholder: "https://linkedin.com/in/...", colSpan: 2 },
+      ];
+    default:
+      return [];
+  }
+}
+
+function getItemTitle(sectionKey: SectionKey, item: Record<string, unknown>): string {
+  switch (sectionKey) {
+    case "experience": return (item.position as string) || (item.company as string) || "Untitled";
+    case "education": return (item.degree as string) || (item.school as string) || "Untitled";
+    case "skills": return (item.name as string) || "Untitled";
+    case "languages": return (item.language as string) || "Untitled";
+    case "projects": return (item.name as string) || "Untitled";
+    case "awards": return (item.title as string) || "Untitled";
+    case "certifications": return (item.title as string) || "Untitled";
+    case "publications": return (item.title as string) || "Untitled";
+    case "volunteer": return (item.organization as string) || "Untitled";
+    case "references": return (item.name as string) || "Untitled";
+    case "interests": return (item.name as string) || "Untitled";
+    case "profiles": return (item.network as string) || "Untitled";
+    default: return "Item";
+  }
+}
+
+function getItemSubtitle(sectionKey: SectionKey, item: Record<string, unknown>): string {
+  switch (sectionKey) {
+    case "experience": return (item.company as string) || "";
+    case "education": return (item.school as string) || "";
+    case "certifications": return (item.issuer as string) || "";
+    case "publications": return (item.publisher as string) || "";
+    case "awards": return (item.awarder as string) || "";
+    case "volunteer": return (item.location as string) || "";
+    case "references": return (item.position as string) || "";
+    default: return "";
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Keywords chip input
+// ---------------------------------------------------------------------------
+
+function KeywordsInput({ keywords, onChange, placeholder }: {
+  keywords: string[]; onChange: (kw: string[]) => void; placeholder?: string;
 }) {
   const [input, setInput] = useState("");
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter" || e.key === ",") {
-        e.preventDefault();
-        const trimmed = input.trim();
-        if (trimmed && !value.includes(trimmed)) {
-          onChange([...value, trimmed]);
-        }
-        setInput("");
-      } else if (e.key === "Backspace" && !input && value.length > 0) {
-        onChange(value.slice(0, -1));
-      }
-    },
-    [input, value, onChange]
-  );
-
-  const removeKeyword = useCallback(
-    (index: number) => {
-      onChange(value.filter((_, i) => i !== index));
-    },
-    [value, onChange]
-  );
+  const add = () => {
+    const trimmed = input.trim();
+    if (trimmed && !keywords.includes(trimmed)) {
+      onChange([...keywords, trimmed]);
+    }
+    setInput("");
+  };
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex flex-wrap gap-1">
-        {value.map((kw, i) => (
+    <div>
+      <div className="flex flex-wrap gap-1.5 mb-1.5">
+        {keywords.map((kw, i) => (
           <span
             key={i}
-            className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] bg-primary-500/10 text-primary-400 rounded-full border border-primary-500/20"
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-primary-500/10 text-primary-300 border border-primary-500/20"
           >
             {kw}
             <button
-              onClick={() => removeKeyword(i)}
-              className="text-primary-400/50 hover:text-primary-400 transition-colors"
+              onClick={() => onChange(keywords.filter((_, j) => j !== i))}
+              className="hover:text-red-400 transition-colors"
             >
-              <SIcon d="M6 18L18 6M6 6l12 12" />
+              ×
             </button>
           </span>
         ))}
@@ -80,314 +206,277 @@ function KeywordsInput({
       <input
         value={input}
         onChange={(e) => setInput(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder || "Type and press Enter..."}
-        className="w-full px-2.5 py-1.5 text-[12px] bg-gray-800/50 border border-gray-700/30 rounded-md text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-primary-500/40 transition-colors"
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+        placeholder={placeholder}
+        className="w-full rounded-xl bg-gray-800/60 border border-gray-700/60 px-3.5 py-2 text-[13px] text-gray-100 placeholder-gray-600 focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all"
       />
     </div>
   );
 }
 
-// =============================================================================
-// Props
-// =============================================================================
+// ---------------------------------------------------------------------------
+// Nested value helpers for dotted paths (e.g., "website.url")
+// ---------------------------------------------------------------------------
 
-interface ListSectionProps {
-  sectionKey: string;
-  fields: FieldDef[];
-  getItemLabel: (item: Record<string, unknown>) => string;
-  getItemSubLabel: (item: Record<string, unknown>) => string;
-  isCustom?: boolean;
+function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+  const parts = path.split(".");
+  let current: unknown = obj;
+  for (const part of parts) {
+    if (current == null || typeof current !== "object") return undefined;
+    current = (current as Record<string, unknown>)[part];
+  }
+  return current;
 }
 
-// =============================================================================
-// Component
-// =============================================================================
+function setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): Record<string, unknown> {
+  const parts = path.split(".");
+  if (parts.length === 1) return { [path]: value };
+  const first = parts[0];
+  const rest = parts.slice(1).join(".");
+  const existing = (obj[first] ?? {}) as Record<string, unknown>;
+  return { [first]: { ...existing, ...setNestedValue(existing, rest, value) } };
+}
 
-export default function ListSection({
-  sectionKey,
-  fields,
-  getItemLabel,
-  getItemSubLabel,
-  isCustom,
-}: ListSectionProps) {
-  const resume = useResumeEditor((s) => s.resume);
-  const addSectionItem = useResumeEditor((s) => s.addSectionItem);
-  const updateSectionItem = useResumeEditor((s) => s.updateSectionItem);
-  const removeSectionItem = useResumeEditor((s) => s.removeSectionItem);
-  const reorderSectionItems = useResumeEditor((s) => s.reorderSectionItems);
-  const removeCustomSection = useResumeEditor((s) => s.removeCustomSection);
+// ---------------------------------------------------------------------------
+// Item Card (expandable)
+// ---------------------------------------------------------------------------
 
-  // Expanded item index (-1 = none)
-  const [expandedItem, setExpandedItem] = useState(-1);
-  // Drag state
-  const [dragIndex, setDragIndex] = useState(-1);
-  const [dragOverIndex, setDragOverIndex] = useState(-1);
+function ItemCard({
+  sectionKey, item, itemIndex, expanded, onToggle,
+}: {
+  sectionKey: SectionKey;
+  item: Record<string, unknown>;
+  itemIndex: number;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const updateItem = useResumeEditor((s) => s.updateSectionItem);
+  const removeItem = useResumeEditor((s) => s.removeSectionItem);
+  const fields = useMemo(() => getFieldsForSection(sectionKey), [sectionKey]);
+  const title = getItemTitle(sectionKey, item);
+  const subtitle = getItemSubtitle(sectionKey, item);
+  const isHidden = item.hidden as boolean;
 
-  // Get items
-  const items: Record<string, unknown>[] = useMemo(() => {
-    if (isCustom) {
-      const cs = resume.customSections.find((s) => s.id === sectionKey);
-      return (cs?.items ?? []) as unknown as Record<string, unknown>[];
-    }
-    const section = (resume.sections as Record<string, { items?: Record<string, unknown>[] }>)[sectionKey];
-    return section?.items ?? [];
-  }, [resume.sections, resume.customSections, sectionKey, isCustom]);
-
-  // ── Add item ──
-  const handleAdd = useCallback(() => {
-    const id = createItemId();
-    addSectionItem(sectionKey, { id });
-    setExpandedItem(items.length); // expand the new item
-  }, [addSectionItem, sectionKey, items.length]);
-
-  // ── Update field ──
   const handleFieldChange = useCallback(
-    (itemIndex: number, fieldKey: string, value: unknown) => {
-      updateSectionItem(sectionKey, itemIndex, { [fieldKey]: value });
-    },
-    [updateSectionItem, sectionKey]
-  );
-
-  // ── Toggle item visibility ──
-  const handleToggleHidden = useCallback(
-    (itemIndex: number) => {
-      updateSectionItem(sectionKey, itemIndex, {
-        hidden: !(items[itemIndex]?.hidden ?? false),
-      });
-    },
-    [updateSectionItem, sectionKey, items]
-  );
-
-  // ── Delete item ──
-  const handleDelete = useCallback(
-    (itemIndex: number) => {
-      removeSectionItem(sectionKey, itemIndex);
-      if (expandedItem === itemIndex) setExpandedItem(-1);
-      else if (expandedItem > itemIndex) setExpandedItem(expandedItem - 1);
-    },
-    [removeSectionItem, sectionKey, expandedItem]
-  );
-
-  // ── Drag & drop ──
-  const handleDragStart = useCallback(
-    (e: React.DragEvent, index: number) => {
-      setDragIndex(index);
-      e.dataTransfer.effectAllowed = "move";
-    },
-    []
-  );
-
-  const handleDragOver = useCallback(
-    (e: React.DragEvent, index: number) => {
-      e.preventDefault();
-      setDragOverIndex(index);
-    },
-    []
-  );
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent, toIndex: number) => {
-      e.preventDefault();
-      if (dragIndex >= 0 && dragIndex !== toIndex) {
-        reorderSectionItems(sectionKey, dragIndex, toIndex);
-        if (expandedItem === dragIndex) setExpandedItem(toIndex);
+    (fieldKey: string, value: unknown) => {
+      if (fieldKey.includes(".")) {
+        const update = setNestedValue(item, fieldKey, value);
+        updateItem(sectionKey, itemIndex, update);
+      } else {
+        updateItem(sectionKey, itemIndex, { [fieldKey]: value });
       }
-      setDragIndex(-1);
-      setDragOverIndex(-1);
     },
-    [dragIndex, reorderSectionItems, sectionKey, expandedItem]
+    [updateItem, sectionKey, itemIndex, item],
   );
-
-  const handleDragEnd = useCallback(() => {
-    setDragIndex(-1);
-    setDragOverIndex(-1);
-  }, []);
 
   return (
-    <div className="pt-2 space-y-1">
-      {/* Items */}
-      {items.map((item, index) => {
-        const isExpanded = expandedItem === index;
-        const isHidden = item.hidden as boolean;
-        const isDragTarget = dragOverIndex === index && dragIndex !== index;
-
-        return (
-          <div
-            key={(item.id as string) || index}
-            draggable
-            onDragStart={(e) => handleDragStart(e, index)}
-            onDragOver={(e) => handleDragOver(e, index)}
-            onDrop={(e) => handleDrop(e, index)}
-            onDragEnd={handleDragEnd}
-            className={`rounded-md border transition-all ${
-              isDragTarget
-                ? "border-primary-500/40 bg-primary-500/5"
-                : dragIndex === index
-                ? "opacity-40 border-gray-700/20"
-                : isHidden
-                ? "border-gray-800/20 opacity-40"
-                : "border-gray-700/20 bg-gray-800/10"
-            }`}
+    <div className={`border border-gray-800/60 rounded-xl overflow-hidden transition-colors ${isHidden ? "opacity-50" : ""}`}>
+      {/* Header */}
+      <button onClick={onToggle} className="flex items-center w-full px-3 py-2.5 hover:bg-white/2 transition-colors group text-left">
+        <span className="text-gray-500 mr-2 text-[10px] font-mono w-5 text-center">{itemIndex + 1}</span>
+        <div className="flex-1 min-w-0">
+          <div className="text-[12px] font-medium text-gray-200 truncate">{title}</div>
+          {subtitle && <div className="text-[10px] text-gray-500 truncate">{subtitle}</div>}
+        </div>
+        <div className="flex items-center gap-1 ml-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); updateItem(sectionKey, itemIndex, { hidden: !isHidden }); }}
+            className="p-1 rounded hover:bg-gray-700/50 text-gray-500 hover:text-gray-300 transition-colors"
+            title={isHidden ? "Show" : "Hide"}
           >
-            {/* Item header */}
-            <div
-              onClick={() => setExpandedItem(isExpanded ? -1 : index)}
-              className="flex items-center gap-2 px-2.5 py-2 cursor-pointer group"
-            >
-              {/* Drag handle */}
-              <span className="text-gray-600 cursor-grab active:cursor-grabbing">
-                <SIcon d="M4 8h16M4 16h16" />
-              </span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {isHidden ? <><line x1="1" y1="1" x2="23" y2="23" /><path d="M17 17.13a10.72 10.72 0 0 1-5 1.37c-7 0-11-8-11-8a20.73 20.73 0 0 1 5.12-6.13" /><path d="M9.9 4.24A9 9 0 0 1 12 4c7 0 11 8 11 8a20.29 20.29 0 0 1-4.36 5.43" /></> : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>}
+            </svg>
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); removeItem(sectionKey, itemIndex); }}
+            className="p-1 rounded hover:bg-red-900/30 text-gray-500 hover:text-red-400 transition-colors"
+            title="Remove"
+          >
+            {Icons.close}
+          </button>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-gray-600 transition-transform ${expanded ? "rotate-180" : ""}`}>
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </div>
+      </button>
 
-              {/* Label */}
-              <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-medium text-gray-300 truncate">
-                  {getItemLabel(item)}
-                </p>
-                {!isExpanded && (
-                  <p className="text-[10px] text-gray-600 truncate">
-                    {getItemSubLabel(item)}
-                  </p>
-                )}
-              </div>
+      {/* Fields */}
+      {expanded && (
+        <div className="px-3 pb-3 pt-1 border-t border-gray-800/40">
+          <div className="grid grid-cols-2 gap-2">
+            {fields.map((field) => {
+              const val = getNestedValue(item, field.key);
+              const span = field.colSpan === 2 ? "col-span-2" : "";
 
-              {/* Actions */}
-              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleToggleHidden(index);
-                  }}
-                  title={isHidden ? "Show" : "Hide"}
-                  className="p-1 text-gray-600 hover:text-gray-400"
-                >
-                  {isHidden ? (
-                    <SIcon d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M3 3l18 18" />
-                  ) : (
-                    <SIcon d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  )}
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(index);
-                  }}
-                  title="Delete"
-                  className="p-1 text-gray-600 hover:text-red-400"
-                >
-                  <SIcon d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </button>
-              </div>
+              if (field.type === "textarea") {
+                return (
+                  <div key={field.key} className={span}>
+                    <FormTextarea
+                      label={field.label}
+                      placeholder={field.placeholder}
+                      value={(val as string) ?? ""}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleFieldChange(field.key, e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                );
+              }
 
-              <SIcon
-                d={isExpanded ? "M19 9l-7 7-7-7" : "M9 5l7 7-7 7"}
-              />
-            </div>
+              if (field.type === "keywords") {
+                return (
+                  <div key={field.key} className={span}>
+                    <label className="block text-[11px] font-medium text-gray-500 mb-1.5">{field.label}</label>
+                    <KeywordsInput
+                      keywords={(val as string[]) ?? []}
+                      onChange={(kw) => handleFieldChange(field.key, kw)}
+                      placeholder={field.placeholder}
+                    />
+                  </div>
+                );
+              }
 
-            {/* Item fields (expanded) */}
-            {isExpanded && (
-              <div className="px-2.5 pb-2.5 border-t border-gray-700/10">
-                <div className="grid grid-cols-2 gap-2 pt-2">
-                  {fields.map((field) => {
-                    const colClass = field.colSpan === 2 ? "col-span-2" : "";
-                    const val = item[field.key];
+              if (field.type === "select") {
+                return (
+                  <div key={field.key} className={span}>
+                    <label className="block text-[11px] font-medium text-gray-500 mb-1.5">{field.label}</label>
+                    <select
+                      value={(val as string) ?? ""}
+                      onChange={(e) => handleFieldChange(field.key, e.target.value)}
+                      className="w-full rounded-xl bg-gray-800/60 border border-gray-700/60 px-3.5 py-2 text-[13px] text-gray-100 focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all"
+                    >
+                      {field.options?.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              }
 
-                    if (field.type === "textarea") {
-                      return (
-                        <div key={field.key} className={colClass}>
-                          <FormTextarea
-                            label={field.label}
-                            value={(val as string) ?? ""}
-                            onChange={(e) =>
-                              handleFieldChange(index, field.key, e.target.value)
-                            }
-                            placeholder={field.placeholder}
-                            rows={3}
-                          />
-                        </div>
-                      );
-                    }
+              if (field.type === "number") {
+                return (
+                  <div key={field.key} className={span}>
+                    <FormInput
+                      label={field.label}
+                      type="number"
+                      min={field.min} max={field.max}
+                      value={String(val ?? 0)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFieldChange(field.key, Number(e.target.value))}
+                    />
+                  </div>
+                );
+              }
 
-                    if (field.type === "select" && field.options) {
-                      return (
-                        <div key={field.key} className={colClass}>
-                          <FormSelect
-                            label={field.label}
-                            value={(val as string) ?? ""}
-                            onChange={(e) =>
-                              handleFieldChange(index, field.key, e.target.value)
-                            }
-                          >
-                            {field.options.map((opt) => (
-                              <option key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </option>
-                            ))}
-                          </FormSelect>
-                        </div>
-                      );
-                    }
+              return (
+                <div key={field.key} className={span}>
+                  <FormInput
+                    label={field.label}
+                    placeholder={field.placeholder}
+                    value={(val as string) ?? ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFieldChange(field.key, e.target.value)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
-                    if (field.type === "keywords") {
-                      return (
-                        <div key={field.key} className={colClass}>
-                          <label className="block text-[11px] text-gray-500 mb-1">
-                            {field.label}
-                          </label>
-                          <KeywordsInput
-                            value={
-                              Array.isArray(val) ? (val as string[]) : []
-                            }
-                            onChange={(v) =>
-                              handleFieldChange(index, field.key, v)
-                            }
-                            placeholder={field.placeholder}
-                          />
-                        </div>
-                      );
-                    }
+// ---------------------------------------------------------------------------
+// ListSection (used by ResumeLeftPanel)
+// ---------------------------------------------------------------------------
 
-                    // Default: text input
-                    return (
-                      <div key={field.key} className={colClass}>
-                        <FormInput
-                          label={field.label}
-                          value={(val as string) ?? ""}
-                          onChange={(e) =>
-                            handleFieldChange(index, field.key, e.target.value)
-                          }
-                          placeholder={field.placeholder}
-                        />
-                      </div>
-                    );
-                  })}
+interface ListSectionProps {
+  sectionKey: SectionKey;
+}
+
+export default function ListSection({ sectionKey }: ListSectionProps) {
+  const section = useResumeEditor((s) => s.resume.sections[sectionKey]);
+  const addItem = useResumeEditor((s) => s.addSectionItem);
+  const reorder = useResumeEditor((s) => s.reorderSectionItems);
+
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+
+  const items = section?.items ?? [];
+  const meta = SECTION_META[sectionKey];
+
+  const handleAdd = useCallback(() => {
+    const blank = createBlankItem(sectionKey);
+    addItem(sectionKey, blank);
+    setExpandedIdx(items.length); // expand new item
+  }, [addItem, sectionKey, items.length]);
+
+  const handleMoveUp = useCallback(
+    (idx: number) => {
+      if (idx > 0) reorder(sectionKey, idx, idx - 1);
+    },
+    [reorder, sectionKey],
+  );
+
+  const handleMoveDown = useCallback(
+    (idx: number) => {
+      if (idx < items.length - 1) reorder(sectionKey, idx, idx + 1);
+    },
+    [reorder, sectionKey, items.length],
+  );
+
+  return (
+    <div className="space-y-2">
+      {items.length === 0 ? (
+        <div className="text-center py-4 text-gray-600 text-[12px]">
+          No {meta.label.toLowerCase()} added yet
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {items.map((item, idx) => (
+            <div key={(item as Record<string, unknown>).id as string ?? idx} className="group">
+              <div className="flex items-start gap-1">
+                {/* Reorder buttons */}
+                <div className="flex flex-col gap-0.5 pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => handleMoveUp(idx)}
+                    disabled={idx === 0}
+                    className="text-gray-600 hover:text-gray-300 disabled:opacity-20 transition-colors"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="18 15 12 9 6 15" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleMoveDown(idx)}
+                    disabled={idx === items.length - 1}
+                    className="text-gray-600 hover:text-gray-300 disabled:opacity-20 transition-colors"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <ItemCard
+                    sectionKey={sectionKey}
+                    item={item as Record<string, unknown>}
+                    itemIndex={idx}
+                    expanded={expandedIdx === idx}
+                    onToggle={() => setExpandedIdx(expandedIdx === idx ? null : idx)}
+                  />
                 </div>
               </div>
-            )}
-          </div>
-        );
-      })}
+            </div>
+          ))}
+        </div>
+      )}
 
-      {/* Add item + Delete section (custom only) */}
-      <div className="flex items-center gap-2 pt-1">
-        <button
-          onClick={handleAdd}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-primary-400 hover:text-primary-300 bg-primary-500/5 hover:bg-primary-500/10 rounded-md border border-primary-500/20 transition-colors flex-1 justify-center"
-        >
-          <SIcon d="M12 4v16m8-8H4" />
-          Add Item
-        </button>
-        {isCustom && (
-          <button
-            onClick={() => removeCustomSection(sectionKey)}
-            className="px-2 py-1.5 text-[11px] text-red-400/60 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
-            title="Remove section"
-          >
-            <SIcon d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </button>
-        )}
-      </div>
+      <button
+        onClick={handleAdd}
+        className="w-full py-2 rounded-xl border border-dashed border-gray-700 hover:border-primary-500/50 text-[12px] text-gray-400 hover:text-primary-400 transition-colors flex items-center justify-center gap-1.5"
+      >
+        <span className="text-lg leading-none">+</span>
+        Add {meta.label.replace(/s$/, "")}
+      </button>
     </div>
   );
 }

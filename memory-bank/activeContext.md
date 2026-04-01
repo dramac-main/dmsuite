@@ -1,43 +1,35 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** ZRA Smart Invoice + NAPSA Integration + Slidev Presenter Rebuild — COMPLETE
+**Phase:** Resume Builder V2 — AI, API Routes, Chiko Manifest, Full Wiring — COMPLETE
 
-### Session: ZRA, NAPSA & Slidev Presenter
+### Session: Resume Builder V2 Completion
 
-Triple-feature session: (1) Rebuilt Presentation Designer presenter/fullscreen modes to match Slidev's exact UI/UX, (2) Full ZRA VSDC Smart Invoice integration for Invoice & Accounting Hub, (3) NAPSA employee management + contribution returns.
+Completed the Reactive Resume-inspired Resume Builder V2 with full AI integration, API routes, Chiko manifest, and workspace wiring.
 
-#### New Files
-- `src/lib/zra-vsdc.ts` — ZRA VSDC client library (~300 lines): enums, interfaces, tax calc, mappers, 15 endpoints, validation
-- `src/app/api/zra/route.ts` — Server-side VSDC proxy (~130 lines)
-- `src/components/workspaces/invoice-accounting/views/ZRASmartInvoiceView.tsx` — 3-tab dashboard
-- `src/components/workspaces/invoice-accounting/views/NAPSAEmployeesView.tsx` — Employee register CRUD
-- `src/components/workspaces/invoice-accounting/views/NAPSAReturnsView.tsx` — Monthly returns + CSV export
+#### New Files Created
+- `src/app/api/chat/resume/generate/route.ts` — AI resume generation endpoint (credit check + Anthropic API)
+- `src/app/api/chat/resume/revise/route.ts` — AI resume revision endpoint
+- `src/app/api/chat/resume/parse/route.ts` — ATS scoring endpoint
+- `src/lib/resume/ai-engine.ts` — System prompts for generate/revise/ATS, message builders
+- `src/lib/resume/templates.ts` — 11 Pokémon-named template configs
+- `src/lib/resume/TemplateRenderer.tsx` — Full page renderer with per-template styling
 
-#### Modified Files
-- `src/stores/invoice-accounting-editor.ts` — ZRA + NAPSA types, 7 new actions
-- `src/components/workspaces/invoice-accounting/InvoiceAccountingWorkspace.tsx` — "Compliance" nav group
-- `src/components/workspaces/slidev-presenter/SlidevPresenterWorkspace.tsx` — Presenter + Fullscreen rebuilt
-- `src/lib/resume/schema.ts` — FONT_PAIRINGS + Zod v4 metadata fix
-- `src/lib/chiko/field-mapper.ts` — Removed invalid linkedin prop
+#### Files Replaced (stub → full)
+- `src/lib/chiko/manifests/resume.ts` — Full manifest with 40+ actions across 8 categories
+- `src/components/workspaces/resume-cv/ResumeBuilderWorkspace.tsx` — Full two-panel workspace with zoom, Google Fonts, keyboard shortcuts, design drawer
 
-### Previous Session: Resume Builder Complete Rebuild — COMPLETE ✅
+#### Files Fixed (TypeScript errors)
+- `ResumeBuilderWorkspace.tsx` — fontFamily (not family), Icons.preview/close (not eye/trash/palette), ExportDropdown props, metadata.layout.pages.length, ConfirmDialog description prop
+- `ResumeLeftPanel.tsx` — Icons.close, ConfirmDialog open/description/variant props
+- `ListSection.tsx` — Inline SVG for eye/eyeSlash icons, Icons.close
+- `resume.ts manifest` — metadata.design.colors.* paths, FONT_PAIRINGS as Record, TypographyItem fontFamily, Basics.website object
 
-Replaced 8-step wizard with Reactive Resume-inspired two-panel editor.
-
-#### Files Created
-- `src/components/workspaces/resume-cv/ResumeBuilderWorkspace.tsx` — Main two-panel workspace (left scrollable sections + right live A4 preview). Chiko manifest, keyboard shortcuts (Ctrl+Z/Y), Google Fonts loading, mobile bottom bar.
-- `src/components/workspaces/resume-cv/ResumeLeftPanel.tsx` — 13 section accordion editors with field definitions, import/clear, custom section support.
-- `src/components/workspaces/resume-cv/sections/BasicsSection.tsx` — Name, headline, photo upload (base64, 2MB limit), contact details.
-- `src/components/workspaces/resume-cv/sections/SummarySection.tsx` — Professional summary textarea.
-- `src/components/workspaces/resume-cv/sections/ListSection.tsx` — Generic list editor for all list-type sections. Drag-drop reorder, expand/collapse, KeywordsInput (chip-style tags), text/textarea/select/keywords field types.
-- `src/components/workspaces/resume-cv/ResumeDesignDrawer.tsx` — Slide-over panel: 20-template grid, accent colors + custom picker, color intensity, font pairing selector, font scale, page format, margins, spacing, sidebar width.
-- `src/components/workspaces/resume-cv/ExportDropdown.tsx` — Export menu (PDF/DOCX/TXT/JSON/clipboard/print).
-
-#### Files Modified
-- `src/lib/resume/schema.ts` — Added profiles/publications/interests sections + photo field (previous session).
-- `src/lib/resume/templates/UniversalTemplate.tsx` — Profiles/publications/interests rendering in ExtraSections.
-- `src/lib/chiko/manifests/resume.ts` — Updated section descriptions for new sections.
+#### Previously Created (prior session)
+- `src/lib/resume/schema.ts` — Zod schema with all section types
+- `src/stores/resume-editor.ts` — Zustand store with temporal(immer(persist()))
+- Section editors: BasicsSection, SummarySection, ListSection
+- ResumeLeftPanel, ResumeDesignDrawer, ExportDropdown
 - `src/app/tools/[categoryId]/[toolId]/page.tsx` — Updated dynamic import to ResumeBuilderWorkspace.
 - `src/lib/resume/ai-resume-generator.ts` — Inlined 6 wizard types (PersonalInfo, TargetRole, etc.) since wizard store was deleted.
 - `TOOL-STATUS.md` — Updated workspace name, notes, and changelog.

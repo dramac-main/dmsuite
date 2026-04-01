@@ -1,40 +1,36 @@
 // =============================================================================
-// DMSuite — Summary Section Editor
-// Professional summary / objective rich text editor.
+// Resume & CV — Summary Section Editor (rich text content)
 // =============================================================================
 
 "use client";
 
 import React, { useCallback } from "react";
 import { useResumeEditor } from "@/stores/resume-editor";
-import {
-  FormTextarea,
-} from "@/components/workspaces/shared/WorkspaceUIKit";
+import { FormTextarea } from "@/components/workspaces/shared/WorkspaceUIKit";
 
 export default function SummarySection() {
-  const summary = useResumeEditor((s) => s.resume.sections.summary);
-  const updateResume = useResumeEditor((s) => s.updateResume);
+  const summary = useResumeEditor((s) => s.resume.summary);
+  const updateSummary = useResumeEditor((s) => s.updateSummary);
 
-  const updateContent = useCallback(
-    (value: string) => {
-      updateResume((draft) => {
-        draft.sections.summary.content = value;
-      });
+  const onChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      updateSummary({ content: e.target.value });
     },
-    [updateResume]
+    [updateSummary],
   );
 
   return (
-    <div className="pt-3">
+    <div className="space-y-2">
       <FormTextarea
         label="Professional Summary"
+        placeholder="Write a brief summary of your professional background, key skills, and career objectives..."
         value={summary.content}
-        onChange={(e) => updateContent(e.target.value)}
-        placeholder="A brief 2-3 sentence summary highlighting your career objectives, key skills, and what you bring to potential employers..."
-        rows={5}
+        onChange={onChange}
+        rows={6}
       />
-      <p className="text-[10px] text-gray-600 mt-1">
-        Tip: Keep it concise — 2-3 sentences that highlight your strongest qualifications.
+      <p className="text-[10px] text-gray-600">
+        Tip: Keep it under 4 sentences. Focus on impact and relevance to the target role.
+        HTML is supported for basic formatting.
       </p>
     </div>
   );

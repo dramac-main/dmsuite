@@ -1,137 +1,85 @@
 // =============================================================================
-// DMSuite — Resume Revision API Route
-// Non-streaming endpoint for AI-powered resume revisions.
-// Called by ai-revision-engine.ts → POST /api/chat/resume/revise
+// DMSuite — Resume AI Revise API Route
+// POST /api/chat/resume/revise
+// Revises existing resume based on natural language instruction.
 // =============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/supabase/auth";
-import { checkCredits, deductCredits } from "@/lib/supabase/credits";
-import type { TokenUsage } from "@/lib/supabase/credits";
+import { checkCredits, deductCredits, refundCredits } from "@/lib/supabase/credits";
+import {
+  RESUME_REVISE_SYSTEM_PROMPT,
+  buildReviseMessages,
+  type ResumeRevisionRequest,
+} from "@/lib/resume/ai-engine";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
-const FALLBACK_MODEL = "claude-haiku-4-5";
-const RETRYABLE_STATUS = new Set([429, 529, 502, 503]);
-const MAX_RETRIES = 2;
-
-async function fetchWithRetry(
-  url: string,
-  init: RequestInit,
-  retries = MAX_RETRIES,
-): Promise<Response> {
-  let lastResponse: Response | null = null;
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    const response = await fetch(url, init);
-    if (response.ok) return response;
-    lastResponse = response;
-    if (!RETRYABLE_STATUS.has(response.status) || attempt === retries) break;
-    const delay = Math.min(1000 * Math.pow(2, attempt), 8000);
-    console.warn(`[resume-revise] ${response.status}, retrying in ${delay}ms (${attempt + 1}/${retries})`);
-    await new Promise((r) => setTimeout(r, delay));
-  }
-  return lastResponse!;
-}
 
 export async function POST(request: NextRequest) {
-  // ── Auth + Credits ──
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const creditCheck = await checkCredits(user.id, "resume-revision");
+
+  const creditCheck = await checkCredits(user.id, "resume-revise");
   if (!creditCheck.allowed) {
-    return NextResponse.json({ error: "Insufficient credits", needed: creditCheck.cost, balance: creditCheck.balance }, { status: 402 });
+    return NextResponse.json(
+      { error: "Insufficient credits", balance: creditCheck.balance, cost: creditCheck.cost },
+      { status: 402 },
+    );
+  }
+
+  const deduction = await deductCredits(user.id, "resume-revise", "Resume AI Revision");
+  if (!deduction.success) {
+    return NextResponse.json({ error: deduction.error || "Credit deduction failed" }, { status: 402 });
   }
 
   try {
-    const { systemPrompt, userMessage } = (await request.json()) as {
-      systemPrompt: string;
-      userMessage: string;
-    };
-
-    if (!systemPrompt || !userMessage) {
-      return NextResponse.json(
-        { error: "systemPrompt and userMessage are required" },
-        { status: 400 }
-      );
+    const body = (await request.json()) as ResumeRevisionRequest;
+    if (!body.resume || !body.instruction?.trim()) {
+      await refundCredits(user.id, creditCheck.cost, "Refund: missing params");
+      return NextResponse.json({ error: "resume and instruction are required" }, { status: 400 });
     }
+
+    const messages = buildReviseMessages(body);
 
     if (!ANTHROPIC_API_KEY) {
-      return NextResponse.json(
-        { error: "ANTHROPIC_API_KEY not configured" },
-        { status: 500 }
-      );
+      await refundCredits(user.id, creditCheck.cost, "Refund: no API key");
+      return NextResponse.json({ error: "AI provider not configured" }, { status: 503 });
     }
 
-    // Try primary model, then fallback
-    const modelsToTry = ANTHROPIC_MODEL !== FALLBACK_MODEL
-      ? [ANTHROPIC_MODEL, FALLBACK_MODEL]
-      : [ANTHROPIC_MODEL];
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: ANTHROPIC_MODEL,
+        max_tokens: 8192,
+        system: RESUME_REVISE_SYSTEM_PROMPT,
+        messages,
+      }),
+    });
 
-    let anthropicResponse: Response | null = null;
-    let usedModel = ANTHROPIC_MODEL;
-
-    for (const model of modelsToTry) {
-      console.log(`[resume-revise] Trying model: ${model}`);
-      anthropicResponse = await fetchWithRetry(
-        "https://api.anthropic.com/v1/messages",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01",
-          },
-          body: JSON.stringify({
-            model,
-            max_tokens: 8192,
-            system: systemPrompt,
-            messages: [{ role: "user", content: userMessage }],
-            stream: false,
-          }),
-        }
-      );
-      if (anthropicResponse.ok) { usedModel = model; break; }
-      console.warn(`[resume-revise] Model ${model} failed: ${anthropicResponse.status}`);
+    if (!response.ok) {
+      await refundCredits(user.id, creditCheck.cost, "Refund: AI API error");
+      return NextResponse.json({ error: "AI revision failed" }, { status: 502 });
     }
 
-    if (!anthropicResponse || !anthropicResponse.ok) {
-      const errText = anthropicResponse ? await anthropicResponse.text() : "no response";
-      console.error("Anthropic API error:", errText);
-      return NextResponse.json(
-        { error: "AI service error — please try again" },
-        { status: 502 }
-      );
+    const result = await response.json();
+    const text = result.content?.[0]?.text ?? "";
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      await refundCredits(user.id, creditCheck.cost, "Refund: no valid JSON");
+      return NextResponse.json({ error: "AI returned invalid format" }, { status: 502 });
     }
 
-    const anthropicData = await anthropicResponse.json();
-    const textBlock = anthropicData.content?.find(
-      (block: { type: string }) => block.type === "text"
-    );
-
-    if (!textBlock?.text) {
-      return NextResponse.json(
-        { error: "No text content in AI response" },
-        { status: 502 }
-      );
-    }
-
-    // Deduct credits AFTER successful AI response with token tracking
-    const tokenUsage: TokenUsage | undefined = anthropicData.usage ? {
-      inputTokens: anthropicData.usage.input_tokens ?? 0,
-      outputTokens: anthropicData.usage.output_tokens ?? 0,
-      model: usedModel,
-    } : undefined;
-    const deduction = await deductCredits(user.id, "resume-revision", "Resume revision", undefined, tokenUsage);
-    if (!deduction.success) {
-      return NextResponse.json({ error: "Failed to deduct credits" }, { status: 402 });
-    }
-
-    return NextResponse.json({ text: textBlock.text });
+    const resumeData = JSON.parse(jsonMatch[0]);
+    return NextResponse.json({ resume: resumeData });
   } catch (err) {
-    console.error("Resume revision API error:", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    await refundCredits(user.id, creditCheck.cost, "Refund: resume revise error");
+    return NextResponse.json({ error: "Revision failed" }, { status: 500 });
   }
 }
