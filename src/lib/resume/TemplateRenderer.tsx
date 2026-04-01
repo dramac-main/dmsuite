@@ -8,7 +8,7 @@
 
 import React, { useMemo } from "react";
 import type { ResumeData, SectionKey, PageLayout, TemplateId, LevelType } from "./schema";
-import { SECTION_META, PAGE_DIMENSIONS, mmToPx, createDefaultResumeData } from "./schema";
+import { SECTION_META, createDefaultResumeData } from "./schema";
 import { getTemplateConfig, type TemplateConfig } from "./templates";
 
 // ---------------------------------------------------------------------------
@@ -487,7 +487,7 @@ function ResumeHeader({
 // ---------------------------------------------------------------------------
 
 function ResumePage({
-  pageIndex, pageLayout, data, color, textColor, cfg, typo, designColors, pageCfg, sidebarWidth, levelType, pageWidthPx, pageHeightPx,
+  pageIndex, pageLayout, data, color, textColor, cfg, typo, designColors, pageCfg, sidebarWidth, levelType,
 }: {
   pageIndex: number;
   pageLayout: PageLayout;
@@ -500,8 +500,6 @@ function ResumePage({
   pageCfg: ResumeData["metadata"]["page"];
   sidebarWidth: number;
   levelType: LevelType;
-  pageWidthPx: number;
-  pageHeightPx: number;
 }) {
   const sidebarPct = sidebarWidth;
   const hasSidebar = sidebarPct > 0 && pageLayout.sidebar.length > 0;
@@ -516,23 +514,23 @@ function ResumePage({
 
   const sidebarBg = cfg.style.hasSidebarBg ? withAlpha(color, 0.06) : "transparent";
   const hasSidebarBg = sidebarBg !== "transparent";
-  const gapX = mmToPx(pageCfg.gapX);
-  const marginX = mmToPx(pageCfg.marginX);
-  const marginY = mmToPx(pageCfg.marginY);
-  const gapY = mmToPx(pageCfg.gapY);
+  const gapX = `${pageCfg.gapX}pt`;
+  const marginX = `${pageCfg.marginX}pt`;
+  const marginY = `${pageCfg.marginY}pt`;
+  const gapY = `${pageCfg.gapY}pt`;
 
   return (
     <div
       className="resume-page"
       style={{
-        width: pageWidthPx,
-        minHeight: pageHeightPx,
+        width: `${pageCfg.format === "letter" ? 216 : 210}mm`,
+        minHeight: `${pageCfg.format === "letter" ? 279 : 297}mm`,
         backgroundColor: designColors.background,
         color: designColors.text,
-        fontFamily: `${typo.body.fontFamily}, serif`,
-        fontSize: pt(typo.body.fontSize),
+        fontFamily: `'${typo.body.fontFamily}', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`,
+        fontSize: `calc(${typo.body.fontSize} * 1pt)`,
         lineHeight: typo.body.lineHeight,
-        padding: `${marginY}px ${marginX}px`,
+        padding: `${marginY} ${marginX}`,
         boxSizing: "border-box",
         position: "relative",
         overflow: "hidden",
@@ -607,10 +605,6 @@ export default function TemplateRenderer({ data, zoom = 1, className, printMode 
   const typo = { heading: typoHeading, body: typoBody };
   const levelType = designLevel.type;
 
-  const pageDims = PAGE_DIMENSIONS[pageCfg.format] ?? PAGE_DIMENSIONS.a4;
-  const pageWidthPx = mmToPx(pageDims.width);
-  const pageHeightPx = mmToPx(pageDims.height);
-
   const pages = useMemo(() => {
     if (!layoutCfg.pages || layoutCfg.pages.length === 0) {
       return [{ fullWidth: false, main: ["summary", "experience", "education", "projects"], sidebar: ["skills", "languages"] }];
@@ -623,21 +617,27 @@ export default function TemplateRenderer({ data, zoom = 1, className, printMode 
     <style dangerouslySetInnerHTML={{ __html: cssCfg.value }} />
   ) : null;
 
-  // Global page styles
+  // Global page styles — mirrors Reactive Resume's preview.module.css approach
   const pageStyles = `
-    .resume-page h1, .resume-page h2, .resume-page h3 {
-      font-family: ${typo.heading.fontFamily}, serif;
+    .resume-page h1, .resume-page h2, .resume-page h3, .resume-page h4, .resume-page h5, .resume-page h6 {
+      font-family: '${typo.heading.fontFamily}', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       font-weight: ${typo.heading.fontWeight};
       line-height: ${typo.heading.lineHeight};
     }
-    .resume-page .resume-section { margin-bottom: ${mmToPx(pageCfg.gapY)}px; }
+    .resume-page h1 { font-size: calc(${typo.heading.fontSize} * 1.5pt); }
+    .resume-page h2 { font-size: calc(${typo.heading.fontSize} * 1.25pt); }
+    .resume-page h3 { font-size: calc(${typo.heading.fontSize} * 1.125pt); }
+    .resume-page h4 { font-size: calc(${typo.heading.fontSize} * 1pt); }
+    .resume-page small { font-size: calc(${typo.body.fontSize} * 0.9pt); }
+    .resume-page .resume-section { margin-bottom: ${pageCfg.gapY}pt; }
     .resume-page .resume-rich-text { line-height: ${typo.body.lineHeight}; }
     .resume-page .resume-rich-text p { margin: 0.25em 0; }
     .resume-page .resume-rich-text ul { margin: 0.25em 0; padding-left: 1.4em; }
     .resume-page .resume-rich-text ol { margin: 0.25em 0; padding-left: 1.4em; }
     .resume-page .resume-rich-text li { margin: 0.15em 0; }
-    .resume-page .resume-rich-text a { color: ${color}; text-decoration: none; }
+    .resume-page .resume-rich-text a { color: ${color}; text-decoration: underline; text-underline-offset: 0.15rem; }
     .resume-page strong { font-weight: 600; }
+    .resume-page hr { margin: 1rem 0; border-color: ${textColor}; }
   `;
 
   return (
@@ -658,8 +658,6 @@ export default function TemplateRenderer({ data, zoom = 1, className, printMode 
           pageCfg={pageCfg}
           sidebarWidth={layoutCfg.sidebarWidth}
           levelType={levelType}
-          pageWidthPx={pageWidthPx}
-          pageHeightPx={pageHeightPx}
         />
       ))}
     </div>
