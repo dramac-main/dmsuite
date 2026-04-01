@@ -1,9 +1,27 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Resume & CV Builder — COMPLETE (Reactive Resume-inspired rebuild)
+**Phase:** ZRA Smart Invoice + NAPSA Integration + Slidev Presenter Rebuild — COMPLETE
 
-### Session: Resume Builder Complete Rebuild
+### Session: ZRA, NAPSA & Slidev Presenter
+
+Triple-feature session: (1) Rebuilt Presentation Designer presenter/fullscreen modes to match Slidev's exact UI/UX, (2) Full ZRA VSDC Smart Invoice integration for Invoice & Accounting Hub, (3) NAPSA employee management + contribution returns.
+
+#### New Files
+- `src/lib/zra-vsdc.ts` — ZRA VSDC client library (~300 lines): enums, interfaces, tax calc, mappers, 15 endpoints, validation
+- `src/app/api/zra/route.ts` — Server-side VSDC proxy (~130 lines)
+- `src/components/workspaces/invoice-accounting/views/ZRASmartInvoiceView.tsx` — 3-tab dashboard
+- `src/components/workspaces/invoice-accounting/views/NAPSAEmployeesView.tsx` — Employee register CRUD
+- `src/components/workspaces/invoice-accounting/views/NAPSAReturnsView.tsx` — Monthly returns + CSV export
+
+#### Modified Files
+- `src/stores/invoice-accounting-editor.ts` — ZRA + NAPSA types, 7 new actions
+- `src/components/workspaces/invoice-accounting/InvoiceAccountingWorkspace.tsx` — "Compliance" nav group
+- `src/components/workspaces/slidev-presenter/SlidevPresenterWorkspace.tsx` — Presenter + Fullscreen rebuilt
+- `src/lib/resume/schema.ts` — FONT_PAIRINGS + Zod v4 metadata fix
+- `src/lib/chiko/field-mapper.ts` — Removed invalid linkedin prop
+
+### Previous Session: Resume Builder Complete Rebuild — COMPLETE ✅
 
 Replaced 8-step wizard with Reactive Resume-inspired two-panel editor.
 

@@ -46,6 +46,9 @@ import PurchaseOrderListView from "./views/PurchaseOrderListView";
 import PurchaseOrderEditView from "./views/PurchaseOrderEditView";
 import ReportsView from "./views/ReportsView";
 import SettingsView from "./views/SettingsView";
+import ZRASmartInvoiceView from "./views/ZRASmartInvoiceView";
+import NAPSAEmployeesView from "./views/NAPSAEmployeesView";
+import NAPSAReturnsView from "./views/NAPSAReturnsView";
 
 // ━━━ Navigation Config ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -103,6 +106,12 @@ const ReportIcon = () => (
 const SettingsIcon = () => (
   <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4"><circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/></svg>
 );
+const ZRAIcon = () => (
+  <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.2"/><path d="M5 6h6M5 8.5h4M5 11h2" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/><path d="M11 8.5l1.5 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.6"/></svg>
+);
+const NAPSAIcon = () => (
+  <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4"><circle cx="8" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.2"/><path d="M4 13.5c0-2.2 1.8-4 4-4s4 1.8 4 4" stroke="currentColor" strokeWidth="1.2"/><path d="M6 12l2 2 4-4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" opacity="0.5"/></svg>
+);
 
 const NAV_GROUPS: NavGroup[] = [
   {
@@ -158,6 +167,19 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    group: "Compliance",
+    items: [
+      { key: "zra-smart-invoice", label: "ZRA Smart Invoice", icon: <ZRAIcon /> },
+      {
+        key: "napsa-employees",
+        label: "NAPSA Employees",
+        icon: <NAPSAIcon />,
+        badge: (f) => f.napsaEmployees.filter((e) => e.isActive).length,
+      },
+      { key: "napsa-returns", label: "NAPSA Returns", icon: <NAPSAIcon /> },
+    ],
+  },
+  {
     group: "Insights",
     items: [
       { key: "reports", label: "Reports", icon: <ReportIcon /> },
@@ -193,6 +215,9 @@ function ViewRouter({ view, recordId }: { view: ViewType; recordId: string | nul
     case "purchase-order-edit": return <PurchaseOrderEditView id={recordId} />;
     case "reports": return <ReportsView />;
     case "settings": return <SettingsView />;
+    case "zra-smart-invoice": return <ZRASmartInvoiceView />;
+    case "napsa-employees": return <NAPSAEmployeesView />;
+    case "napsa-returns": return <NAPSAReturnsView />;
     default: return <DashboardView />;
   }
 }

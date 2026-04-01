@@ -130,7 +130,6 @@ export function mapProfileToResumeBasics(profile: BusinessProfile): Partial<Resu
   if (profile.phone) result.phone = profile.phone;
   if (profile.address) result.location = profile.address;
   if (profile.website) result.website = { url: profile.website, label: "Website" };
-  if (profile.linkedin) result.linkedin = profile.linkedin;
   return result;
 }
 

@@ -74,7 +74,7 @@ const PlusIcon = () => (
 
 // ── Sub-views ───────────────────────────────────────────────────────────────
 
-type SubView = "none" | "overview" | "presenter";
+type SubView = "none" | "overview" | "presenter" | "fullscreen";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PromptPhase — Entry point with topic input + template selection
@@ -157,8 +157,11 @@ function PromptPhase({
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Presenter Mode Overlay
+// Presenter Mode — Slidev-exact CSS Grid layout with 3 responsive modes,
+// resizable panels, timer controls, editable notes, goto, click slider
 // ═══════════════════════════════════════════════════════════════════════════════
+
+type PresenterLayout = 1 | 2 | 3;
 
 function PresenterOverlay({
   slides,
@@ -167,6 +170,7 @@ function PresenterOverlay({
   aspectRatio,
   onClose,
   onNavigate,
+  onGoto,
 }: {
   slides: ReturnType<typeof parseSlidevMarkdown>["slides"];
   currentIndex: number;
@@ -174,127 +178,477 @@ function PresenterOverlay({
   aspectRatio: "16:9" | "4:3" | "16:10";
   onClose: () => void;
   onNavigate: (dir: "prev" | "next") => void;
+  onGoto: (index: number) => void;
 }) {
+  // ── Timer ──
   const [elapsed, setElapsed] = useState(0);
+  const [timerRunning, setTimerRunning] = useState(true);
 
   useEffect(() => {
-    const timer = setInterval(() => setElapsed((t) => t + 1), 1000);
-    return () => clearInterval(timer);
-  }, []);
+    if (!timerRunning) return;
+    const t = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [timerRunning]);
 
   const formatTime = (s: number) => {
-    const m = Math.floor(s / 60);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
     const sec = s % 60;
-    return `${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
+    const mm = m.toString().padStart(2, "0");
+    const ss = sec.toString().padStart(2, "0");
+    return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
   };
 
+  // ── Click steps ──
   const current = slides[currentIndex];
   const next = slides[currentIndex + 1];
+  const totalClicks = countClicks(current.content);
+  const [clickStep, setClickStep] = useState(0);
+  const prevIndexRef = useRef(currentIndex);
+  if (prevIndexRef.current !== currentIndex) {
+    prevIndexRef.current = currentIndex;
+    if (clickStep !== 0) setClickStep(0);
+  }
 
+  // ── Resizable panels (Slidev pattern: pointer events + localStorage) ──
+  const [notesWidth, setNotesWidth] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("dmsuite-presenter-notes-width");
+      return saved ? Number(saved) : 320;
+    }
+    return 320;
+  });
+  const [notesRowPercent, setNotesRowPercent] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("dmsuite-presenter-notes-row");
+      return saved ? Number(saved) : 40;
+    }
+    return 40;
+  });
+
+  const isResizingH = useRef(false);
+  const isResizingV = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Persist on change
+  useEffect(() => {
+    localStorage.setItem("dmsuite-presenter-notes-width", String(notesWidth));
+  }, [notesWidth]);
+  useEffect(() => {
+    localStorage.setItem("dmsuite-presenter-notes-row", String(notesRowPercent));
+  }, [notesRowPercent]);
+
+  // Pointer move handler for resizing
+  useEffect(() => {
+    const handlePointerMove = (e: PointerEvent) => {
+      if (isResizingH.current && containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const x = rect.right - e.clientX;
+        setNotesWidth(Math.max(240, Math.min(x, 720)));
+      }
+      if (isResizingV.current && containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const pct = ((e.clientY - rect.top) / rect.height) * 100;
+        setNotesRowPercent(Math.max(20, Math.min(pct, 80)));
+      }
+    };
+    const handlePointerUp = () => {
+      isResizingH.current = false;
+      isResizingV.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, []);
+
+  // ── Layout mode (responsive like Slidev's 3 breakpoints) ──
+  const [layout, setLayout] = useState<PresenterLayout>(1);
+
+  // ── Goto dialog ──
+  const [showGoto, setShowGoto] = useState(false);
+  const [gotoInput, setGotoInput] = useState("");
+
+  // ── Editable notes ──
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesText, setNotesText] = useState(current.notes || "");
+  const prevNoteIdxRef = useRef(currentIndex);
+  const prevNoteTextRef = useRef(current.notes);
+  if (prevNoteIdxRef.current !== currentIndex || prevNoteTextRef.current !== current.notes) {
+    prevNoteIdxRef.current = currentIndex;
+    prevNoteTextRef.current = current.notes;
+    if (notesText !== (current.notes || "")) setNotesText(current.notes || "");
+    if (editingNotes) setEditingNotes(false);
+  }
+
+  // ── Keyboard ──
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
+      if (showGoto) {
+        if (e.key === "Escape") setShowGoto(false);
+        if (e.key === "Enter") {
+          const n = parseInt(gotoInput, 10);
+          if (n >= 1 && n <= slides.length) {
+            onGoto(n - 1);
+            setShowGoto(false);
+            setGotoInput("");
+          }
+        }
+        return;
+      }
       if (e.key === "Escape") onClose();
-      else if (e.key === "ArrowRight" || e.key === " ") onNavigate("next");
-      else if (e.key === "ArrowLeft" || e.key === "Backspace")
-        onNavigate("prev");
+      else if (e.key === "ArrowRight" || e.key === " ") {
+        e.preventDefault();
+        if (clickStep < totalClicks) setClickStep((c) => c + 1);
+        else onNavigate("next");
+      } else if (e.key === "ArrowLeft" || e.key === "Backspace") {
+        e.preventDefault();
+        if (clickStep > 0) setClickStep((c) => c - 1);
+        else onNavigate("prev");
+      } else if (e.key === "g") {
+        setShowGoto(true);
+        setGotoInput("");
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        onGoto(0);
+      } else if (e.key === "End") {
+        e.preventDefault();
+        onGoto(slides.length - 1);
+      }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [onClose, onNavigate]);
+  }, [onClose, onNavigate, onGoto, clickStep, totalClicks, slides.length, showGoto, gotoInput]);
+
+  // ── CSS Grid styles for 3 layouts ──
+  const gridStyle: React.CSSProperties =
+    layout === 1
+      ? {
+          display: "grid",
+          gridTemplateColumns: `1fr ${notesWidth}px`,
+          gridTemplateRows: `${notesRowPercent}% 1fr`,
+          gridTemplateAreas: `"main next" "main note"`,
+          height: "100%",
+        }
+      : layout === 2
+        ? {
+            display: "grid",
+            gridTemplateColumns: `1fr ${notesWidth}px`,
+            gridTemplateRows: "1fr auto",
+            gridTemplateAreas: `"main note" "bottom bottom"`,
+            height: "100%",
+          }
+        : {
+            display: "grid",
+            gridTemplateColumns: "1fr",
+            gridTemplateRows: `${notesRowPercent}% 1fr auto`,
+            gridTemplateAreas: `"main" "note" "bottom"`,
+            height: "100%",
+          };
+
+  // Timer progress bar width
+  const timerBarStyle = timerRunning
+    ? { transition: "width 1s linear" }
+    : {};
 
   return (
-    <div className="fixed inset-0 z-[999] bg-gray-950 flex">
-      {/* Left: Current slide (large) */}
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div
-          className="relative overflow-hidden rounded-xl shadow-2xl"
-          style={{ maxWidth: "100%", maxHeight: "100%" }}
-        >
-          <SlidevSlideRenderer
-            slide={current}
-            theme={theme}
-            scale={0.7}
-            aspectRatio={aspectRatio}
-          />
-        </div>
-      </div>
-
-      {/* Right: Next slide + notes + timer */}
-      <div className="w-80 flex flex-col border-l border-gray-800 bg-gray-900 p-4 gap-4">
-        {/* Timer */}
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500">
+    <div ref={containerRef} className="fixed inset-0 z-999 bg-gray-950 flex flex-col select-none">
+      {/* ── Top bar ── */}
+      <div className="h-10 flex items-center justify-between px-4 bg-gray-900 border-b border-gray-800 shrink-0">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-medium text-gray-400">
             Slide {currentIndex + 1} / {slides.length}
           </span>
-          <span className="text-lg font-mono text-primary-400">
-            {formatTime(elapsed)}
-          </span>
-        </div>
-
-        {/* Next slide preview */}
-        <div>
-          <div className="text-xs text-gray-500 mb-1">Next</div>
-          {next ? (
-            <div className="rounded-lg overflow-hidden border border-gray-700">
-              <SlidevSlideRenderer
-                slide={next}
-                theme={theme}
-                scale={0.29}
-                isThumbnail
-                aspectRatio={aspectRatio}
-              />
-            </div>
-          ) : (
-            <div className="h-20 rounded-lg bg-gray-800 flex items-center justify-center text-gray-600 text-xs">
-              End of presentation
-            </div>
+          {totalClicks > 0 && (
+            <span className="text-xs text-gray-500">
+              Click {clickStep}/{totalClicks}
+            </span>
           )}
         </div>
 
-        {/* Speaker notes */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="text-xs text-gray-500 mb-1">Speaker Notes</div>
-          {current.notes ? (
-            <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
-              {current.notes}
-            </p>
-          ) : (
-            <p className="text-xs text-gray-600 italic">
-              No notes for this slide
-            </p>
-          )}
-        </div>
+        <div className="flex items-center gap-2">
+          {/* Timer */}
+          <button
+            onClick={() => setTimerRunning((r) => !r)}
+            className="text-xs px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 font-mono"
+            title={timerRunning ? "Pause timer" : "Resume timer"}
+          >
+            {timerRunning ? "⏸" : "▶"} {formatTime(elapsed)}
+          </button>
+          <button
+            onClick={() => { setElapsed(0); setTimerRunning(true); }}
+            className="text-xs px-1.5 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-400"
+            title="Reset timer"
+          >↻</button>
 
-        {/* Controls */}
-        <div className="flex gap-2">
-          <ActionButton
-            onClick={() => onNavigate("prev")}
-            variant="secondary"
-            className="flex-1"
-            disabled={currentIndex <= 0}
-          >← Prev</ActionButton>
-          <ActionButton
-            onClick={() => onNavigate("next")}
-            variant="primary"
-            className="flex-1"
-            disabled={currentIndex >= slides.length - 1}
-          >Next →</ActionButton>
-        </div>
+          {/* Layout switcher */}
+          <div className="flex items-center border-l border-gray-700 ml-2 pl-2 gap-1">
+            {([1, 2, 3] as PresenterLayout[]).map((l) => (
+              <button
+                key={l}
+                onClick={() => setLayout(l)}
+                className={`w-6 h-5 rounded text-[10px] font-bold ${
+                  layout === l
+                    ? "bg-primary-500 text-black"
+                    : "bg-gray-800 text-gray-500 hover:text-gray-300"
+                }`}
+              >{l}</button>
+            ))}
+          </div>
 
-        {/* Close */}
-        <button
-          onClick={onClose}
-          className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-        >
-          Press Esc to exit presenter mode
-        </button>
+          {/* Close */}
+          <button
+            onClick={onClose}
+            className="ml-2 text-gray-400 hover:text-white text-sm px-2 py-0.5 rounded hover:bg-gray-800"
+          >✕</button>
+        </div>
       </div>
+
+      {/* ── Timer progress bar (Slidev-style) ── */}
+      <div className="h-0.5 bg-gray-800 shrink-0 relative">
+        <div
+          className="h-full bg-primary-500/60"
+          style={{
+            width: `${((currentIndex + 1) / slides.length) * 100}%`,
+            ...timerBarStyle,
+          }}
+        />
+      </div>
+
+      {/* ── Grid content ── */}
+      <div className="flex-1 overflow-hidden" style={gridStyle}>
+        {/* Main slide (current) */}
+        <div
+          style={{ gridArea: "main" }}
+          className="flex items-center justify-center p-3 overflow-hidden"
+        >
+          <div className="relative rounded-lg overflow-hidden shadow-2xl">
+            <SlidevSlideRenderer
+              slide={current}
+              theme={theme}
+              scale={0.65}
+              clickStep={clickStep}
+              aspectRatio={aspectRatio}
+            />
+          </div>
+        </div>
+
+        {/* Next slide preview (layout 1 only) */}
+        {layout === 1 && (
+          <div
+            style={{ gridArea: "next" }}
+            className="flex items-center justify-center p-3 border-b border-gray-800"
+          >
+            {next ? (
+              <div className="rounded-lg overflow-hidden border border-gray-700 shadow-lg">
+                <SlidevSlideRenderer
+                  slide={next}
+                  theme={theme}
+                  scale={0.28}
+                  isThumbnail
+                  aspectRatio={aspectRatio}
+                />
+              </div>
+            ) : (
+              <div className="flex items-center justify-center text-gray-600 text-xs italic">
+                End of presentation
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Notes panel */}
+        <div
+          style={{ gridArea: "note" }}
+          className="flex flex-col p-3 overflow-hidden bg-gray-900/50"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-gray-500 font-medium">Speaker Notes</span>
+            <button
+              onClick={() => setEditingNotes((e) => !e)}
+              className="text-[10px] text-gray-500 hover:text-gray-300 px-1.5 py-0.5 rounded hover:bg-gray-800"
+            >
+              {editingNotes ? "Done" : "Edit"}
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {editingNotes ? (
+              <textarea
+                value={notesText}
+                onChange={(e) => setNotesText(e.target.value)}
+                className="w-full h-full bg-gray-800 text-gray-300 text-sm p-2 rounded-lg border border-gray-700 resize-none focus:outline-none focus:border-primary-500"
+                placeholder="Type speaker notes..."
+              />
+            ) : notesText ? (
+              <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                {notesText}
+              </p>
+            ) : (
+              <p className="text-xs text-gray-600 italic">No notes for this slide</p>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom controls (layouts 2 & 3) */}
+        {(layout === 2 || layout === 3) && (
+          <div
+            style={{ gridArea: "bottom" }}
+            className="flex items-center justify-between px-4 py-2 bg-gray-900 border-t border-gray-800"
+          >
+            {next && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">Next:</span>
+                <div className="w-24 rounded overflow-hidden border border-gray-700">
+                  <SlidevSlideRenderer
+                    slide={next}
+                    theme={theme}
+                    scale={0.1}
+                    isThumbnail
+                    aspectRatio={aspectRatio}
+                  />
+                </div>
+              </div>
+            )}
+            <span className="text-xs text-gray-500 font-mono">{formatTime(elapsed)}</span>
+          </div>
+        )}
+
+        {/* ── Horizontal resize handle ── */}
+        {layout !== 3 && (
+          <div
+            className="absolute top-10 cursor-col-resize z-50 w-1 hover:bg-primary-500/40 active:bg-primary-500/60 transition-colors"
+            style={{
+              right: notesWidth - 2,
+              height: "calc(100% - 2.5rem)",
+            }}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              isResizingH.current = true;
+              document.body.style.cursor = "col-resize";
+              document.body.style.userSelect = "none";
+            }}
+          />
+        )}
+
+        {/* ── Vertical resize handle ── */}
+        {(layout === 1 || layout === 3) && (
+          <div
+            className="absolute cursor-row-resize z-50 h-1 hover:bg-primary-500/40 active:bg-primary-500/60 transition-colors"
+            style={{
+              top: `calc(2.5rem + ${notesRowPercent}%)`,
+              right: 0,
+              width: layout === 1 ? notesWidth : "100%",
+            }}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              isResizingV.current = true;
+              document.body.style.cursor = "row-resize";
+              document.body.style.userSelect = "none";
+            }}
+          />
+        )}
+      </div>
+
+      {/* ── Navigation bar (Slidev-style bottom bar) ── */}
+      <div className="h-10 flex items-center justify-center gap-1 bg-gray-900 border-t border-gray-800 shrink-0">
+        <button
+          onClick={() => onGoto(0)}
+          disabled={currentIndex <= 0}
+          className="px-2 py-1 text-xs text-gray-400 hover:text-white hover:bg-gray-800 rounded disabled:opacity-30"
+          title="First slide (Home)"
+        >⏮</button>
+        <button
+          onClick={() => {
+            if (clickStep > 0) setClickStep((c) => c - 1);
+            else onNavigate("prev");
+          }}
+          disabled={currentIndex <= 0 && clickStep <= 0}
+          className="px-2 py-1 text-xs text-gray-400 hover:text-white hover:bg-gray-800 rounded disabled:opacity-30"
+          title="Previous (←)"
+        >◀</button>
+
+        {/* Goto button */}
+        <button
+          onClick={() => { setShowGoto(true); setGotoInput(""); }}
+          className="px-3 py-1 text-xs font-mono text-gray-300 bg-gray-800 hover:bg-gray-700 rounded min-w-15 text-center"
+          title="Go to slide (G)"
+        >
+          {currentIndex + 1} / {slides.length}
+        </button>
+
+        <button
+          onClick={() => {
+            if (clickStep < totalClicks) setClickStep((c) => c + 1);
+            else onNavigate("next");
+          }}
+          disabled={currentIndex >= slides.length - 1 && clickStep >= totalClicks}
+          className="px-2 py-1 text-xs text-gray-400 hover:text-white hover:bg-gray-800 rounded disabled:opacity-30"
+          title="Next (→)"
+        >▶</button>
+        <button
+          onClick={() => onGoto(slides.length - 1)}
+          disabled={currentIndex >= slides.length - 1}
+          className="px-2 py-1 text-xs text-gray-400 hover:text-white hover:bg-gray-800 rounded disabled:opacity-30"
+          title="Last slide (End)"
+        >⏭</button>
+
+        {/* Click slider */}
+        {totalClicks > 0 && (
+          <div className="flex items-center gap-2 ml-4 border-l border-gray-700 pl-4">
+            <span className="text-[10px] text-gray-500">Clicks</span>
+            <input
+              type="range"
+              min={0}
+              max={totalClicks}
+              value={clickStep}
+              onChange={(e) => setClickStep(Number(e.target.value))}
+              className="w-20 h-1 accent-primary-500"
+            />
+            <span className="text-[10px] text-gray-400 font-mono w-6 text-center">{clickStep}</span>
+          </div>
+        )}
+      </div>
+
+      {/* ── Goto Dialog ── */}
+      {showGoto && (
+        <div className="fixed inset-0 z-1000 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 shadow-2xl w-64">
+            <div className="text-sm text-gray-300 mb-2">Go to slide</div>
+            <input
+              autoFocus
+              type="number"
+              min={1}
+              max={slides.length}
+              value={gotoInput}
+              onChange={(e) => setGotoInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  const n = parseInt(gotoInput, 10);
+                  if (n >= 1 && n <= slides.length) {
+                    onGoto(n - 1);
+                    setShowGoto(false);
+                  }
+                }
+                if (e.key === "Escape") setShowGoto(false);
+              }}
+              placeholder={`1 — ${slides.length}`}
+              className="w-full px-3 py-2 bg-gray-800 text-gray-100 border border-gray-600 rounded-lg text-center text-lg font-mono focus:outline-none focus:border-primary-500"
+            />
+            <div className="text-[10px] text-gray-500 mt-2 text-center">Enter to go · Esc to cancel</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Fullscreen Present Mode
+// Fullscreen Present Mode — Slidev-exact play view with click regions,
+// bottom nav controls, and CSS filter support
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function FullscreenPresent({
@@ -305,6 +659,7 @@ function FullscreenPresent({
   transition,
   onClose,
   onNavigate,
+  onGoto,
 }: {
   slides: ReturnType<typeof parseSlidevMarkdown>["slides"];
   currentIndex: number;
@@ -313,15 +668,20 @@ function FullscreenPresent({
   transition: string;
   onClose: () => void;
   onNavigate: (dir: "prev" | "next") => void;
+  onGoto: (index: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [clickStep, setClickStep] = useState(0);
+  const [showControls, setShowControls] = useState(false);
+  const [showOverview, setShowOverview] = useState(false);
+  const [cursorHidden, setCursorHidden] = useState(false);
+  const hideTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const current = slides[currentIndex];
   const totalClicks = countClicks(current.content);
 
-  // Compute scale to fit viewport
+  // Scale to fit viewport
   useEffect(() => {
     const updateScale = () => {
       const vw = window.innerWidth;
@@ -334,47 +694,75 @@ function FullscreenPresent({
             : 16 / 9;
       const slideW = 960;
       const slideH = slideW / ar;
-      const s = Math.min(vw / slideW, vh / slideH);
-      setScale(s);
+      setScale(Math.min(vw / slideW, vh / slideH));
     };
     updateScale();
     window.addEventListener("resize", updateScale);
     return () => window.removeEventListener("resize", updateScale);
   }, [aspectRatio]);
 
-  // Reset click step on slide change
-  useEffect(() => {
-    setClickStep(0);
-  }, [currentIndex]);
+  // Reset clicks on slide change
+  const prevFsIdxRef = useRef(currentIndex);
+  if (prevFsIdxRef.current !== currentIndex) {
+    prevFsIdxRef.current = currentIndex;
+    if (clickStep !== 0) setClickStep(0);
+  }
 
-  // Keyboard
+  // Auto-hide cursor
   useEffect(() => {
+    const handleMove = () => {
+      setCursorHidden(false);
+      setShowControls(true);
+      clearTimeout(hideTimer.current);
+      hideTimer.current = setTimeout(() => {
+        setCursorHidden(true);
+        setShowControls(false);
+      }, 3000);
+    };
+    window.addEventListener("mousemove", handleMove);
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      clearTimeout(hideTimer.current);
+    };
+  }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (showOverview) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      } else if (
-        e.key === "ArrowRight" ||
-        e.key === " " ||
-        e.key === "Enter"
-      ) {
-        e.preventDefault();
-        if (clickStep < totalClicks) {
-          setClickStep((c) => c + 1);
-        } else {
-          onNavigate("next");
-        }
-      } else if (e.key === "ArrowLeft" || e.key === "Backspace") {
-        e.preventDefault();
-        if (clickStep > 0) {
-          setClickStep((c) => c - 1);
-        } else {
-          onNavigate("prev");
-        }
+      switch (e.key) {
+        case "Escape":
+          onClose();
+          break;
+        case "ArrowRight":
+        case " ":
+        case "Enter":
+          e.preventDefault();
+          if (clickStep < totalClicks) setClickStep((c) => c + 1);
+          else onNavigate("next");
+          break;
+        case "ArrowLeft":
+        case "Backspace":
+          e.preventDefault();
+          if (clickStep > 0) setClickStep((c) => c - 1);
+          else onNavigate("prev");
+          break;
+        case "Home":
+          e.preventDefault();
+          onGoto(0);
+          break;
+        case "End":
+          e.preventDefault();
+          onGoto(slides.length - 1);
+          break;
+        case "o":
+          setShowOverview(true);
+          break;
       }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [onClose, onNavigate, clickStep, totalClicks]);
+  }, [onClose, onNavigate, onGoto, clickStep, totalClicks, slides.length, showOverview]);
 
   // Request fullscreen
   useEffect(() => {
@@ -392,27 +780,36 @@ function FullscreenPresent({
   // Transition CSS
   const transitionStyle: React.CSSProperties =
     transition !== "none"
-      ? {
-          transition: "transform 0.4s ease, opacity 0.4s ease",
-        }
+      ? { transition: "transform 0.4s ease, opacity 0.4s ease" }
       : {};
 
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-[1000] bg-black flex items-center justify-center cursor-none"
-      onClick={(e) => {
-        // Click to advance (unless clicking a link)
-        if ((e.target as HTMLElement).tagName !== "A") {
-          if (clickStep < totalClicks) {
-            setClickStep((c) => c + 1);
-          } else {
-            onNavigate("next");
-          }
-        }
-      }}
+      className={`fixed inset-0 z-1000 bg-black flex items-center justify-center ${cursorHidden ? "cursor-none" : ""}`}
     >
-      <div style={transitionStyle}>
+      {/* ── Click regions (Slidev-style: left half = prev, right half = next) ── */}
+      <div
+        className="absolute inset-0 z-10 flex"
+        onClick={(e) => {
+          if ((e.target as HTMLElement).closest("button, a, input")) return;
+          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const midpoint = rect.width / 2;
+          if (x > midpoint) {
+            // Right half → advance
+            if (clickStep < totalClicks) setClickStep((c) => c + 1);
+            else onNavigate("next");
+          } else {
+            // Left half → go back
+            if (clickStep > 0) setClickStep((c) => c - 1);
+            else onNavigate("prev");
+          }
+        }}
+      />
+
+      {/* ── Slide content ── */}
+      <div style={transitionStyle} className="relative z-0">
         <SlidevSlideRenderer
           slide={current}
           theme={theme}
@@ -422,10 +819,111 @@ function FullscreenPresent({
         />
       </div>
 
-      {/* Slide counter (bottom right, subtle) */}
-      <div className="absolute bottom-4 right-6 text-xs text-white/30 font-mono">
-        {currentIndex + 1} / {slides.length}
+      {/* ── Bottom controls bar (Slidev-style, auto-hide) ── */}
+      <div
+        className={`absolute bottom-0 left-0 right-0 z-20 flex items-center justify-center gap-2 py-2 px-4 bg-linear-to-t from-black/80 to-transparent transition-opacity duration-300 ${
+          showControls ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        <button
+          onClick={() => onGoto(0)}
+          disabled={currentIndex <= 0}
+          className="p-1.5 text-white/60 hover:text-white rounded hover:bg-white/10 disabled:opacity-30 text-xs"
+        >⏮</button>
+        <button
+          onClick={() => {
+            if (clickStep > 0) setClickStep((c) => c - 1);
+            else onNavigate("prev");
+          }}
+          disabled={currentIndex <= 0 && clickStep <= 0}
+          className="p-1.5 text-white/60 hover:text-white rounded hover:bg-white/10 disabled:opacity-30 text-xs"
+        >◀</button>
+
+        <span className="text-xs text-white/50 font-mono min-w-12.5 text-center">
+          {currentIndex + 1} / {slides.length}
+        </span>
+
+        <button
+          onClick={() => {
+            if (clickStep < totalClicks) setClickStep((c) => c + 1);
+            else onNavigate("next");
+          }}
+          disabled={currentIndex >= slides.length - 1 && clickStep >= totalClicks}
+          className="p-1.5 text-white/60 hover:text-white rounded hover:bg-white/10 disabled:opacity-30 text-xs"
+        >▶</button>
+        <button
+          onClick={() => onGoto(slides.length - 1)}
+          disabled={currentIndex >= slides.length - 1}
+          className="p-1.5 text-white/60 hover:text-white rounded hover:bg-white/10 disabled:opacity-30 text-xs"
+        >⏭</button>
+
+        <div className="w-px h-4 bg-white/20 mx-1" />
+
+        <button
+          onClick={() => setShowOverview(true)}
+          className="p-1.5 text-white/60 hover:text-white rounded hover:bg-white/10 text-xs"
+          title="Overview (O)"
+        >
+          <GridIcon />
+        </button>
+        <button
+          onClick={onClose}
+          className="p-1.5 text-white/60 hover:text-white rounded hover:bg-white/10 text-xs"
+          title="Exit (Esc)"
+        >✕</button>
       </div>
+
+      {/* ── Slide progress bar (Slidev-style) ── */}
+      <div className="absolute top-0 left-0 right-0 z-20 h-0.5 bg-white/10">
+        <div
+          className="h-full bg-primary-500/70 transition-all duration-300"
+          style={{ width: `${((currentIndex + 1) / slides.length) * 100}%` }}
+        />
+      </div>
+
+      {/* ── Quick overview overlay ── */}
+      {showOverview && (
+        <div className="absolute inset-0 z-30 bg-black/90 backdrop-blur-sm flex flex-col">
+          <div className="flex items-center justify-between px-6 py-3">
+            <span className="text-sm text-white/80 font-medium">Slide Overview</span>
+            <button
+              onClick={() => setShowOverview(false)}
+              className="text-white/60 hover:text-white text-sm px-2 py-1 rounded hover:bg-white/10"
+            >Close (Esc / O)</button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 max-w-7xl mx-auto">
+              {slides.map((slide, i) => (
+                <button
+                  key={slide.id}
+                  onClick={() => {
+                    onGoto(i);
+                    setShowOverview(false);
+                  }}
+                  className={`relative rounded-lg overflow-hidden border-2 transition-all ${
+                    i === currentIndex
+                      ? "border-primary-500 ring-2 ring-primary-500/30"
+                      : "border-white/10 hover:border-white/30"
+                  }`}
+                >
+                  <SlidevSlideRenderer
+                    slide={slide}
+                    theme={theme}
+                    scale={0.18}
+                    isThumbnail
+                    aspectRatio={aspectRatio}
+                  />
+                  <div className={`absolute top-1 left-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                    i === currentIndex ? "bg-primary-500 text-black" : "bg-black/70 text-white/80"
+                  }`}>
+                    {i + 1}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -749,8 +1247,7 @@ export default function SlidevPresenterWorkspace() {
           break;
         case "f":
           e.preventDefault();
-          setSubView("none");
-          setTimeout(() => setSubView("presenter"), 0); // trigger fullscreen
+          setSubView("fullscreen");
           break;
         case "p":
           e.preventDefault();
@@ -992,12 +1489,16 @@ export default function SlidevPresenterWorkspace() {
               <ChevronRightIcon />
             </button>
 
-            {/* Fullscreen present button */}
-            <div className="ml-4 border-l border-gray-700 pl-4">
+            {/* Present mode buttons */}
+            <div className="ml-4 border-l border-gray-700 pl-4 flex gap-2">
               <ActionButton
-                onClick={() => setSubView("presenter")}
+                onClick={() => setSubView("fullscreen")}
                 variant="primary"
               >Present</ActionButton>
+              <ActionButton
+                onClick={() => setSubView("presenter")}
+                variant="secondary"
+              >Presenter</ActionButton>
             </div>
           </div>
 
@@ -1091,6 +1592,20 @@ export default function SlidevPresenterWorkspace() {
           aspectRatio={form.aspectRatio}
           onClose={() => setSubView("none")}
           onNavigate={handlePresentNavigate}
+          onGoto={setActiveSlideIndex}
+        />
+      )}
+
+      {subView === "fullscreen" && (
+        <FullscreenPresent
+          slides={slides}
+          currentIndex={activeSlideIndex}
+          theme={theme}
+          aspectRatio={form.aspectRatio}
+          transition={form.transition}
+          onClose={() => setSubView("none")}
+          onNavigate={handlePresentNavigate}
+          onGoto={setActiveSlideIndex}
         />
       )}
 

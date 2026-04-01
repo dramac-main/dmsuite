@@ -1,7 +1,6 @@
 // =============================================================================
-// DMSuite — Resume Data Schema
-// Zod-validated schema for ALL resume data types. Single source of truth.
-// Inspired by Reactive Resume's comprehensive Zod schema (data.ts ~650 lines).
+// DMSuite — Resume Data Schema (Reactive Resume-Aligned)
+// Full Zod-validated schema. Single source of truth for all resume types.
 // =============================================================================
 
 import { z } from "zod/v4";
@@ -17,12 +16,32 @@ export const urlSchema = z.object({
   label: z.string().default(""),
 });
 
+export type UrlField = z.infer<typeof urlSchema>;
+
 export const customFieldSchema = z.object({
   id: idSchema,
   icon: z.string().default(""),
-  name: z.string().default(""),
-  value: z.string().default(""),
+  text: z.string().default(""),
+  link: z.string().default(""),
 });
+
+export type CustomField = z.infer<typeof customFieldSchema>;
+
+// ---------------------------------------------------------------------------
+// Picture settings
+// ---------------------------------------------------------------------------
+
+export const pictureSchema = z.object({
+  hidden: z.boolean().default(false),
+  url: z.string().default(""),
+  size: z.number().min(32).max(512).default(80),
+  aspectRatio: z.number().min(0.5).max(2.5).default(1),
+  borderRadius: z.number().min(0).max(100).default(0),
+  borderColor: z.string().default("rgba(0,0,0,0.5)"),
+  borderWidth: z.number().min(0).default(0),
+});
+
+export type Picture = z.infer<typeof pictureSchema>;
 
 // ---------------------------------------------------------------------------
 // Basics — Personal information & contact
@@ -35,274 +54,217 @@ export const basicsSchema = z.object({
   phone: z.string().default(""),
   location: z.string().default(""),
   website: urlSchema.default({ url: "", label: "" }),
-  linkedin: z.string().default(""),
-  photo: z.string().default(""),
   customFields: z.array(customFieldSchema).default([]),
 });
 
 export type Basics = z.infer<typeof basicsSchema>;
 
 // ---------------------------------------------------------------------------
-// Profiles — Social links (GitHub, LinkedIn, Twitter, etc.)
+// Summary section
 // ---------------------------------------------------------------------------
 
-export const profileItemSchema = z.object({
-  id: idSchema,
+export const summarySchema = z.object({
+  title: z.string().default("Summary"),
+  columns: z.number().default(1),
   hidden: z.boolean().default(false),
-  network: z.string().default(""),
-  username: z.string().default(""),
-  url: z.string().default(""),
-  icon: z.string().default(""),
+  content: z.string().default(""),
 });
 
-export type ProfileItem = z.infer<typeof profileItemSchema>;
+export type Summary = z.infer<typeof summarySchema>;
 
 // ---------------------------------------------------------------------------
-// Publications — Academic papers, articles, blog posts
+// Base item schema (shared by all section items)
 // ---------------------------------------------------------------------------
 
-export const publicationItemSchema = z.object({
+export const itemOptionsSchema = z.object({
+  showLinkInTitle: z.boolean().default(false),
+}).default({ showLinkInTitle: false });
+
+export const baseItemSchema = z.object({
   id: idSchema,
   hidden: z.boolean().default(false),
-  name: z.string().default(""),
-  publisher: z.string().default(""),
-  date: z.string().default(""),
-  url: z.string().default(""),
-  description: z.string().default(""),
+  options: itemOptionsSchema.optional(),
 });
-
-export type PublicationItem = z.infer<typeof publicationItemSchema>;
-
-// ---------------------------------------------------------------------------
-// Interests — Hobbies, passions
-// ---------------------------------------------------------------------------
-
-export const interestItemSchema = z.object({
-  id: idSchema,
-  hidden: z.boolean().default(false),
-  name: z.string().default(""),
-  keywords: z.array(z.string()).default([]),
-});
-
-export type InterestItem = z.infer<typeof interestItemSchema>;
 
 // ---------------------------------------------------------------------------
 // Section item schemas
 // ---------------------------------------------------------------------------
 
-export const summarySchema = z.object({
-  title: z.string().default("Professional Summary"),
-  content: z.string().default(""),
-  hidden: z.boolean().default(false),
+export const profileItemSchema = baseItemSchema.extend({
+  icon: z.string().default(""),
+  network: z.string().default(""),
+  username: z.string().default(""),
+  website: urlSchema.default({ url: "", label: "" }),
 });
+export type ProfileItem = z.infer<typeof profileItemSchema>;
 
-export type Summary = z.infer<typeof summarySchema>;
-
-export const experienceItemSchema = z.object({
+export const roleItemSchema = z.object({
   id: idSchema,
-  hidden: z.boolean().default(false),
+  position: z.string().default(""),
+  period: z.string().default(""),
+  description: z.string().default(""),
+});
+export type RoleItem = z.infer<typeof roleItemSchema>;
+
+export const experienceItemSchema = baseItemSchema.extend({
   company: z.string().default(""),
   position: z.string().default(""),
   location: z.string().default(""),
-  startDate: z.string().default(""),
-  endDate: z.string().default(""),
-  isCurrent: z.boolean().default(false),
-  website: z.string().default(""),
+  period: z.string().default(""),
+  website: urlSchema.default({ url: "", label: "" }),
   description: z.string().default(""),
+  roles: z.array(roleItemSchema).default([]),
 });
-
 export type ExperienceItem = z.infer<typeof experienceItemSchema>;
 
-export const educationItemSchema = z.object({
-  id: idSchema,
-  hidden: z.boolean().default(false),
-  institution: z.string().default(""),
+export const educationItemSchema = baseItemSchema.extend({
+  school: z.string().default(""),
   degree: z.string().default(""),
-  field: z.string().default(""),
-  graduationYear: z.string().default(""),
+  area: z.string().default(""),
+  grade: z.string().default(""),
+  location: z.string().default(""),
+  period: z.string().default(""),
+  website: urlSchema.default({ url: "", label: "" }),
   description: z.string().default(""),
 });
-
 export type EducationItem = z.infer<typeof educationItemSchema>;
 
-export const skillItemSchema = z.object({
-  id: idSchema,
-  hidden: z.boolean().default(false),
+export const projectItemSchema = baseItemSchema.extend({
   name: z.string().default(""),
-  keywords: z.array(z.string()).default([]),
-  proficiency: z.enum(["beginner", "intermediate", "advanced", "expert"]).optional(),
-});
-
-export type SkillItem = z.infer<typeof skillItemSchema>;
-
-export const certificationItemSchema = z.object({
-  id: idSchema,
-  hidden: z.boolean().default(false),
-  name: z.string().default(""),
-  issuer: z.string().default(""),
-  year: z.string().default(""),
-  url: z.string().default(""),
-});
-
-export type CertificationItem = z.infer<typeof certificationItemSchema>;
-
-export const languageItemSchema = z.object({
-  id: idSchema,
-  hidden: z.boolean().default(false),
-  name: z.string().default(""),
-  proficiency: z.enum(["native", "fluent", "intermediate", "basic"]).default("intermediate"),
-});
-
-export type LanguageItem = z.infer<typeof languageItemSchema>;
-
-export const volunteerItemSchema = z.object({
-  id: idSchema,
-  hidden: z.boolean().default(false),
-  organization: z.string().default(""),
-  role: z.string().default(""),
+  period: z.string().default(""),
+  website: urlSchema.default({ url: "", label: "" }),
   description: z.string().default(""),
-  startDate: z.string().default(""),
-  endDate: z.string().default(""),
 });
-
-export type VolunteerItem = z.infer<typeof volunteerItemSchema>;
-
-export const projectItemSchema = z.object({
-  id: idSchema,
-  hidden: z.boolean().default(false),
-  name: z.string().default(""),
-  description: z.string().default(""),
-  url: z.string().default(""),
-  keywords: z.array(z.string()).default([]),
-});
-
 export type ProjectItem = z.infer<typeof projectItemSchema>;
 
-export const awardItemSchema = z.object({
-  id: idSchema,
-  hidden: z.boolean().default(false),
+export const skillItemSchema = baseItemSchema.extend({
+  icon: z.string().default(""),
+  name: z.string().default(""),
+  proficiency: z.string().default(""),
+  level: z.number().min(0).max(5).default(0),
+  keywords: z.array(z.string()).default([]),
+});
+export type SkillItem = z.infer<typeof skillItemSchema>;
+
+export const languageItemSchema = baseItemSchema.extend({
+  language: z.string().default(""),
+  fluency: z.string().default(""),
+  level: z.number().min(0).max(5).default(0),
+});
+export type LanguageItem = z.infer<typeof languageItemSchema>;
+
+export const interestItemSchema = baseItemSchema.extend({
+  icon: z.string().default(""),
+  name: z.string().default(""),
+  keywords: z.array(z.string()).default([]),
+});
+export type InterestItem = z.infer<typeof interestItemSchema>;
+
+export const awardItemSchema = baseItemSchema.extend({
+  title: z.string().default(""),
+  awarder: z.string().default(""),
+  date: z.string().default(""),
+  website: urlSchema.default({ url: "", label: "" }),
+  description: z.string().default(""),
+});
+export type AwardItem = z.infer<typeof awardItemSchema>;
+
+export const certificationItemSchema = baseItemSchema.extend({
   title: z.string().default(""),
   issuer: z.string().default(""),
   date: z.string().default(""),
+  website: urlSchema.default({ url: "", label: "" }),
   description: z.string().default(""),
 });
+export type CertificationItem = z.infer<typeof certificationItemSchema>;
 
-export type AwardItem = z.infer<typeof awardItemSchema>;
+export const publicationItemSchema = baseItemSchema.extend({
+  title: z.string().default(""),
+  publisher: z.string().default(""),
+  date: z.string().default(""),
+  website: urlSchema.default({ url: "", label: "" }),
+  description: z.string().default(""),
+});
+export type PublicationItem = z.infer<typeof publicationItemSchema>;
 
-export const referenceItemSchema = z.object({
-  id: idSchema,
-  hidden: z.boolean().default(false),
+export const volunteerItemSchema = baseItemSchema.extend({
+  organization: z.string().default(""),
+  location: z.string().default(""),
+  period: z.string().default(""),
+  website: urlSchema.default({ url: "", label: "" }),
+  description: z.string().default(""),
+});
+export type VolunteerItem = z.infer<typeof volunteerItemSchema>;
+
+export const referenceItemSchema = baseItemSchema.extend({
   name: z.string().default(""),
-  relationship: z.string().default(""),
+  position: z.string().default(""),
   phone: z.string().default(""),
-  email: z.string().default(""),
+  website: urlSchema.default({ url: "", label: "" }),
   description: z.string().default(""),
 });
-
 export type ReferenceItem = z.infer<typeof referenceItemSchema>;
 
 // ---------------------------------------------------------------------------
-// Built-in sections
+// Section schemas (title + columns + hidden + items[])
 // ---------------------------------------------------------------------------
 
-export const sectionsSchema = z.object({
-  summary: summarySchema.default({
-    title: "Professional Summary",
-    content: "",
-    hidden: false,
-  }),
-  experience: z.object({
-    title: z.string().default("Work Experience"),
-    items: z.array(experienceItemSchema).default([]),
-    hidden: z.boolean().default(false),
-  }).default({ title: "Work Experience", items: [], hidden: false }),
-  education: z.object({
-    title: z.string().default("Education"),
-    items: z.array(educationItemSchema).default([]),
-    hidden: z.boolean().default(false),
-  }).default({ title: "Education", items: [], hidden: false }),
-  skills: z.object({
-    title: z.string().default("Skills"),
-    items: z.array(skillItemSchema).default([]),
-    hidden: z.boolean().default(false),
-  }).default({ title: "Skills", items: [], hidden: false }),
-  certifications: z.object({
-    title: z.string().default("Certifications"),
-    items: z.array(certificationItemSchema).default([]),
-    hidden: z.boolean().default(false),
-  }).default({ title: "Certifications", items: [], hidden: false }),
-  languages: z.object({
-    title: z.string().default("Languages"),
-    items: z.array(languageItemSchema).default([]),
-    hidden: z.boolean().default(false),
-  }).default({ title: "Languages", items: [], hidden: false }),
-  volunteer: z.object({
-    title: z.string().default("Volunteer Experience"),
-    items: z.array(volunteerItemSchema).default([]),
-    hidden: z.boolean().default(false),
-  }).default({ title: "Volunteer Experience", items: [], hidden: false }),
-  projects: z.object({
-    title: z.string().default("Projects"),
-    items: z.array(projectItemSchema).default([]),
-    hidden: z.boolean().default(false),
-  }).default({ title: "Projects", items: [], hidden: false }),
-  awards: z.object({
-    title: z.string().default("Awards"),
-    items: z.array(awardItemSchema).default([]),
-    hidden: z.boolean().default(false),
-  }).default({ title: "Awards", items: [], hidden: false }),
-  references: z.object({
-    title: z.string().default("References"),
-    items: z.array(referenceItemSchema).default([]),
-    hidden: z.boolean().default(false),
-  }).default({ title: "References", items: [], hidden: false }),
-  profiles: z.object({
-    title: z.string().default("Profiles"),
-    items: z.array(profileItemSchema).default([]),
-    hidden: z.boolean().default(false),
-  }).default({ title: "Profiles", items: [], hidden: false }),
-  publications: z.object({
-    title: z.string().default("Publications"),
-    items: z.array(publicationItemSchema).default([]),
-    hidden: z.boolean().default(false),
-  }).default({ title: "Publications", items: [], hidden: false }),
-  interests: z.object({
-    title: z.string().default("Interests"),
-    items: z.array(interestItemSchema).default([]),
-    hidden: z.boolean().default(false),
-  }).default({ title: "Interests", items: [], hidden: false }),
+export const baseSectionSchema = z.object({
+  title: z.string().default(""),
+  columns: z.number().default(1),
+  hidden: z.boolean().default(false),
 });
 
-export type Sections = z.infer<typeof sectionsSchema>;
+export const sectionsSchema = z.object({
+  profiles: baseSectionSchema.extend({ items: z.array(profileItemSchema).default([]) }),
+  experience: baseSectionSchema.extend({ items: z.array(experienceItemSchema).default([]) }),
+  education: baseSectionSchema.extend({ items: z.array(educationItemSchema).default([]) }),
+  projects: baseSectionSchema.extend({ items: z.array(projectItemSchema).default([]) }),
+  skills: baseSectionSchema.extend({ items: z.array(skillItemSchema).default([]) }),
+  languages: baseSectionSchema.extend({ items: z.array(languageItemSchema).default([]) }),
+  interests: baseSectionSchema.extend({ items: z.array(interestItemSchema).default([]) }),
+  awards: baseSectionSchema.extend({ items: z.array(awardItemSchema).default([]) }),
+  certifications: baseSectionSchema.extend({ items: z.array(certificationItemSchema).default([]) }),
+  publications: baseSectionSchema.extend({ items: z.array(publicationItemSchema).default([]) }),
+  volunteer: baseSectionSchema.extend({ items: z.array(volunteerItemSchema).default([]) }),
+  references: baseSectionSchema.extend({ items: z.array(referenceItemSchema).default([]) }),
+});
+
+export type SectionKey = keyof z.infer<typeof sectionsSchema>;
+export type SectionData = z.infer<typeof sectionsSchema>[SectionKey];
 
 // ---------------------------------------------------------------------------
 // Custom sections
 // ---------------------------------------------------------------------------
 
-export const customSectionItemSchema = z.object({
-  id: idSchema,
-  hidden: z.boolean().default(false),
-  title: z.string().default(""),
-  subtitle: z.string().default(""),
-  date: z.string().default(""),
-  description: z.string().default(""),
-  url: z.string().default(""),
-});
+export type CustomSectionType =
+  | "experience" | "education" | "projects" | "skills" | "languages"
+  | "interests" | "awards" | "certifications" | "publications"
+  | "volunteer" | "references" | "summary" | "profiles";
 
-export type CustomSectionItem = z.infer<typeof customSectionItemSchema>;
-
-export const customSectionSchema = z.object({
+export const customSectionSchema = baseSectionSchema.extend({
   id: idSchema,
-  title: z.string().default("Custom Section"),
-  type: z.enum(["basic", "detailed"]).default("basic"),
-  items: z.array(customSectionItemSchema).default([]),
-  hidden: z.boolean().default(false),
+  type: z.string().default("summary"),
+  items: z.array(z.any()).default([]),
 });
 
 export type CustomSection = z.infer<typeof customSectionSchema>;
 
 // ---------------------------------------------------------------------------
-// Layout — Per-page section arrangement (from Reactive Resume)
+// Typography
+// ---------------------------------------------------------------------------
+
+export const typographyItemSchema = z.object({
+  fontFamily: z.string().default("IBM Plex Serif"),
+  fontWeight: z.string().default("400"),
+  fontSize: z.number().min(6).max(24).default(11),
+  lineHeight: z.number().min(0.5).max(4).default(1.5),
+});
+
+export type TypographyItem = z.infer<typeof typographyItemSchema>;
+
+// ---------------------------------------------------------------------------
+// Layout
 // ---------------------------------------------------------------------------
 
 export const pageLayoutSchema = z.object({
@@ -314,350 +276,258 @@ export const pageLayoutSchema = z.object({
 export type PageLayout = z.infer<typeof pageLayoutSchema>;
 
 export const layoutSchema = z.object({
-  sidebarWidth: z.number().min(20).max(45).default(35),
-  pages: z.array(pageLayoutSchema).default([
-    {
-      fullWidth: false,
-      main: ["summary", "experience", "projects"],
-      sidebar: ["skills", "education", "certifications", "languages"],
-    },
-  ]),
+  sidebarWidth: z.number().min(10).max(50).default(35),
+  pages: z.array(pageLayoutSchema).default([]),
 });
 
-export type Layout = z.infer<typeof layoutSchema>;
-
 // ---------------------------------------------------------------------------
-// Design metadata — CSS custom properties + visual configuration
+// Level design
 // ---------------------------------------------------------------------------
 
-export const templateId = z.enum([
-  // ── Pro Templates (20 HTML-based) ──
-  "modern-minimalist",
-  "corporate-executive",
-  "creative-bold",
-  "elegant-sidebar",
-  "infographic",
-  "dark-professional",
-  "gradient-creative",
-  "classic-corporate",
-  "artistic-portfolio",
-  "tech-modern",
-  "swiss-typographic",
-  "newspaper-editorial",
-  "brutalist-mono",
-  "pastel-soft",
-  "split-duotone",
-  "architecture-blueprint",
-  "retro-vintage",
-  "medical-clean",
-  "neon-glass",
-  "corporate-stripe",
-]);
+export type LevelType = "hidden" | "circle" | "square" | "rectangle" | "progress-bar";
 
-export type TemplateId = z.infer<typeof templateId>;
+export const levelDesignSchema = z.object({
+  icon: z.string().default("star"),
+  type: z.enum(["hidden", "circle", "square", "rectangle", "progress-bar"]).default("circle"),
+});
 
-export const pageFormatSchema = z.enum([
-  "a4",
-  "letter",
-  "a5",
-  "b5",
-  "linkedin-banner",   // 1584×396  → social sharing
-  "instagram-square",  // 1080×1080 → social sharing
-]);
-export type PageFormat = z.infer<typeof pageFormatSchema>;
+// ---------------------------------------------------------------------------
+// Color design
+// ---------------------------------------------------------------------------
 
-export const colorIntensitySchema = z.enum(["subtle", "standard", "bold"]);
-export type ColorIntensity = z.infer<typeof colorIntensitySchema>;
+export const colorDesignSchema = z.object({
+  primary: z.string().default("rgba(139,92,246,1)"),
+  text: z.string().default("rgba(0,0,0,1)"),
+  background: z.string().default("rgba(255,255,255,1)"),
+});
 
-export const fontScaleSchema = z.enum(["compact", "standard", "spacious"]);
-export type FontScale = z.infer<typeof fontScaleSchema>;
+export type ColorDesign = z.infer<typeof colorDesignSchema>;
 
-export const marginPresetSchema = z.enum(["narrow", "standard", "wide"]);
-export type MarginPreset = z.infer<typeof marginPresetSchema>;
+// ---------------------------------------------------------------------------
+// Metadata (template, layout, page, design, typography)
+// ---------------------------------------------------------------------------
 
-export const sectionSpacingSchema = z.enum(["compact", "standard", "relaxed"]);
-export type SectionSpacing = z.infer<typeof sectionSpacingSchema>;
+export const TEMPLATE_IDS = [
+  "azurill", "bronzor", "chikorita", "ditto", "gengar",
+  "glalie", "kakuna", "leafish", "onyx", "pikachu", "rhyhorn",
+] as const;
 
-export const lineSpacingSchema = z.enum(["tight", "normal", "loose"]);
-export type LineSpacing = z.infer<typeof lineSpacingSchema>;
+export type TemplateId = (typeof TEMPLATE_IDS)[number];
 
 export const metadataSchema = z.object({
-  template: templateId.default("modern-minimalist"),
+  template: z.string().default("onyx"),
   layout: layoutSchema.default({
     sidebarWidth: 35,
-    pages: [
-      {
-        fullWidth: false,
-        main: ["summary", "experience", "projects"],
-        sidebar: ["skills", "education", "certifications", "languages"],
-      },
-    ],
+    pages: [{
+      fullWidth: false,
+      main: ["summary", "experience", "education", "projects", "volunteer", "references"],
+      sidebar: ["profiles", "skills", "certifications", "languages", "awards", "interests", "publications"],
+    }],
   }),
   css: z.object({
     enabled: z.boolean().default(false),
     value: z.string().default(""),
   }).default({ enabled: false, value: "" }),
   page: z.object({
-    format: pageFormatSchema.default("a4"),
-    marginPreset: marginPresetSchema.default("standard"),
-    sectionSpacing: sectionSpacingSchema.default("standard"),
-    lineSpacing: lineSpacingSchema.default("normal"),
-  }).default({
-    format: "a4",
-    marginPreset: "standard",
-    sectionSpacing: "standard",
-    lineSpacing: "normal",
-  }),
+    format: z.enum(["a4", "letter"]).default("a4"),
+    marginX: z.number().min(0).default(14),
+    marginY: z.number().min(0).default(12),
+    gapX: z.number().min(0).default(4),
+    gapY: z.number().min(0).default(6),
+    locale: z.string().default("en-US"),
+    hideIcons: z.boolean().default(false),
+  }).default({ format: "a4", marginX: 14, marginY: 12, gapX: 4, gapY: 6, locale: "en-US", hideIcons: false }),
   design: z.object({
-    primaryColor: z.string().default("rgba(37, 99, 235, 1)"),
-    backgroundColor: z.string().default("rgba(255, 255, 255, 1)"),
-    textColor: z.string().default("rgba(0, 0, 0, 1)"),
-    colorIntensity: colorIntensitySchema.default("standard"),
+    colors: colorDesignSchema.default({ primary: "rgba(139,92,246,1)", text: "rgba(0,0,0,1)", background: "rgba(255,255,255,1)" }),
+    level: levelDesignSchema.default({ icon: "star", type: "circle" }),
   }).default({
-    primaryColor: "rgba(37, 99, 235, 1)",
-    backgroundColor: "rgba(255, 255, 255, 1)",
-    textColor: "rgba(0, 0, 0, 1)",
-    colorIntensity: "standard",
+    colors: { primary: "rgba(139,92,246,1)", text: "rgba(0,0,0,1)", background: "rgba(255,255,255,1)" },
+    level: { icon: "star", type: "circle" },
   }),
   typography: z.object({
-    fontPairing: z.string().default("inter-georgia"),
-    fontScale: fontScaleSchema.default("standard"),
+    body: typographyItemSchema.default({ fontFamily: "IBM Plex Serif", fontWeight: "400", fontSize: 11, lineHeight: 1.5 }),
+    heading: typographyItemSchema.default({ fontFamily: "IBM Plex Serif", fontWeight: "600", fontSize: 14, lineHeight: 1.5 }),
   }).default({
-    fontPairing: "inter-georgia",
-    fontScale: "standard",
+    body: { fontFamily: "IBM Plex Serif", fontWeight: "400", fontSize: 11, lineHeight: 1.5 },
+    heading: { fontFamily: "IBM Plex Serif", fontWeight: "600", fontSize: 14, lineHeight: 1.5 },
   }),
+  notes: z.string().default(""),
 });
 
 export type Metadata = z.infer<typeof metadataSchema>;
 
 // ---------------------------------------------------------------------------
-// Complete resume data
+// Full Resume Data schema
 // ---------------------------------------------------------------------------
 
 export const resumeDataSchema = z.object({
   basics: basicsSchema.default({
-    name: "",
-    headline: "",
-    email: "",
-    phone: "",
-    location: "",
-    website: { url: "", label: "" },
-    linkedin: "",
-    photo: "",
-    customFields: [],
+    name: "", headline: "", email: "", phone: "", location: "",
+    website: { url: "", label: "" }, customFields: [],
+  }),
+  picture: pictureSchema.default({
+    hidden: false, url: "", size: 80, aspectRatio: 1,
+    borderRadius: 0, borderColor: "rgba(0,0,0,0.5)", borderWidth: 0,
+  }),
+  summary: summarySchema.default({
+    title: "Summary", columns: 1, hidden: false, content: "",
   }),
   sections: sectionsSchema.default({
-    summary: { title: "Professional Summary", content: "", hidden: false },
-    experience: { title: "Work Experience", items: [], hidden: false },
-    education: { title: "Education", items: [], hidden: false },
-    skills: { title: "Skills", items: [], hidden: false },
-    certifications: { title: "Certifications", items: [], hidden: false },
-    languages: { title: "Languages", items: [], hidden: false },
-    volunteer: { title: "Volunteer Experience", items: [], hidden: false },
-    projects: { title: "Projects", items: [], hidden: false },
-    awards: { title: "Awards", items: [], hidden: false },
-    references: { title: "References", items: [], hidden: false },
-    profiles: { title: "Profiles", items: [], hidden: false },
-    publications: { title: "Publications", items: [], hidden: false },
-    interests: { title: "Interests", items: [], hidden: false },
+    profiles: { title: "Profiles", columns: 1, hidden: false, items: [] },
+    experience: { title: "Experience", columns: 1, hidden: false, items: [] },
+    education: { title: "Education", columns: 1, hidden: false, items: [] },
+    projects: { title: "Projects", columns: 1, hidden: false, items: [] },
+    skills: { title: "Skills", columns: 2, hidden: false, items: [] },
+    languages: { title: "Languages", columns: 2, hidden: false, items: [] },
+    interests: { title: "Interests", columns: 2, hidden: false, items: [] },
+    awards: { title: "Awards", columns: 1, hidden: false, items: [] },
+    certifications: { title: "Certifications", columns: 1, hidden: false, items: [] },
+    publications: { title: "Publications", columns: 1, hidden: false, items: [] },
+    volunteer: { title: "Volunteer", columns: 1, hidden: false, items: [] },
+    references: { title: "References", columns: 1, hidden: false, items: [] },
   }),
   customSections: z.array(customSectionSchema).default([]),
   metadata: metadataSchema.default({
-    template: "modern-minimalist",
+    template: "onyx",
     layout: {
       sidebarWidth: 35,
-      pages: [
-        {
-          fullWidth: false,
-          main: ["summary", "experience", "projects"],
-          sidebar: ["skills", "education", "certifications", "languages"],
-        },
-      ],
+      pages: [{
+        fullWidth: false,
+        main: ["summary", "experience", "education", "projects", "volunteer", "references"],
+        sidebar: ["profiles", "skills", "certifications", "languages", "awards", "interests", "publications"],
+      }],
     },
     css: { enabled: false, value: "" },
-    page: { format: "a4", marginPreset: "standard", sectionSpacing: "standard", lineSpacing: "normal" },
+    page: { format: "a4", marginX: 14, marginY: 12, gapX: 4, gapY: 6, locale: "en-US", hideIcons: false },
     design: {
-      primaryColor: "rgba(37, 99, 235, 1)",
-      backgroundColor: "rgba(255, 255, 255, 1)",
-      textColor: "rgba(0, 0, 0, 1)",
-      colorIntensity: "standard",
+      colors: { primary: "rgba(139,92,246,1)", text: "rgba(0,0,0,1)", background: "rgba(255,255,255,1)" },
+      level: { icon: "star", type: "circle" },
     },
-    typography: { fontPairing: "inter-georgia", fontScale: "standard" },
+    typography: {
+      body: { fontFamily: "IBM Plex Serif", fontWeight: "400", fontSize: 11, lineHeight: 1.5 },
+      heading: { fontFamily: "IBM Plex Serif", fontWeight: "600", fontSize: 14, lineHeight: 1.5 },
+    },
+    notes: "",
   }),
 });
 
 export type ResumeData = z.infer<typeof resumeDataSchema>;
 
 // ---------------------------------------------------------------------------
-// Defaults factory
+// Default data factory
 // ---------------------------------------------------------------------------
 
 export function createDefaultResumeData(): ResumeData {
   return resumeDataSchema.parse({});
 }
 
-export function createItemId(): string {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
 // ---------------------------------------------------------------------------
-// Font pairings — used by the typography controls
-// ---------------------------------------------------------------------------
-
-export const FONT_PAIRINGS: Record<string, { heading: string; body: string; label: string }> = {
-  // ── Classic pairings ──
-  "inter-georgia": { heading: "Georgia, serif", body: "'Inter', sans-serif", label: "Inter + Georgia" },
-  "playfair-source": { heading: "'Playfair Display', serif", body: "'Source Sans 3', sans-serif", label: "Playfair + Source Sans" },
-  "roboto-roboto-slab": { heading: "'Roboto Slab', serif", body: "'Roboto', sans-serif", label: "Roboto + Roboto Slab" },
-  "merriweather-open": { heading: "'Merriweather', serif", body: "'Open Sans', sans-serif", label: "Merriweather + Open Sans" },
-  "lato-lora": { heading: "'Lora', serif", body: "'Lato', sans-serif", label: "Lato + Lora" },
-  "inter-inter": { heading: "'Inter', sans-serif", body: "'Inter', sans-serif", label: "Inter (Sans Only)" },
-  "georgia-georgia": { heading: "Georgia, serif", body: "Georgia, serif", label: "Georgia (Serif Only)" },
-  "system": { heading: "system-ui, sans-serif", body: "system-ui, sans-serif", label: "System Default" },
-  // ── Pro template pairings ──
-  "jakarta-jakarta": { heading: "'Plus Jakarta Sans', sans-serif", body: "'Plus Jakarta Sans', sans-serif", label: "Jakarta Sans" },
-  "cormorant-raleway": { heading: "'Cormorant Garamond', serif", body: "'Raleway', sans-serif", label: "Cormorant + Raleway" },
-  "archivo-dm": { heading: "'Archivo Black', sans-serif", body: "'DM Sans', sans-serif", label: "Archivo + DM Sans" },
-  "nunito-nunito": { heading: "'Nunito', sans-serif", body: "'Nunito', sans-serif", label: "Nunito" },
-  "outfit-outfit": { heading: "'Outfit', sans-serif", body: "'Outfit', sans-serif", label: "Outfit" },
-  "sora-sora": { heading: "'Sora', sans-serif", body: "'Sora', sans-serif", label: "Sora" },
-  "baskerville-open": { heading: "'Libre Baskerville', serif", body: "'Open Sans', sans-serif", label: "Baskerville + Open Sans" },
-  "bricolage-crimson": { heading: "'Bricolage Grotesque', sans-serif", body: "'Crimson Pro', serif", label: "Bricolage + Crimson" },
-  "jetbrains-inter": { heading: "'JetBrains Mono', monospace", body: "'Inter', sans-serif", label: "JetBrains Mono + Inter" },
-  "ibm-plex-ibm-plex": { heading: "'IBM Plex Sans', sans-serif", body: "'IBM Plex Sans', sans-serif", label: "IBM Plex Sans" },
-  "playfair-lora": { heading: "'Playfair Display', serif", body: "'Lora', serif", label: "Playfair + Lora" },
-  "space-mono-grotesk": { heading: "'Space Mono', monospace", body: "'Space Grotesk', sans-serif", label: "Space Mono + Grotesk" },
-  "quicksand-quicksand": { heading: "'Quicksand', sans-serif", body: "'Quicksand', sans-serif", label: "Quicksand" },
-  "manrope-manrope": { heading: "'Manrope', sans-serif", body: "'Manrope', sans-serif", label: "Manrope" },
-  "dm-sans-mono": { heading: "'DM Sans', sans-serif", body: "'DM Mono', monospace", label: "DM Sans + DM Mono" },
-  "stint-josefin": { heading: "'Stint Ultra Expanded', serif", body: "'Josefin Sans', sans-serif", label: "Stint + Josefin" },
-  "figtree-figtree": { heading: "'Figtree', sans-serif", body: "'Figtree', sans-serif", label: "Figtree" },
-  "poppins-poppins": { heading: "'Poppins', sans-serif", body: "'Poppins', sans-serif", label: "Poppins" },
-  "source-sans-source-sans": { heading: "'Source Sans 3', sans-serif", body: "'Source Sans 3', sans-serif", label: "Source Sans 3" },
-};
-
-// ---------------------------------------------------------------------------
-// Page dimensions in pixels (at 96 DPI for screen rendering)
+// Page dimensions (mm → rendered at 96 DPI)
 // ---------------------------------------------------------------------------
 
 export const PAGE_DIMENSIONS = {
-  // ── Print sizes ──
-  a4:     { width: 794, height: 1123 },   // 210mm × 297mm at 96 DPI
-  letter: { width: 816, height: 1056 },   // 8.5in × 11in at 96 DPI
-  a5:     { width: 559, height: 794  },   // 148mm × 210mm at 96 DPI
-  b5:     { width: 665, height: 945  },   // 176mm × 250mm at 96 DPI
-  // ── Web / social sharing ──
-  "linkedin-banner":  { width: 1584, height: 396  },
-  "instagram-square": { width: 1080, height: 1080 },
+  a4: { width: 210, height: 297, label: "A4 (210 × 297 mm)" },
+  letter: { width: 216, height: 279, label: "US Letter (8.5 × 11 in)" },
 } as const;
 
-/** Human-readable labels for the page format picker */
-export const PAGE_FORMAT_LABELS: Record<PageFormat, { label: string; group: "print" | "web" }> = {
-  a4:                { label: "A4",               group: "print" },
-  letter:            { label: "US Letter",        group: "print" },
-  a5:                { label: "A5",               group: "print" },
-  b5:                { label: "B5",               group: "print" },
-  "linkedin-banner": { label: "LinkedIn Banner",  group: "web"   },
-  "instagram-square":{ label: "Instagram Square", group: "web"   },
-};
+export type PageFormat = keyof typeof PAGE_DIMENSIONS;
 
-// ---------------------------------------------------------------------------
-// CSS variable computation from metadata
-// ---------------------------------------------------------------------------
-
-const MARGIN_VALUES: Record<string, { x: number; y: number }> = {
-  narrow: { x: 28, y: 28 },
-  standard: { x: 40, y: 40 },
-  wide: { x: 56, y: 56 },
-};
-
-const SECTION_GAP_VALUES: Record<string, number> = {
-  compact: 8,
-  standard: 12,
-  relaxed: 18,
-};
-
-const LINE_HEIGHT_VALUES: Record<string, number> = {
-  tight: 1.3,
-  normal: 1.5,
-  loose: 1.7,
-};
-
-const FONT_SCALE_MULTIPLIER: Record<string, number> = {
-  compact: 0.9,
-  standard: 1.0,
-  spacious: 1.1,
-};
-
-export function computeCSSVariables(metadata: Metadata): Record<string, string> {
-  const dims = PAGE_DIMENSIONS[metadata.page.format];
-  const margins = MARGIN_VALUES[metadata.page.marginPreset] ?? MARGIN_VALUES.standard;
-  const sectionGap = SECTION_GAP_VALUES[metadata.page.sectionSpacing] ?? 12;
-  const lineHeight = LINE_HEIGHT_VALUES[metadata.page.lineSpacing] ?? 1.5;
-  const fontScale = FONT_SCALE_MULTIPLIER[metadata.typography.fontScale] ?? 1.0;
-  const pairing = FONT_PAIRINGS[metadata.typography.fontPairing] ?? FONT_PAIRINGS["inter-georgia"];
-
-  return {
-    "--page-width": `${dims.width}px`,
-    "--page-height": `${dims.height}px`,
-    "--page-margin-x": `${margins.x}pt`,
-    "--page-margin-y": `${margins.y}pt`,
-    "--page-gap-x": "20pt",
-    "--page-gap-y": `${sectionGap}pt`,
-    "--page-sidebar-width": `${metadata.layout.sidebarWidth}%`,
-    "--page-primary-color": metadata.design.primaryColor,
-    "--page-background-color": metadata.design.backgroundColor,
-    "--page-text-color": metadata.design.textColor,
-    "--page-body-font-family": pairing.body,
-    "--page-body-font-size": `${Math.round(10 * fontScale)}pt`,
-    "--page-body-font-weight": "400",
-    "--page-body-line-height": `${lineHeight}`,
-    "--page-heading-font-family": pairing.heading,
-    "--page-heading-font-size": `${Math.round(14 * fontScale)}pt`,
-    "--page-heading-font-weight": "700",
-    "--section-border-width": "1px",
-    "--section-border-color": metadata.design.primaryColor,
-  };
+// mm to px at 96dpi (1mm = 3.7795px)
+export function mmToPx(mm: number): number {
+  return Math.round(mm * 3.7795);
 }
 
 // ---------------------------------------------------------------------------
-// Accent color presets for the wizard
+// Font helpers
 // ---------------------------------------------------------------------------
 
-export const ACCENT_COLORS = [
-  { name: "Deep Blue", value: "rgba(37, 99, 235, 1)" },
-  { name: "Teal", value: "rgba(20, 184, 166, 1)" },
-  { name: "Burgundy", value: "rgba(159, 18, 57, 1)" },
-  { name: "Forest Green", value: "rgba(22, 101, 52, 1)" },
-  { name: "Slate", value: "rgba(71, 85, 105, 1)" },
-  { name: "Navy", value: "rgba(30, 58, 138, 1)" },
-  { name: "Dark Purple", value: "rgba(88, 28, 135, 1)" },
-  { name: "Charcoal", value: "rgba(55, 65, 81, 1)" },
-  { name: "Coral", value: "rgba(220, 38, 38, 1)" },
-  { name: "Gold", value: "rgba(161, 98, 7, 1)" },
+export const POPULAR_FONTS = [
+  "IBM Plex Serif", "IBM Plex Sans", "Inter", "Roboto", "Open Sans",
+  "Lato", "Montserrat", "Fira Sans", "Fira Sans Condensed", "Merriweather",
+  "Playfair Display", "Source Sans 3", "Nunito", "Raleway", "Outfit",
+  "Work Sans", "Poppins", "DM Sans", "Rubik", "Space Grotesk",
+  "Crimson Text", "Libre Baskerville", "EB Garamond", "PT Serif",
+  "Josefin Sans", "Ubuntu", "Cabin", "Karla", "Quicksand", "Barlow",
 ] as const;
 
+/**
+ * Curated font pairings for the Resume builder.
+ * Keyed by pairing id so useGoogleFonts can look them up with `FONT_PAIRINGS[id]`.
+ */
+export const FONT_PAIRINGS: Record<string, { heading: string; body: string }> = {
+  "ibmplex-serif":         { heading: "IBM Plex Serif",      body: "IBM Plex Serif" },
+  "ibmplex-sans":          { heading: "IBM Plex Sans",       body: "IBM Plex Sans" },
+  "inter-inter":           { heading: "Inter",               body: "Inter" },
+  "playfair-source":       { heading: "Playfair Display",    body: "Source Sans 3" },
+  "montserrat-opensans":   { heading: "Montserrat",          body: "Open Sans" },
+  "raleway-lato":          { heading: "Raleway",             body: "Lato" },
+  "poppins-inter":         { heading: "Poppins",             body: "Inter" },
+  "dmserif-dmsans":        { heading: "DM Serif Display",    body: "DM Sans" },
+  "cormorant-proza":       { heading: "Cormorant Garamond",  body: "Proza Libre" },
+  "spacegrotesk-inter":    { heading: "Space Grotesk",       body: "Inter" },
+  "crimsonpro-worksans":   { heading: "Crimson Pro",         body: "Work Sans" },
+  "merriweather-roboto":   { heading: "Merriweather",        body: "Roboto" },
+  "garamond-nunito":       { heading: "EB Garamond",         body: "Nunito" },
+};
+
 // ---------------------------------------------------------------------------
-// Resume style presets for the wizard
+// Section metadata — display labels & icons
 // ---------------------------------------------------------------------------
 
-export type ResumeStyle = "professional" | "modern" | "creative" | "executive";
-export type PageCountPreference = "one" | "two" | "auto";
-export type ContentFidelityMode = "keep-exact" | "ai-enhanced";
-export type ExperienceLevel = "entry" | "mid" | "senior" | "executive";
+export const SECTION_META: Record<SectionKey, { label: string; icon: string }> = {
+  profiles: { label: "Profiles", icon: "globe" },
+  experience: { label: "Experience", icon: "briefcase" },
+  education: { label: "Education", icon: "academic-cap" },
+  projects: { label: "Projects", icon: "folder" },
+  skills: { label: "Skills", icon: "star" },
+  languages: { label: "Languages", icon: "language" },
+  interests: { label: "Interests", icon: "heart" },
+  awards: { label: "Awards", icon: "trophy" },
+  certifications: { label: "Certifications", icon: "badge" },
+  publications: { label: "Publications", icon: "book" },
+  volunteer: { label: "Volunteer", icon: "users" },
+  references: { label: "References", icon: "user" },
+};
 
 // ---------------------------------------------------------------------------
-// Built-in section IDs (type-safe)
+// Item factory helpers (create blank items with unique id)
 // ---------------------------------------------------------------------------
 
-export const BUILT_IN_SECTIONS = [
-  "summary", "experience", "education", "skills",
-  "certifications", "languages", "volunteer", "projects",
-  "awards", "references", "profiles", "publications", "interests",
-] as const;
+let _counter = 0;
+function uid(): string {
+  return `${Date.now().toString(36)}-${(++_counter).toString(36)}`;
+}
 
-export type BuiltInSectionId = typeof BUILT_IN_SECTIONS[number];
+export function createBlankItem(sectionKey: SectionKey): Record<string, unknown> {
+  const id = uid();
+  const base = { id, hidden: false };
 
-export function isBuiltInSection(id: string): id is BuiltInSectionId {
-  return BUILT_IN_SECTIONS.includes(id as BuiltInSectionId);
+  switch (sectionKey) {
+    case "profiles":
+      return { ...base, icon: "", network: "", username: "", website: { url: "", label: "" } };
+    case "experience":
+      return { ...base, company: "", position: "", location: "", period: "", website: { url: "", label: "" }, description: "", roles: [] };
+    case "education":
+      return { ...base, school: "", degree: "", area: "", grade: "", location: "", period: "", website: { url: "", label: "" }, description: "" };
+    case "projects":
+      return { ...base, name: "", period: "", website: { url: "", label: "" }, description: "" };
+    case "skills":
+      return { ...base, icon: "", name: "", proficiency: "", level: 0, keywords: [] };
+    case "languages":
+      return { ...base, language: "", fluency: "", level: 0 };
+    case "interests":
+      return { ...base, icon: "", name: "", keywords: [] };
+    case "awards":
+      return { ...base, title: "", awarder: "", date: "", website: { url: "", label: "" }, description: "" };
+    case "certifications":
+      return { ...base, title: "", issuer: "", date: "", website: { url: "", label: "" }, description: "" };
+    case "publications":
+      return { ...base, title: "", publisher: "", date: "", website: { url: "", label: "" }, description: "" };
+    case "volunteer":
+      return { ...base, organization: "", location: "", period: "", website: { url: "", label: "" }, description: "" };
+    case "references":
+      return { ...base, name: "", position: "", phone: "", website: { url: "", label: "" }, description: "" };
+    default:
+      return base;
+  }
 }

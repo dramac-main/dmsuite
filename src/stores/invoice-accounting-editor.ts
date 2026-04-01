@@ -39,7 +39,9 @@ export type ViewType =
   | "credit-notes" | "credit-note-edit"
   | "purchase-orders" | "purchase-order-edit"
   | "reports"
-  | "settings";
+  | "settings"
+  | "zra-smart-invoice"
+  | "napsa-returns" | "napsa-employees";
 
 export type ReportType = "revenue" | "profit-loss" | "tax-summary" | "aging" | "client-statement" | "expense-summary" | "paye-report" | "napsa-report";
 
@@ -130,6 +132,11 @@ export interface Invoice {
   depositPaid: boolean;
   poNumber: string;           // Client's PO reference
   customFields: Record<string, string>;
+  // ZRA Smart Invoice tracking
+  zraStatus: "not-submitted" | "pending" | "submitted" | "verified" | "error";
+  zraReceiptNo: string;
+  zraSubmittedAt: string;
+  zraErrorMessage: string;
 }
 
 export interface Quote {
@@ -252,6 +259,39 @@ export interface TimeEntry {
   createdAt: string;
 }
 
+// ━━━ NAPSA Employee Management ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+export interface NAPSAEmployee {
+  id: string;
+  name: string;
+  nrcNumber: string;          // National Registration Card number
+  napsaMemberNo: string;      // NAPSA membership number
+  grossSalary: number;        // Monthly gross salary
+  department: string;
+  position: string;
+  startDate: string;
+  isActive: boolean;
+}
+
+export interface NAPSAReturn {
+  id: string;
+  month: string;              // YYYY-MM format
+  employeeContributions: Array<{
+    employeeId: string;
+    grossSalary: number;
+    employeeAmount: number;   // 5% capped at K1,221.80
+    employerAmount: number;   // 5% capped at K1,221.80
+    totalAmount: number;
+  }>;
+  totalEmployeeContrib: number;
+  totalEmployerContrib: number;
+  grandTotal: number;
+  status: "draft" | "submitted" | "paid";
+  submittedAt: string;
+  paidAt: string;
+  createdAt: string;
+}
+
 // ━━━ Style ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export type InvoiceTemplate = "professional" | "modern" | "classic" | "minimal" | "bold";
@@ -304,6 +344,12 @@ export interface BusinessSettings {
   mobileMoneyName: string;
   mobileMoneyNumber: string;
   mobileMoneyProvider: string;
+  // ZRA Smart Invoice VSDC Configuration
+  zraEnabled: boolean;
+  zraVsdcUrl: string;         // Local VSDC device URL (e.g. http://localhost:8080)
+  zraBranchId: string;        // Branch ID (e.g. "000")
+  zraDeviceSerialNo: string;  // Device serial number
+  zraAutoSubmit: boolean;     // Auto-submit invoices to ZRA on approval
 }
 
 // ━━━ Main Form ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -322,6 +368,9 @@ export interface InvoiceAccountingForm {
   expenses: Expense[];
   projects: Project[];
   timeEntries: TimeEntry[];
+  // NAPSA
+  napsaEmployees: NAPSAEmployee[];
+  napsaReturns: NAPSAReturn[];
   style: InvoiceStyle;
   activeView: ViewType;
   activeRecordId: string | null;
@@ -553,6 +602,12 @@ function createDefaultForm(): InvoiceAccountingForm {
       mobileMoneyName: "",
       mobileMoneyNumber: "",
       mobileMoneyProvider: "Airtel Money",
+      // ZRA Smart Invoice defaults
+      zraEnabled: false,
+      zraVsdcUrl: "http://localhost:8080",
+      zraBranchId: "000",
+      zraDeviceSerialNo: "",
+      zraAutoSubmit: false,
     },
     taxes: [...DEFAULT_TAX_RATES],
     clients: [],
@@ -566,6 +621,8 @@ function createDefaultForm(): InvoiceAccountingForm {
     expenses: [],
     projects: [],
     timeEntries: [],
+    napsaEmployees: [],
+    napsaReturns: [],
     style: {
       template: "professional",
       accentColor: "#8b5cf6",
@@ -694,6 +751,17 @@ export interface InvoiceAccountingEditorState {
   // ── Global ──
   resetForm: () => void;
   setForm: (data: InvoiceAccountingForm) => void;
+
+  // ── ZRA Smart Invoice ──
+  submitInvoiceToZRA: (invoiceId: string) => Promise<void>;
+  updateInvoiceZRAStatus: (invoiceId: string, status: Invoice["zraStatus"], receiptNo?: string, error?: string) => void;
+
+  // ── NAPSA Employee Management ──
+  addNAPSAEmployee: (data: Omit<NAPSAEmployee, "id">) => string;
+  updateNAPSAEmployee: (id: string, data: Partial<NAPSAEmployee>) => void;
+  removeNAPSAEmployee: (id: string) => void;
+  generateNAPSAReturn: (month: string) => string;
+  updateNAPSAReturnStatus: (id: string, status: NAPSAReturn["status"]) => void;
 }
 
 export const useInvoiceAccountingEditor = create<InvoiceAccountingEditorState>()(
@@ -839,6 +907,10 @@ export const useInvoiceAccountingEditor = create<InvoiceAccountingEditorState>()
               depositPaid: false,
               poNumber: "",
               customFields: {},
+              zraStatus: "not-submitted",
+              zraReceiptNo: "",
+              zraSubmittedAt: "",
+              zraErrorMessage: "",
             });
             s.form.business.nextInvoiceNumber = num + 1;
           });
@@ -1061,6 +1133,10 @@ export const useInvoiceAccountingEditor = create<InvoiceAccountingEditorState>()
                 depositPaid: false,
                 poNumber: "",
                 customFields: {},
+                zraStatus: "not-submitted",
+                zraReceiptNo: "",
+                zraSubmittedAt: "",
+                zraErrorMessage: "",
               });
               q.status = "converted";
               q.convertedToInvoiceId = invoiceId;
@@ -1442,6 +1518,207 @@ export const useInvoiceAccountingEditor = create<InvoiceAccountingEditorState>()
         bulkDeleteInvoices: (ids) =>
           set((s) => {
             s.form.invoices = s.form.invoices.filter((i) => !ids.includes(i.id));
+          }),
+
+        // ── ZRA Smart Invoice ──
+        submitInvoiceToZRA: async (invoiceId) => {
+          const state = get();
+          const inv = state.form.invoices.find((i) => i.id === invoiceId);
+          if (!inv) return;
+          const biz = state.form.business;
+          if (!biz.zraEnabled || !biz.zraVsdcUrl) return;
+
+          // Mark pending
+          set((s) => {
+            const target = s.form.invoices.find((i: Invoice) => i.id === invoiceId);
+            if (target) {
+              target.zraStatus = "pending";
+              target.zraErrorMessage = "";
+            }
+          });
+
+          try {
+            // Build sales items from invoice line items
+            const salesItems = inv.lineItems.map((li, idx) => ({
+              itemSeq: idx + 1,
+              itemCd: li.productId || `ITEM-${idx + 1}`,
+              itemClsCd: "5059690000",
+              itemNm: li.description,
+              pkgUnitCd: "NT",
+              qtyUnitCd: "U",
+              qty: li.quantity,
+              prc: li.unitPrice,
+              splyAmt: li.quantity * li.unitPrice,
+              dcRt: li.discount || 0,
+              dcAmt: ((li.discount || 0) / 100) * li.quantity * li.unitPrice,
+              taxblAmt: li.quantity * li.unitPrice * (1 - li.discount / 100),
+              taxTyCd: li.taxRateId === "exempt" ? "D" : "A",
+              taxAmt: li.quantity * li.unitPrice * (1 - li.discount / 100) * (li.taxRate / 100),
+              totAmt: li.quantity * li.unitPrice * (1 - li.discount / 100) * (1 + li.taxRate / 100),
+            }));
+
+            const payload = {
+              endpoint: "saveSales",
+              baseUrl: biz.zraVsdcUrl,
+              tpin: biz.taxId || "",
+              branchId: biz.zraBranchId || "000",
+              data: {
+                tpin: biz.taxId,
+                bhfId: biz.zraBranchId || "000",
+                orgInvcNo: 0,
+                cisInvcNo: inv.number,
+                custTpin: "",
+                custNm: inv.clientId ? (state.form.clients.find((c) => c.id === inv.clientId)?.name || "Walk-in Customer") : "Walk-in Customer",
+                salesTyCd: "N",
+                rcptTyCd: "S",
+                pmtTyCd: "01",
+                salesSttsCd: "02",
+                cfmDt: new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14),
+                salesDt: inv.date.replace(/-/g, ""),
+                stockRlsDt: null,
+                cnclReqDt: null,
+                cnclDt: null,
+                rfdDt: null,
+                rfdRsnCd: null,
+                totItemCnt: salesItems.length,
+                taxblAmtA: salesItems.filter((i) => i.taxTyCd === "A").reduce((s, i) => s + i.taxblAmt, 0),
+                taxblAmtB: 0,
+                taxblAmtC1: 0,
+                taxblAmtC2: 0,
+                taxblAmtC3: 0,
+                taxblAmtD: salesItems.filter((i) => i.taxTyCd === "D").reduce((s, i) => s + i.taxblAmt, 0),
+                taxRtA: 16,
+                taxRtB: 0,
+                taxRtC1: 0,
+                taxRtC2: 0,
+                taxRtC3: 0,
+                taxRtD: 0,
+                taxAmtA: salesItems.filter((i) => i.taxTyCd === "A").reduce((s, i) => s + i.taxAmt, 0),
+                taxAmtB: 0,
+                taxAmtC1: 0,
+                taxAmtC2: 0,
+                taxAmtC3: 0,
+                taxAmtD: 0,
+                totTaxblAmt: salesItems.reduce((s, i) => s + i.taxblAmt, 0),
+                totTaxAmt: salesItems.reduce((s, i) => s + i.taxAmt, 0),
+                totAmt: salesItems.reduce((s, i) => s + i.totAmt, 0),
+                prchrAcptcYn: "N",
+                remark: inv.notes || "",
+                regrId: "DMSuite",
+                regrNm: "DMSuite",
+                modrId: "DMSuite",
+                modrNm: "DMSuite",
+                itemList: salesItems,
+              },
+            };
+
+            const resp = await fetch("/api/zra", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            const result = await resp.json();
+
+            if (resp.ok && result.resultCd === "000") {
+              set((s) => {
+                const target = s.form.invoices.find((i: Invoice) => i.id === invoiceId);
+                if (target) {
+                  target.zraStatus = "submitted";
+                  target.zraReceiptNo = result.data?.rcptNo || result.data?.intrlData || "";
+                  target.zraSubmittedAt = new Date().toISOString();
+                }
+              });
+            } else {
+              set((s) => {
+                const target = s.form.invoices.find((i: Invoice) => i.id === invoiceId);
+                if (target) {
+                  target.zraStatus = "error";
+                  target.zraErrorMessage = result.resultMsg || result.error || "ZRA submission failed";
+                }
+              });
+            }
+          } catch (err) {
+            set((s) => {
+              const target = s.form.invoices.find((i: Invoice) => i.id === invoiceId);
+              if (target) {
+                target.zraStatus = "error";
+                target.zraErrorMessage = err instanceof Error ? err.message : "Connection to VSDC device failed";
+              }
+            });
+          }
+        },
+
+        updateInvoiceZRAStatus: (invoiceId, status, receiptNo, error) =>
+          set((s) => {
+            const inv = s.form.invoices.find((i: Invoice) => i.id === invoiceId);
+            if (inv) {
+              inv.zraStatus = status;
+              if (receiptNo !== undefined) inv.zraReceiptNo = receiptNo;
+              if (error !== undefined) inv.zraErrorMessage = error;
+            }
+          }),
+
+        // ── NAPSA Employee Management ──
+        addNAPSAEmployee: (data) => {
+          const id = `napsa-emp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          set((s) => {
+            s.form.napsaEmployees.push({ ...data, id });
+          });
+          return id;
+        },
+
+        updateNAPSAEmployee: (id, data) =>
+          set((s) => {
+            const emp = s.form.napsaEmployees.find((e: NAPSAEmployee) => e.id === id);
+            if (emp) Object.assign(emp, data);
+          }),
+
+        removeNAPSAEmployee: (id) =>
+          set((s) => {
+            s.form.napsaEmployees = s.form.napsaEmployees.filter((e: NAPSAEmployee) => e.id !== id);
+          }),
+
+        generateNAPSAReturn: (month) => {
+          const state = get();
+          const activeEmps = state.form.napsaEmployees.filter((e) => e.isActive);
+          const contributions = activeEmps.map((emp) => {
+            const napsa = calculateNAPSA(emp.grossSalary);
+            return {
+              employeeId: emp.id,
+              grossSalary: emp.grossSalary,
+              employeeAmount: napsa.employee,
+              employerAmount: napsa.employer,
+              totalAmount: napsa.total,
+            };
+          });
+          const id = `napsa-ret-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          const totalEmp = contributions.reduce((s, c) => s + c.employeeAmount, 0);
+          const totalEr = contributions.reduce((s, c) => s + c.employerAmount, 0);
+          set((s) => {
+            s.form.napsaReturns.push({
+              id,
+              month,
+              employeeContributions: contributions,
+              totalEmployeeContrib: Math.round(totalEmp * 100) / 100,
+              totalEmployerContrib: Math.round(totalEr * 100) / 100,
+              grandTotal: Math.round((totalEmp + totalEr) * 100) / 100,
+              status: "draft",
+              submittedAt: "",
+              paidAt: "",
+              createdAt: new Date().toISOString(),
+            });
+          });
+          return id;
+        },
+
+        updateNAPSAReturnStatus: (id, status) =>
+          set((s) => {
+            const ret = s.form.napsaReturns.find((r: NAPSAReturn) => r.id === id);
+            if (ret) {
+              ret.status = status;
+              if (status === "submitted") ret.submittedAt = new Date().toISOString();
+              if (status === "paid") ret.paidAt = new Date().toISOString();
+            }
           }),
 
         // ── Global ──
