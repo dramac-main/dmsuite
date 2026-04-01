@@ -297,7 +297,20 @@ const useResumeEditorBase = create<ResumeEditorState>()(
         }),
         {
           name: "dmsuite-resume",
+          version: 2,
           partialize: (state) => ({ resume: state.resume }),
+          migrate: () => {
+            // Any pre-V2 data is incompatible — return fresh defaults
+            return { resume: createDefaultResumeData(), pendingRevision: null, isRevisionPending: false };
+          },
+          merge: (persisted, current) => {
+            const p = persisted as Partial<ResumeEditorState> | undefined;
+            if (!p?.resume?.metadata?.typography?.heading?.fontFamily) {
+              // Persisted data missing V2 structure — use defaults
+              return current;
+            }
+            return { ...current, resume: p.resume };
+          },
         },
       ),
     ),

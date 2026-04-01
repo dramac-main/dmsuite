@@ -514,6 +514,9 @@ interface TemplateRendererProps {
 
 export default function TemplateRenderer({ data, zoom = 1, className, printMode }: TemplateRendererProps) {
   const meta = data.metadata;
+  if (!meta?.typography?.heading || !meta?.typography?.body || !meta?.design?.colors || !meta?.layout?.pages) {
+    return <div className="p-8 text-center text-gray-400">Loading resume…</div>;
+  }
   const templateId = (meta.template || "onyx") as TemplateId;
   const cfg = getTemplateConfig(templateId);
   const color = meta.design.colors.primary;

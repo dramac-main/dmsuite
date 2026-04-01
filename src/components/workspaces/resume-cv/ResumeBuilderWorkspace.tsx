@@ -51,13 +51,14 @@ export default function ResumeBuilderWorkspace() {
 
   // ── Google Fonts ──
   const fontPairingId = useMemo(() => {
-    const headingFam = resume.metadata.typography.heading.fontFamily;
-    const bodyFam = resume.metadata.typography.body.fontFamily;
+    const headingFam = resume.metadata?.typography?.heading?.fontFamily;
+    const bodyFam = resume.metadata?.typography?.body?.fontFamily;
+    if (!headingFam && !bodyFam) return "inter-inter";
     for (const [key, val] of Object.entries(FONT_PAIRINGS)) {
       if (val.heading === headingFam || val.body === bodyFam) return key;
     }
     return "inter-inter";
-  }, [resume.metadata.typography.heading.fontFamily, resume.metadata.typography.body.fontFamily]);
+  }, [resume.metadata?.typography?.heading?.fontFamily, resume.metadata?.typography?.body?.fontFamily]);
   useGoogleFonts(fontPairingId);
 
   // ── dispatchDirty on resume changes ──
@@ -209,7 +210,7 @@ export default function ResumeBuilderWorkspace() {
 
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-500">
-                  {resume.metadata.page.format.toUpperCase()} • {resume.metadata.layout.pages.length} page{resume.metadata.layout.pages.length !== 1 ? "s" : ""}
+                  {(resume.metadata?.page?.format ?? "a4").toUpperCase()} • {resume.metadata?.layout?.pages?.length ?? 1} page{(resume.metadata?.layout?.pages?.length ?? 1) !== 1 ? "s" : ""}
                 </span>
                 <ActionButton
                   variant="ghost"

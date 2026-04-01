@@ -83,11 +83,14 @@ export default function ResumeDesignDrawer({ open, onClose }: ResumeDesignDrawer
 
   // --- Current font pairing id ---
   const currentPairingId = useMemo(() => {
+    const heading = meta?.typography?.heading?.fontFamily;
+    const body = meta?.typography?.body?.fontFamily;
+    if (!heading || !body) return "";
     const entry = Object.entries(FONT_PAIRINGS).find(
-      ([, p]) => p.heading === meta.typography.heading.fontFamily && p.body === meta.typography.body.fontFamily,
+      ([, p]) => p.heading === heading && p.body === body,
     );
     return entry?.[0] ?? "";
-  }, [meta.typography]);
+  }, [meta?.typography]);
 
   const handleFontPairing = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
