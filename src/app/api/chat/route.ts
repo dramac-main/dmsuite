@@ -46,13 +46,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { messages, provider: requestedProvider } = await request.json();
+    const { messages, provider: requestedProvider, systemPrompt: clientSystemPrompt } = await request.json();
 
     if (!messages || !Array.isArray(messages)) {
       return new Response("Invalid request: messages array required", {
         status: 400,
       });
     }
+
+    // Allow per-conversation system prompt override (sanitized — max 2000 chars)
+    const activeSystemPrompt =
+      typeof clientSystemPrompt === "string" && clientSystemPrompt.trim()
+        ? clientSystemPrompt.slice(0, 2000)
+        : SYSTEM_PROMPT;
 
     // Deduct credits before making AI call
     const deduction = await deductCredits(user.id, "chat-message", "AI Chat message");
@@ -68,9 +74,9 @@ export async function POST(request: NextRequest) {
 
     let response: Response;
     if (provider === "openai") {
-      response = await streamOpenAI(messages);
+      response = await streamOpenAI(messages, activeSystemPrompt);
     } else {
-      response = await streamClaude(messages, user.id);
+      response = await streamClaude(messages, user.id, activeSystemPrompt);
     }
 
     // If the AI call itself failed, refund the credit
@@ -98,7 +104,7 @@ function resolveProvider(requested?: string): Provider {
 
 /* ── Anthropic Claude streaming ──────────────────────────── */
 
-async function streamClaude(messages: { role: string; content: string }[], userId: string) {
+async function streamClaude(messages: { role: string; content: string }[], userId: string, sysPrompt: string = SYSTEM_PROMPT) {
   if (!ANTHROPIC_API_KEY) {
     return new Response(
       "ANTHROPIC_API_KEY is not configured. Add it to your .env.local file.",
@@ -118,7 +124,7 @@ async function streamClaude(messages: { role: string; content: string }[], userI
       body: JSON.stringify({
         model: ANTHROPIC_MODEL,
         max_tokens: 4096,
-        system: SYSTEM_PROMPT,
+        system: sysPrompt,
         messages: messages.map((m: { role: string; content: string }) => ({
           role: m.role === "user" ? "user" : "assistant",
           content: m.content,
@@ -212,7 +218,7 @@ async function streamClaude(messages: { role: string; content: string }[], userI
 
 /* ── OpenAI streaming ────────────────────────────────────── */
 
-async function streamOpenAI(messages: { role: string; content: string }[]) {
+async function streamOpenAI(messages: { role: string; content: string }[], sysPrompt: string = SYSTEM_PROMPT) {
   if (!OPENAI_API_KEY) {
     return new Response(
       "OPENAI_API_KEY is not configured. Add it to your .env.local file.",
@@ -232,7 +238,7 @@ async function streamOpenAI(messages: { role: string; content: string }[]) {
         model: OPENAI_MODEL,
         max_tokens: 4096,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: sysPrompt },
           ...messages.map((m: { role: string; content: string }) => ({
             role: m.role === "user" ? "user" : ("assistant" as const),
             content: m.content,

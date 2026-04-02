@@ -659,6 +659,39 @@ function getGenericAdapter(): StoreAdapter {
   };
 }
 
+function getChatAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useChatStore } = require("@/stores/chat");
+  return {
+    getSnapshot: () => {
+      const s = useChatStore.getState();
+      return {
+        conversations: s.conversations,
+        activeConversationId: s.activeConversationId,
+        selectedProvider: s.selectedProvider,
+        systemPrompt: s.systemPrompt,
+        customPresets: s.customPresets,
+        folders: s.folders,
+      };
+    },
+    restoreSnapshot: (data) => {
+      const patch: Record<string, unknown> = {};
+      if (Array.isArray(data.conversations)) patch.conversations = data.conversations;
+      if (data.activeConversationId) patch.activeConversationId = data.activeConversationId;
+      if (data.selectedProvider) patch.selectedProvider = data.selectedProvider;
+      if (typeof data.systemPrompt === "string") patch.systemPrompt = data.systemPrompt;
+      if (Array.isArray(data.customPresets)) patch.customPresets = data.customPresets;
+      if (Array.isArray(data.folders)) patch.folders = data.folders;
+      if (Object.keys(patch).length > 0) useChatStore.setState(patch);
+    },
+    resetStore: () => {
+      useChatStore.getState().resetForm();
+      nukePersistStorage("dmsuite-chat");
+    },
+    subscribe: (cb) => useChatStore.subscribe(cb),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Adapter registry
 // ---------------------------------------------------------------------------
@@ -667,6 +700,8 @@ const _adapterCache: Record<string, StoreAdapter> = {};
 
 /** Master mapping: toolId → adapter factory */
 const ADAPTER_FACTORIES: Record<string, () => StoreAdapter> = {
+  // AI Chat
+  "ai-chat": getChatAdapter,
   // Document editors (invoice family shares one store)
   "contract-template": getContractAdapter,
   "invoice-designer": getInvoiceAdapter,

@@ -2436,12 +2436,13 @@ export const toolCategories: ToolCategory[] = [
         id: "ai-chat",
         name: "AI Chat Assistant",
         description:
-          "Chat with Claude AI for brainstorming, creative direction, problem-solving, and any question",
+          "Multi-model AI chat with Claude & GPT-4o — conversation management, presets, forking, bookmarks, and export",
         icon: "messageCircle",
-        status: "coming-soon",
-        tags: ["AI", "chat", "assistant", "brainstorm", "Claude"],
-        aiProviders: ["claude"],
-        outputs: ["json"],
+        status: "ready",
+        devStatus: "complete",
+        tags: ["AI", "chat", "assistant", "brainstorm", "Claude", "GPT-4o", "multi-model"],
+        aiProviders: ["claude", "openai"],
+        outputs: ["json", "markdown", "text"],
       },
       {
         id: "ai-image-chat",

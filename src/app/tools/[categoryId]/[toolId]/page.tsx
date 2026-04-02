@@ -28,7 +28,7 @@ import { useProjectData } from "@/hooks/useProjectData";
 /* ── Dynamically imported workspace components ──────────────── */
 const workspaceComponents: Record<string, React.ComponentType> = {
   // ── Existing / Phase 1-2 ──
-  "ai-chat": dynamic(() => import("@/components/workspaces/AIChatWorkspace")),
+  "ai-chat": dynamic(() => import("@/components/workspaces/ai-chat/AIChatWorkspace")),
   "logo-generator": dynamic(() => import("@/components/workspaces/LogoGeneratorWorkspace")),
   "social-media-post": dynamic(() => import("@/components/workspaces/SocialMediaPostWorkspace")),
   "ai-image-generator": dynamic(() => import("@/components/workspaces/StockImageBrowserWorkspace")),

@@ -1,11 +1,11 @@
 # DMSuite — Tool Development Status Tracker
 
-> **Last updated:** 2025-07-29
+> **Last updated:** 2026-04-02
 > **Total tools registered:** 195+
 > **Tools with workspace UI:** 100
-> **Tools fully complete:** 22
-> **Tools available (ready):** 18
-> **Tools coming soon:** 180
+> **Tools fully complete:** 23
+> **Tools available (ready):** 19
+> **Tools coming soon:** 179
 
 ---
 
@@ -112,6 +112,12 @@ All 9 route to `SalesBookDesignerWorkspace` with different `initialDocumentType`
 |---|---------|-----------|-----------|-------|
 | 21 | `sketch-board` | Sketch Board | sketch-board/SketchBoardWorkspace | tldraw-inspired infinite canvas whiteboard. Custom SVG rendering engine with camera transform (pan/zoom). 13 tools (select/hand/pen/eraser/rectangle/ellipse/diamond/triangle/line/arrow/text/sticky/image). Freehand drawing with quadratic bezier smoothing. Sticky notes (6 colors). Arrows with head types. Shape fills (solid/semi/hatch/cross-hatch/none). Dash styles. Grid with snap. Background presets. Keyboard shortcuts (V/H/P/E/R/O/D/T/L/A/S + Ctrl+Z/Y/A/D/Delete). Wheel zoom toward cursor. Style panel (stroke/fill/width/dash/opacity/font). Export PNG/SVG. Zustand+Immer+persist+temporal store (undo/redo). Chiko AI manifest (40+ actions: element CRUD, styles, camera, grid, composite actions for flowcharts/mind maps/sticky walls). Store adapter. 0 TS errors. |
 
+### AI Chat Assistant
+
+| # | Tool ID | Tool Name | Workspace | Notes |
+|---|---------|-----------|-----------|-------|
+| 22 | `ai-chat` | AI Chat Assistant | ai-chat/AIChatWorkspace | LibreChat-inspired multi-model AI chat. Claude (Anthropic) + GPT-4o (OpenAI) provider switching. Zustand+Immer+persist store with conversation CRUD/pin/duplicate/fork/folders/bookmarks. 6 builtin system presets (Default/Creative Writer/Code Assistant/Business Advisor/Design Consultant/Data Analyst) + custom presets. Conversation sidebar with search, date-grouped lists, pinned section, folders, context menus (rename/pin/move/delete). Message actions (copy/bookmark/fork/edit+resend/regenerate). ReactMarkdown+remarkGfm+rehypeHighlight rendering. Streaming via /api/chat with AbortController. Token estimation. Export (markdown/json/text). Temporary conversations. Empty state with 6 suggestion prompts. Model picker dropdown. System prompt panel with preset pills. Responsive (mobile sidebar overlay). Chiko AI manifest (13 actions, 5 categories). Store adapter. Credit system (5cr/message). 0 TS errors. |
+
 **Shared architecture (Sales Book):**
 - Store: `useSalesBookEditor` (Zustand + Immer + Zundo undo)
 - Renderer: `BlankFormRenderer` (HTML → print pipeline)
@@ -130,8 +136,7 @@ These have real workspace code (state management, canvas/editor, templates) but 
 
 | # | Tool ID | Tool Name | Workspace Component | Dev Status |
 |---|---------|-----------|---------------------|------------|
-| 1 | `ai-chat` | AI Chat | AIChatWorkspace | `SCAFFOLD` |
-| 2 | `logo-generator` | Logo Generator | LogoGeneratorWorkspace | `SCAFFOLD` |
+| 1 | `logo-generator` | Logo Generator | LogoGeneratorWorkspace | `SCAFFOLD` |
 | 3 | `social-media-post` | Social Media Post | SocialMediaPostWorkspace | `SCAFFOLD` |
 | 4 | `ai-image-generator` | AI Image Generator | StockImageBrowserWorkspace | `SCAFFOLD` |
 | 5 | `photo-retoucher` | Photo Retoucher | StockImageBrowserWorkspace | `SCAFFOLD` |
@@ -315,11 +320,11 @@ These are registered in `src/data/tools.ts` but have no workspace component in t
 
 | Status | Count | Description |
 |--------|-------|-------------|
-| **COMPLETE** | 13 | Sales Books (9) + Statement of Account + Contract & Agreement + Resume/CV + Document Signer |
-| **SCAFFOLD** | 85 | Has workspace UI but untested/unpolished — all set to "coming-soon" |
+| **COMPLETE** | 23 | Sales Books (9) + Statement of Account + Contract & Agreement + Resume/CV + Certificate + Diploma + Ticket + Menu + ID Badge + Worksheet + Cover Letter + Color Palette + Background Remover + PDF Tools + Document Signer + Invoice & Accounting + Sketch Board + Presentation + AI Chat |
+| **SCAFFOLD** | 84 | Has workspace UI but untested/unpolished — all set to "coming-soon" |
 | **NO-UI** | 100+ | Placeholder page only — all set to "coming-soon" |
-| **READY** | 11 | Available to users (complete tools only) |
-| **COMING-SOON** | 185 | Grayed out in dashboard |
+| **READY** | 12 | Available to users (complete tools only) |
+| **COMING-SOON** | 184 | Grayed out in dashboard |
 | **TOTAL** | 195+ | Registered in tools.ts |
 
 ---
@@ -377,6 +382,7 @@ These already have substantial workspace code and would benefit most from a poli
 | 2025-07-28 | color-palette (Color Palette Generator) | **V2 Major Overhaul**: Rewrote all 3 files from scratch. 36 curated presets (Realtime Default, Indigo Dream, Cyber Neon, GitHub Dark, Vercel Dark, Stripe Dark, Vaporwave, Aurora Borealis, etc.). 45+ Google Fonts with FontMeta (name, category, weights). 20 professional font pairings with vibe tags (Modern Clean, Editorial, Startup, Elegant Serif, etc.). Golden-angle random palette generation engine with perceptual lightness rules and AAA contrast guarantee. Intelligent dark↔light mode swap (derives new values for all 5 color roles, not just text/bg flip). Polished sidebar+preview layout with 6 tabs (Colors, Presets, Fonts, A11y, Saved, Export). Rich previews (Landing/Dashboard/Blog/E-commerce). Font pairing selector with search and vibe labels. WCAG contrast checker (5 pairs with visual badges). Auto-fix contrast issues. Mobile-responsive (tab toggle between Controls and Preview). Chiko manifest updated (25+ actions including applyFontPairing). 0 TS errors. | Drake |
 | 2025-07-29 | document-signer (Document Signer & Form Filler) | Full build: DocuSeal-inspired document filling & signing platform. Zustand+Immer+persist+Zundo store. 14 field types (signature/initials/date/text/number/email/phone/checkbox/radio/select/textarea/file/stamp/image). Multiple signers with color-coding. Signature capture (draw canvas with color/width controls, type with 6 font choices, upload mode). 9 document templates (blank/nda/employment-contract/rental-agreement/service-agreement/sales-contract/freelancer-agreement/partnership-agreement/custom-upload). PDF upload support. Audit trail with timestamped entries. Email workflows (subject templates, reminders, CC, reply-to). Branding (company name/logo/brand color). 5-tab editor (Document/Fields/Signers/Style/Settings). Figma-style layers panel. Chiko AI manifest (24 actions + activity logging). Store adapter. Print-ready PDF export. 0 TS errors. | Drake |
 | 2025-07-29 | invoice-tracker (Invoice & Accounting Hub) | Full build: Invoice Ninja-inspired invoicing & accounting platform. Zambian localization (ZMW, ZRA VAT 16%, PAYE brackets, NAPSA 5%+5% capped K1,221.80/mo, Turnover Tax 4%). Zustand+Immer+persist+temporal store (~1500 lines). 23 views (Dashboard/InvoiceList+Edit/QuoteList+Edit/CreditNoteList+Edit/PurchaseOrderList+Edit/PaymentList/ExpenseList+Edit/ClientList+Edit/VendorList+Edit/ProductList+Edit/ProjectList+Edit/TimeTracking/Reports/Settings). 4-doc print renderer (invoice/quote/credit-note/purchase-order) with 5 templates each (clean/corporate/minimal/bold/classic). Shared UI components (StatusBadge/PageHeader/TabStrip/StatCard/ClientPicker/VendorPicker/ProductPicker/TaxRatePicker/SectionDivider). Multi-currency (ZMW/USD/EUR/GBP/ZAR). Mobile money (MTN MoMo/Airtel Money/Zamtel Kwacha). Chiko AI manifest (35+ actions: create/edit all document types, add line items, set tax rates, generate reports, manage clients/vendors/products). Store adapter. 0 TS errors. | Drake |
+| 2026-04-02 | ai-chat (AI Chat Assistant) | Full LibreChat-inspired rebuild: Deleted old scaffold AIChatWorkspace.tsx. New enhanced Zustand+Immer+persist store with ChatProvider (claude/openai), ChatMessage (bookmarked/tokenEstimate/parentId), ChatConversation (pinned/folder/temporary/systemPrompt), 6 builtin presets + custom presets, conversation CRUD/pin/duplicate/fork/folders/bookmarks, export (md/json/txt). Enhanced /api/chat route with dynamic systemPrompt passthrough. New workspace at ai-chat/AIChatWorkspace.tsx: conversation sidebar (search/date-grouped/pinned/folders/context menus), message bubbles (ReactMarkdown+remarkGfm+rehypeHighlight, copy/bookmark/fork/edit+resend/regenerate), model picker (Claude/GPT-4o), system prompt panel with preset pills, streaming with AbortController, token estimation, empty state with 6 suggestions, responsive mobile sidebar overlay, export dropdown. Chiko AI manifest (13 actions, 5 categories). Store adapter. 8-point integration contract wired (page.tsx/store-adapters/manifests/tools.ts/stores-index). Status → ready, devStatus → complete. 0 TS errors. | Drake |
 | 2025-07-30 | resume-cv (Resume & CV Builder) | **Complete Reactive Resume-inspired rebuild**: Replaced 8-step wizard with two-panel editor (left scrollable sections + right live A4 preview). 7 new components (ResumeBuilderWorkspace, ResumeLeftPanel, BasicsSection, SummarySection, ListSection, ResumeDesignDrawer, ExportDropdown). 13 built-in sections (basics/summary/profiles/experience/education/skills/certifications/languages/projects/volunteer/awards/publications/interests/references) + custom sections. Schema enhanced with 3 new sections (profiles/publications/interests) + photo field. ListSection: generic drag-drop reorder, per-item expand/collapse, keywords chip editor, text/textarea/select/keywords field types. Design drawer: 20 pro template grid, accent color swatches + custom picker, color intensity, font pairing selector, font scale, page format, margins, section/line spacing, sidebar width. Mobile: bottom bar toggles editor/preview/design views. Keyboard shortcuts (Ctrl+Z/Y). Chiko manifest updated. AI generator types inlined (removed wizard dependency). 0 TS errors. | Drake |
 | 2025-07-31 | resume-cv (Resume & CV Builder) | **V2 cont'd — AI, API, Chiko manifest, full wiring**: Created 3 API routes (generate/revise/parse with credit check+deduct+refund pattern, Anthropic Claude). AI engine (system prompts for generate/revise/ATS, message builders). Full Chiko manifest (40+ actions across 8 categories: Info/Content/Style/Typography/Layout/AI/Export/Misc — readState, readSectionItems, updateBasics/Picture/Summary, section CRUD, custom sections, changeTemplate, colors, typography with font pairing lookup, level design, CSS, layout ops, generateResume, reviseResume, scoreATS, acceptRevision, rejectRevision, export, validate, prefillFromMemory, importJSON, resetResume). Full workspace component (two-panel layout, zoom toolbar, Google Fonts hook, dispatchDirty/dispatchProgress, keyboard shortcuts Ctrl+Z/Y/P, mobile bottom bar, design drawer, export dropdown, start-over dialog). All TypeScript errors fixed (metadata path corrections, ConfirmDialog props, Icons registry alignment). 0 TS errors. | Drake |
 | 2025-07-30 | presentation (Presentation Designer) | **Slidev-inspired markdown rebuild**: Replaced Fabric.js multi-slide editor with Slidev-inspired markdown slide deck creator. 10 new files. Core markdown parser (parseSlidevMarkdown/reconstructMarkdown) with YAML frontmatter extraction. 17 slide layouts (default/center/cover/intro/end/section/statement/fact/quote/two-cols/two-cols-header/image/image-left/image-right/full/iframe/none). 10 themes (Default/Seriph/Apple Basic/Dracula/Academic/Geist/Purplin/Penguin/Mokka/Neon). Zustand+Immer+persist+Zundo store with markdown as single source of truth. SlidevSlideRenderer with dynamic highlight.js code highlighting, KaTeX math rendering, Mermaid diagram rendering, v-click animations, two-cols layout support. Navigator panel with slide thumbnails, move/duplicate/delete, speaker notes. 3-tab editor (Editor/Theme/Settings). Full Document + per-slide editing modes. Presenter overlay (current+next slide, notes, timer). Fullscreen presentation with keyboard nav (→/Space/←/Backspace/F/P/O/D). Slide overview grid. Drawing overlay (canvas pen with color/width picker). Print/export via browser print. Chiko AI manifest (25 actions across 8 categories: Info/Content/Layout/Metadata/Style/Navigation/Export/Reset). NPM deps: marked, highlight.js, katex, mermaid. 0 TS errors. | Drake |
