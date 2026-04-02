@@ -154,6 +154,7 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   "pdf-tools": dynamic(() => import("@/components/workspaces/pdf-tools/PDFToolsWorkspace")),
   "document-signer": dynamic(() => import("@/components/workspaces/document-signer/DocumentSignerWorkspace")),
   "invoice-tracker": dynamic(() => import("@/components/workspaces/invoice-accounting/InvoiceAccountingWorkspace")),
+  "sketch-board": dynamic(() => import("@/components/workspaces/sketch-board/SketchBoardWorkspace")),
 };
 
 export default function ToolWorkspacePage() {

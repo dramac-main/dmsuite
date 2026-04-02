@@ -1,13 +1,42 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Resume Builder V2 — AI, API Routes, Chiko Manifest, Full Wiring — COMPLETE
+**Phase:** Sketch Board (Infinite Canvas Whiteboard) — COMPLETE
 
-### Session: Resume Builder V2 Completion
+### Session: Sketch Board Full Build
 
-Completed the Reactive Resume-inspired Resume Builder V2 with full AI integration, API routes, Chiko manifest, and workspace wiring.
+Built tldraw-inspired infinite canvas whiteboard tool named "Sketch Board" (id: `sketch-board`).
 
-#### New Files Created
+#### Architecture
+- **Custom SVG rendering engine** — NOT Fabric.js. Uses `<svg>` with `<g transform={translate/scale}>` for infinite canvas pan/zoom via camera transform.
+- **Zustand + Immer + persist + temporal** store (full undo/redo) — key: `"dmsuite-sketch-board"`
+- **13 drawing tools**: select, hand (pan), pen, eraser, rectangle, ellipse, diamond, triangle, line, arrow, text, sticky, image
+- **Freehand drawing** with quadratic bezier curve smoothing
+- **Sticky notes** with 6 color options
+- **Style panel**: stroke color, fill color/style, stroke width, dash style, opacity, font size/family
+- **Grid with snap**, background presets, keyboard shortcuts (V/H/P/E/R/O/D/T/L/A/S)
+- **Export**: PNG and SVG
+
+#### Files Created
+- `src/types/sketch-board.ts` — Full type system (SketchTool, 8 element types, styles, camera, grid)
+- `src/stores/sketch-board-editor.ts` — 40+ actions (element CRUD, camera, grid, z-order, selection, clipboard)
+- `src/components/workspaces/sketch-board/SketchBoardWorkspace.tsx` — Full workspace (TopBar, SketchCanvas, StylePanel, RenderElement)
+- `src/lib/chiko/manifests/sketch-board.ts` — 40+ Chiko actions across 10 categories, including composite actions (createFlowchart, createMindMap, createStickyWall)
+
+#### Files Modified
+- `src/components/icons.tsx` — Added IconWhiteboard + iconMap entry
+- `src/app/tools/[categoryId]/[toolId]/page.tsx` — Dynamic import added
+- `src/lib/store-adapters.ts` — getSketchBoardAdapter() + ADAPTER_FACTORIES entry
+- `src/lib/chiko/manifests/index.ts` — Barrel export added
+- `src/data/tools.ts` — Tool entry in design category (devStatus: "complete")
+- `TOOL-STATUS.md` — COMPLETE #21, changelog entry, counter updates (100 workspaces, 22 complete)
+
+#### Key Decisions
+- Custom SVG rendering instead of Fabric.js — tldraw's infinite canvas paradigm is fundamentally different
+- No new npm dependencies — entire canvas engine is custom-built
+- Classified under "design" category with tags: whiteboard, canvas, drawing, diagram, flowchart, mind map, sketch, freehand
+
+### Previous Focus: Open Source Research AI-First Restructuring — COMPLETE
 - `src/app/api/chat/resume/generate/route.ts` — AI resume generation endpoint (credit check + Anthropic API)
 - `src/app/api/chat/resume/revise/route.ts` — AI resume revision endpoint
 - `src/app/api/chat/resume/parse/route.ts` — ATS scoring endpoint

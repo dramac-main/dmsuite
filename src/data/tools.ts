@@ -1272,6 +1272,19 @@ export const toolCategories: ToolCategory[] = [
         printSizes: ["A5", "A6", "square"],
         supportsPartEdit: true,
       },
+      // ── Infinite Canvas ──────────────────────────────────────
+      {
+        id: "sketch-board",
+        name: "Sketch Board",
+        description:
+          "Infinite canvas whiteboard for freehand drawing, diagramming, flowcharts, mind maps, and sticky notes — inspired by tldraw",
+        icon: "whiteboard",
+        status: "ready",
+        devStatus: "complete",
+        tags: ["whiteboard", "canvas", "drawing", "diagram", "flowchart", "mind map", "sketch", "freehand"],
+        outputs: ["png", "svg"],
+        supportsPartEdit: true,
+      },
     ],
   },
 
