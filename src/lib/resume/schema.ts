@@ -308,8 +308,8 @@ export type ColorDesign = z.infer<typeof colorDesignSchema>;
 // ---------------------------------------------------------------------------
 
 export const TEMPLATE_IDS = [
-  "azurill", "bronzor", "chikorita", "ditto", "gengar",
-  "glalie", "kakuna", "leafish", "onyx", "pikachu", "rhyhorn",
+  "azurill", "bronzor", "chikorita", "ditto", "ditgar", "gengar",
+  "glalie", "kakuna", "lapras", "leafish", "onyx", "pikachu", "rhyhorn",
 ] as const;
 
 export type TemplateId = (typeof TEMPLATE_IDS)[number];

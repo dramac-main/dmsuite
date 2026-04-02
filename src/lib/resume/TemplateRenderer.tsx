@@ -7,6 +7,7 @@
 "use client";
 
 import React, { useMemo } from "react";
+import DOMPurify from "dompurify";
 import type { ResumeData, SectionKey, PageLayout, TemplateId, LevelType } from "./schema";
 import { SECTION_META, createDefaultResumeData } from "./schema";
 import { getTemplateConfig, type TemplateConfig } from "./templates";
@@ -106,7 +107,8 @@ function LevelIndicator({ level, maxLevel = 5, type, color }: {
 
 function RichText({ html, bodySize }: { html: string; bodySize?: number }) {
   if (!html.trim()) return null;
-  return <div className="resume-rich-text" style={bodySize ? { fontSize: pt(bodySize) } : undefined} dangerouslySetInnerHTML={{ __html: html }} />;
+  const clean = typeof window !== "undefined" ? DOMPurify.sanitize(html) : html;
+  return <div className="resume-rich-text" style={bodySize ? { fontSize: pt(bodySize) } : undefined} dangerouslySetInnerHTML={{ __html: clean }} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -612,9 +614,9 @@ export default function TemplateRenderer({ data, zoom = 1, className, printMode 
     return layoutCfg.pages;
   }, [layoutCfg.pages]);
 
-  // Custom CSS injection
+  // Custom CSS injection (scoped & sanitized)
   const customCSSStyle = cssCfg.enabled && cssCfg.value ? (
-    <style dangerouslySetInnerHTML={{ __html: cssCfg.value }} />
+    <style dangerouslySetInnerHTML={{ __html: cssCfg.value.replace(/<\/?[^>]+(>|$)/g, "") }} />
   ) : null;
 
   // Global page styles — mirrors Reactive Resume's preview.module.css approach

@@ -12,6 +12,7 @@ import { useResumeEditor } from "@/stores/resume-editor";
 import type { SectionKey } from "@/lib/resume/schema";
 import { createBlankItem, SECTION_META } from "@/lib/resume/schema";
 import { FormInput, FormTextarea, Icons } from "@/components/workspaces/shared/WorkspaceUIKit";
+import RichInput from "../RichInput";
 
 // ---------------------------------------------------------------------------
 // Field definitions per section type
@@ -310,6 +311,19 @@ function ItemCard({
               const span = field.colSpan === 2 ? "col-span-2" : "";
 
               if (field.type === "textarea") {
+                // Use rich text editor for description fields
+                if (field.key === "description") {
+                  return (
+                    <div key={field.key} className={span}>
+                      <label className="block text-[11px] font-medium text-gray-500 mb-1.5">{field.label}</label>
+                      <RichInput
+                        value={(val as string) ?? ""}
+                        onChange={(html) => handleFieldChange(field.key, html)}
+                        placeholder={field.placeholder}
+                      />
+                    </div>
+                  );
+                }
                 return (
                   <div key={field.key} className={span}>
                     <FormTextarea

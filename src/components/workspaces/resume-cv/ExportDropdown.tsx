@@ -8,7 +8,9 @@
 import React, { useCallback, useRef, useState } from "react";
 import { useResumeEditor } from "@/stores/resume-editor";
 import type { ResumeData } from "@/lib/resume/schema";
-import { Icons } from "@/components/workspaces/shared/WorkspaceUIKit";
+import { generateDocx } from "@/lib/resume/docx-builder";
+import html2canvas from "html2canvas-pro";
+import { jsPDF } from "jspdf";
 
 type ExportFormat = "pdf" | "docx" | "txt" | "json" | "clipboard" | "print";
 
@@ -87,26 +89,6 @@ function downloadText(text: string, filename: string, mime = "text/plain") {
   downloadBlob(new Blob([text], { type: mime }), filename);
 }
 
-function generateDocx(data: ResumeData): Blob {
-  // Simple DOCX via XML — works for most import scenarios
-  const text = resumeToPlainText(data);
-  const xmlContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:body>
-    ${text.split("\n").map((line) =>
-    `<w:p><w:r><w:t xml:space="preserve">${escapeXml(line)}</w:t></w:r></w:p>`,
-  ).join("\n    ")}
-  </w:body>
-</w:document>`;
-
-  // Minimal DOCX is a ZIP — but for now export as plain XML which Word can open
-  return new Blob([xmlContent], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
-}
-
-function escapeXml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -137,9 +119,11 @@ export default function ExportDropdown({ printAreaRef }: ExportDropdownProps) {
             downloadText(resumeToPlainText(resume), `${safeName}.txt`);
             break;
 
-          case "docx":
-            downloadBlob(generateDocx(resume), `${safeName}.docx`);
+          case "docx": {
+            const docxBlob = await generateDocx(resume);
+            downloadBlob(docxBlob, `${safeName}.docx`);
             break;
+          }
 
           case "clipboard": {
             const text = resumeToPlainText(resume);
@@ -149,30 +133,58 @@ export default function ExportDropdown({ printAreaRef }: ExportDropdownProps) {
 
           case "print":
             if (printAreaRef.current) {
+              // Clone the resume at 100% zoom so print output is clean
+              const clone = printAreaRef.current.cloneNode(true) as HTMLElement;
+              // Remove any transform scaling from the clone
+              const pages = clone.querySelectorAll(".resume-page");
+              clone.style.transform = "none";
               const printWindow = window.open("", "_blank");
               if (printWindow) {
+                // Copy font stylesheets
+                const linkTags = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+                  .map((el) => el.outerHTML).join("\n");
+                const styleTags = Array.from(document.querySelectorAll("style"))
+                  .map((el) => el.outerHTML).join("\n");
                 printWindow.document.write(`<html><head><title>${name} — Resume</title>
-                  <style>body{margin:0;padding:0}@media print{@page{margin:0}}</style>
-                  </head><body>${printAreaRef.current.innerHTML}</body></html>`);
+                  ${linkTags}
+                  ${styleTags}
+                  <style>
+                    body{margin:0;padding:0;background:#fff}
+                    .resume-page{box-shadow:none!important}
+                    @media print{@page{margin:0;size:auto}.resume-page{box-shadow:none!important}}
+                  </style>
+                  </head><body>${clone.outerHTML}</body></html>`);
                 printWindow.document.close();
-                printWindow.focus();
-                printWindow.print();
+                // Wait for fonts to load before printing
+                setTimeout(() => { printWindow.focus(); printWindow.print(); }, 500);
               }
             }
             break;
 
           case "pdf":
-            // Use browser print-to-PDF as primary path
             if (printAreaRef.current) {
-              const printWindow = window.open("", "_blank");
-              if (printWindow) {
-                printWindow.document.write(`<html><head><title>${name} — Resume</title>
-                  <style>body{margin:0;padding:0}@media print{@page{margin:0;size:auto}}</style>
-                  </head><body>${printAreaRef.current.innerHTML}</body></html>`);
-                printWindow.document.close();
-                printWindow.focus();
-                printWindow.print();
+              // Find all resume pages and export each as a PDF page
+              const pageElements = printAreaRef.current.querySelectorAll(".resume-page");
+              const elements = pageElements.length > 0 ? Array.from(pageElements) : [printAreaRef.current];
+              const format = resume?.metadata?.page?.format === "letter" ? "letter" : "a4";
+              const pdfWidthMM = format === "letter" ? 215.9 : 210;
+              const pdfHeightMM = format === "letter" ? 279.4 : 297;
+
+              const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format });
+
+              for (let i = 0; i < elements.length; i++) {
+                const el = elements[i] as HTMLElement;
+                const canvas = await html2canvas(el, {
+                  scale: 2,
+                  useCORS: true,
+                  logging: false,
+                  backgroundColor: "#ffffff",
+                });
+                const imgData = canvas.toDataURL("image/png");
+                if (i > 0) pdf.addPage(format, "portrait");
+                pdf.addImage(imgData, "PNG", 0, 0, pdfWidthMM, pdfHeightMM);
               }
+              pdf.save(`${safeName}.pdf`);
             }
             break;
         }
@@ -246,9 +258,11 @@ export async function exportResume(
     case "txt":
       downloadText(resumeToPlainText(resume), `${safeName}.txt`);
       return { success: true, message: `Exported ${safeName}.txt` };
-    case "docx":
-      downloadBlob(generateDocx(resume), `${safeName}.docx`);
+    case "docx": {
+      const docxBlob = await generateDocx(resume);
+      downloadBlob(docxBlob, `${safeName}.docx`);
       return { success: true, message: `Exported ${safeName}.docx` };
+    }
     case "clipboard": {
       await navigator.clipboard.writeText(resumeToPlainText(resume));
       return { success: true, message: "Copied to clipboard" };

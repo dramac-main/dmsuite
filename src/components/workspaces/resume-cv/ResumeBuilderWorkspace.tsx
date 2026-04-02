@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useResumeEditor, useResumeTemporalStore } from "@/stores/resume-editor";
 import { useChikoActions } from "@/hooks/useChikoActions";
 import { createResumeManifest } from "@/lib/chiko/manifests/resume";
@@ -42,6 +42,7 @@ export default function ResumeBuilderWorkspace() {
 
   // ── Refs ──
   const chikoOnPrintRef = useRef<(() => void) | null>(null);
+  const printAreaRef = useRef<HTMLDivElement>(null);
 
   // ── State ──
   const [mobileView, setMobileView] = useState<"editor" | "preview">("editor");
@@ -159,7 +160,7 @@ export default function ResumeBuilderWorkspace() {
                 icon={Icons.edit}
                 title="Design & Templates"
               />
-              <ExportDropdown printAreaRef={{ current: null }} />
+              <ExportDropdown printAreaRef={printAreaRef} />
               <IconButton
                 onClick={() => setShowStartOverDialog(true)}
                 icon={Icons.close}
@@ -224,12 +225,7 @@ export default function ResumeBuilderWorkspace() {
 
             {/* Canvas */}
             <div className="flex-1 overflow-auto p-6 flex justify-center workspace-canvas">
-              <div
-                style={{
-                  transform: `scale(${zoom / 100})`,
-                  transformOrigin: "top center",
-                }}
-              >
+              <div ref={printAreaRef}>
                 <TemplateRenderer data={resume} zoom={zoom / 100} />
               </div>
             </div>
