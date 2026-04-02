@@ -12,6 +12,7 @@ export type ToolStatus = "ready" | "beta" | "coming-soon";
 /** Which AI provider(s) a tool can leverage */
 export type AIProvider =
   | "claude"
+  | "openai"
   | "luma"
   | "runway"
   | "elevenlabs"
@@ -47,7 +48,9 @@ export type OutputFormat =
   | "tiff"
   | "bmp"
   | "css"
-  | "scss";
+  | "scss"
+  | "markdown"
+  | "text";
 
 /** Print size presets */
 export type PrintSize =
@@ -2566,6 +2569,19 @@ export const toolCategories: ToolCategory[] = [
         status: "ready",
         devStatus: "complete",
         tags: ["invoice", "accounting", "payment", "tracking", "freelance", "ZRA", "NAPSA", "Zambia"],
+      },
+      // ── AI Flow Builder (visual workflow canvas) ──────────────
+      {
+        id: "ai-flow-builder",
+        name: "AI Flow Builder",
+        description:
+          "Visual AI workflow builder — drag-drop node canvas for building conversational AI agents, RAG pipelines, multi-model chains, content generators, and custom LLM flows. Inspired by Langflow.",
+        icon: "zap",
+        status: "ready",
+        devStatus: "complete",
+        tags: ["AI", "flow", "workflow", "agent", "RAG", "pipeline", "nodes", "canvas", "LLM", "Langflow", "chain"],
+        aiProviders: ["claude"],
+        outputs: ["json"],
       },
       // Ã¢â€â‚¬Ã¢â€â‚¬ Design Utilities Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       {
