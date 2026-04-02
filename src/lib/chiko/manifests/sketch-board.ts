@@ -589,9 +589,9 @@ export function createSketchBoardManifest(store: Store): ChikoActionManifest {
         elementTypes: types,
         selectedCount: s.selectedIds.length,
         selectedIds: s.selectedIds,
-        camera: s.doc.camera,
-        gridEnabled: s.doc.grid.enabled,
-        gridSnap: s.doc.grid.snap,
+        camera: s.camera,
+        gridEnabled: s.grid.enabled,
+        gridSnap: s.grid.snap,
         activeTool: s.activeTool,
       };
     },
@@ -612,7 +612,7 @@ export function createSketchBoardManifest(store: Store): ChikoActionManifest {
             }
             return {
               success: true,
-              message: `Board "${s.doc.title}": ${s.doc.elements.length} elements (${Object.entries(types).map(([k, v]) => `${v} ${k}(s)`).join(", ") || "empty"}). Background: ${s.doc.background}. Camera: (${Math.round(s.doc.camera.x)}, ${Math.round(s.doc.camera.y)}) @ ${Math.round(s.doc.camera.zoom * 100)}%. Grid: ${s.doc.grid.enabled ? "on" : "off"}.`,
+              message: `Board "${s.doc.title}": ${s.doc.elements.length} elements (${Object.entries(types).map(([k, v]) => `${v} ${k}(s)`).join(", ") || "empty"}). Background: ${s.doc.background}. Camera: (${Math.round(s.camera.x)}, ${Math.round(s.camera.y)}) @ ${Math.round(s.camera.zoom * 100)}%. Grid: ${s.grid.enabled ? "on" : "off"}.`,
             };
           }
           case "listElements": {
@@ -847,13 +847,13 @@ export function createSketchBoardManifest(store: Store): ChikoActionManifest {
             s.toggleGrid();
             return {
               success: true,
-              message: `Grid ${!s.doc.grid.enabled ? "enabled" : "disabled"}`,
+              message: `Grid ${!s.grid.enabled ? "enabled" : "disabled"}`,
             };
           case "toggleSnap":
             s.toggleSnap();
             return {
               success: true,
-              message: `Snap ${!s.doc.grid.snap ? "enabled" : "disabled"}`,
+              message: `Snap ${!s.grid.snap ? "enabled" : "disabled"}`,
             };
           case "setGridSize":
             s.setGrid({ size: params.size as number });

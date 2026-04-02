@@ -161,7 +161,7 @@ export interface GridConfig {
   snap: boolean;
 }
 
-/** The full board document */
+/** The full board document (only undoable data — no view state) */
 export interface SketchBoardDocument {
   /** Document title */
   title: string;
@@ -169,8 +169,4 @@ export interface SketchBoardDocument {
   background: string;
   /** All elements on the canvas */
   elements: SketchElement[];
-  /** Current camera position */
-  camera: Camera;
-  /** Grid settings */
-  grid: GridConfig;
 }

@@ -1,9 +1,12 @@
 "use client";
 
 /* ─────────────────────────────────────────────────────────────
-   Sketch Board Workspace — Infinite Canvas Whiteboard  (V2)
-   Complete rewrite: proper export, real eraser, direction-aware
-   lines/arrows, ref-based interaction state, hit-test eraser.
+   Sketch Board Workspace — Infinite Canvas Whiteboard  (V3)
+   - Undo/redo only tracks element changes (not camera/zoom)
+   - Arrows use manual polygon arrowheads (no SVG markers)
+   - Pointer capture for reliable drag
+   - Proper ref-based interaction state
+   - Excalidraw-quality interactions
    ───────────────────────────────────────────────────────────── */
 
 import React, {
@@ -108,18 +111,36 @@ function escXml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/** stroke-dasharray SVG attribute string */
+/** stroke-dasharray SVG attribute string for export */
 function dashAttr(ds: string): string {
   if (ds === "dashed") return ' stroke-dasharray="8 4"';
   if (ds === "dotted") return ' stroke-dasharray="2 4"';
   return "";
 }
 
+/** Calculate arrowhead polygon points (Excalidraw-style, manual) */
+function arrowheadPoints(
+  start: Point,
+  end: Point,
+  size = 16
+): [Point, Point] {
+  const angle = Math.atan2(end.y - start.y, end.x - start.x);
+  return [
+    {
+      x: end.x - size * Math.cos(angle - Math.PI / 7),
+      y: end.y - size * Math.sin(angle - Math.PI / 7),
+    },
+    {
+      x: end.x - size * Math.cos(angle + Math.PI / 7),
+      y: end.y - size * Math.sin(angle + Math.PI / 7),
+    },
+  ];
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Hit-test (for eraser sweep)
 // ═══════════════════════════════════════════════════════════════
 
-/** Check if point (px,py) is close to an element */
 function hitTestPoint(
   el: SketchElement,
   px: number,
@@ -130,7 +151,6 @@ function hitTestPoint(
     case "draw":
     case "eraser": {
       const d = el as DrawElement;
-      // point-to-polyline-segment distance
       for (let i = 1; i < d.points.length; i++) {
         const ax = d.points[i - 1].x,
           ay = d.points[i - 1].y;
@@ -178,7 +198,6 @@ function hitTestPoint(
       );
     }
     default: {
-      // Bounding-box test for shapes, text, sticky
       return (
         px >= el.x - threshold &&
         px <= el.x + el.width + threshold &&
@@ -240,7 +259,7 @@ function elementToSVGStr(el: SketchElement): string {
       return `<path d="${getDrawPath(d.points)}" fill="none" stroke="${d.style.strokeColor}" stroke-width="${d.style.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"${da}${op}/>`;
     }
     case "eraser":
-      return ""; // eraser strokes are not exported
+      return "";
     case "rectangle": {
       const tr = `translate(${el.x},${el.y}) rotate(${el.rotation} ${el.width / 2} ${el.height / 2})`;
       return `<g transform="${tr}"><rect width="${el.width}" height="${el.height}" fill="${el.style.fillColor}" stroke="${el.style.strokeColor}" stroke-width="${el.style.strokeWidth}"${da} rx="4"${op}/></g>`;
@@ -266,12 +285,11 @@ function elementToSVGStr(el: SketchElement): string {
     }
     case "arrow": {
       const a = el as ArrowElement;
-      const mid = `arw_${a.id.replace(/[^a-zA-Z0-9]/g, "")}`;
-      let svg = "";
+      let svg = `<line x1="${a.start.x}" y1="${a.start.y}" x2="${a.end.x}" y2="${a.end.y}" stroke="${a.style.strokeColor}" stroke-width="${a.style.strokeWidth}" stroke-linecap="round"${da}${op}/>`;
       if (a.endHead !== "none") {
-        svg += `<defs><marker id="${mid}" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M 0 0 L 12 4 L 0 8 Z" fill="${a.style.strokeColor}"/></marker></defs>`;
+        const [p1, p2] = arrowheadPoints(a.start, a.end, 16);
+        svg += `<polygon points="${a.end.x},${a.end.y} ${p1.x},${p1.y} ${p2.x},${p2.y}" fill="${a.style.strokeColor}"${op}/>`;
       }
-      svg += `<line x1="${a.start.x}" y1="${a.start.y}" x2="${a.end.x}" y2="${a.end.y}" stroke="${a.style.strokeColor}" stroke-width="${a.style.strokeWidth}" stroke-linecap="round"${da}${op}${a.endHead !== "none" ? ` marker-end="url(#${mid})"` : ""}/>`;
       return svg;
     }
     case "text": {
@@ -294,8 +312,9 @@ function elementToSVGStr(el: SketchElement): string {
     case "sticky": {
       const st = el as StickyElement;
       const tr = `translate(${st.x},${st.y}) rotate(${st.rotation} ${st.width / 2} ${st.height / 2})`;
-      // Word-wrap approximation using tspans
-      const maxChars = Math.floor((st.width - 16) / (st.style.fontSize * 0.55));
+      const maxChars = Math.floor(
+        (st.width - 16) / (st.style.fontSize * 0.55)
+      );
       const words = st.text.split(" ");
       const lines: string[] = [];
       let cur = "";
@@ -321,7 +340,6 @@ function elementToSVGStr(el: SketchElement): string {
   }
 }
 
-/** Build a complete standalone SVG from document data */
 function buildExportSVG(
   doc: { elements: SketchElement[]; background: string },
   title: string
@@ -351,8 +369,9 @@ function buildExportSVG(
   ].join("\n");
 }
 
-/** Trigger SVG download */
-function doExportSVG(doc: ReturnType<typeof useSketchBoardEditor.getState>["doc"]) {
+function doExportSVG(
+  doc: ReturnType<typeof useSketchBoardEditor.getState>["doc"]
+) {
   const svgStr = buildExportSVG(doc, doc.title);
   const blob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
   const a = document.createElement("a");
@@ -368,22 +387,21 @@ function doExportSVG(doc: ReturnType<typeof useSketchBoardEditor.getState>["doc"
   );
 }
 
-/** Trigger PNG download via offscreen canvas */
-function doExportPNG(doc: ReturnType<typeof useSketchBoardEditor.getState>["doc"]) {
+function doExportPNG(
+  doc: ReturnType<typeof useSketchBoardEditor.getState>["doc"]
+) {
   const svgStr = buildExportSVG(doc, doc.title);
   const blob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
   const url = URL.createObjectURL(blob);
 
   const img = new Image();
   img.onload = () => {
-    // Render at 2x for quality (min 1920 wide)
     const scale = Math.max(2, 1920 / img.width);
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(img.width * scale);
     canvas.height = Math.round(img.height * scale);
     const ctx = canvas.getContext("2d")!;
 
-    // Fill background (in case SVG bg is transparent)
     const bg =
       BACKGROUND_PRESETS.find((b) => b.id === doc.background)?.value ??
       "#ffffff";
@@ -422,7 +440,7 @@ function doExportPNG(doc: ReturnType<typeof useSketchBoardEditor.getState>["doc"
 // RenderElement — draw each element type in <svg>
 // ═══════════════════════════════════════════════════════════════
 
-function RenderElement({
+const RenderElement = React.memo(function RenderElement({
   el,
   isSelected,
   isEraseTarget,
@@ -450,7 +468,6 @@ function RenderElement({
         ? "2 4"
         : undefined;
 
-  /** Selection indicator rect */
   const selRect = (x: number, y: number, w: number, h: number) =>
     isSelected ? (
       <rect
@@ -467,7 +484,6 @@ function RenderElement({
       />
     ) : null;
 
-  /** Eraser highlight */
   const eraseHighlight = (x: number, y: number, w: number, h: number) =>
     isEraseTarget ? (
       <rect
@@ -489,7 +505,6 @@ function RenderElement({
       const d = el as DrawElement;
       return (
         <g onPointerDown={handlePD} style={elStyle}>
-          {/* Invisible fat hit-area path */}
           <path
             d={getDrawPath(d.points)}
             fill="none"
@@ -513,7 +528,6 @@ function RenderElement({
     }
 
     case "eraser":
-      // Legacy eraser stroke elements are hidden
       return null;
 
     case "rectangle": {
@@ -612,7 +626,6 @@ function RenderElement({
       const l = el as LineElement;
       return (
         <g onPointerDown={handlePD} style={elStyle}>
-          {/* Fat invisible hit area */}
           <line
             x1={l.start.x}
             y1={l.start.y}
@@ -639,22 +652,9 @@ function RenderElement({
 
     case "arrow": {
       const a = el as ArrowElement;
-      const mid = `arrowhead-${a.id}`;
+      const [hp1, hp2] = arrowheadPoints(a.start, a.end, 16);
       return (
         <g onPointerDown={handlePD} style={elStyle}>
-          <defs>
-            <marker
-              id={mid}
-              markerWidth="12"
-              markerHeight="8"
-              refX="10"
-              refY="4"
-              orient="auto"
-              markerUnits="userSpaceOnUse"
-            >
-              <path d="M 0 0 L 12 4 L 0 8 Z" fill={a.style.strokeColor} />
-            </marker>
-          </defs>
           {/* Fat invisible hit area */}
           <line
             x1={a.start.x}
@@ -664,6 +664,7 @@ function RenderElement({
             stroke="transparent"
             strokeWidth={Math.max(a.style.strokeWidth + 12, 16)}
           />
+          {/* Arrow shaft */}
           <line
             x1={a.start.x}
             y1={a.start.y}
@@ -673,10 +674,14 @@ function RenderElement({
             strokeWidth={a.style.strokeWidth}
             strokeLinecap="round"
             strokeDasharray={strokeDash}
-            markerEnd={
-              a.endHead !== "none" ? `url(#${mid})` : undefined
-            }
           />
+          {/* Arrowhead — manual polygon (no SVG markers!) */}
+          {a.endHead !== "none" && (
+            <polygon
+              points={`${a.end.x},${a.end.y} ${hp1.x},${hp1.y} ${hp2.x},${hp2.y}`}
+              fill={a.style.strokeColor}
+            />
+          )}
           {selRect(a.x, a.y, a.width || 1, a.height || 1)}
           {eraseHighlight(a.x, a.y, a.width || 1, a.height || 1)}
         </g>
@@ -691,7 +696,6 @@ function RenderElement({
           style={elStyle}
           transform={`translate(${t.x}, ${t.y}) rotate(${t.rotation} ${t.width / 2} ${t.height / 2})`}
         >
-          {/* Invisible hit area */}
           <rect
             width={t.width}
             height={t.height}
@@ -769,7 +773,7 @@ function RenderElement({
     default:
       return null;
   }
-}
+});
 
 // ═══════════════════════════════════════════════════════════════
 // Style Panel (right sidebar)
@@ -905,9 +909,7 @@ function StylePanel() {
           min={12}
           max={72}
           value={currentStyle.fontSize}
-          onChange={(e) =>
-            updateStyle({ fontSize: Number(e.target.value) })
-          }
+          onChange={(e) => updateStyle({ fontSize: Number(e.target.value) })}
           className="w-full accent-primary-500"
         />
       </div>
@@ -936,18 +938,20 @@ function StylePanel() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// SketchCanvas — main infinite canvas (V2 with ref-based state)
+// SketchCanvas — main infinite canvas (V3)
 // ═══════════════════════════════════════════════════════════════
 
 function SketchCanvas() {
   const svgRef = useRef<SVGSVGElement>(null);
 
-  // Read reactive state for rendering
+  // Reactive state for rendering
   const doc = useSketchBoardEditor((s) => s.doc);
+  const camera = useSketchBoardEditor((s) => s.camera);
+  const grid = useSketchBoardEditor((s) => s.grid);
   const activeTool = useSketchBoardEditor((s) => s.activeTool);
   const selectedIds = useSketchBoardEditor((s) => s.selectedIds);
 
-  // Store actions (stable references)
+  // Stable action refs
   const setCamera = useSketchBoardEditor((s) => s.setCamera);
   const setSelectedIds = useSketchBoardEditor((s) => s.setSelectedIds);
   const deselectAll = useSketchBoardEditor((s) => s.deselectAll);
@@ -964,11 +968,10 @@ function SketchCanvas() {
   const removeElements = useSketchBoardEditor((s) => s.removeElements);
   const setActiveTool = useSketchBoardEditor((s) => s.setActiveTool);
 
-  // ── Interaction refs (avoid stale closures) ──
+  // ── Interaction refs ──
   const isDrawingRef = useRef(false);
   const drawPointsRef = useRef<Point[]>([]);
   const shapeStartRef = useRef<Point | null>(null);
-  const shapeEndRef = useRef<Point | null>(null);
   const dragRef = useRef<{ id: string; x: number; y: number } | null>(null);
   const panRef = useRef<{
     cx: number;
@@ -978,7 +981,7 @@ function SketchCanvas() {
   } | null>(null);
   const eraserIdsRef = useRef<Set<string>>(new Set());
 
-  // ── Preview state (for rendering) ──
+  // ── Preview state ──
   const [drawPreview, setDrawPreview] = useState<Point[]>([]);
   const [previewShape, setPreviewShape] = useState<{
     type: string;
@@ -998,12 +1001,12 @@ function SketchCanvas() {
     return preset?.value ?? "#ffffff";
   }, [doc.background]);
 
-  /** Convert screen coordinates to canvas coordinates */
+  /** Screen → canvas coords */
   const screenToCanvas = useCallback(
     (clientX: number, clientY: number): Point => {
       const rect = svgRef.current?.getBoundingClientRect();
       if (!rect) return { x: clientX, y: clientY };
-      const cam = useSketchBoardEditor.getState().doc.camera;
+      const cam = useSketchBoardEditor.getState().camera;
       return {
         x: (clientX - rect.left - cam.x) / cam.zoom,
         y: (clientY - rect.top - cam.y) / cam.zoom,
@@ -1012,7 +1015,7 @@ function SketchCanvas() {
     []
   );
 
-  // ── Pointer Handlers (read store directly -> no stale closures) ──
+  // ── Pointer handlers ──
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
@@ -1020,25 +1023,29 @@ function SketchCanvas() {
       const tool = useSketchBoardEditor.getState().activeTool;
       const pt = screenToCanvas(e.clientX, e.clientY);
 
-      // Pan / Hand tool
+      // Capture pointer for reliable drag even if cursor leaves SVG
+      (e.target as Element).setPointerCapture?.(e.pointerId);
+
       if (tool === "hand") {
-        const cam = useSketchBoardEditor.getState().doc.camera;
-        panRef.current = { cx: cam.x, cy: cam.y, mx: e.clientX, my: e.clientY };
+        const cam = useSketchBoardEditor.getState().camera;
+        panRef.current = {
+          cx: cam.x,
+          cy: cam.y,
+          mx: e.clientX,
+          my: e.clientY,
+        };
         isDrawingRef.current = true;
         return;
       }
 
-      // Select tool — click on blank = deselect
       if (tool === "select") {
         deselectAll();
         return;
       }
 
-      // Eraser — start eraser sweep
       if (tool === "eraser") {
         eraserIdsRef.current = new Set();
         isDrawingRef.current = true;
-        // Check initial hit
         const elements = useSketchBoardEditor.getState().doc.elements;
         for (const el of elements) {
           if (!el.locked && hitTestPoint(el, pt.x, pt.y)) {
@@ -1049,7 +1056,6 @@ function SketchCanvas() {
         return;
       }
 
-      // Draw tool
       if (tool === "draw") {
         drawPointsRef.current = [pt];
         setDrawPreview([pt]);
@@ -1057,7 +1063,6 @@ function SketchCanvas() {
         return;
       }
 
-      // Shape / Line / Arrow tools
       if (
         [
           "rectangle",
@@ -1069,12 +1074,10 @@ function SketchCanvas() {
         ].includes(tool)
       ) {
         shapeStartRef.current = pt;
-        shapeEndRef.current = pt;
         isDrawingRef.current = true;
         return;
       }
 
-      // Text tool — single click creates text
       if (tool === "text") {
         addText(pt.x, pt.y, "Text");
         setActiveTool("select");
@@ -1082,7 +1085,6 @@ function SketchCanvas() {
         return;
       }
 
-      // Sticky note tool
       if (tool === "sticky") {
         addSticky(pt.x, pt.y, "Note");
         setActiveTool("select");
@@ -1100,7 +1102,7 @@ function SketchCanvas() {
 
       // Pan
       if (tool === "hand" && panRef.current) {
-        const cam = useSketchBoardEditor.getState().doc.camera;
+        const cam = useSketchBoardEditor.getState().camera;
         const dx = e.clientX - panRef.current.mx;
         const dy = e.clientY - panRef.current.my;
         setCamera({
@@ -1113,7 +1115,7 @@ function SketchCanvas() {
 
       const pt = screenToCanvas(e.clientX, e.clientY);
 
-      // Eraser sweep — detect elements under cursor
+      // Eraser sweep
       if (tool === "eraser") {
         const elements = useSketchBoardEditor.getState().doc.elements;
         for (const el of elements) {
@@ -1125,7 +1127,7 @@ function SketchCanvas() {
         return;
       }
 
-      // Freehand draw
+      // Draw
       if (tool === "draw") {
         drawPointsRef.current.push(pt);
         setDrawPreview([...drawPointsRef.current]);
@@ -1136,7 +1138,6 @@ function SketchCanvas() {
       if (shapeStartRef.current) {
         const sx = shapeStartRef.current.x;
         const sy = shapeStartRef.current.y;
-        shapeEndRef.current = pt;
         setPreviewShape({
           type: tool,
           x: Math.min(sx, pt.x),
@@ -1161,83 +1162,89 @@ function SketchCanvas() {
     [screenToCanvas, setCamera, moveElement]
   );
 
-  const handlePointerUp = useCallback(() => {
-    if (!isDrawingRef.current && !dragRef.current) return;
-    const tool = useSketchBoardEditor.getState().activeTool;
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      // Release pointer capture
+      (e.target as Element).releasePointerCapture?.(e.pointerId);
 
-    // Pan end
-    if (tool === "hand") {
-      panRef.current = null;
-      isDrawingRef.current = false;
-      return;
-    }
+      if (!isDrawingRef.current && !dragRef.current) return;
+      const tool = useSketchBoardEditor.getState().activeTool;
 
-    // Eraser — delete everything swept over
-    if (tool === "eraser") {
-      if (eraserIdsRef.current.size > 0) {
-        removeElements(Array.from(eraserIdsRef.current));
+      if (tool === "hand") {
+        panRef.current = null;
+        isDrawingRef.current = false;
+        return;
+      }
+
+      if (tool === "eraser") {
+        if (eraserIdsRef.current.size > 0) {
+          removeElements(Array.from(eraserIdsRef.current));
+          window.dispatchEvent(new CustomEvent("workspace:dirty"));
+        }
+        eraserIdsRef.current = new Set();
+        setEraserPreviewIds(new Set());
+        isDrawingRef.current = false;
+        return;
+      }
+
+      if (tool === "draw") {
+        if (drawPointsRef.current.length > 1) {
+          addFreehand(drawPointsRef.current);
+          window.dispatchEvent(new CustomEvent("workspace:dirty"));
+        }
+        drawPointsRef.current = [];
+        setDrawPreview([]);
+        isDrawingRef.current = false;
+        return;
+      }
+
+      // Shape / line / arrow creation
+      if (
+        shapeStartRef.current &&
+        previewShape &&
+        (previewShape.w > 3 || previewShape.h > 3)
+      ) {
+        const { x, y, w, h, startPt, endPt } = previewShape;
+        switch (tool) {
+          case "rectangle":
+            addRectangle(x, y, Math.max(w, 2), Math.max(h, 2));
+            break;
+          case "ellipse":
+            addEllipse(x, y, Math.max(w, 2), Math.max(h, 2));
+            break;
+          case "diamond":
+            addDiamond(x, y, Math.max(w, 2), Math.max(h, 2));
+            break;
+          case "triangle":
+            addTriangle(x, y, Math.max(w, 2), Math.max(h, 2));
+            break;
+          case "line":
+            addLine(startPt.x, startPt.y, endPt.x, endPt.y);
+            break;
+          case "arrow":
+            addArrow(startPt.x, startPt.y, endPt.x, endPt.y);
+            break;
+        }
         window.dispatchEvent(new CustomEvent("workspace:dirty"));
       }
-      eraserIdsRef.current = new Set();
-      setEraserPreviewIds(new Set());
+
+      shapeStartRef.current = null;
+      setPreviewShape(null);
+      dragRef.current = null;
       isDrawingRef.current = false;
-      return;
-    }
-
-    // Freehand draw end
-    if (tool === "draw") {
-      if (drawPointsRef.current.length > 1) {
-        addFreehand(drawPointsRef.current);
-        window.dispatchEvent(new CustomEvent("workspace:dirty"));
-      }
-      drawPointsRef.current = [];
-      setDrawPreview([]);
-      isDrawingRef.current = false;
-      return;
-    }
-
-    // Shape creation
-    if (shapeStartRef.current && previewShape && (previewShape.w > 3 || previewShape.h > 3)) {
-      const { x, y, w, h, startPt, endPt } = previewShape;
-      switch (tool) {
-        case "rectangle":
-          addRectangle(x, y, w, h);
-          break;
-        case "ellipse":
-          addEllipse(x, y, w, h);
-          break;
-        case "diamond":
-          addDiamond(x, y, w, h);
-          break;
-        case "triangle":
-          addTriangle(x, y, w, h);
-          break;
-        case "line":
-          addLine(startPt.x, startPt.y, endPt.x, endPt.y);
-          break;
-        case "arrow":
-          addArrow(startPt.x, startPt.y, endPt.x, endPt.y);
-          break;
-      }
-      window.dispatchEvent(new CustomEvent("workspace:dirty"));
-    }
-
-    shapeStartRef.current = null;
-    shapeEndRef.current = null;
-    setPreviewShape(null);
-    dragRef.current = null;
-    isDrawingRef.current = false;
-  }, [
-    previewShape,
-    removeElements,
-    addFreehand,
-    addRectangle,
-    addEllipse,
-    addDiamond,
-    addTriangle,
-    addLine,
-    addArrow,
-  ]);
+    },
+    [
+      previewShape,
+      removeElements,
+      addFreehand,
+      addRectangle,
+      addEllipse,
+      addDiamond,
+      addTriangle,
+      addLine,
+      addArrow,
+    ]
+  );
 
   /** Element pointer-down: select + drag / eraser click */
   const handleElementPointerDown = useCallback(
@@ -1245,7 +1252,9 @@ function SketchCanvas() {
       e.stopPropagation();
       const tool = useSketchBoardEditor.getState().activeTool;
 
-      // Eraser click-on-element → instant delete
+      // Capture pointer on the SVG for reliable tracking
+      svgRef.current?.setPointerCapture?.(e.pointerId);
+
       if (tool === "eraser") {
         removeElements([id]);
         window.dispatchEvent(new CustomEvent("workspace:dirty"));
@@ -1256,7 +1265,6 @@ function SketchCanvas() {
 
       const currentSelected = useSketchBoardEditor.getState().selectedIds;
       if (e.shiftKey) {
-        // Multi-select toggle
         setSelectedIds(
           currentSelected.includes(id)
             ? currentSelected.filter((s) => s !== id)
@@ -1266,7 +1274,6 @@ function SketchCanvas() {
         setSelectedIds([id]);
       }
 
-      // Start drag
       const pt = screenToCanvas(e.clientX, e.clientY);
       dragRef.current = { id, x: pt.x, y: pt.y };
       isDrawingRef.current = true;
@@ -1278,7 +1285,7 @@ function SketchCanvas() {
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
       e.preventDefault();
-      const cam = useSketchBoardEditor.getState().doc.camera;
+      const cam = useSketchBoardEditor.getState().camera;
       const factor = e.deltaY > 0 ? 0.9 : 1.1;
       const newZoom = Math.max(0.1, Math.min(8, cam.zoom * factor));
       const rect = svgRef.current?.getBoundingClientRect();
@@ -1297,13 +1304,50 @@ function SketchCanvas() {
     [setCamera]
   );
 
-  // Sort elements by z-index for rendering
+  // ── Middle-mouse / space+drag pan ──
+  const handleAuxClick = useCallback(
+    (e: React.PointerEvent) => {
+      if (e.button === 1) {
+        // Middle mouse
+        e.preventDefault();
+        const cam = useSketchBoardEditor.getState().camera;
+        panRef.current = {
+          cx: cam.x,
+          cy: cam.y,
+          mx: e.clientX,
+          my: e.clientY,
+        };
+        isDrawingRef.current = true;
+        (e.target as Element).setPointerCapture?.(e.pointerId);
+      }
+    },
+    []
+  );
+
   const sortedElements = useMemo(
     () => [...doc.elements].sort((a, b) => a.zIndex - b.zIndex),
     [doc.elements]
   );
 
-  const gridSize = doc.grid.size * doc.camera.zoom;
+  const gridSize = grid.size * camera.zoom;
+
+  // Compute cursor based on active tool
+  const cursor = useMemo(() => {
+    switch (activeTool) {
+      case "hand":
+        return "grab";
+      case "draw":
+        return "crosshair";
+      case "eraser":
+        return "crosshair";
+      case "text":
+        return "text";
+      case "select":
+        return "default";
+      default:
+        return "crosshair";
+    }
+  }, [activeTool]);
 
   return (
     <div
@@ -1313,29 +1357,21 @@ function SketchCanvas() {
       <svg
         ref={svgRef}
         className="w-full h-full"
-        onPointerDown={handlePointerDown}
+        onPointerDown={(e) => {
+          if (e.button === 1) {
+            handleAuxClick(e);
+          } else {
+            handlePointerDown(e);
+          }
+        }}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
+        onPointerLeave={(e) => handlePointerUp(e)}
         onWheel={handleWheel}
-        style={{
-          cursor:
-            activeTool === "hand"
-              ? isDrawingRef.current
-                ? "grabbing"
-                : "grab"
-              : activeTool === "draw" || activeTool === "eraser"
-                ? "crosshair"
-                : activeTool === "text"
-                  ? "text"
-                  : activeTool === "select"
-                    ? "default"
-                    : "crosshair",
-          touchAction: "none",
-        }}
+        style={{ cursor, touchAction: "none" }}
       >
         {/* Grid dots */}
-        {doc.grid.enabled && gridSize > 4 && (
+        {grid.enabled && gridSize > 4 && (
           <>
             <defs>
               <pattern
@@ -1343,8 +1379,8 @@ function SketchCanvas() {
                 width={gridSize}
                 height={gridSize}
                 patternUnits="userSpaceOnUse"
-                x={doc.camera.x % gridSize}
-                y={doc.camera.y % gridSize}
+                x={camera.x % gridSize}
+                y={camera.y % gridSize}
               >
                 <circle
                   cx={gridSize / 2}
@@ -1361,7 +1397,7 @@ function SketchCanvas() {
 
         {/* Canvas transform group */}
         <g
-          transform={`translate(${doc.camera.x}, ${doc.camera.y}) scale(${doc.camera.zoom})`}
+          transform={`translate(${camera.x}, ${camera.y}) scale(${camera.zoom})`}
         >
           {/* Rendered elements */}
           {sortedElements.map((el) => (
@@ -1444,16 +1480,32 @@ function SketchCanvas() {
               )}
               {(previewShape.type === "line" ||
                 previewShape.type === "arrow") && (
-                <line
-                  x1={previewShape.startPt.x}
-                  y1={previewShape.startPt.y}
-                  x2={previewShape.endPt.x}
-                  y2={previewShape.endPt.y}
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  strokeDasharray="6 3"
-                  pointerEvents="none"
-                />
+                <>
+                  <line
+                    x1={previewShape.startPt.x}
+                    y1={previewShape.startPt.y}
+                    x2={previewShape.endPt.x}
+                    y2={previewShape.endPt.y}
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    strokeDasharray="6 3"
+                    pointerEvents="none"
+                  />
+                  {previewShape.type === "arrow" && (() => {
+                    const [p1, p2] = arrowheadPoints(
+                      previewShape.startPt,
+                      previewShape.endPt,
+                      14
+                    );
+                    return (
+                      <polygon
+                        points={`${previewShape.endPt.x},${previewShape.endPt.y} ${p1.x},${p1.y} ${p2.x},${p2.y}`}
+                        fill="#3b82f6"
+                        pointerEvents="none"
+                      />
+                    );
+                  })()}
+                </>
               )}
             </>
           )}
@@ -1462,14 +1514,14 @@ function SketchCanvas() {
 
       {/* Zoom indicator */}
       <div className="absolute bottom-3 right-3 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm px-2 py-1 rounded text-xs text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 select-none">
-        {Math.round(doc.camera.zoom * 100)}%
+        {Math.round(camera.zoom * 100)}%
       </div>
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Toolbar (tool picker in top bar)
+// Toolbar
 // ═══════════════════════════════════════════════════════════════
 
 function Toolbar() {
@@ -1497,13 +1549,15 @@ function Toolbar() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Top Bar (title, toolbar, actions, export)
+// Top Bar
 // ═══════════════════════════════════════════════════════════════
 
 function TopBar() {
   const title = useSketchBoardEditor((s) => s.doc.title);
   const setTitle = useSketchBoardEditor((s) => s.setTitle);
   const doc = useSketchBoardEditor((s) => s.doc);
+  const camera = useSketchBoardEditor((s) => s.camera);
+  const grid = useSketchBoardEditor((s) => s.grid);
   const selectedIds = useSketchBoardEditor((s) => s.selectedIds);
   const removeElements = useSketchBoardEditor((s) => s.removeElements);
   const zoomIn = useSketchBoardEditor((s) => s.zoomIn);
@@ -1553,7 +1607,6 @@ function TopBar() {
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1">
-        {/* Undo / Redo */}
         <button
           onClick={handleUndo}
           className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -1571,7 +1624,6 @@ function TopBar() {
 
         <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1" />
 
-        {/* Zoom */}
         <button
           onClick={zoomOut}
           className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -1584,7 +1636,7 @@ function TopBar() {
           className="px-1.5 py-0.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
           title="Reset zoom"
         >
-          {Math.round(doc.camera.zoom * 100)}%
+          {Math.round(camera.zoom * 100)}%
         </button>
         <button
           onClick={zoomIn}
@@ -1596,11 +1648,10 @@ function TopBar() {
 
         <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1" />
 
-        {/* Grid */}
         <button
           onClick={toggleGrid}
           className={`px-2 py-1 text-xs rounded-lg ${
-            doc.grid.enabled
+            grid.enabled
               ? "bg-primary-500/20 text-primary-600 dark:text-primary-400"
               : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
           }`}
@@ -1609,7 +1660,6 @@ function TopBar() {
           Grid
         </button>
 
-        {/* Fit */}
         <button
           onClick={fitToContent}
           className="px-2 py-1 text-xs rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -1618,7 +1668,7 @@ function TopBar() {
           Fit
         </button>
 
-        {/* Background */}
+        {/* Background picker */}
         <div className="relative">
           <button
             onClick={() => setShowBg(!showBg)}
@@ -1806,9 +1856,29 @@ export default function SketchBoardWorkspace() {
         state.setActiveTool(toolMap[e.key]);
         return;
       }
+
+      // Space held = hand tool (temporary)
+      if (e.key === " " && !e.repeat) {
+        e.preventDefault();
+        state.setActiveTool("hand");
+      }
     };
+
+    const keyUp = (e: KeyboardEvent) => {
+      if (e.key === " ") {
+        const state = useSketchBoardEditor.getState();
+        if (state.activeTool === "hand") {
+          state.setActiveTool("select");
+        }
+      }
+    };
+
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener("keyup", keyUp);
+    return () => {
+      window.removeEventListener("keydown", handler);
+      window.removeEventListener("keyup", keyUp);
+    };
   }, []);
 
   // ── Fire initial workspace progress if board has content ──

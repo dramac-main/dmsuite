@@ -1,6 +1,7 @@
 /* ─────────────────────────────────────────────────────────────
-   Sketch Board — Zustand Store
-   Infinite canvas whiteboard state management
+   Sketch Board — Zustand Store  (V3)
+   Camera & grid are top-level view state (NOT inside doc).
+   Only doc mutations are tracked by undo/redo (temporal).
    ───────────────────────────────────────────────────────────── */
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -55,8 +56,6 @@ const DEFAULT_DOC: SketchBoardDocument = {
   title: "Untitled Board",
   background: "white",
   elements: [],
-  camera: DEFAULT_CAMERA,
-  grid: DEFAULT_GRID,
 };
 
 // ── Sticky note color palette ─────────────────────────────────
@@ -115,8 +114,12 @@ function genId(): string {
 // ── Store Interface ───────────────────────────────────────────
 
 interface SketchBoardState {
-  /** The full document */
+  /** The document (only this is tracked by undo/redo) */
   doc: SketchBoardDocument;
+  /** Camera / viewport — NOT tracked by undo */
+  camera: Camera;
+  /** Grid config — NOT tracked by undo */
+  grid: GridConfig;
   /** Currently active tool */
   activeTool: SketchTool;
   /** Current style for new elements */
@@ -156,14 +159,14 @@ interface SketchBoardState {
   bringForward: (id: string) => void;
   sendBackward: (id: string) => void;
 
-  // ── Camera ──
+  // ── Camera (NOT undoable) ──
   setCamera: (camera: Camera) => void;
   zoomIn: () => void;
   zoomOut: () => void;
   resetZoom: () => void;
   fitToContent: () => void;
 
-  // ── Grid ──
+  // ── Grid (NOT undoable) ──
   setGrid: (grid: Partial<GridConfig>) => void;
   toggleGrid: () => void;
   toggleSnap: () => void;
@@ -196,6 +199,8 @@ export const useSketchBoardEditor = create<SketchBoardState>()(
     persist(
       immer((set, get) => ({
         doc: { ...DEFAULT_DOC },
+        camera: { ...DEFAULT_CAMERA },
+        grid: { ...DEFAULT_GRID },
         activeTool: "select" as SketchTool,
         currentStyle: { ...DEFAULT_STYLE },
         selectedIds: [] as string[],
@@ -206,6 +211,8 @@ export const useSketchBoardEditor = create<SketchBoardState>()(
         resetDoc: () =>
           set({
             doc: { ...DEFAULT_DOC, elements: [] },
+            camera: { ...DEFAULT_CAMERA },
+            grid: { ...DEFAULT_GRID },
             selectedIds: [],
             activeTool: "select",
           }),
@@ -291,28 +298,22 @@ export const useSketchBoardEditor = create<SketchBoardState>()(
             if (el) el.zIndex -= 1;
           }),
 
-        // ── Camera ──
-        setCamera: (camera) =>
-          set((s) => {
-            s.doc.camera = camera;
-          }),
+        // ── Camera (top-level — NOT tracked by undo) ──
+        setCamera: (camera) => set({ camera }),
         zoomIn: () =>
           set((s) => {
-            s.doc.camera.zoom = Math.min(s.doc.camera.zoom * 1.25, 8);
+            s.camera.zoom = Math.min(s.camera.zoom * 1.25, 8);
           }),
         zoomOut: () =>
           set((s) => {
-            s.doc.camera.zoom = Math.max(s.doc.camera.zoom / 1.25, 0.1);
+            s.camera.zoom = Math.max(s.camera.zoom / 1.25, 0.1);
           }),
-        resetZoom: () =>
-          set((s) => {
-            s.doc.camera = { x: 0, y: 0, zoom: 1 };
-          }),
+        resetZoom: () => set({ camera: { x: 0, y: 0, zoom: 1 } }),
         fitToContent: () =>
           set((s) => {
             const elems = s.doc.elements;
             if (elems.length === 0) {
-              s.doc.camera = { x: 0, y: 0, zoom: 1 };
+              s.camera = { x: 0, y: 0, zoom: 1 };
               return;
             }
             let minX = Infinity,
@@ -328,21 +329,21 @@ export const useSketchBoardEditor = create<SketchBoardState>()(
             }
             const cx = (minX + maxX) / 2;
             const cy = (minY + maxY) / 2;
-            s.doc.camera = { x: -cx + 500, y: -cy + 350, zoom: 1 };
+            s.camera = { x: -cx + 500, y: -cy + 350, zoom: 1 };
           }),
 
-        // ── Grid ──
+        // ── Grid (top-level — NOT tracked by undo) ──
         setGrid: (grid) =>
           set((s) => {
-            Object.assign(s.doc.grid, grid);
+            Object.assign(s.grid, grid);
           }),
         toggleGrid: () =>
           set((s) => {
-            s.doc.grid.enabled = !s.doc.grid.enabled;
+            s.grid.enabled = !s.grid.enabled;
           }),
         toggleSnap: () =>
           set((s) => {
-            s.doc.grid.snap = !s.doc.grid.snap;
+            s.grid.snap = !s.grid.snap;
           }),
 
         // ── Clipboard ──
@@ -637,12 +638,41 @@ export const useSketchBoardEditor = create<SketchBoardState>()(
         updateText: (id, text) =>
           set((s) => {
             const el = s.doc.elements.find((e: SketchElement) => e.id === id);
-            if (el && ("text" in el)) {
+            if (el && "text" in el) {
               (el as TextElement | StickyElement).text = text;
             }
           }),
       })),
-      { name: "dmsuite-sketch-board" }
-    )
+      {
+        name: "dmsuite-sketch-board",
+        version: 2,
+        migrate: (persisted: unknown, version: number) => {
+          const s = persisted as Record<string, unknown>;
+          if (version < 2) {
+            // V1 had camera & grid nested inside doc — move to top-level
+            const doc = s.doc as Record<string, unknown> | undefined;
+            if (doc?.camera) {
+              s.camera = doc.camera;
+              delete doc.camera;
+            } else {
+              s.camera = { ...DEFAULT_CAMERA };
+            }
+            if (doc?.grid) {
+              s.grid = doc.grid;
+              delete doc.grid;
+            } else {
+              s.grid = { ...DEFAULT_GRID };
+            }
+          }
+          return s as unknown as SketchBoardState;
+        },
+      }
+    ),
+    {
+      // ── Temporal: only track doc mutations for undo/redo ──
+      // Camera, grid, activeTool, selectedIds, currentStyle are EXCLUDED.
+      partialize: (state) => ({ doc: state.doc }),
+      limit: 100,
+    }
   )
 );
