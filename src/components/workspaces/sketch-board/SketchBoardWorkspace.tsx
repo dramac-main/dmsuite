@@ -323,7 +323,7 @@ const RenderElement = React.memo(function RenderElement({
   onPointerDown: (e: React.PointerEvent, id: string) => void;
   onDoubleClick: (e: React.MouseEvent, id: string) => void;
 }) {
-  const handlePD = useCallback((e: React.PointerEvent) => { e.stopPropagation(); onPointerDown(e, el.id); }, [onPointerDown, el.id]);
+  const handlePD = useCallback((e: React.PointerEvent) => { onPointerDown(e, el.id); }, [onPointerDown, el.id]);
   const handleDC = useCallback((e: React.MouseEvent) => { e.stopPropagation(); onDoubleClick(e, el.id); }, [onDoubleClick, el.id]);
 
   const sd = dashVal(el.style.dashStyle);
@@ -887,8 +887,13 @@ function SketchCanvas() {
   // ─── Element pointer-down (select / drag / eraser click) ───
 
   const onElPD = useCallback((e: React.PointerEvent, id: string) => {
-    e.stopPropagation();
     const tool = useSketchBoardEditor.getState().activeTool;
+
+    // Only intercept for select & eraser — all other tools should pass
+    // through to the canvas so users can draw/create on top of elements
+    if (tool !== "select" && tool !== "eraser") return;
+
+    e.stopPropagation();
     (e.target as Element).setPointerCapture?.(e.pointerId);
 
     if (tool === "eraser") {
@@ -896,7 +901,6 @@ function SketchCanvas() {
       fireEvent("workspace:dirty");
       return;
     }
-    if (tool !== "select") return;
 
     // Selection logic (Shift for toggle)
     const current = useSketchBoardEditor.getState().selectedIds;
