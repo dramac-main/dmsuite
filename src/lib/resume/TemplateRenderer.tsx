@@ -57,8 +57,9 @@ function SectionTitle({ title, color, style: divStyle, headingSize }: {
     dotted: `2px dotted ${color}`,
     none: "none",
   };
+  const isCompact = divStyle.compact;
   return (
-    <div style={{ borderBottom: borderMap[divStyle.sectionDivider], paddingBottom: 6, marginBottom: 10 }}>
+    <div style={{ borderBottom: borderMap[divStyle.sectionDivider], paddingBottom: isCompact ? 3 : 6, marginBottom: isCompact ? 6 : 10 }}>
       <h3 style={{
         color,
         margin: 0,
@@ -202,12 +203,24 @@ function ContactItems({ entries, size, color, iconColor, hideIcons, centered }: 
 function renderExperienceSection(data: ResumeData, color: string, textColor: string, cfg: TemplateConfig, typo: ResumeData["metadata"]["typography"]) {
   const section = data.sections?.experience;
   if (!section || section.hidden || section.items.length === 0) return null;
+  const isCompact = cfg.style.compact;
+  const showTimeline = cfg.style.hasTimeline;
   return (
     <div className="resume-section">
       <SectionTitle title={section.title || "Experience"} color={color} style={cfg.style} headingSize={typo.heading.fontSize} />
-      <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.columns}, 1fr)`, gap: "0.6em" }}>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.columns}, 1fr)`, gap: isCompact ? "0.35em" : "0.6em" }}>
         {section.items.filter((i) => !i.hidden).map((item, idx) => (
-          <div key={item.id ?? idx} style={{ marginBottom: "0.5em" }}>
+          <div key={item.id ?? idx} style={{
+            marginBottom: isCompact ? "0.25em" : "0.5em",
+            ...(showTimeline ? { paddingLeft: 16, borderLeft: `2px solid ${withAlpha(color, 0.3)}`, position: "relative" as const } : {}),
+          }}>
+            {showTimeline && (
+              <span style={{
+                position: "absolute", left: -5, top: 4,
+                width: 8, height: 8, borderRadius: "50%",
+                backgroundColor: color, display: "block",
+              }} />
+            )}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 4 }}>
               <strong style={{ fontSize: pt(typo.heading.fontSize * 0.9) }}>{item.position}</strong>
               {cfg.style.dateStyle === "right" && <span style={{ fontSize: pt(typo.body.fontSize * 0.88), color: muted(textColor, "softer") }}>{item.period}</span>}
@@ -241,12 +254,24 @@ function renderExperienceSection(data: ResumeData, color: string, textColor: str
 function renderEducationSection(data: ResumeData, color: string, textColor: string, cfg: TemplateConfig, typo: ResumeData["metadata"]["typography"]) {
   const section = data.sections?.education;
   if (!section || section.hidden || section.items.length === 0) return null;
+  const isCompact = cfg.style.compact;
+  const showTimeline = cfg.style.hasTimeline;
   return (
     <div className="resume-section">
       <SectionTitle title={section.title || "Education"} color={color} style={cfg.style} headingSize={typo.heading.fontSize} />
-      <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.columns}, 1fr)`, gap: "0.5em" }}>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.columns}, 1fr)`, gap: isCompact ? "0.3em" : "0.5em" }}>
         {section.items.filter((i) => !i.hidden).map((item, idx) => (
-          <div key={item.id ?? idx} style={{ marginBottom: "0.4em" }}>
+          <div key={item.id ?? idx} style={{
+            marginBottom: isCompact ? "0.2em" : "0.4em",
+            ...(showTimeline ? { paddingLeft: 16, borderLeft: `2px solid ${withAlpha(color, 0.3)}`, position: "relative" as const } : {}),
+          }}>
+            {showTimeline && (
+              <span style={{
+                position: "absolute", left: -5, top: 4,
+                width: 8, height: 8, borderRadius: "50%",
+                backgroundColor: color, display: "block",
+              }} />
+            )}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 4 }}>
               <strong style={{ fontSize: pt(typo.heading.fontSize * 0.9) }}>{item.degree}{item.area ? ` in ${item.area}` : ""}</strong>
               <span style={{ fontSize: pt(typo.body.fontSize * 0.88), color: muted(textColor, "softer") }}>{item.period}</span>
@@ -273,6 +298,7 @@ function renderSkillsSection(data: ResumeData, color: string, textColor: string,
     <div className="resume-section">
       <SectionTitle title={section.title || "Skills"} color={color} style={cfg.style} headingSize={typo.heading.fontSize} />
       {skillStyle === "chips" ? (
+        /* Chips — compact inline badges, modern tag-based look */
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {section.items.filter((i) => !i.hidden).map((item, idx) => (
             <span key={item.id ?? idx} style={{
@@ -289,6 +315,7 @@ function renderSkillsSection(data: ResumeData, color: string, textColor: string,
           ))}
         </div>
       ) : skillStyle === "grouped" ? (
+        /* Grouped — skill name with keywords listed below, information-dense */
         <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.columns}, 1fr)`, gap: "0.5em" }}>
           {section.items.filter((i) => !i.hidden).map((item, idx) => (
             <div key={item.id ?? idx}>
@@ -297,12 +324,36 @@ function renderSkillsSection(data: ResumeData, color: string, textColor: string,
             </div>
           ))}
         </div>
-      ) : (
+      ) : skillStyle === "bars" ? (
+        /* Bars — progress bar indicators, systematic/measured feel */
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.columns}, 1fr)`, gap: "0.5em 1.2em" }}>
+          {section.items.filter((i) => !i.hidden).map((item, idx) => (
+            <div key={item.id ?? idx}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3, gap: 8 }}>
+                <span style={{ fontSize: pt(typo.body.fontSize * 0.92) }}>{item.name}</span>
+                {item.proficiency && <span style={{ fontSize: pt(typo.body.fontSize * 0.8), color: muted(textColor, "softer") }}>{item.proficiency}</span>}
+              </div>
+              {item.level > 0 && <LevelIndicator level={item.level} type="progress-bar" color={color} />}
+            </div>
+          ))}
+        </div>
+      ) : skillStyle === "dots" ? (
+        /* Dots — circle dot indicators, classic measured representation */
         <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.columns}, 1fr)`, gap: "0.4em 1em" }}>
           {section.items.filter((i) => !i.hidden).map((item, idx) => (
             <div key={item.id ?? idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: pt(typo.body.fontSize * 0.92) }}>{item.name}</span>
-              {item.level > 0 && <LevelIndicator level={item.level} type={levelType} color={color} />}
+              {item.level > 0 && <LevelIndicator level={item.level} type="circle" color={color} />}
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* Plain — clean text-only list, no visual indicators */
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${section.columns}, 1fr)`, gap: "0.3em 1em" }}>
+          {section.items.filter((i) => !i.hidden).map((item, idx) => (
+            <div key={item.id ?? idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: pt(typo.body.fontSize * 0.92) }}>{item.name}</span>
+              {item.proficiency && <span style={{ fontSize: pt(typo.body.fontSize * 0.85), color: muted(textColor, "softer") }}>{item.proficiency}</span>}
             </div>
           ))}
         </div>
