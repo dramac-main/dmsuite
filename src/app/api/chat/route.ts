@@ -104,13 +104,41 @@ function resolveProvider(requested?: string): Provider {
 
 /* ── Anthropic Claude streaming ──────────────────────────── */
 
-async function streamClaude(messages: { role: string; content: string }[], userId: string, sysPrompt: string = SYSTEM_PROMPT) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function streamClaude(messages: { role: string; content: string | any[] }[], userId: string, sysPrompt: string = SYSTEM_PROMPT) {
   if (!ANTHROPIC_API_KEY) {
     return new Response(
       "ANTHROPIC_API_KEY is not configured. Add it to your .env.local file.",
       { status: 500 }
     );
   }
+
+  // Convert messages to Anthropic format, handling multimodal content
+  const anthropicMessages = messages.map((m) => {
+    const role = m.role === "user" ? "user" : "assistant";
+    // If content is a string, pass directly
+    if (typeof m.content === "string") {
+      return { role, content: m.content };
+    }
+    // If content is an array (multimodal), convert image_url parts to Anthropic format
+    const parts = (m.content as Array<Record<string, unknown>>).map((part) => {
+      if (part.type === "image_url") {
+        const url = (part.image_url as { url: string })?.url ?? "";
+        // Extract base64 data and media type from data URL
+        const match = url.match(/^data:(image\/[^;]+);base64,(.+)$/);
+        if (match) {
+          return {
+            type: "image",
+            source: { type: "base64", media_type: match[1], data: match[2] },
+          };
+        }
+        // Fallback: URL-based image (not base64)
+        return { type: "image", source: { type: "url", url } };
+      }
+      return part;
+    });
+    return { role, content: parts };
+  });
 
   const anthropicResponse = await fetch(
     "https://api.anthropic.com/v1/messages",
@@ -125,10 +153,7 @@ async function streamClaude(messages: { role: string; content: string }[], userI
         model: ANTHROPIC_MODEL,
         max_tokens: 4096,
         system: sysPrompt,
-        messages: messages.map((m: { role: string; content: string }) => ({
-          role: m.role === "user" ? "user" : "assistant",
-          content: m.content,
-        })),
+        messages: anthropicMessages,
         stream: true,
       }),
     }
@@ -218,7 +243,8 @@ async function streamClaude(messages: { role: string; content: string }[], userI
 
 /* ── OpenAI streaming ────────────────────────────────────── */
 
-async function streamOpenAI(messages: { role: string; content: string }[], sysPrompt: string = SYSTEM_PROMPT) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function streamOpenAI(messages: { role: string; content: string | any[] }[], sysPrompt: string = SYSTEM_PROMPT) {
   if (!OPENAI_API_KEY) {
     return new Response(
       "OPENAI_API_KEY is not configured. Add it to your .env.local file.",
@@ -239,7 +265,7 @@ async function streamOpenAI(messages: { role: string; content: string }[], sysPr
         max_tokens: 4096,
         messages: [
           { role: "system", content: sysPrompt },
-          ...messages.map((m: { role: string; content: string }) => ({
+          ...messages.map((m) => ({
             role: m.role === "user" ? "user" : ("assistant" as const),
             content: m.content,
           })),

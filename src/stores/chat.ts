@@ -5,6 +5,14 @@ import { immer } from "zustand/middleware/immer";
 // ─── Types ──────────────────────────────────────────────────
 export type ChatProvider = "claude" | "openai";
 
+export interface FileAttachment {
+  id: string;
+  name: string;
+  type: string; // MIME type
+  size: number;
+  url: string; // data: URL (base64) or object URL
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
@@ -18,6 +26,8 @@ export interface ChatMessage {
   bookmarked?: boolean;
   /** Token estimate for this message */
   tokenEstimate?: number;
+  /** File attachments (images, documents) */
+  attachments?: FileAttachment[];
 }
 
 export interface ChatConversation {
