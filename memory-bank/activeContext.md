@@ -1,11 +1,34 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** AI Chat V2 — LibreChat-Faithful UI Overhaul — COMPLETE
+**Phase:** Resume Builder — Template Modernization & Renderer Enhancements — COMPLETE
 
-### Session: AI Chat V2 — Complete UI Rewrite
+### Session: Resume Template Redesign + Renderer Gap Fixes
 
-User rejected the V1 AI Chat UI as "looking like the same DMSuite layouts" and demanded a faithful LibreChat clone with every feature working. Complete ground-up UI rewrite delivered.
+Completely redesigned all 13 resume templates from generic to modern/minimalistic. Fixed 3 unimplemented renderer features (compact mode, timeline markers, 5 distinct skillStyle branches).
+
+#### What Changed
+- **templates.ts** (complete rewrite, 280→412 lines): All 13 template configs redesigned with refined color palettes, modern font pairings, distinct design philosophies, and extensive inline docs
+- **TemplateRenderer.tsx** (700→802 lines): Implemented compact mode (tight spacing), hasTimeline (left-border + dot markers), and 5 distinct skillStyle branches (bars→progress-bar, dots→circles, plain→text-only, chips→badges, grouped→name+keywords)
+
+#### Template Design Summary
+- **Onyx** (default): violet-700, banner+sidebarBg, IBM Plex Serif — executive
+- **Azurill**: slate-600, centered+no dividers, Inter — Nordic minimal
+- **Bronzor**: stone-800, centered+thick, Playfair/Source — editorial serif
+- **Chikorita**: teal-600, classic+none, Poppins — fresh geometric
+- **Ditto**: neutral-900, classic+line, IBM Plex Sans — Swiss precision
+- **Gengar**: indigo-700, sidebar-header+sidebarBg, DM Serif — bold studio
+- **Glalie**: slate-700, classic+dotted+compact, Raleway — corporate frost
+- **Kakuna**: amber-700, minimal+compact, sidebarWidth=0, Crimson Pro — single column
+- **Lapras**: blue-700, classic+chips, Inter — ocean professional
+- **Leafish**: green-700, classic+timeline, Cormorant — organic elegance
+- **Pikachu**: amber-600, split+double+chips, Montserrat — dynamic split
+- **Rhyhorn**: zinc-600, sidebar-header+thick+sidebarBg, Space Grotesk — structured matrix
+- **Ditgar**: purple-700, sidebar-header+sidebarBg, Poppins — midnight canvas
+
+#### Commit: 7b55cac — Pushed to main
+
+### Previous Focus: AI Chat V2 — LibreChat-Faithful UI Overhaul — COMPLETE
 
 #### What Changed
 - **AIChatWorkspace.tsx**: Complete rewrite (1055 insertions, 787 deletions). Removed old DMSuite card-in-card patterns.
