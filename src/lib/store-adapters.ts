@@ -648,6 +648,30 @@ function getSketchBoardAdapter(): StoreAdapter {
 }
 
 // ---------------------------------------------------------------------------
+// AI Flow Builder (visual workflow canvas)
+// ---------------------------------------------------------------------------
+
+function getAIFlowBuilderAdapter(): StoreAdapter {
+  const { useAIFlowBuilderEditor } = require("@/stores/ai-flow-builder-editor");
+  return {
+    getSnapshot: () => {
+      const { form } = useAIFlowBuilderEditor.getState();
+      return { form };
+    },
+    restoreSnapshot: (data: Record<string, unknown>) => {
+      if (data.form) {
+        useAIFlowBuilderEditor.getState().setForm(data.form as never);
+      }
+    },
+    resetStore: () => {
+      useAIFlowBuilderEditor.getState().resetForm();
+      nukePersistStorage("dmsuite-ai-flow-builder");
+    },
+    subscribe: (cb: () => void) => useAIFlowBuilderEditor.subscribe(cb),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Generic adapter for tools that don't have dedicated stores
 // ---------------------------------------------------------------------------
 
@@ -752,6 +776,8 @@ const ADAPTER_FACTORIES: Record<string, () => StoreAdapter> = {
   "invoice-tracker": getInvoiceAccountingAdapter,
   // Sketch Board
   "sketch-board": getSketchBoardAdapter,
+  // AI Flow Builder
+  "ai-flow-builder": getAIFlowBuilderAdapter,
 };
 
 /**

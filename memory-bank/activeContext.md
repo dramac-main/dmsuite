@@ -1,42 +1,53 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Sketch Board (Infinite Canvas Whiteboard) — COMPLETE
+**Phase:** AI Flow Builder (Visual AI Workflow Canvas) — COMPLETE
 
-### Session: Sketch Board Full Build
+### Session: AI Flow Builder Full Build
 
-Built tldraw-inspired infinite canvas whiteboard tool named "Sketch Board" (id: `sketch-board`).
+Built Langflow-inspired visual AI workflow builder named "AI Flow Builder" (id: `ai-flow-builder`).
 
 #### Architecture
-- **Custom SVG rendering engine** — NOT Fabric.js. Uses `<svg>` with `<g transform={translate/scale}>` for infinite canvas pan/zoom via camera transform.
-- **Zustand + Immer + persist + temporal** store (full undo/redo) — key: `"dmsuite-sketch-board"`
-- **13 drawing tools**: select, hand (pan), pen, eraser, rectangle, ellipse, diamond, triangle, line, arrow, text, sticky, image
-- **Freehand drawing** with quadratic bezier curve smoothing
-- **Sticky notes** with 6 color options
-- **Style panel**: stroke color, fill color/style, stroke width, dash style, opacity, font size/family
-- **Grid with snap**, background presets, keyboard shortcuts (V/H/P/E/R/O/D/T/L/A/S)
-- **Export**: PNG and SVG
+- **@xyflow/react v12** — ReactFlow visual node canvas (already installed in project)
+- **22 node types** across 8 categories (inputs/outputs/models/prompts/processing/memory/agents/tools)
+- **7 port data types** (message/data/model/memory/tool/embeddings/any) with color-coded handles and type-safe connection validation
+- **Topological sort execution engine** — traverses nodes in dependency order, calls `/api/chat/ai-flow-builder` for LLM nodes
+- **Zustand + Immer + persist + temporal** store (full undo/redo) — key: `"dmsuite-ai-flow-builder"`
+- **6 pre-built templates**: Basic Chatbot, RAG Pipeline, Agent with Tools, Content Generator, Translation Pipeline, Multi-Model Comparison
+- **3-panel responsive layout**: NodePalette (left), FlowCanvas (center), NodeInspector/PlaygroundChat (right) with mobile bottom nav
+- **Keyboard shortcuts**: Ctrl+Z/Y (undo/redo), Ctrl+S (save)
+- **Export/Import**: JSON flow files
 
-#### Files Created
-- `src/types/sketch-board.ts` — Full type system (SketchTool, 8 element types, styles, camera, grid)
-- `src/stores/sketch-board-editor.ts` — 40+ actions (element CRUD, camera, grid, z-order, selection, clipboard)
-- `src/components/workspaces/sketch-board/SketchBoardWorkspace.tsx` — Full workspace (TopBar, SketchCanvas, StylePanel, RenderElement)
-- `src/lib/chiko/manifests/sketch-board.ts` — 40+ Chiko actions across 10 categories, including composite actions (createFlowchart, createMindMap, createStickyWall)
+#### Files Created (New)
+- `src/lib/ai-flow-builder/node-registry.ts` — 22 node definitions with typed ports and parameters
+- `src/lib/ai-flow-builder/engine.ts` — Topological sort execution engine
+- `src/data/ai-flow-builder-templates.ts` — 6 starter flow templates
+- `src/stores/ai-flow-builder-editor.ts` — Full Zustand store (40+ actions)
+- `src/components/workspaces/ai-flow-builder/FlowNode.tsx` — Custom ReactFlow node component
+- `src/components/workspaces/ai-flow-builder/NodePalette.tsx` — Draggable sidebar with search/category filter
+- `src/components/workspaces/ai-flow-builder/NodeInspector.tsx` — Right panel node parameter editor
+- `src/components/workspaces/ai-flow-builder/PlaygroundChat.tsx` — Test chat panel with flow execution
+- `src/components/workspaces/ai-flow-builder/FlowCanvas.tsx` — Main ReactFlow canvas (drag-drop, MiniMap, Controls)
+- `src/components/workspaces/ai-flow-builder/AIFlowBuilderWorkspace.tsx` — Parent workspace composing all panels
+- `src/lib/chiko/manifests/ai-flow-builder.ts` — 30+ Chiko actions (including build_flow composite)
+- `src/app/api/chat/ai-flow-builder/route.ts` — Auth+credit+Anthropic+token tracking API
 
 #### Files Modified
-- `src/components/icons.tsx` — Added IconWhiteboard + iconMap entry
+- `src/types/flow-builder.ts` — Added index signature to FlowNodeData for ReactFlow compatibility
 - `src/app/tools/[categoryId]/[toolId]/page.tsx` — Dynamic import added
-- `src/lib/store-adapters.ts` — getSketchBoardAdapter() + ADAPTER_FACTORIES entry
+- `src/lib/store-adapters.ts` — getAIFlowBuilderAdapter() + ADAPTER_FACTORIES entry
 - `src/lib/chiko/manifests/index.ts` — Barrel export added
-- `src/data/tools.ts` — Tool entry in design category (devStatus: "complete")
-- `TOOL-STATUS.md` — COMPLETE #21, changelog entry, counter updates (100 workspaces, 22 complete)
+- `src/data/tools.ts` — Tool entry in utilities category (status: "ready", devStatus: "complete")
+- `src/data/credit-costs.ts` — Credit mapping (ai-flow-builder → chiko-message)
+- `TOOL-STATUS.md` — COMPLETE #24, changelog entry, counter updates
 
 #### Key Decisions
-- Custom SVG rendering instead of Fabric.js — tldraw's infinite canvas paradigm is fundamentally different
-- No new npm dependencies — entire canvas engine is custom-built
-- Classified under "design" category with tags: whiteboard, canvas, drawing, diagram, flowchart, mind map, sketch, freehand
+- Used `@xyflow/react` (already in package.json) instead of custom canvas — proven library for node-based UIs
+- Placed in "utilities" category alongside ai-chat and other tools
+- Credit cost mapped to "chiko-message" (8 credits per LLM node execution)
+- 0 new TypeScript errors introduced (5 pre-existing errors unchanged)
 
-### Previous Focus: Open Source Research AI-First Restructuring — COMPLETE
+### Previous Focus: Sketch Board (Infinite Canvas Whiteboard) — COMPLETE
 - `src/app/api/chat/resume/generate/route.ts` — AI resume generation endpoint (credit check + Anthropic API)
 - `src/app/api/chat/resume/revise/route.ts` — AI resume revision endpoint
 - `src/app/api/chat/resume/parse/route.ts` — ATS scoring endpoint

@@ -258,6 +258,7 @@ export const TOOL_CREDIT_MAP: Record<string, string> = {
   "email-template":        "email-campaign",
 
   /* ── Utilities (mostly free / low-cost) ─────────────── */
+  "ai-chat":               "chat-message",
   "ai-image-generator":    "logo-generation",
   "image-enhancer":        "image-analysis",
   "background-remover":    "image-analysis",
@@ -267,6 +268,9 @@ export const TOOL_CREDIT_MAP: Record<string, string> = {
 
   /* ── Utilities ─── PDF Tools (free — all client-side) ──── */
   "pdf-tools":             "image-search",
+
+  /* ── AI Flow Builder (per-node execution uses chiko-message) ── */
+  "ai-flow-builder":       "chiko-message",
 };
 
 /**

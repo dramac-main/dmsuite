@@ -1,32 +1,38 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 100/195 tools with workspaces (51%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅ — Resume Controls & Multi-Page A4 Fix ✅ — Project Saving System (IndexedDB + Store Adapters) ✅ — Architectural Audit Fixes (3-Phase Remediation) ✅ — **Certificate Designer + Diploma & Accreditation Designer ✅** — **Ticket & Pass Designer ✅** — **Business Plan Writer ✅** — **Worksheet & Form Designer ✅** — **Supabase-Backed Project Storage ✅** — **Full Platform Data Persistence ✅** — **Vector PDF Renderer ✅** — **Diploma Canvas Rewrite ✅** — **Certificate V3 Handoff (Infrastructure Upgrade Spec) ✅** — **Invoice & Accounting Hub ✅** — **Resume Builder Reactive Resume Rebuild ✅** — **ZRA Smart Invoice Integration ✅** — **NAPSA Employee Management & Returns ✅** — **Slidev Presenter Rebuild ✅** — **Open Source Research AI-First Restructuring ✅** — **Sketch Board (Infinite Canvas Whiteboard) ✅**
+## Overall Status: 101/196 tools with workspaces (52%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅ — Resume Controls & Multi-Page A4 Fix ✅ — Project Saving System (IndexedDB + Store Adapters) ✅ — Architectural Audit Fixes (3-Phase Remediation) ✅ — **Certificate Designer + Diploma & Accreditation Designer ✅** — **Ticket & Pass Designer ✅** — **Business Plan Writer ✅** — **Worksheet & Form Designer ✅** — **Supabase-Backed Project Storage ✅** — **Full Platform Data Persistence ✅** — **Vector PDF Renderer ✅** — **Diploma Canvas Rewrite ✅** — **Certificate V3 Handoff (Infrastructure Upgrade Spec) ✅** — **Invoice & Accounting Hub ✅** — **Resume Builder Reactive Resume Rebuild ✅** — **ZRA Smart Invoice Integration ✅** — **NAPSA Employee Management & Returns ✅** — **Slidev Presenter Rebuild ✅** — **Open Source Research AI-First Restructuring ✅** — **Sketch Board (Infinite Canvas Whiteboard) ✅** — **AI Flow Builder (Visual AI Workflow Canvas) ✅**
 
 ---
 
-## Current Work: Sketch Board (Infinite Canvas Whiteboard) — COMPLETE ✅
+## Current Work: AI Flow Builder (Visual AI Workflow Canvas) — COMPLETE ✅
 
-### Session: Sketch Board Full Build
+### Session: AI Flow Builder Full Build (Langflow Port)
 
 - [x] Read memory bank files and gather context
-- [x] Created `src/types/sketch-board.ts` — 8 element types, styles, camera, grid
-- [x] Created `src/stores/sketch-board-editor.ts` — Zustand+Immer+persist+temporal, 40+ actions
-- [x] Created `src/components/workspaces/sketch-board/SketchBoardWorkspace.tsx` — Full infinite canvas workspace
-- [x] Created `src/lib/chiko/manifests/sketch-board.ts` — 40+ Chiko actions including composite actions
-- [x] Added IconWhiteboard to icons.tsx + iconMap
+- [x] Created `src/lib/ai-flow-builder/node-registry.ts` — 22 node types, 8 categories
+- [x] Created `src/lib/ai-flow-builder/engine.ts` — Topological sort execution engine
+- [x] Created `src/data/ai-flow-builder-templates.ts` — 6 starter flow templates
+- [x] Created `src/stores/ai-flow-builder-editor.ts` — Zustand+Immer+persist+temporal, 40+ actions
+- [x] Created `src/components/workspaces/ai-flow-builder/FlowNode.tsx` — Custom ReactFlow node
+- [x] Created `src/components/workspaces/ai-flow-builder/NodePalette.tsx` — Draggable sidebar
+- [x] Created `src/components/workspaces/ai-flow-builder/NodeInspector.tsx` — Node parameter editor
+- [x] Created `src/components/workspaces/ai-flow-builder/PlaygroundChat.tsx` — Flow test chat
+- [x] Created `src/components/workspaces/ai-flow-builder/FlowCanvas.tsx` — ReactFlow canvas
+- [x] Created `src/components/workspaces/ai-flow-builder/AIFlowBuilderWorkspace.tsx` — Parent workspace
+- [x] Created `src/lib/chiko/manifests/ai-flow-builder.ts` — 30+ Chiko actions
+- [x] Created `src/app/api/chat/ai-flow-builder/route.ts` — Auth+credit+Anthropic API
+- [x] Added index signature to FlowNodeData in types/flow-builder.ts
 - [x] Wired dynamic import in page.tsx
-- [x] Added store adapter (getSketchBoardAdapter) in store-adapters.ts
+- [x] Added store adapter (getAIFlowBuilderAdapter) in store-adapters.ts
 - [x] Added barrel export in manifests/index.ts
-- [x] Added tool entry in tools.ts (design category, devStatus: "complete")
-- [x] Fixed 2 TypeScript errors (EraserElement cast, type comparison)
-- [x] TypeScript: 0 errors
-- [x] Updated TOOL-STATUS.md (COMPLETE #21, changelog, counters: 100 workspaces / 22 complete)
+- [x] Added tool entry in tools.ts (utilities category, devStatus: "complete")
+- [x] Added credit mapping in credit-costs.ts
+- [x] TypeScript: 0 new errors (5 pre-existing in orphan files unchanged)
+- [x] Updated TOOL-STATUS.md (COMPLETE #24, changelog, counters: 101 workspaces / 24 complete)
 
 ---
 
-## Previous Work: ZRA Smart Invoice + NAPSA + Slidev Presenter — COMPLETE ✅
-
-### Session: Realtime Colors-Inspired Color Palette Generator
+## Previous Work: Sketch Board (Infinite Canvas Whiteboard) — COMPLETE ✅
 
 - [x] Created `src/stores/color-palette.ts` — Zustand+Immer+persist store, 5 color roles, font pairing, 10 presets, randomize, save/load
 - [x] Created `src/lib/chiko/manifests/color-palette.ts` — 25+ Chiko actions (harmonies, moods, industries, contrast, export)

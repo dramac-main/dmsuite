@@ -618,6 +618,20 @@ export const useSketchBoardEditor = create<SketchBoardState>()(
             if (el && !el.locked) {
               el.x += dx;
               el.y += dy;
+              // Move line/arrow start+end points
+              if (el.type === "line" || el.type === "arrow") {
+                (el as LineElement | ArrowElement).start.x += dx;
+                (el as LineElement | ArrowElement).start.y += dy;
+                (el as LineElement | ArrowElement).end.x += dx;
+                (el as LineElement | ArrowElement).end.y += dy;
+              }
+              // Move freehand/eraser point arrays
+              if (el.type === "draw" || el.type === "eraser") {
+                for (const p of (el as DrawElement).points) {
+                  p.x += dx;
+                  p.y += dy;
+                }
+              }
             }
           }),
         resizeElement: (id, w, h) =>
