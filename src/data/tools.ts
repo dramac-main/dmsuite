@@ -1295,7 +1295,7 @@ export const toolCategories: ToolCategory[] = [
         description:
           "Full-featured infinite canvas powered by tldraw — drawing, shapes, arrows, sticky notes, frames, embeds, multiplayer-ready",
         icon: "whiteboard",
-        status: "beta",
+        status: "ready",
         devStatus: "complete",
         tags: ["whiteboard", "canvas", "drawing", "tldraw", "diagram", "sketch", "infinite canvas"],
         outputs: ["png", "svg"],
