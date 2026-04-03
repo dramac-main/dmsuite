@@ -98,10 +98,12 @@ function gatherInputs(
     inputs[edge.targetHandle] = value;
   }
 
-  // If no input edges for required ports, check param defaults
+  // Auto-inject user message for chat-input-like nodes with no connected "in-message" port
   for (const port of node.data.inputs) {
-    if (!inputs[port.id] && port.id === "in-message" && ctx.userMessage) {
-      // Auto-inject user message for chat inputs
+    if (!inputs[port.id] && ctx.userMessage) {
+      if (port.id === "in-message" || port.id === "in-prompt" || port.id === "in-query") {
+        inputs[port.id] = ctx.userMessage;
+      }
     }
   }
 
@@ -152,13 +154,20 @@ function executeDataOutput(_node: EngineNode, inputs: Record<string, string>, _c
 function executePromptTemplate(node: EngineNode, inputs: Record<string, string>, ctx: ExecutionContext): string {
   let template = String(node.data.paramValues.template ?? "");
 
-  // Replace {input} with the variable input
-  const variableData = inputs["in-variables"] ?? ctx.userMessage ?? "";
-  template = template.replace(/\{input\}/g, variableData);
-  template = template.replace(/\{context\}/g, inputs["in-variables"] ?? "");
+  // Build a variables map from all inputs + context
+  const vars: Record<string, string> = {
+    input: inputs["in-variables"] ?? ctx.userMessage ?? "",
+    context: inputs["in-variables"] ?? "",
+    query: ctx.userMessage ?? "",
+    user_message: ctx.userMessage ?? "",
+    ...inputs,
+  };
 
-  // Replace any remaining {key} with empty
-  template = template.replace(/\{[^}]+\}/g, "");
+  // Replace all {variable_name} placeholders with matching values
+  template = template.replace(/\{([^}]+)\}/g, (match, key: string) => {
+    const trimmedKey = key.trim();
+    return vars[trimmedKey] ?? vars[trimmedKey.replace(/-/g, "_")] ?? "";
+  });
 
   ctx.outputs.set(`${node.id}:out-prompt`, template);
   return template;
@@ -465,7 +474,7 @@ async function executeLLMNode(
   messages.push({ role: "user", content: prompt });
 
   try {
-    const response = await fetch("/api/chat/flow-builder", {
+    const response = await fetch("/api/chat/ai-flow-builder", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -530,7 +539,7 @@ async function executeAgent(
   messages.push({ role: "user", content: prompt });
 
   try {
-    const response = await fetch("/api/chat/flow-builder", {
+    const response = await fetch("/api/chat/ai-flow-builder", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -616,15 +625,9 @@ export async function executeFlow(
   };
 
   try {
-    // Filter out frozen nodes
-    const activeNodes = nodes.filter((n) => !n.data.isFrozen);
-    const activeNodeIds = new Set(activeNodes.map((n) => n.id));
-    const activeEdges = edges.filter(
-      (e) => activeNodeIds.has(e.source) && activeNodeIds.has(e.target)
-    );
-
-    const order = topologicalSort(activeNodes, activeEdges);
-    const nodeMap = new Map(activeNodes.map((n) => [n.id, n]));
+    // Keep ALL nodes in graph (frozen nodes use cached output instead of re-executing)
+    const order = topologicalSort(nodes, edges);
+    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
 
     for (const nodeId of order) {
       const node = nodeMap.get(nodeId);
@@ -634,8 +637,23 @@ export async function executeFlow(
       ctx.onNodeStatus?.(nodeId, "running");
 
       try {
-        const inputs = gatherInputs(nodeId, node, activeEdges, ctx);
+        const inputs = gatherInputs(nodeId, node, edges, ctx);
         let output: string;
+
+        // Frozen nodes use their cached output (pass-through)
+        if (node.data.isFrozen) {
+          output = node.data.lastOutput ?? "";
+          // Propagate cached outputs to all output ports
+          for (const port of node.data.outputs) {
+            if (!ctx.outputs.has(`${nodeId}:${port.id}`)) {
+              ctx.outputs.set(`${nodeId}:${port.id}`, output);
+            }
+          }
+          const duration = performance.now() - nodeStart;
+          ctx.onNodeStatus?.(nodeId, "complete", output);
+          results.push({ nodeId, success: true, output: "[frozen] " + output, duration });
+          continue;
+        }
 
         if (ASYNC_NODE_TYPES.has(node.data.definitionType)) {
           if (

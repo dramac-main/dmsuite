@@ -143,7 +143,7 @@ export default function NodePalette({ onLoadTemplate }: NodePaletteProps) {
                   </svg>
                 </button>
 
-                {expandedCats.has(cat as FlowNodeCategory) && (
+                {(search || expandedCats.has(cat as FlowNodeCategory)) && (
                   <div className="flex flex-col gap-1 pl-1 pb-1">
                     {nodes.map((def) => (
                       <DraggableNodeItem key={def.type} def={def} />

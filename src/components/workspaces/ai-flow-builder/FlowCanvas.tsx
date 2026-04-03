@@ -136,7 +136,7 @@ export default function FlowCanvas() {
     [addEdge]
   );
 
-  // Validate connections — only allow compatible port types
+  // Validate connections — allow compatible port types (Langflow-style flexibility)
   const isValidConnection: IsValidConnection = useCallback(
     (connection) => {
       if (!connection.source || !connection.target) return false;
@@ -159,8 +159,14 @@ export default function FlowCanvas() {
       // "any" type accepts anything
       if (sourcePort.dataType === "any" || targetPort.dataType === "any") return true;
 
-      // Must match types
-      return sourcePort.dataType === targetPort.dataType;
+      // Exact type match
+      if (sourcePort.dataType === targetPort.dataType) return true;
+
+      // Allow implicit conversions between text-like types (message ↔ data)
+      const textLikeTypes = new Set(["message", "data"]);
+      if (textLikeTypes.has(sourcePort.dataType) && textLikeTypes.has(targetPort.dataType)) return true;
+
+      return false;
     },
     [nodes]
   );

@@ -159,7 +159,9 @@ export default function NodeInspector() {
                   className="flex-1 h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
                 />
                 <span className="text-[11px] text-gray-400 w-8 text-right tabular-nums">
-                  {Number(data.paramValues[param.key] ?? param.defaultValue).toFixed(1)}
+                  {Number(data.paramValues[param.key] ?? param.defaultValue).toFixed(
+                    String(param.step ?? 0.1).includes(".") ? String(param.step ?? 0.1).split(".")[1].length : 0
+                  )}
                 </span>
               </div>
             )}
