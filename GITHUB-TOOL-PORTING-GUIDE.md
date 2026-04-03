@@ -1537,6 +1537,90 @@ npm run lint              # No critical warnings
 4. Ensure action names in actions[] match switch cases
 ```
 
+### Failure: Third-Party Component UI Invisible / Broken (CSS Isolation)
+
+**This is the #1 Fast Path failure mode.** When embedding a third-party React component (tldraw, xyflow, Fabric.js canvas UI, etc.), its internal styles can be overridden by:
+
+1. **Tailwind v4 preflight** — Resets `button { background-color: transparent; color: inherit }` which leaks into the component's container and overrides its own CSS custom properties
+2. **DMSuite dark mode body styles** — `body { color: ... }` cascades into `color: inherit` rules inside the component, causing icons/text that use `currentColor` to become invisible
+3. **CSS custom property conflicts** — If the component uses `--color-text`, `--color-panel` etc. and DMSuite also defines vars with the same names
+
+**Symptoms:**
+- Toolbars, menus, panels render but are blank/invisible
+- Icons missing (component uses `mask-image` + `background-color: currentColor` pattern)
+- Buttons look like empty rectangles
+- Dark mode works but light mode is broken (or vice versa)
+
+**Fix protocol:**
+```
+1. Identify the component's root container class (e.g. `.tl-container`)
+2. Add CSS isolation overrides in globals.css SCOPED to that container:
+
+   .tl-container button {
+     background-color: revert;
+     color: revert;
+   }
+
+3. Reset text/background colors to prevent DMSuite body styles leaking in:
+
+   .tl-container {
+     color: initial;
+   }
+
+4. If the component uses CSS mask icons:
+
+   .tl-container [class*="icon"] {
+     background-color: revert;
+   }
+
+5. For theme sync, use the component's API (not CSS):
+   editor.user.updateUserPreferences({ colorScheme: theme })
+```
+
+**Import order matters:**
+```css
+/* globals.css — tldraw CSS MUST come AFTER Tailwind base */
+@import "tailwindcss";
+@import "tldraw/tldraw.css";
+/* Then your .tl-container overrides at the end of the file */
+```
+
+**Key lesson:** Always test BOTH themes. Tailwind preflight issues often only surface in one theme because the other happens to have matching colors by coincidence.
+
+### Failure: Vercel Build Fails with ERESOLVE (Peer Dependency Conflict)
+
+**Cause:** The ported library peers on `react@^18` but DMSuite uses React 19. Locally `npm install --legacy-peer-deps` works, but Vercel's default `npm install` does not use `--legacy-peer-deps`.
+
+**Fix:**
+```
+1. Create .npmrc in project root:
+   legacy-peer-deps=true
+
+2. Commit .npmrc to git — Vercel reads it automatically
+```
+
+**Warning:** This suppresses ALL peer dep warnings. Only use when you've verified the library actually works with React 19.
+
+### Failure: License Enforcement in Production (Hidden Paywall)
+
+**Cause:** Some open-source libraries (e.g., tldraw v4+) changed their license from MIT to a commercial model. The library may work perfectly in development (`localhost`) but enforce licensing restrictions in production:
+- Hide the UI after a timeout
+- Overlay a watermark
+- Disable features
+- Show "unlicensed" warnings
+
+**Detection protocol:**
+```
+1. BEFORE starting a port, check the library's LICENSE file:
+   - MIT / Apache-2.0 / BSD → safe
+   - AGPL / BSL / Custom → read carefully
+2. Check for license enforcement code: search for "license", "watermark", "production"
+3. Test on a non-localhost URL (e.g. ngrok, Vercel preview deploy)
+4. If the library recently changed licenses, check if older MIT versions are still usable
+```
+
+**Fix:** If a library has switched to a commercial license, use the last MIT-licensed version. Example: `tldraw@2.4.6` (MIT) instead of `tldraw@4.x` (commercial).
+
 ---
 
 ## 17. File Checklist Template

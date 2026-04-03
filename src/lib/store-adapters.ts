@@ -623,29 +623,7 @@ function getInvoiceAccountingAdapter(): StoreAdapter {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Sketch Board (infinite canvas whiteboard)
-// ---------------------------------------------------------------------------
 
-function getSketchBoardAdapter(): StoreAdapter {
-  const { useSketchBoardEditor } = require("@/stores/sketch-board-editor");
-  return {
-    getSnapshot: () => {
-      const { doc } = useSketchBoardEditor.getState();
-      return { doc };
-    },
-    restoreSnapshot: (data: Record<string, unknown>) => {
-      if (data.doc) {
-        useSketchBoardEditor.getState().setDoc(data.doc as never);
-      }
-    },
-    resetStore: () => {
-      useSketchBoardEditor.getState().resetDoc();
-      nukePersistStorage("dmsuite-sketch-board");
-    },
-    subscribe: (cb: () => void) => useSketchBoardEditor.subscribe(cb),
-  };
-}
 
 // ---------------------------------------------------------------------------
 // AI Flow Builder (visual workflow canvas)
@@ -774,10 +752,8 @@ const ADAPTER_FACTORIES: Record<string, () => StoreAdapter> = {
   "document-signer": getDocumentSignerAdapter,
   // Invoice & Accounting
   "invoice-tracker": getInvoiceAccountingAdapter,
-  // Sketch Board
-  "sketch-board": getSketchBoardAdapter,
-  // Sketch Board V2 (tldraw) — tldraw handles its own persistence via IndexedDB
-  "sketch-board-v2": getGenericAdapter,
+  // Sketch Board — handles its own persistence via IndexedDB
+  "sketch-board": getGenericAdapter,
   // AI Flow Builder
   "ai-flow-builder": getAIFlowBuilderAdapter,
 };

@@ -1280,24 +1280,11 @@ export const toolCategories: ToolCategory[] = [
         id: "sketch-board",
         name: "Sketch Board",
         description:
-          "Infinite canvas whiteboard for freehand drawing, diagramming, flowcharts, mind maps, and sticky notes — inspired by tldraw",
+          "Full-featured infinite canvas whiteboard — drawing, shapes, arrows, sticky notes, frames, embeds, and multiplayer-ready",
         icon: "whiteboard",
         status: "ready",
         devStatus: "complete",
-        tags: ["whiteboard", "canvas", "drawing", "diagram", "flowchart", "mind map", "sketch", "freehand"],
-        outputs: ["png", "svg"],
-        supportsPartEdit: true,
-      },
-      // ── Infinite Canvas V2 (tldraw-powered) ─────────────────
-      {
-        id: "sketch-board-v2",
-        name: "Sketch Board V2 (tldraw)",
-        description:
-          "Full-featured infinite canvas powered by tldraw — drawing, shapes, arrows, sticky notes, frames, embeds, multiplayer-ready",
-        icon: "whiteboard",
-        status: "ready",
-        devStatus: "complete",
-        tags: ["whiteboard", "canvas", "drawing", "tldraw", "diagram", "sketch", "infinite canvas"],
+        tags: ["whiteboard", "canvas", "drawing", "diagram", "flowchart", "sketch", "infinite canvas", "freehand"],
         outputs: ["png", "svg"],
         supportsPartEdit: true,
       },
