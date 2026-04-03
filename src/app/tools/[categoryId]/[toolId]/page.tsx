@@ -562,7 +562,7 @@ export default function ToolWorkspacePage() {
             <div className="flex-1 flex items-center justify-center">
               <div className="flex flex-col items-center gap-3">
                 <div className="size-8 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500" suppressHydrationWarning>
                   {activeProjectId ? "Loading project\u2026" : hasSynced ? "Preparing workspace\u2026" : "Syncing projects\u2026"}
                 </p>
               </div>

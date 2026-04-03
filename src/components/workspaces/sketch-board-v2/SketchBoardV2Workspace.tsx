@@ -1,11 +1,9 @@
 "use client";
 
-// Excalidraw CSS — must be loaded before the component renders.
-// The package.json exports map for "./index.css" only has "development" and
-// "production" conditions (no "style"), so a CSS @import in globals.css fails.
-// A JS-level import works because Turbopack/Next.js sets the "production"
-// condition during builds.
-import "@excalidraw/excalidraw/index.css";
+// Excalidraw CSS — loaded via a local wrapper that uses a direct filesystem
+// path to bypass the package exports map (which only has "development" /
+// "production" conditions that Turbopack can't resolve for CSS).
+import "./excalidraw-theme.css";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTheme } from "@/components/ThemeProvider";
