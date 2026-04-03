@@ -251,3 +251,59 @@ body {
 .tl-container svg {
   display: inline-block;
 }
+
+/* ============================================================
+   Excalidraw — CSS Isolation
+   ============================================================
+   Same pattern as tldraw above. Tailwind v4's preflight and
+   DMSuite's global dark mode styles leak into the Excalidraw
+   container. These overrides ensure the Excalidraw UI stays
+   fully visible in both light and dark themes.
+   ============================================================ */
+
+/* Wrapper class set on the containing div in SketchBoardV2Workspace */
+.excalidraw-wrapper {
+  /* Excalidraw takes 100% of its container */
+  position: relative;
+}
+
+/* Reset global color overrides on the Excalidraw root —
+   Excalidraw manages its own colors via CSS custom properties */
+.excalidraw-wrapper .excalidraw {
+  color: initial;
+}
+
+/* Ensure Excalidraw buttons don't get Tailwind's
+   button { background-color: transparent } override */
+.excalidraw-wrapper .excalidraw button {
+  background-color: unset;
+}
+
+/* Excalidraw SVGs need inline-block, same fix as tldraw */
+.excalidraw-wrapper .excalidraw svg {
+  display: inline-block;
+}
+
+/* Prevent Tailwind's input reset from breaking Excalidraw inputs */
+.excalidraw-wrapper .excalidraw input,
+.excalidraw-wrapper .excalidraw textarea {
+  color: inherit;
+  background-color: unset;
+  border: unset;
+}
+
+/* Ensure labels and text inside Excalidraw are visible */
+.excalidraw-wrapper .excalidraw label {
+  color: inherit;
+}
+
+/* Dialog and modal backgrounds */
+.excalidraw-wrapper .excalidraw .Modal,
+.excalidraw-wrapper .excalidraw .Dialog {
+  color: inherit;
+}
+
+/* Ensure the Excalidraw layer-ui (toolbar, sidebar) stays above canvas */
+.excalidraw-wrapper .excalidraw .layer-ui__wrapper {
+  color: inherit;
+}

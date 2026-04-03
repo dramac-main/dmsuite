@@ -754,6 +754,8 @@ const ADAPTER_FACTORIES: Record<string, () => StoreAdapter> = {
   "invoice-tracker": getInvoiceAccountingAdapter,
   // Sketch Board — handles its own persistence via IndexedDB
   "sketch-board": getGenericAdapter,
+  // Sketch Board V2 (Excalidraw) — handles its own persistence via localStorage
+  "sketch-board-v2": getGenericAdapter,
   // AI Flow Builder
   "ai-flow-builder": getAIFlowBuilderAdapter,
 };

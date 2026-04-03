@@ -1288,6 +1288,18 @@ export const toolCategories: ToolCategory[] = [
         outputs: ["png", "svg"],
         supportsPartEdit: true,
       },
+      {
+        id: "sketch-board-v2",
+        name: "Sketch Board V2",
+        description:
+          "Excalidraw-powered infinite canvas — hand-drawn style diagrams, shapes, arrows, text, mermaid support, PNG/SVG/clipboard export, and offline-ready",
+        icon: "whiteboard",
+        status: "ready",
+        devStatus: "complete",
+        tags: ["whiteboard", "canvas", "drawing", "diagram", "excalidraw", "hand-drawn", "infinite canvas", "flowchart", "mermaid"],
+        outputs: ["png", "svg", "json"],
+        supportsPartEdit: true,
+      },
     ],
   },
 
