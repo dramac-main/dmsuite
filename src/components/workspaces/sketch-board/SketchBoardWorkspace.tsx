@@ -219,7 +219,8 @@ function elToSVG(el: SketchElement): string {
       const a = el as ArrowElement;
       let s = `<line x1="${a.start.x}" y1="${a.start.y}" x2="${a.end.x}" y2="${a.end.y}" stroke="${a.style.strokeColor}" stroke-width="${a.style.strokeWidth}" stroke-linecap="round"${da}${op}/>`;
       if (a.endHead !== "none") {
-        const [p1, p2] = arrowheadPts(a.start, a.end, 16);
+        const headSize = Math.max(14, a.style.strokeWidth * 3.5);
+        const [p1, p2] = arrowheadPts(a.start, a.end, headSize);
         s += `<polygon points="${a.end.x},${a.end.y} ${p1.x},${p1.y} ${p2.x},${p2.y}" fill="${a.style.strokeColor}"${op}/>`;
       }
       return s;
@@ -402,7 +403,8 @@ const RenderElement = React.memo(function RenderElement({
     }
     case "arrow": {
       const a = el as ArrowElement;
-      const [hp1, hp2] = arrowheadPts(a.start, a.end, 16);
+      const headSize = Math.max(14, a.style.strokeWidth * 3.5);
+      const [hp1, hp2] = arrowheadPts(a.start, a.end, headSize);
       return (
         <g onPointerDown={handlePD} onDoubleClick={handleDC} style={{ cursor: "move", opacity: elOp }}>
           <line x1={a.start.x} y1={a.start.y} x2={a.end.x} y2={a.end.y} stroke="transparent" strokeWidth={Math.max(a.style.strokeWidth + 14, 18)} />
@@ -988,18 +990,22 @@ function SketchCanvas() {
           ))}
 
           {/* Live freehand preview */}
-          {drawPreview.length > 1 && (
-            <path
-              d={drawPathD(drawPreview)}
-              fill="none"
-              stroke={useSketchBoardEditor.getState().currentStyle.strokeColor}
-              strokeWidth={useSketchBoardEditor.getState().currentStyle.strokeWidth}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity={0.6}
-              pointerEvents="none"
-            />
-          )}
+          {drawPreview.length > 1 && (() => {
+            const cs = useSketchBoardEditor.getState().currentStyle;
+            return (
+              <path
+                d={drawPathD(drawPreview)}
+                fill="none"
+                stroke={cs.strokeColor}
+                strokeWidth={cs.strokeWidth}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray={dashVal(cs.dashStyle)}
+                opacity={0.6}
+                pointerEvents="none"
+              />
+            );
+          })()}
 
           {/* Shape preview */}
           {shapePreview && (
@@ -1020,7 +1026,9 @@ function SketchCanvas() {
                 <>
                   <line x1={shapePreview.s.x} y1={shapePreview.s.y} x2={shapePreview.e.x} y2={shapePreview.e.y} stroke="#3b82f6" strokeWidth={2} strokeDasharray="6 3" pointerEvents="none" />
                   {shapePreview.type === "arrow" && (() => {
-                    const [p1, p2] = arrowheadPts(shapePreview.s, shapePreview.e, 14);
+                    const sw = useSketchBoardEditor.getState().currentStyle.strokeWidth;
+                    const hs = Math.max(14, sw * 3.5);
+                    const [p1, p2] = arrowheadPts(shapePreview.s, shapePreview.e, hs);
                     return <polygon points={`${shapePreview.e.x},${shapePreview.e.y} ${p1.x},${p1.y} ${p2.x},${p2.y}`} fill="#3b82f6" pointerEvents="none" />;
                   })()}
                 </>
@@ -1082,12 +1090,13 @@ function UndoRedoBar() {
   const handleUndo = useCallback(() => { useSketchBoardEditor.temporal.getState().undo(); }, []);
   const handleRedo = useCallback(() => { useSketchBoardEditor.temporal.getState().redo(); }, []);
   return (
-    <div className="absolute bottom-3 left-3 z-40 flex items-center gap-1 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg px-1 py-1">
-      <button onClick={handleUndo} className="p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Undo (Ctrl+Z)">
-        <IconUndo className="w-4 h-4" />
+    <div className="absolute bottom-3 left-3 z-50 flex items-center gap-1 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl px-1.5 py-1.5 pointer-events-auto">
+      <button onClick={handleUndo} className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Undo (Ctrl+Z)">
+        <IconUndo className="w-5 h-5" />
       </button>
-      <button onClick={handleRedo} className="p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Redo (Ctrl+Y)">
-        <IconRedo className="w-4 h-4" />
+      <div className="w-px h-5 bg-gray-200 dark:bg-gray-700" />
+      <button onClick={handleRedo} className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Redo (Ctrl+Y)">
+        <IconRedo className="w-5 h-5" />
       </button>
     </div>
   );
