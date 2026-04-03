@@ -1288,6 +1288,19 @@ export const toolCategories: ToolCategory[] = [
         outputs: ["png", "svg"],
         supportsPartEdit: true,
       },
+      // ── Infinite Canvas V2 (tldraw-powered) ─────────────────
+      {
+        id: "sketch-board-v2",
+        name: "Sketch Board V2 (tldraw)",
+        description:
+          "Full-featured infinite canvas powered by tldraw — drawing, shapes, arrows, sticky notes, frames, embeds, multiplayer-ready",
+        icon: "whiteboard",
+        status: "beta",
+        devStatus: "complete",
+        tags: ["whiteboard", "canvas", "drawing", "tldraw", "diagram", "sketch", "infinite canvas"],
+        outputs: ["png", "svg"],
+        supportsPartEdit: true,
+      },
     ],
   },
 

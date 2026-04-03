@@ -1,33 +1,40 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** AI Flow Builder (Visual AI Workflow Canvas) — COMPLETE
+**Phase:** AI Chat V2 — LibreChat-Faithful UI Overhaul — COMPLETE
 
-### Session: AI Flow Builder Full Build
+### Session: AI Chat V2 — Complete UI Rewrite
 
-Built Langflow-inspired visual AI workflow builder named "AI Flow Builder" (id: `ai-flow-builder`).
+User rejected the V1 AI Chat UI as "looking like the same DMSuite layouts" and demanded a faithful LibreChat clone with every feature working. Complete ground-up UI rewrite delivered.
 
-#### Architecture
-- **@xyflow/react v12** — ReactFlow visual node canvas (already installed in project)
-- **22 node types** across 8 categories (inputs/outputs/models/prompts/processing/memory/agents/tools)
-- **7 port data types** (message/data/model/memory/tool/embeddings/any) with color-coded handles and type-safe connection validation
-- **Topological sort execution engine** — traverses nodes in dependency order, calls `/api/chat/ai-flow-builder` for LLM nodes
-- **Zustand + Immer + persist + temporal** store (full undo/redo) — key: `"dmsuite-ai-flow-builder"`
-- **6 pre-built templates**: Basic Chatbot, RAG Pipeline, Agent with Tools, Content Generator, Translation Pipeline, Multi-Model Comparison
-- **3-panel responsive layout**: NodePalette (left), FlowCanvas (center), NodeInspector/PlaygroundChat (right) with mobile bottom nav
-- **Keyboard shortcuts**: Ctrl+Z/Y (undo/redo), Ctrl+S (save)
-- **Export/Import**: JSON flow files
+#### What Changed
+- **AIChatWorkspace.tsx**: Complete rewrite (1055 insertions, 787 deletions). Removed old DMSuite card-in-card patterns.
+- **src/stores/chat.ts**: Added `FileAttachment` interface + `attachments` field on `ChatMessage`
+- **src/app/api/chat/route.ts**: Updated `streamClaude` and `streamOpenAI` to accept multimodal messages (image_url → Anthropic image source conversion)
+- **TOOL-STATUS.md**: Added V2 changelog entry
 
-#### Files Created (New)
-- `src/lib/ai-flow-builder/node-registry.ts` — 22 node definitions with typed ports and parameters
-- `src/lib/ai-flow-builder/engine.ts` — Topological sort execution engine
-- `src/data/ai-flow-builder-templates.ts` — 6 starter flow templates
-- `src/stores/ai-flow-builder-editor.ts` — Full Zustand store (40+ actions)
-- `src/components/workspaces/ai-flow-builder/FlowNode.tsx` — Custom ReactFlow node component
-- `src/components/workspaces/ai-flow-builder/NodePalette.tsx` — Draggable sidebar with search/category filter
-- `src/components/workspaces/ai-flow-builder/NodeInspector.tsx` — Right panel node parameter editor
-- `src/components/workspaces/ai-flow-builder/PlaygroundChat.tsx` — Test chat panel with flow execution
-- `src/components/workspaces/ai-flow-builder/FlowCanvas.tsx` — Main ReactFlow canvas (drag-drop, MiniMap, Controls)
+#### Key Design Changes (V1 → V2)
+1. **No card wrapper** — full-bleed `h-full flex bg-gray-900` (was `rounded-2xl border`)
+2. **Dark sidebar** — `bg-gray-950` with `border-gray-800/60`
+3. **Pill-shaped input** — `rounded-3xl` with paperclip upload inside + ArrowUp send (was rounded-xl with separate send button)
+4. **Model selector TOP-LEFT** — prominent dropdown (was top-right small pill)
+5. **Temporary chat** — violet-tinted border + banner notification + hidden from sidebar (was just "TMP" badge)
+6. **Code blocks** — language label header + copy button via custom CodeBlock component
+7. **File upload** — paperclip button, base64 FileAttachment, image preview in messages + chips above input
+8. **Right panels** — toggleable Presets/Prompts and Bookmarks side panels (new)
+9. **Message actions** — copy/edit/bookmark/fork/regenerate on hover (redesigned, no context menu)
+10. **Sidebar** — inline edit/delete/pin icons on hover (was context menu dots)
+11. **Empty state** — centered "How can I help you today?" + 6 suggestion cards
+12. **Send button** — white circle with ArrowUp icon (ChatGPT style)
+13. **Disclaimer** — "DMSuite AI can make mistakes" below input
+
+#### Architecture (Unchanged)
+- Store: Zustand+Immer+persist, key: `dmsuite-chat`
+- API: `/api/chat` with streaming (Claude + OpenAI)
+- Chiko manifest: 13 actions, 5 categories
+- Integration: 8-point contract (page.tsx, store-adapters, manifests, tools.ts, stores/index.ts)
+
+### Previous Focus: AI Flow Builder — COMPLETE
 - `src/components/workspaces/ai-flow-builder/AIFlowBuilderWorkspace.tsx` — Parent workspace composing all panels
 - `src/lib/chiko/manifests/ai-flow-builder.ts` — 30+ Chiko actions (including build_flow composite)
 - `src/app/api/chat/ai-flow-builder/route.ts` — Auth+credit+Anthropic+token tracking API

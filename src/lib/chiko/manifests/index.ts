@@ -39,5 +39,6 @@ export { createPDFToolsManifest } from "./pdf-tools";
 export { createDocumentSignerManifest } from "./document-signer";
 export { createInvoiceAccountingManifest } from "./invoice-accounting";
 export { createSketchBoardManifest } from "./sketch-board";
+export { createSketchBoardV2Manifest } from "./sketch-board-v2";
 export { createAIChatManifest } from "./ai-chat";
 export { createAIFlowBuilderManifest } from "./ai-flow-builder";

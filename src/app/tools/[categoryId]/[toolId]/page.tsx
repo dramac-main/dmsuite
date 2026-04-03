@@ -155,6 +155,7 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   "document-signer": dynamic(() => import("@/components/workspaces/document-signer/DocumentSignerWorkspace")),
   "invoice-tracker": dynamic(() => import("@/components/workspaces/invoice-accounting/InvoiceAccountingWorkspace")),
   "sketch-board": dynamic(() => import("@/components/workspaces/sketch-board/SketchBoardWorkspace")),
+  "sketch-board-v2": dynamic(() => import("@/components/workspaces/sketch-board-v2/SketchBoardV2Workspace")),
 
   // ── AI Flow Builder ──
   "ai-flow-builder": dynamic(() => import("@/components/workspaces/ai-flow-builder/AIFlowBuilderWorkspace")),

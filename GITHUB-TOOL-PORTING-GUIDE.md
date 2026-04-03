@@ -1,73 +1,500 @@
 # DMSuite — GitHub Open-Source Tool Porting Guide
 
-> **Purpose:** A comprehensive, zero-fault guide for porting any tested open-source tool from GitHub into DMSuite. Covers fresh builds AND full rebuilds of existing tools. Follow every step — skip nothing.
+> **Purpose:** A comprehensive, zero-fault guide for porting any tested open-source tool from GitHub into DMSuite. Covers fresh builds AND full rebuilds of existing tools. Two paths: **Fast Path** (same-stack repos — copy-paste-and-adapt) and **Full Rewrite Path** (different-stack repos). Follow every step — skip nothing.
 
 ---
 
 ## Table of Contents
 
 1. [Philosophy & Ground Rules](#1-philosophy--ground-rules)
-2. [Pre-Port Analysis Checklist](#2-pre-port-analysis-checklist)
-3. [Platform Integration Points (The 8-Point Contract)](#3-platform-integration-points-the-8-point-contract)
-4. [Step-by-Step Build Process — New Tool](#4-step-by-step-build-process--new-tool)
-5. [Step-by-Step Rebuild Process — Replace Existing Tool](#5-step-by-step-rebuild-process--replace-existing-tool)
-6. [Dependency Management Rules](#6-dependency-management-rules)
-7. [Styling & Theme Compliance](#7-styling--theme-compliance)
-8. [State Management Patterns](#8-state-management-patterns)
-9. [Chiko AI Manifest Guide](#9-chiko-ai-manifest-guide)
-10. [Workspace Events Contract](#10-workspace-events-contract)
-11. [Project Persistence Wiring](#11-project-persistence-wiring)
-12. [Testing & Verification Protocol](#12-testing--verification-protocol)
-13. [Common Failure Modes & Fixes](#13-common-failure-modes--fixes)
-14. [File Checklist Template](#14-file-checklist-template)
-15. [Tool Type Matrix — Which Pattern to Use](#15-tool-type-matrix--which-pattern-to-use)
-16. [TOOL-STATUS.md & tools.ts Update Protocol](#16-tool-statusmd--toolsts-update-protocol)
+2. [Stack Compatibility Check — Which Path to Use](#2-stack-compatibility-check--which-path-to-use)
+3. [FAST PATH — Same-Stack Copy-Paste-and-Adapt](#3-fast-path--same-stack-copy-paste-and-adapt)
+4. [Branding & Theme Compliance Protocol](#4-branding--theme-compliance-protocol)
+5. [Pre-Port Analysis Checklist](#5-pre-port-analysis-checklist)
+6. [Platform Integration Points (The 8-Point Contract)](#6-platform-integration-points-the-8-point-contract)
+7. [FULL REWRITE PATH — Step-by-Step Build Process](#7-full-rewrite-path--step-by-step-build-process)
+8. [Step-by-Step Rebuild Process — Replace Existing Tool](#8-step-by-step-rebuild-process--replace-existing-tool)
+9. [Dependency Management Rules](#9-dependency-management-rules)
+10. [Styling & Theme Compliance](#10-styling--theme-compliance)
+11. [State Management Patterns](#11-state-management-patterns)
+12. [Chiko AI Manifest Guide](#12-chiko-ai-manifest-guide)
+13. [Workspace Events Contract](#13-workspace-events-contract)
+14. [Project Persistence Wiring](#14-project-persistence-wiring)
+15. [Testing & Verification Protocol](#15-testing--verification-protocol)
+16. [Common Failure Modes & Fixes](#16-common-failure-modes--fixes)
+17. [File Checklist Template](#17-file-checklist-template)
+18. [Tool Type Matrix — Which Pattern to Use](#18-tool-type-matrix--which-pattern-to-use)
+19. [TOOL-STATUS.md & tools.ts Update Protocol](#19-tool-statusmd--toolsts-update-protocol)
 
 ---
 
 ## 1. Philosophy & Ground Rules
 
 ### The Core Principle
-**You are NOT copying code. You are replicating functionality.** The GitHub repo is a REFERENCE IMPLEMENTATION — the "what it does" — but the code must be REWRITTEN to fit DMSuite's architecture. Direct code paste is the #1 cause of bugs.
+**There are TWO paths, and you MUST pick the right one before writing any code:**
 
-### Ground Rules
+| Path | When | What You Do |
+|------|------|-------------|
+| **🟢 FAST PATH** | Source repo uses React + Tailwind (+ TypeScript, + Next.js) | **Copy-paste the source files, then surgically adapt** — swap imports, state hooks, and hardcoded colors. The UI stays intact. TypeScript is your checklist. |
+| **🔴 FULL REWRITE PATH** | Source repo uses Vue/Svelte/Angular, CSS modules, styled-components, Redux, or any non-matching stack | **Rewrite from scratch** using DMSuite patterns. The source is a reference only. |
+
+### Why Two Paths?
+
+**The old approach** (always rewrite from scratch) caused:
+- AI agents "reimagining" the UI instead of replicating it → missing features, broken states
+- Edge cases dropped because the AI summarized the logic instead of preserving it
+- Hours spent recreating what already works
+
+**The new approach** (copy-paste-and-adapt for same-stack repos) ensures:
+- ✅ Every feature works because the proven code is preserved
+- ✅ Every edge case is handled because the original developer's work stays intact
+- ✅ AI agent's job is reduced to mechanical find-replace, not creative interpretation
+- ✅ TypeScript compiler catches every remaining incompatibility — zero guessing
+
+### Ground Rules (Both Paths)
 
 | Rule | Why |
 |------|-----|
-| **NEVER copy-paste React components verbatim** | Different state management (Zustand vs Redux/Context), different styling (Tailwind v4 vs CSS modules/styled-components), different routing (Next.js App Router). |
-| **NEVER import the source repo's dependencies blindly** | They may conflict with DMSuite's existing deps, or pull in frameworks we don't use. |
-| **ALWAYS start from DMSuite's patterns, not the source** | Build the DMSuite shell first (workspace, store, adapter, manifest, routing), THEN port the logic. |
-| **Map features, don't map files** | GitHub repos have their own file structure. DMSuite has a strict structure. Map features from source → DMSuite locations. |
-| **Test the source repo FIRST** | Run the GitHub repo locally. Screenshot every feature. Note every input/output. This is your spec. |
-| **One tool = one session** | Don't port 3 tools at once. Port one, verify it end-to-end, commit, then start the next. |
+| **NEVER import the source repo's dependencies blindly** | They may conflict with DMSuite's existing deps. Check first. |
+| **NEVER hardcode colors, fonts, or spacing** | ALL visual tokens must come from DMSuite's Tailwind theme. |
+| **ALWAYS wire the 8 integration points** | These are ALWAYS written fresh — they're DMSuite-specific. |
+| **Test the source repo FIRST** | Run it locally. Use every feature. This is your spec. |
+| **One tool = one session** | Don't port 3 tools at once. Port one, verify end-to-end, commit. |
+
+### Ground Rules (Fast Path ONLY)
+
+| Rule | Why |
+|------|-----|
+| **Copy ALL component files, not just the "main" one** | Missing a sub-component causes runtime crashes. Copy the entire feature. |
+| **Let `tsc --noEmit` be your TODO list** | Every TypeScript error = one thing to adapt. Fix them ALL. When tsc passes, you're done. |
+| **Keep the UI structure exactly as source** | Don't "improve" the layout or reorganize components. The source UI is proven to work. |
+| **ONLY change what breaks or what violates DMSuite branding** | If it compiles and follows our theme tokens, leave it alone. |
+
+### Ground Rules (Full Rewrite Path ONLY)
+
+| Rule | Why |
+|------|-----|
+| **NEVER copy-paste React components verbatim** | Different styling, state, routing — nothing will resolve. |
+| **ALWAYS start from DMSuite's patterns, not the source** | Build the DMSuite shell first, THEN port the logic. |
+| **Map features, don't map files** | GitHub repos have their own file structure. DMSuite has a strict structure. |
 
 ### What "Porting" Actually Means
 
+#### Fast Path (Same-Stack):
 ```
-GitHub Repo (Reference)              DMSuite (Target)
-├── Their components          →      Our workspace component(s)
-├── Their state (Redux/etc)   →      Our Zustand store
-├── Their API calls           →      Our api/ routes (if needed)
-├── Their CSS/styles          →      Our Tailwind v4 tokens
-├── Their core logic/engine   →      Our lib/ modules (THIS is what you actually reuse)
-├── Their config/types        →      Our data/ + types/
-└── Their tests               →      Our verification protocol
+GitHub Repo (Source)                  DMSuite (Target)
+├── Their components          →      COPY into our workspace folder, adapt imports
+├── Their state (Zustand)     →      KEEP if Zustand, wrap with our persist/immer/temporal
+├── Their state (Context)     →      REWRITE to our Zustand pattern
+├── Their Tailwind classes    →      KEEP — but replace any hardcoded colors with our tokens
+├── Their core logic/engine   →      COPY as-is (pure functions need no changes)
+├── Their config/types        →      COPY, rename to our conventions
+└── Their package deps        →      CHECK against our package.json — use ours where overlap exists
 ```
 
-**The ONLY things you should port nearly verbatim:**
+#### Full Rewrite Path (Different Stack):
+```
+GitHub Repo (Reference)              DMSuite (Target)
+├── Their components          →      REWRITE as our workspace component(s)
+├── Their state (Redux/etc)   →      REWRITE as our Zustand store
+├── Their API calls           →      REWRITE as our api/ routes (if needed)
+├── Their CSS/styles          →      REWRITE using our Tailwind v4 tokens
+├── Their core logic/engine   →      COPY into our lib/ modules (THIS is what you actually reuse)
+├── Their config/types        →      ADAPT into our data/ + types/
+└── Their tests               →      REPLACE with our verification protocol
+```
+
+**What you ALWAYS copy verbatim (both paths):**
 - Pure computation logic (algorithms, parsers, transformers, math)
 - Data schemas/types (adapted to our naming conventions)
 - Template definitions (converted to our format)
 
-**The things you REWRITE from scratch using DMSuite patterns:**
-- ALL React components (must use our Tailwind classes, our icons, our layout)
-- ALL state management (must use Zustand with our persist/immer/temporal patterns)
-- ALL routing (must use our dynamic `[toolId]` router)
-- ALL AI integration (must use Chiko manifest system)
+**What you ALWAYS write fresh (both paths):**
+- The 8 integration points (store adapter, Chiko manifest, workspace events, etc.)
+- These are DMSuite-specific glue code that no source repo will have
 
 ---
 
-## 2. Pre-Port Analysis Checklist
+## 2. Stack Compatibility Check — Which Path to Use
+
+**This is the FIRST thing you do. Before any analysis, before any code, classify the source repo.**
+
+### The Decision Matrix
+
+| Source Repo Uses... | DMSuite Uses... | Match? | Path |
+|---------------------|-----------------|--------|------|
+| React | React 19 | ✅ | Fast Path candidate |
+| Vue / Svelte / Angular / Vanilla | React 19 | ❌ | Full Rewrite |
+| Tailwind CSS (any version) | Tailwind CSS v4 | ✅ | Fast Path candidate |
+| CSS Modules / styled-components / Emotion / SASS | Tailwind CSS v4 | ❌ | Full Rewrite |
+| TypeScript | TypeScript (strict) | ✅ | Fast Path candidate |
+| JavaScript (no types) | TypeScript (strict) | ⚠️ | Fast Path OK — add types during adaptation |
+| Next.js (App Router) | Next.js 16+ (App Router) | ✅ | Fast Path candidate |
+| Next.js (Pages Router) | Next.js 16+ (App Router) | ⚠️ | Fast Path OK — move routing to our [toolId] pattern |
+| Vite / CRA / Remix | Next.js 16+ (App Router) | ⚠️ | Fast Path OK — components are still React, just adapt routing |
+| Zustand | Zustand + immer + persist + zundo | ✅ | Fast Path — wrap with our middleware |
+| Redux / MobX / Recoil / Jotai | Zustand | ❌ for state | Fast Path for UI, but rewrite state management |
+| React Context (simple) | Zustand | ⚠️ | Fast Path — convert Context → Zustand |
+
+### Quick Classification Rule
+
+**Count the ✅ matches above:**
+- **3+ matches (React + Tailwind + TypeScript/JS)** → 🟢 **FAST PATH**
+- **React but NO Tailwind** → ⚠️ **FAST PATH for logic, REWRITE for styling** (still faster than full rewrite)
+- **NOT React** → 🔴 **FULL REWRITE PATH** (Section 7)
+
+### Fast Path Compatibility Scoring
+
+```
+Score the source repo (check all that apply):
+
+[+3] Uses React (functional components with hooks)          □
+[+2] Uses Tailwind CSS (any version)                        □
+[+2] Uses TypeScript                                        □
+[+1] Uses Next.js                                           □
+[+1] Uses Zustand                                           □
+[+1] Uses similar deps we already have (fabric, pdf-lib)    □
+
+[-5] Uses Vue, Svelte, Angular, or non-React framework      □
+[-3] Uses styled-components, CSS modules, or Emotion         □
+[-2] Uses Redux, MobX, or Recoil                             □
+[-1] Uses JavaScript (no TypeScript)                          □
+
+SCORE: ___
+
+  7+ = 🟢 FAST PATH — copy-paste-and-adapt (Section 3)
+  4-6 = ⚠️ HYBRID — copy logic, partially rewrite UI (use judgment)
+  <4  = 🔴 FULL REWRITE (Section 7)
+```
+
+---
+
+## 3. FAST PATH — Same-Stack Copy-Paste-and-Adapt
+
+> **This is the preferred path when the source repo uses React + Tailwind.** The source code IS the implementation — you are adapting it to run inside DMSuite, not reimagining it. The UI stays intact. TypeScript catches everything that needs changing.
+
+### The Core Idea
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  1. COPY all source component files into DMSuite workspace folder  │
+│  2. RUN tsc --noEmit → get the FULL list of errors                 │
+│  3. FIX ONLY what TypeScript flags:                                │
+│     • Broken imports → swap to our @/ paths                        │
+│     • Missing types → add them                                     │
+│     • Wrong state hooks → swap to our Zustand store                │
+│  4. AUDIT className strings → replace hardcoded colors with tokens │
+│  5. WIRE the 8 integration points (always written fresh)           │
+│  6. BUILD + TEST                                                   │
+│                                                                    │
+│  RULE: If TypeScript doesn't complain about it, DON'T TOUCH IT.   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Phase F1: Fetch & Copy Source Files
+
+```
+Step F1.1  □  Fetch the source repo (clone or read via GitHub URL)
+Step F1.2  □  Identify ALL component files that make up the tool's UI
+             - The main workspace/page component
+             - ALL sub-components it imports (panels, dialogs, toolbars, etc.)
+             - ALL hooks it uses (custom hooks)
+             - ALL utility functions it imports
+             - ALL type definitions it uses
+             - ALL constants/config files it references
+Step F1.3  □  Copy these files into DMSuite:
+             - Components → src/components/workspaces/tool-name/
+             - Hooks → src/hooks/ (or keep inline in workspace folder if tool-specific)
+             - Utils/engine → src/lib/tool-name/
+             - Types → src/types/tool-name.ts (or inline in component)
+             - Constants/templates → src/data/tool-name-*.ts
+Step F1.4  □  DO NOT copy: their layout shell, auth, theme toggle, router, package.json
+             (DMSuite already has all of these)
+```
+
+### Phase F2: TypeScript Error-Driven Adaptation
+
+**This is the most important phase. TypeScript IS your migration checklist.**
+
+```
+Step F2.1  □  Run: npx tsc --noEmit 2>&1 | head -100
+             Every error is something you MUST fix. No error = nothing to change.
+
+Step F2.2  □  Fix import errors (most common):
+             SOURCE:  import { Button } from "../components/ui/Button"
+             FIX:     import { Button } from "@/components/ui/Button"  ← IF we have it
+                 OR:  Inline the component / create minimal version   ← IF we don't
+
+             SOURCE:  import { useAppStore } from "../store"
+             FIX:     import { useToolNameEditor } from "@/stores/tool-name-editor"
+
+             SOURCE:  import { FiDownload } from "react-icons/fi"
+             FIX:     import { IconDownload } from "@/components/icons"
+
+             SOURCE:  import styles from "./Component.module.css"
+             FIX:     DELETE this import, convert CSS module classes to Tailwind
+
+Step F2.3  □  Fix state management hooks:
+             SOURCE:  const dispatch = useDispatch()
+                      dispatch(setTitle("new"))
+             FIX:     const { setTitle } = useToolNameEditor()
+                      setTitle("new")
+
+             SOURCE:  const title = useSelector(state => state.tool.title)
+             FIX:     const title = useToolNameEditor(s => s.form.title)
+
+             SOURCE:  const [state, setState] = useContext(ToolContext)
+             FIX:     const state = useToolNameEditor()
+
+Step F2.4  □  Fix component library imports:
+             If source uses shadcn/ui, MUI, Ant Design, Chakra, etc.:
+             - Simple components (Button, Input, Select): replace with our Tailwind equivalents
+               or create a minimal local version in the workspace folder
+             - Complex components (DataTable, Calendar, Dialog): check if we have one in
+               src/components/ui/, if not, build a minimal Tailwind version
+             - DO NOT install their component library
+
+Step F2.5  □  Fix routing:
+             SOURCE:  import { useRouter } from "next/navigation" → router.push("/tool/...")
+             FIX:     Remove or adapt — tools are single-page workspaces in DMSuite
+
+             SOURCE:  import { Link } from "react-router-dom"
+             FIX:     import Link from "next/link" (if actually needed, usually not)
+
+Step F2.6  □  Run tsc --noEmit again
+             Repeat until 0 errors. Each pass should have fewer errors.
+
+Step F2.7  □  IMPORTANT: Do NOT suppress errors with `as any` or `@ts-ignore`
+             Every error represents a real incompatibility. Fix it properly.
+```
+
+### Phase F3: Branding Compliance Sweep
+
+**The UI layout stays exactly as source. You are ONLY changing colors/spacing to use DMSuite tokens.**
+
+```
+Step F3.1  □  Search for hardcoded hex colors in className strings:
+             Find:    className="text-[#4f46e5]"  or  className="bg-[#1e1e2e]"
+             Replace: className="text-primary-500"  or  className="bg-gray-900"
+             (See Section 4 for the full color mapping table)
+
+Step F3.2  □  Search for hardcoded hex colors in inline styles:
+             Find:    style={{ color: '#4f46e5', background: '#111' }}
+             Replace: Use className with Tailwind tokens instead
+             EXCEPTION: Dynamic colors that MUST be computed at runtime (e.g., user picks a color)
+                        are OK as inline styles — but use CSS variables where possible
+
+Step F3.3  □  Search for hardcoded pixel values in className strings:
+             Find:    className="w-[73px]" or className="h-[200px]"
+             Replace: className="w-18" or className="h-48" (nearest token)
+             EXCEPTION: Very specific sizes for canvas/SVG rendering are OK
+
+Step F3.4  □  Verify dark mode compliance:
+             Every bg-*, text-*, border-* class should have a dark: variant
+             If source repo doesn't support dark mode, ADD dark: variants now:
+             SOURCE:  className="bg-white text-gray-900"
+             FIX:     className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+
+Step F3.5  □  Verify Tailwind v4 syntax:
+             Find:    bg-gradient-to-br  (v3 syntax)
+             Replace: bg-linear-to-br    (v4 syntax)
+
+Step F3.6  □  Replace any external icon imports:
+             Find:    import { X } from "lucide-react"
+                 OR:  import { FiX } from "react-icons/fi"
+             Replace: import { IconClose } from "@/components/icons"
+             If we don't have the icon, add it to src/components/icons.tsx + iconMap
+```
+
+### Phase F4: State Management Adaptation
+
+**If the source uses Zustand already, this is easy. If it uses Redux/Context, create our store from their state shape.**
+
+```
+Step F4.1  □  Identify the source's state shape:
+             Look at their store/context for ALL state fields and actions
+             Document: { field: type, field: type, ... }
+
+Step F4.2  □  Create our Zustand store with their EXACT same fields:
+             File: src/stores/tool-name-editor.ts
+             - Preserve their field names (don't rename unless necessary)
+             - Add our middleware: persist + immer (+ temporal if undo/redo needed)
+             - Add setForm() and resetForm() for DMSuite compatibility
+             - localStorage key: "dmsuite-tool-name"
+
+Step F4.3  □  If source uses Zustand already:
+             - COPY their store file
+             - WRAP with our persist + immer middleware
+             - ADD setForm() / resetForm() if missing
+             - CHANGE the persist key to "dmsuite-tool-name"
+             - That's it.
+
+Step F4.4  □  In the copied components, find-replace state hooks:
+             If source uses Redux:    useSelector(s => s.xxx) → useToolNameEditor(s => s.xxx)
+             If source uses Context:  useToolContext() → useToolNameEditor()
+             If source uses Zustand:  useSourceStore() → useToolNameEditor()
+```
+
+### Phase F5: Wire the 8 Integration Points
+
+**These are ALWAYS written fresh. No source repo has them.**
+
+```
+Step F5.1  □  Ensure workspace component has "use client" as FIRST LINE
+Step F5.2  □  Add to page.tsx dynamic imports:
+             "your-tool-id": dynamic(() => import("@/components/workspaces/tool-name/ToolNameWorkspace")),
+Step F5.3  □  Create store adapter in src/lib/store-adapters.ts
+Step F5.4  □  Create Chiko manifest in src/lib/chiko/manifests/tool-name.ts
+Step F5.5  □  Add workspace event dispatching in the workspace component:
+             - workspace:dirty on any user edit
+             - workspace:progress on milestones
+             - workspace:save on export
+Step F5.6  □  Update src/data/tools.ts entry (status: "ready", devStatus: "complete")
+Step F5.7  □  Update src/data/credit-costs.ts (if AI-powered)
+Step F5.8  □  Add icon to src/components/icons.tsx if needed
+```
+
+(See Section 6 for full details on each integration point.)
+
+### Phase F6: Compile, Build, Test
+
+```
+Step F6.1  □  npx tsc --noEmit → MUST be 0 errors
+Step F6.2  □  npm run build → MUST succeed
+Step F6.3  □  npm run dev → navigate to tool
+             □  Verify it loads (no blank screen)
+             □  Verify ALL features work exactly as in the source repo
+             □  Verify dark mode looks correct
+             □  Verify light mode looks correct
+Step F6.4  □  Compare source repo side-by-side with DMSuite version:
+             Every feature in source MUST work identically in DMSuite.
+             If something is missing or broken, the copy was incomplete — go back to F1.
+```
+
+### Fast Path Checklist (copy this for each tool)
+
+```markdown
+## Fast Path Port: [Tool Name] from [Source Repo URL]
+
+### Compatibility Score: ___/10
+- [ ] React: YES/NO
+- [ ] Tailwind: YES/NO
+- [ ] TypeScript: YES/NO
+- [ ] Next.js: YES/NO
+- [ ] Zustand: YES/NO
+
+### Files Copied
+- [ ] Listed ALL source files needed
+- [ ] Copied to correct DMSuite locations
+- [ ] Did NOT copy: layout, auth, theme, router
+
+### TypeScript Adaptation (tsc --noEmit driven)
+- [ ] Fixed all import paths
+- [ ] Replaced state management hooks
+- [ ] Replaced component library imports
+- [ ] Replaced icon imports
+- [ ] 0 TypeScript errors remaining
+
+### Branding Compliance
+- [ ] No hardcoded hex colors in className
+- [ ] No hardcoded hex colors in inline styles
+- [ ] No hardcoded pixel values (except canvas/SVG)
+- [ ] Dark mode variants on all surfaces
+- [ ] Tailwind v4 syntax (bg-linear-to, not bg-gradient-to)
+- [ ] All icons from @/components/icons
+
+### 8 Integration Points
+- [ ] tools.ts entry updated
+- [ ] Dynamic import in page.tsx
+- [ ] Store adapter in store-adapters.ts
+- [ ] Chiko manifest created + barrel exported
+- [ ] Workspace events dispatched
+- [ ] Credit costs (if AI-powered)
+- [ ] Icon added (if needed)
+- [ ] "use client" directive present
+
+### Verification
+- [ ] tsc --noEmit: 0 errors
+- [ ] npm run build: success
+- [ ] Tool loads in browser
+- [ ] All source features work identically
+- [ ] Dark + light mode correct
+- [ ] TOOL-STATUS.md updated
+```
+
+---
+
+## 4. Branding & Theme Compliance Protocol
+
+> **The UI layout, structure, and interactions from the source repo stay UNTOUCHED. You ONLY change the visual tokens so colours, fonts, and spacing pull from DMSuite's theme — never hardcoded.**
+
+### The Golden Rule
+```
+✅ The copied code should reference DMSuite's Tailwind design tokens for ALL visual properties.
+✅ The UI structure, layout, component hierarchy, and interactions remain exactly as source.
+❌ Do NOT redesign, rearrange, or "improve" the UI.
+❌ Do NOT hardcode ANY hex color, pixel value, or font family.
+```
+
+### Color Token Mapping Table
+
+When you find hardcoded colors in the source, map them to DMSuite tokens:
+
+| Source Color | Likely Purpose | DMSuite Token |
+|-------------|----------------|---------------|
+| `#4f46e5`, `#6366f1`, `#8b5cf6` | Primary/accent | `primary-500`, `primary-400` |
+| `#06b6d4`, `#0ea5e9`, `#22d3ee` | Secondary/info | `secondary-500`, `info` |
+| `#10b981`, `#22c55e` | Success | `success` |
+| `#ef4444`, `#f43f5e` | Error/danger | `error` |
+| `#f59e0b`, `#eab308` | Warning | `warning` |
+| `#ffffff`, `#fafafa` | Light background | `white dark:bg-gray-900` |
+| `#f3f4f6`, `#f9fafb` | Light surface | `gray-100 dark:bg-gray-800` |
+| `#e5e7eb`, `#d1d5db` | Border (light) | `gray-200 dark:border-gray-700` |
+| `#111827`, `#1f2937` | Dark background | `gray-900` |
+| `#374151`, `#4b5563` | Dark surface | `gray-700`, `gray-600` |
+| `#6b7280`, `#9ca3af` | Muted text | `gray-500 dark:text-gray-400` |
+| `#111827`, `#030712` | Primary text (light mode) | `gray-900 dark:text-gray-100` |
+| Any specific brand color | Depends | Map to nearest primary/secondary/gray token |
+
+### Font Compliance
+
+```
+SOURCE:  font-family: 'Helvetica', sans-serif
+FIX:     className="font-sans"                  ← uses Inter (our theme font)
+
+SOURCE:  font-family: 'Fira Code', monospace
+FIX:     className="font-mono"                  ← uses JetBrains Mono (our theme font)
+
+NEVER:   style={{ fontFamily: 'Custom Font' }}
+```
+
+### Spacing Compliance
+
+```
+SOURCE:  className="p-[18px]"    →  className="p-4" or "p-5"     (nearest token: 16px or 20px)
+SOURCE:  className="gap-[14px]"  →  className="gap-3.5"          (nearest token: 14px)
+SOURCE:  className="w-[300px]"   →  className="w-72" or "w-80"   (nearest: 288px or 320px)
+SOURCE:  className="h-[calc(100vh-64px)]" → className="h-[calc(100vh-64px)]"  ← OK, this is layout math
+```
+
+**Exception:** `calc()` expressions for layout dimensions are acceptable as arbitrary values since they're responsive layout math, not design tokens.
+
+### What NOT to Change
+
+```
+✅ KEEP: Component structure and hierarchy
+✅ KEEP: Event handlers and user interactions
+✅ KEEP: Conditional rendering logic
+✅ KEEP: Animation/transition classes (if using Tailwind or framer-motion)
+✅ KEEP: Responsive breakpoints (sm:, md:, lg:, xl:)
+✅ KEEP: Accessibility attributes (aria-*, role, tabIndex)
+✅ KEEP: Form validation logic
+✅ KEEP: Error/loading/empty state handling
+```
+
+---
+
+## 5. Pre-Port Analysis Checklist
 
 Before writing any code, complete this analysis of the GitHub repo:
 
@@ -119,7 +546,7 @@ Classify the tool into one of DMSuite's 4 workspace patterns:
 
 ---
 
-## 3. Platform Integration Points (The 8-Point Contract)
+## 6. Platform Integration Points (The 8-Point Contract)
 
 **Every tool MUST wire into exactly these 8 integration points.** Missing ANY of them causes bugs or broken features. This is the checklist that guarantees zero faults.
 
@@ -284,7 +711,9 @@ window.dispatchEvent(new CustomEvent("workspace:save"));
 
 ---
 
-## 4. Step-by-Step Build Process — New Tool
+## 7. FULL REWRITE PATH — Step-by-Step Build Process
+
+> **Use this section ONLY when the source repo uses a different stack (Vue, Svelte, CSS modules, etc.) and scored <4 on the compatibility check in Section 2.**
 
 Follow these steps IN ORDER for a fresh tool port from GitHub.
 
@@ -455,7 +884,7 @@ Step 7.3  □  Commit with descriptive message:
 
 ---
 
-## 5. Step-by-Step Rebuild Process — Replace Existing Tool
+## 8. Step-by-Step Rebuild Process — Replace Existing Tool
 
 When you find a better GitHub implementation of a tool that already exists in DMSuite, follow this enhanced process.
 
@@ -544,7 +973,7 @@ Step R4.3  □  User's existing projects for this tool:
 
 ---
 
-## 6. Dependency Management Rules
+## 9. Dependency Management Rules
 
 ### Rule 1: Check Before Installing
 ```bash
@@ -605,7 +1034,7 @@ npm install new-package --legacy-peer-deps
 
 ---
 
-## 7. Styling & Theme Compliance
+## 10. Styling & Theme Compliance
 
 ### Absolute Rules (Violation = Broken UI in production)
 
@@ -677,7 +1106,7 @@ const ToolIcon = getIcon("scissors"); // Returns component or FallbackIcon
 
 ---
 
-## 8. State Management Patterns
+## 11. State Management Patterns
 
 ### Pattern A Store: Fabric.js Tools (use shared store)
 ```typescript
@@ -753,7 +1182,7 @@ export const useToolEditor = create<ToolState>()(
 
 ---
 
-## 9. Chiko AI Manifest Guide
+## 12. Chiko AI Manifest Guide
 
 ### Manifest Structure
 Every tool's manifest follows this exact pattern:
@@ -889,7 +1318,7 @@ function ToolNameWorkspace() {
 
 ---
 
-## 10. Workspace Events Contract
+## 13. Workspace Events Contract
 
 ### Events That MUST Be Dispatched
 
@@ -938,7 +1367,7 @@ useEffect(() => {
 
 ---
 
-## 11. Project Persistence Wiring
+## 14. Project Persistence Wiring
 
 ### How It Works (Automatic if Adapter is Correct)
 
@@ -974,7 +1403,7 @@ User opens tool → page.tsx creates project → useProjectData hook activates
 
 ---
 
-## 12. Testing & Verification Protocol
+## 15. Testing & Verification Protocol
 
 ### Mandatory Checks (ALL must pass before marking complete)
 
@@ -1026,7 +1455,7 @@ npm run lint              # No critical warnings
 
 ---
 
-## 13. Common Failure Modes & Fixes
+## 16. Common Failure Modes & Fixes
 
 ### Failure: Blank Screen After Loading
 
@@ -1110,7 +1539,7 @@ npm run lint              # No critical warnings
 
 ---
 
-## 14. File Checklist Template
+## 17. File Checklist Template
 
 Copy this for each tool port and check off every item:
 
@@ -1156,7 +1585,7 @@ Copy this for each tool port and check off every item:
 
 ---
 
-## 15. Tool Type Matrix — Which Pattern to Use
+## 18. Tool Type Matrix — Which Pattern to Use
 
 | If the GitHub tool is... | Use Pattern | Store Type | Example |
 |--------------------------|-------------|------------|---------|
@@ -1186,7 +1615,7 @@ Does the tool have a visual canvas with draggable objects?
 
 ---
 
-## 16. TOOL-STATUS.md & tools.ts Update Protocol
+## 19. TOOL-STATUS.md & tools.ts Update Protocol
 
 ### MANDATORY after every tool build/rebuild
 
@@ -1217,13 +1646,15 @@ Increment the "Tools fully complete" count in the header.
 
 ## Quick Reference: The Porting Commandments
 
-1. **Thou shalt NOT copy-paste components** — rewrite using DMSuite patterns
-2. **Thou shalt port the ENGINE, not the UI** — algorithms and logic are portable; UI is not
-3. **Thou shalt wire ALL 8 integration points** — missing even one causes subtle bugs
-4. **Thou shalt run `tsc --noEmit` before AND after** — TypeScript errors are deal-breakers
-5. **Thou shalt test in BOTH themes** — dark mode is default, but light must work too
-6. **Thou shalt dispatch workspace events** — progress tracking breaks without them
-7. **Thou shalt verify Chiko access** — every tool must be AI-controllable
+1. **Thou shalt CHECK STACK COMPATIBILITY FIRST** — score the repo, pick Fast Path or Full Rewrite
+2. **Thou shalt COPY-PASTE for same-stack repos** — preserve the proven UI, don't reimagine it
+3. **Thou shalt let TypeScript be thy checklist** — `tsc --noEmit` errors = things to fix, nothing else
+4. **Thou shalt NEVER hardcode colors, fonts, or spacing** — all visual tokens from DMSuite's theme
+5. **Thou shalt wire ALL 8 integration points** — these are ALWAYS written fresh
+6. **Thou shalt run `tsc --noEmit` before AND after** — 0 errors is the only acceptable result
+7. **Thou shalt test in BOTH themes** — dark mode is default, but light must work too
 8. **Thou shalt NOT install competing libraries** — use what DMSuite already has
-9. **Thou shalt handle old project data gracefully** — users may have saved state in the old format
-10. **Thou shalt commit with a descriptive message and update TOOL-STATUS.md** — the tracker is law
+9. **Thou shalt dispatch workspace events** — progress tracking breaks without them
+10. **Thou shalt verify Chiko access** — every tool must be AI-controllable
+11. **Thou shalt NOT "improve" the source UI** — if it works in the source, preserve it exactly
+12. **Thou shalt commit with a descriptive message and update TOOL-STATUS.md** — the tracker is law

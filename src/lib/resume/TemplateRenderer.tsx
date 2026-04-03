@@ -58,7 +58,7 @@ function SectionTitle({ title, color, style: divStyle, headingSize }: {
     none: "none",
   };
   return (
-    <div style={{ borderBottom: borderMap[divStyle.sectionDivider], paddingBottom: 4, marginBottom: 6 }}>
+    <div style={{ borderBottom: borderMap[divStyle.sectionDivider], paddingBottom: 6, marginBottom: 10 }}>
       <h3 style={{
         color,
         margin: 0,
@@ -109,6 +109,90 @@ function RichText({ html, bodySize }: { html: string; bodySize?: number }) {
   if (!html.trim()) return null;
   const clean = typeof window !== "undefined" ? DOMPurify.sanitize(html) : html;
   return <div className="resume-rich-text" style={bodySize ? { fontSize: pt(bodySize) } : undefined} dangerouslySetInnerHTML={{ __html: clean }} />;
+}
+
+/** Inline SVG contact icons for the resume header — no external dependency */
+function ContactIcon({ type, size = 12, color }: { type: string; size?: number; color: string }) {
+  const s: React.CSSProperties = { width: size, height: size, flexShrink: 0, display: "inline-block", verticalAlign: "middle" };
+  switch (type) {
+    case "email":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={s}>
+          <rect x="2" y="4" width="20" height="16" rx="2" />
+          <path d="M22 7l-10 6L2 7" />
+        </svg>
+      );
+    case "phone":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={s}>
+          <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.12.8.3 1.58.56 2.33a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.75.26 1.53.44 2.33.56A2 2 0 0122 16.92z" />
+        </svg>
+      );
+    case "location":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={s}>
+          <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" />
+          <circle cx="12" cy="10" r="3" />
+        </svg>
+      );
+    case "website":
+    case "globe":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={s}>
+          <circle cx="12" cy="12" r="10" />
+          <path d="M2 12h20" />
+          <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
+        </svg>
+      );
+    case "link":
+    default:
+      if (!type) return null;
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={s}>
+          <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+          <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+        </svg>
+      );
+  }
+}
+
+/** Builds contact entries with icon type from basics data */
+function buildContactEntries(basics: ResumeData["basics"]): Array<{ type: string; text: string; url?: string }> {
+  const entries: Array<{ type: string; text: string; url?: string }> = [];
+  if (basics.email) entries.push({ type: "email", text: basics.email, url: `mailto:${basics.email}` });
+  if (basics.phone) entries.push({ type: "phone", text: basics.phone, url: `tel:${basics.phone}` });
+  if (basics.location) entries.push({ type: "location", text: basics.location });
+  if (basics.website?.url) entries.push({ type: "website", text: basics.website.label || basics.website.url, url: basics.website.url });
+  basics.customFields?.forEach((f) => {
+    if (f.text) entries.push({ type: f.icon || "link", text: f.text, url: f.link || undefined });
+  });
+  return entries;
+}
+
+/** Renders the contact items row with optional icons */
+function ContactItems({ entries, size, color, iconColor, hideIcons, centered }: {
+  entries: Array<{ type: string; text: string; url?: string }>;
+  size: string; color: string; iconColor: string; hideIcons: boolean; centered?: boolean;
+}) {
+  if (entries.length === 0) return null;
+  return (
+    <div style={{
+      display: "flex", flexWrap: "wrap", gap: "4px 12px", alignItems: "center",
+      fontSize: size, color, marginTop: 6,
+      ...(centered ? { justifyContent: "center" } : {}),
+    }}>
+      {entries.map((entry, i) => (
+        <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+          {!hideIcons && <ContactIcon type={entry.type} size={11} color={iconColor} />}
+          {entry.url ? (
+            <a href={entry.url} style={{ color: "inherit", textDecoration: "none" }}>{entry.text}</a>
+          ) : (
+            <span>{entry.text}</span>
+          )}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -385,8 +469,8 @@ function renderSection(
 // ---------------------------------------------------------------------------
 
 function ResumeHeader({
-  data, color, textColor, cfg, typo,
-}: { data: ResumeData; color: string; textColor: string; cfg: TemplateConfig; typo: ResumeData["metadata"]["typography"] }) {
+  data, color, textColor, cfg, typo, hideIcons,
+}: { data: ResumeData; color: string; textColor: string; cfg: TemplateConfig; typo: ResumeData["metadata"]["typography"]; hideIcons: boolean }) {
   const basics = data.basics ?? { name: "", headline: "", email: "", phone: "", location: "", website: { url: "", label: "" }, customFields: [] };
   const picture = data.picture ?? { hidden: true, url: "", size: 80, aspectRatio: 1, borderRadius: 0, borderColor: "rgba(0,0,0,0.5)", borderWidth: 0 };
   const headerStyle = cfg.style.headerStyle;
@@ -395,6 +479,7 @@ function ResumeHeader({
   const nameSize = pt(typo.heading.fontSize * 1.7);
   const headlineSize = pt(typo.body.fontSize * 1.15);
   const contactSize = pt(typo.body.fontSize * 0.88);
+  const iconColor = color;
 
   const pictureEl = hasPicture ? (
     <div style={{
@@ -410,21 +495,20 @@ function ResumeHeader({
     </div>
   ) : null;
 
-  const contactItems = [basics.email, basics.phone, basics.location, basics.website?.url].filter(Boolean);
-  const contactLine = contactItems.join("  \u2022  ");
+  const contactEntries = buildContactEntries(basics);
 
   if (headerStyle === "banner" || headerStyle === "sidebar-header") {
     return (
       <div style={{
         display: "flex", alignItems: "center", gap: 16,
-        padding: "16px 0", marginBottom: 14,
+        padding: "16px 0", marginBottom: 18,
         borderBottom: `3px solid ${color}`,
       }}>
         {pictureEl}
         <div>
           <h1 style={{ margin: 0, fontSize: nameSize, fontFamily: typo.heading.fontFamily, fontWeight: Number(typo.heading.fontWeight), color }}>{basics.name}</h1>
           {basics.headline && <div style={{ fontSize: headlineSize, color: muted(textColor, "soft"), marginTop: 3 }}>{basics.headline}</div>}
-          {contactLine && <div style={{ fontSize: contactSize, color: muted(textColor, "softer"), marginTop: 6 }}>{contactLine}</div>}
+          <ContactItems entries={contactEntries} size={contactSize} color={muted(textColor, "softer")} iconColor={iconColor} hideIcons={hideIcons} />
         </div>
       </div>
     );
@@ -432,25 +516,25 @@ function ResumeHeader({
 
   if (headerStyle === "centered") {
     return (
-      <div style={{ textAlign: "center", marginBottom: 16, paddingBottom: 12, borderBottom: `3px solid ${color}` }}>
+      <div style={{ textAlign: "center", marginBottom: 20, paddingBottom: 14, borderBottom: `3px solid ${color}` }}>
         {pictureEl && <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>{pictureEl}</div>}
         <h1 style={{ margin: 0, fontSize: nameSize, fontFamily: typo.heading.fontFamily, fontWeight: Number(typo.heading.fontWeight), color }}>{basics.name}</h1>
         {basics.headline && <div style={{ fontSize: headlineSize, color: muted(textColor, "soft"), marginTop: 3 }}>{basics.headline}</div>}
-        {contactLine && <div style={{ fontSize: contactSize, color: muted(textColor, "softer"), marginTop: 6 }}>{contactLine}</div>}
+        <ContactItems entries={contactEntries} size={contactSize} color={muted(textColor, "softer")} iconColor={iconColor} hideIcons={hideIcons} centered />
       </div>
     );
   }
 
   if (headerStyle === "split") {
     return (
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, paddingBottom: 12, borderBottom: `3px solid ${color}` }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 14, borderBottom: `3px solid ${color}` }}>
         <div>
           <h1 style={{ margin: 0, fontSize: nameSize, fontFamily: typo.heading.fontFamily, fontWeight: Number(typo.heading.fontWeight), color }}>{basics.name}</h1>
           {basics.headline && <div style={{ fontSize: headlineSize, color: muted(textColor, "soft"), marginTop: 3 }}>{basics.headline}</div>}
         </div>
         <div style={{ textAlign: "right" }}>
           {pictureEl}
-          {contactLine && <div style={{ fontSize: contactSize, color: muted(textColor, "softer"), marginTop: 6 }}>{contactLine}</div>}
+          <ContactItems entries={contactEntries} size={contactSize} color={muted(textColor, "softer")} iconColor={iconColor} hideIcons={hideIcons} />
         </div>
       </div>
     );
@@ -458,7 +542,7 @@ function ResumeHeader({
 
   if (headerStyle === "minimal") {
     return (
-      <div style={{ marginBottom: 14 }}>
+      <div style={{ marginBottom: 18 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           {pictureEl}
           <div>
@@ -466,19 +550,19 @@ function ResumeHeader({
             {basics.headline && <div style={{ fontSize: pt(typo.body.fontSize * 1.05), color: muted(textColor, "soft") }}>{basics.headline}</div>}
           </div>
         </div>
-        {contactLine && <div style={{ fontSize: contactSize, color: muted(textColor, "softer"), marginTop: 8 }}>{contactLine}</div>}
+        <ContactItems entries={contactEntries} size={contactSize} color={muted(textColor, "softer")} iconColor={iconColor} hideIcons={hideIcons} />
       </div>
     );
   }
 
   // classic (default)
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 14 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 18 }}>
       {pictureEl}
       <div style={{ flex: 1 }}>
         <h1 style={{ margin: 0, fontSize: pt(typo.heading.fontSize * 1.6), fontFamily: typo.heading.fontFamily, fontWeight: Number(typo.heading.fontWeight), color }}>{basics.name}</h1>
         {basics.headline && <div style={{ fontSize: pt(typo.body.fontSize * 1.1), color: muted(textColor, "soft"), marginTop: 3 }}>{basics.headline}</div>}
-        {contactLine && <div style={{ fontSize: contactSize, color: muted(textColor, "softer"), marginTop: 6 }}>{contactLine}</div>}
+        <ContactItems entries={contactEntries} size={contactSize} color={muted(textColor, "softer")} iconColor={iconColor} hideIcons={hideIcons} />
       </div>
     </div>
   );
@@ -541,7 +625,7 @@ function ResumePage({
     >
       {/* Header only on first page */}
       {pageIndex === 0 && (
-        <ResumeHeader data={data} color={color} textColor={designColors.text} cfg={cfg} typo={typo} />
+        <ResumeHeader data={data} color={color} textColor={designColors.text} cfg={cfg} typo={typo} hideIcons={!!pageCfg.hideIcons} />
       )}
 
       {hasSidebar ? (
@@ -550,7 +634,7 @@ function ResumePage({
             <div style={{
               width: `${sidebarPct}%`,
               backgroundColor: sidebarBg,
-              padding: hasSidebarBg ? 12 : 0,
+              padding: hasSidebarBg ? 16 : 0,
               borderRadius: hasSidebarBg ? 6 : 0,
             }}>
               <div style={{ display: "flex", flexDirection: "column", gap: gapY }}>{sidebarSections}</div>
@@ -563,7 +647,7 @@ function ResumePage({
             <div style={{
               width: `${sidebarPct}%`,
               backgroundColor: sidebarBg,
-              padding: hasSidebarBg ? 12 : 0,
+              padding: hasSidebarBg ? 16 : 0,
               borderRadius: hasSidebarBg ? 6 : 0,
             }}>
               <div style={{ display: "flex", flexDirection: "column", gap: gapY }}>{sidebarSections}</div>

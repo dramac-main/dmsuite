@@ -330,13 +330,13 @@ export const metadataSchema = z.object({
   }).default({ enabled: false, value: "" }),
   page: z.object({
     format: z.enum(["a4", "letter"]).default("a4"),
-    marginX: z.number().min(0).default(14),
-    marginY: z.number().min(0).default(12),
-    gapX: z.number().min(0).default(4),
-    gapY: z.number().min(0).default(6),
+    marginX: z.number().min(0).default(36),
+    marginY: z.number().min(0).default(28),
+    gapX: z.number().min(0).default(12),
+    gapY: z.number().min(0).default(8),
     locale: z.string().default("en-US"),
     hideIcons: z.boolean().default(false),
-  }).default({ format: "a4", marginX: 14, marginY: 12, gapX: 4, gapY: 6, locale: "en-US", hideIcons: false }),
+  }).default({ format: "a4", marginX: 36, marginY: 28, gapX: 12, gapY: 8, locale: "en-US", hideIcons: false }),
   design: z.object({
     colors: colorDesignSchema.default({ primary: "rgba(139,92,246,1)", text: "rgba(0,0,0,1)", background: "rgba(255,255,255,1)" }),
     level: levelDesignSchema.default({ icon: "star", type: "circle" }),
@@ -398,7 +398,7 @@ export const resumeDataSchema = z.object({
       }],
     },
     css: { enabled: false, value: "" },
-    page: { format: "a4", marginX: 14, marginY: 12, gapX: 4, gapY: 6, locale: "en-US", hideIcons: false },
+    page: { format: "a4", marginX: 36, marginY: 28, gapX: 12, gapY: 8, locale: "en-US", hideIcons: false },
     design: {
       colors: { primary: "rgba(139,92,246,1)", text: "rgba(0,0,0,1)", background: "rgba(255,255,255,1)" },
       level: { icon: "star", type: "circle" },
