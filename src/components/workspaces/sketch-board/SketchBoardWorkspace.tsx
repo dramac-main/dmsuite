@@ -5,7 +5,7 @@
 // "production" conditions that Turbopack can't resolve for CSS).
 import "./excalidraw-theme.css";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useChikoActions } from "@/hooks/useChikoActions";
 import { createSketchBoardManifest } from "@/lib/chiko/manifests/sketch-board";
@@ -37,7 +37,7 @@ export default function SketchBoardWorkspace() {
   const dirtyCountRef = useRef(0);
   const hasDispatchedRef = useRef(false);
   const libraryLoadedRef = useRef(false);
-  const isLoadingLibraryRef = useRef(false);
+  const readyRef = useRef(false);
   const [mod, setMod] = useState<ExcalidrawMod | null>(null);
 
   // ── Chiko AI integration ──
@@ -57,54 +57,75 @@ export default function SketchBoardWorkspace() {
     };
   }, []);
 
-  // ── Fire workspace events ──
-  const dispatchDirty = useCallback(() => {
-    dirtyCountRef.current++;
-    window.dispatchEvent(new CustomEvent("workspace:dirty"));
-
-    if (dirtyCountRef.current === 1) {
-      window.dispatchEvent(
-        new CustomEvent("workspace:progress", {
-          detail: { milestone: "input" },
-        })
-      );
+  // ── Compute initialData once (stable reference — never re-created) ──
+  const initialData = useMemo(() => {
+    try {
+      const raw = localStorage.getItem(PERSISTENCE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return {
+          elements: parsed.elements || [],
+          appState: { ...parsed.appState },
+        };
+      }
+    } catch {
+      // Corrupted data — start fresh
     }
-    if (dirtyCountRef.current === 5) {
-      window.dispatchEvent(
-        new CustomEvent("workspace:progress", {
-          detail: { milestone: "content" },
-        })
-      );
-    }
-  }, []);
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only compute once on mount
 
   // ── onChange: persist scene to localStorage + dispatch dirty ──
+  // Uses a ref-based debounce to avoid overwhelming React with synchronous
+  // DOM events on every single Excalidraw change callback.
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleChange = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (elements: readonly any[], appState: Record<string, unknown>) => {
-      // Skip onChange events fired during bulk library injection
-      if (isLoadingLibraryRef.current) return;
+      // Don't process changes until the canvas is fully ready
+      // (prevents onChange storms during library injection or initialization)
+      if (!readyRef.current) return;
 
-      dispatchDirty();
+      dirtyCountRef.current++;
 
-      // Persist scene (debounced via React batching)
-      try {
-        const sceneData = {
-          elements,
-          appState: {
-            viewBackgroundColor: appState.viewBackgroundColor,
-            gridSize: appState.gridSize,
-          },
-        };
-        localStorage.setItem(PERSISTENCE_KEY, JSON.stringify(sceneData));
-      } catch {
-        // localStorage full or unavailable — silently skip
-      }
+      // Debounce localStorage writes + workspace events (100ms)
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("workspace:dirty"));
+
+        if (dirtyCountRef.current === 1) {
+          window.dispatchEvent(
+            new CustomEvent("workspace:progress", {
+              detail: { milestone: "input" },
+            })
+          );
+        }
+        if (dirtyCountRef.current === 5) {
+          window.dispatchEvent(
+            new CustomEvent("workspace:progress", {
+              detail: { milestone: "content" },
+            })
+          );
+        }
+
+        try {
+          const sceneData = {
+            elements,
+            appState: {
+              viewBackgroundColor: appState.viewBackgroundColor,
+              gridSize: appState.gridSize,
+            },
+          };
+          localStorage.setItem(PERSISTENCE_KEY, JSON.stringify(sceneData));
+        } catch {
+          // localStorage full or unavailable — silently skip
+        }
+      }, 100);
     },
-    [dispatchDirty]
+    []
   );
 
-  // ── Capture the Excalidraw API ref + load bundled libraries ──
+  // ── Capture the Excalidraw API ref ──
   const handleExcalidrawAPI = useCallback(
     (api: ExcalidrawImperativeAPI) => {
       apiRef.current = api;
@@ -119,51 +140,42 @@ export default function SketchBoardWorkspace() {
         );
       }
 
-      // Load 1,000+ bundled library items (shapes, icons, diagrams)
-      if (!libraryLoadedRef.current) {
-        libraryLoadedRef.current = true;
-        fetch(LIBRARY_URL)
-          .then((res) => res.json())
-          .then((data) => {
-            if (data?.libraryItems?.length) {
-              isLoadingLibraryRef.current = true;
-              api
-                .updateLibrary({
-                  libraryItems: data.libraryItems,
-                  merge: true,
-                  openLibraryMenu: false,
-                })
-                .finally(() => {
-                  isLoadingLibraryRef.current = false;
-                });
-            }
-          })
-          .catch(() => {
-            // Library load failed — non-critical, user can still draw
-          });
-      }
+      // Mark canvas as ready after a short delay — this ensures
+      // onChange events from initial render + library injection are skipped.
+      // Library loading happens separately in a useEffect below.
+      setTimeout(() => {
+        readyRef.current = true;
+      }, 500);
     },
     []
   );
 
-  // ── Load initial data from localStorage ──
-  const getInitialData = useCallback(() => {
-    try {
-      const raw = localStorage.getItem(PERSISTENCE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        return {
-          elements: parsed.elements || [],
-          appState: {
-            ...parsed.appState,
-          },
-        };
-      }
-    } catch {
-      // Corrupted data — start fresh
-    }
-    return undefined;
-  }, []);
+  // ── Load bundled libraries after API is available ──
+  useEffect(() => {
+    const api = apiRef.current;
+    if (!mod || !api || libraryLoadedRef.current) return;
+    libraryLoadedRef.current = true;
+
+    // Delay library injection to avoid colliding with initial render
+    const timer = setTimeout(() => {
+      fetch(LIBRARY_URL)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.libraryItems?.length && apiRef.current) {
+            apiRef.current.updateLibrary({
+              libraryItems: data.libraryItems,
+              merge: true,
+              openLibraryMenu: false,
+            });
+          }
+        })
+        .catch(() => {
+          // Library load failed — non-critical, user can still draw
+        });
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [mod]); // Run when Excalidraw module loads
 
   // ── Loading state ──
   if (!mod) {
@@ -186,7 +198,7 @@ export default function SketchBoardWorkspace() {
     <div className="excalidraw-wrapper h-full w-full" style={{ position: "relative" }}>
       <Excalidraw
         theme={excalidrawTheme}
-        initialData={getInitialData()}
+        initialData={initialData}
         excalidrawAPI={handleExcalidrawAPI}
         onChange={handleChange}
         name="DMSuite Sketch Board"
@@ -205,9 +217,7 @@ export default function SketchBoardWorkspace() {
           <MainMenu.DefaultItems.Export />
           <MainMenu.DefaultItems.ClearCanvas />
           <MainMenu.DefaultItems.ChangeCanvasBackground />
-          <MainMenu.DefaultItems.SearchMenu />
           <MainMenu.DefaultItems.Help />
-          {/* Socials + LiveCollaboration deliberately omitted */}
         </MainMenu>
       </Excalidraw>
     </div>
