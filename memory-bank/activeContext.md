@@ -1,36 +1,49 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Open Source Tool Porting — Document Signer NPM Package Upgrade — COMPLETE ✅
+**Phase:** Open Source Tool Porting — AI Chat (@lobehub/ui rebuild) — COMPLETE ✅
 
-### Session: Document Signer — NPM Package Upgrade
+### Session: AI Chat — Complete Rebuild with @lobehub/ui
 
-Upgraded the existing Document Signer & Form Filler tool from custom canvas-based implementations to proper MIT-licensed npm packages. DocuSeal (AGPL-3.0) cannot be used directly, so the tool is composed from three MIT/Apache-licensed packages.
+Completely erased ALL prior AI Chat code (both ai-chat and ai-chat-v2) and rebuilt from scratch using `@lobehub/ui` (MIT) — the actual LobeChat component library.
 
 #### Packages Installed
-- **react-signature-canvas** (MIT) — Smooth Bézier curve signature drawing with touch support
-- **react-pdf** (Apache-2.0) — Real PDF page rendering in browser via pdfjs-dist
-- **@types/react-signature-canvas** — TypeScript types
-- **pdf-lib** (MIT) — Already installed, used for real PDF export
+- **@lobehub/ui** v5.6.4 (MIT) — AIGC component library with Chat components
+- **antd** (MIT) — Required peer dependency of @lobehub/ui
+- **antd-style** (MIT) — CSS-in-JS solution for antd components
+- **motion** (MIT) — Required by @lobehub/ui's ConfigProvider for animations
+
+#### Files Deleted (Complete Erasure)
+- `src/components/workspaces/ai-chat/` (AIChatWorkspace.tsx ~1200 lines)
+- `src/components/workspaces/ai-chat-v2/` (AIChatV2Workspace.tsx ~1200 lines)
+- `src/stores/ai-chat-editor.ts` (~600 lines)
+- `src/stores/ai-chat-v2-editor.ts` (~900 lines)
+- `src/lib/chiko/manifests/ai-chat.ts` (~350 lines)
+- `src/lib/chiko/manifests/ai-chat-v2.ts` (~350 lines)
+
+#### Files Created
+- **NEW: src/stores/ai-chat-editor.ts** (~300 lines) — Zustand+persist store. Conversation CRUD, streaming with AbortController, model/provider/temp/tokens settings, message CRUD, sidebar state.
+- **NEW: src/components/workspaces/ai-chat/AIChatWorkspace.tsx** (~620 lines) — Uses @lobehub/ui components: ThemeProvider, DraggablePanel, ChatList, ChatItem, ChatInputArea, ChatHeader, ChatHeaderTitle, BackBottom. Conversation sidebar with search + pinned/unpinned sections. Model selector (6 models, 4 providers). Settings panel (system prompt, temperature, max tokens). Empty state. Connected to /api/chat streaming endpoint.
 
 #### Files Modified
-- **MODIFIED: src/components/workspaces/document-signer/tabs/DocumentSignerSettingsTab.tsx** — Replaced custom canvas mouseDown/mouseMove/mouseUp signature drawing with `<SignatureCanvas>` component (dynamic import, SSR false). Uses `getTrimmedCanvas().toDataURL()` for clean capture, `clear()` for reset.
-- **MODIFIED: src/components/workspaces/document-signer/DocumentSignerRenderer.tsx** — Added react-pdf `Document`/`Page` for real PDF viewing when `uploadedPdfData` exists. Dual-mode renderer (PDF pages vs HTML template). Shared `renderFieldOverlay()` for draggable fields on both modes.
-- **CREATED: src/lib/document-signer/pdf-export.ts** — Real PDF generation via pdf-lib + @pdf-lib/fontkit. `exportUploadedPdf()` loads original PDF and embeds signatures/field values in-place. `exportTemplatePdf()` generates new A4 PDF with title/company/description/fields. `downloadDocumentPdf()` triggers browser download.
-- **MODIFIED: src/components/workspaces/document-signer/DocumentSignerWorkspace.tsx** — Export button now uses `downloadDocumentPdf()` (pdf-lib) with `buildPrintHTML()`/`printHTML()` as fallback.
-- **MODIFIED: src/styles/workspace-canvas.css** — Added `.document-signer-wrapper` CSS isolation for react-pdf (prevents Tailwind preflight breaking PDF rendering).
-- **UPDATED: TOOL-STATUS.md** — New changelog entry for 2026-04-04.
+- **next.config.ts** — Added `transpilePackages: ['@lobehub/ui', 'antd', 'antd-style', '@ant-design']`
+- **src/app/tools/[categoryId]/[toolId]/page.tsx** — Added ai-chat dynamic import
+- **src/lib/store-adapters.ts** — Added getAIChatAdapter function + registry entry
+- **src/data/tools.ts** — Consolidated ai-chat + ai-chat-v2 into single tool entry with updated description
+- **TOOL-STATUS.md** — Updated ai-chat entry, removed ai-chat-v2, added changelog entry
 
-#### Key Decisions
-- **Fallback export**: If pdf-lib export fails, automatically falls back to HTML print
-- **Dynamic imports with SSR false** for both react-signature-canvas and react-pdf (browser-only dependencies)
-- **pdf-lib fontkit** for custom font embedding in generated PDFs
-- **Shared field overlay function** used by both PDF and HTML rendering paths
+#### @lobehub/ui Components Used
+- `ThemeProvider` — Wraps workspace with LobeChat theme system (auto appearance)
+- `DraggablePanel` — Resizable conversation sidebar (left placement, 220-400px)
+- `ChatList` — Message list with bubble variant, loading state, message actions
+- `ChatHeader` + `ChatHeaderTitle` — Top header with title + model selector tag
+- `ChatInputArea` — Input area with send/stop, expandable, resizable heights
+- `BackBottom` — Scroll-to-bottom button with visibility threshold
 
 #### Status
-- 0 TypeScript errors on all document-signer files
-- devStatus remains "complete" in tools.ts
-- Ready for next open-source tool porting task
+- 0 TypeScript errors across entire project
+- devStatus: "complete" in tools.ts
+- Consolidated ai-chat + ai-chat-v2 into single tool
 
 ---
 

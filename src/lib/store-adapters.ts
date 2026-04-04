@@ -671,27 +671,6 @@ function getAIFlowBuilderAdapter(): StoreAdapter {
 }
 
 // ---------------------------------------------------------------------------
-// AI Chat
-// ---------------------------------------------------------------------------
-
-function getAIChatAdapter(): StoreAdapter {
-  const { useAIChatEditor } = require("@/stores/ai-chat-editor");
-  return {
-    getSnapshot: () => ({ form: useAIChatEditor.getState().form }),
-    restoreSnapshot: (data: Record<string, unknown>) => {
-      if (data.form) {
-        useAIChatEditor.getState().setForm(data.form as never);
-      }
-    },
-    resetStore: () => {
-      useAIChatEditor.getState().resetForm();
-      nukePersistStorage("dmsuite-ai-chat");
-    },
-    subscribe: (cb: () => void) => useAIChatEditor.subscribe(cb),
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Generic adapter for tools that don't have dedicated stores
 // ---------------------------------------------------------------------------
 
@@ -722,6 +701,33 @@ function getGenericAdapter(): StoreAdapter {
     restoreSnapshot: () => {},
     resetStore: () => {},
     subscribe: () => () => {},
+  };
+}
+
+function getAIChatAdapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useAIChatEditor } = require("@/stores/ai-chat-editor");
+  return {
+    getSnapshot: () => {
+      const { conversations, activeConversationId, model, provider, systemPrompt } = useAIChatEditor.getState();
+      return { conversations, activeConversationId, model, provider, systemPrompt };
+    },
+    restoreSnapshot: (data) => {
+      const state = useAIChatEditor.getState();
+      if (data.conversations) state.resetStore();
+      useAIChatEditor.setState({
+        ...(data.conversations ? { conversations: data.conversations as never } : {}),
+        ...(data.activeConversationId ? { activeConversationId: data.activeConversationId as string } : {}),
+        ...(data.model ? { model: data.model as string } : {}),
+        ...(data.provider ? { provider: data.provider as never } : {}),
+        ...(data.systemPrompt ? { systemPrompt: data.systemPrompt as string } : {}),
+      });
+    },
+    resetStore: () => {
+      useAIChatEditor.getState().resetStore();
+      nukePersistStorage("dmsuite-ai-chat");
+    },
+    subscribe: (cb) => useAIChatEditor.subscribe(cb),
   };
 }
 
@@ -788,7 +794,7 @@ const ADAPTER_FACTORIES: Record<string, () => StoreAdapter> = {
   "ai-flow-builder": getAIFlowBuilderAdapter,
   // Reveal.js Presenter
   "reveal-presenter": getRevealPresenterAdapter,
-  // AI Chat
+  // AI Chat (LobeChat-style)
   "ai-chat": getAIChatAdapter,
 };
 

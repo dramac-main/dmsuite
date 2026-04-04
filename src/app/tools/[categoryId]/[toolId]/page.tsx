@@ -162,9 +162,8 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   // ── Reveal.js Presenter ──
   "reveal-presenter": dynamic(() => import("@/components/workspaces/reveal-presenter/RevealPresenterWorkspace")),
 
-  // ── AI Chat ──
+  // ── AI Chat (LobeChat-style, @lobehub/ui) ──
   "ai-chat": dynamic(() => import("@/components/workspaces/ai-chat/AIChatWorkspace")),
-  "ai-chat-v2": dynamic(() => import("@/components/workspaces/ai-chat-v2/AIChatV2Workspace")),
 };
 
 export default function ToolWorkspacePage() {

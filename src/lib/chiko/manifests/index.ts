@@ -40,5 +40,4 @@ export { createDocumentSignerManifest } from "./document-signer";
 export { createInvoiceAccountingManifest } from "./invoice-accounting";
 export { createSketchBoardManifest } from "./sketch-board";
 export { createAIFlowBuilderManifest } from "./ai-flow-builder";
-export { createAIChatManifest } from "./ai-chat";
 export { createRevealPresenterManifest } from "./reveal-presenter";

@@ -140,10 +140,6 @@ export const WORKSPACE_SHORTCUTS: Record<string, Shortcut[]> = {
     { key: "ArrowRight", action: "next-variant", description: "Next variant", scope: "workspace" },
     { key: "g", ctrl: true, action: "generate-ai", description: "Generate AI variants", scope: "workspace" },
   ],
-  "ai-chat": [
-    { key: "n", ctrl: true, action: "new-chat", description: "New chat", scope: "workspace" },
-    { key: "e", ctrl: true, action: "export-chat", description: "Export chat", scope: "workspace" },
-  ],
 };
 
 // ---------------------------------------------------------------------------

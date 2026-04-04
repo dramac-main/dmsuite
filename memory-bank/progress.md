@@ -1,27 +1,30 @@
 # DMSuite — Progress Tracker
 
-## Overall Status: 101/196 tools with workspaces (52%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅ — Resume Controls & Multi-Page A4 Fix ✅ — Project Saving System (IndexedDB + Store Adapters) ✅ — Architectural Audit Fixes (3-Phase Remediation) ✅ — **Certificate Designer + Diploma & Accreditation Designer ✅** — **Ticket & Pass Designer ✅** — **Business Plan Writer ✅** — **Worksheet & Form Designer ✅** — **Supabase-Backed Project Storage ✅** — **Full Platform Data Persistence ✅** — **Vector PDF Renderer ✅** — **Diploma Canvas Rewrite ✅** — **Certificate V3 Handoff (Infrastructure Upgrade Spec) ✅** — **Invoice & Accounting Hub ✅** — **Resume Builder Reactive Resume Rebuild ✅** — **ZRA Smart Invoice Integration ✅** — **NAPSA Employee Management & Returns ✅** — **Slidev Presenter Rebuild ✅** — **Open Source Research AI-First Restructuring ✅** — **Sketch Board (Infinite Canvas Whiteboard) ✅** — **AI Flow Builder (Visual AI Workflow Canvas) ✅** — **AI Chat Vercel AI SDK Migration ✅** — **Document Signer NPM Package Upgrade ✅**
+## Overall Status: 101/196 tools with workspaces (52%) — ~90 tools still need building — Build passes ✅ — Auth + Payments + Credits COMPLETE ✅ — Token-Aligned Credit System ✅ — Infrastructure Deployed ✅ — Production LIVE at dmsuite-iota.vercel.app ✅ — Account System COMPLETE ✅ — Real-Time Credits ✅ — Airtel Money Spec COMPLETE ✅ — MTN MoMo Integration COMPLETE ✅ — Vercel Env Vars SET ✅ — RLS Payment Fix ✅ — Phone Input Bulletproof ✅ — Chiko Website Scanning ✅ — Visual Overhaul (Electric Violet + Glassmorphism) ✅ — Admin Panel COMPLETE ✅ — Sales Book Designer v3 (Tabbed) ✅ — Global Compact Workspace Layout ✅ — Sales Book Consolidation (removed A4/A5 generic) ✅ — Tool Dev Tracker LIVE ✅ — Zambian Law Contract Templates ✅ — Employment Code Act 2019 Correction ✅ — Template Overhaul ✅ — Print Font Standardization ✅ — Pre-Print Validation ✅ — Fillable Fields ✅ — Production Hardening ✅ — Cover Design Picker (6 designs) ✅ — UX Masterplan (35 items, 4 phases) ✅ — Resume Editor Contract-Pattern Rework ✅ — Platform Infrastructure Hardening ✅ — Resume Global Layout Alignment ✅ — Milestone Progress Tracking ✅ — Resume 3-Panel + Layers Panel ✅ — Resume UX Revamp (4-Tab + Fix Generate Bug) ✅ — Credits & Profile Cache-First Loading ✅ — Resume Controls & Multi-Page A4 Fix ✅ — Project Saving System (IndexedDB + Store Adapters) ✅ — Architectural Audit Fixes (3-Phase Remediation) ✅ — **Certificate Designer + Diploma & Accreditation Designer ✅** — **Ticket & Pass Designer ✅** — **Business Plan Writer ✅** — **Worksheet & Form Designer ✅** — **Supabase-Backed Project Storage ✅** — **Full Platform Data Persistence ✅** — **Vector PDF Renderer ✅** — **Diploma Canvas Rewrite ✅** — **Certificate V3 Handoff (Infrastructure Upgrade Spec) ✅** — **Invoice & Accounting Hub ✅** — **Resume Builder Reactive Resume Rebuild ✅** — **ZRA Smart Invoice Integration ✅** — **NAPSA Employee Management & Returns ✅** — **Slidev Presenter Rebuild ✅** — **Open Source Research AI-First Restructuring ✅** — **Sketch Board (Infinite Canvas Whiteboard) ✅** — **AI Flow Builder (Visual AI Workflow Canvas) ✅** — **AI Chat Vercel AI SDK Migration ✅** — **Document Signer NPM Package Upgrade ✅** — **AI Chat @lobehub/ui Complete Rebuild ✅**
 
 ---
 
-## Current Work: Document Signer — NPM Package Upgrade — COMPLETE ✅
+## Current Work: AI Chat — @lobehub/ui Complete Rebuild — COMPLETE ✅
 
-### Session: Replace Custom Implementations with MIT-Licensed Packages
+### Session: Delete Everything + Rebuild with @lobehub/ui MIT Components
 
-- [x] Read memory bank files and explored all document-signer files
-- [x] Installed react-signature-canvas (MIT) + react-pdf (Apache-2.0) + @types/react-signature-canvas
-- [x] Replaced custom canvas signature drawing with react-signature-canvas (Bézier curves, getTrimmedCanvas)
-- [x] Added react-pdf Document/Page for real PDF viewing when PDFs are uploaded
-- [x] Created src/lib/document-signer/pdf-export.ts (pdf-lib + fontkit real PDF generation)
-- [x] Wired downloadDocumentPdf() into workspace with HTML print fallback
-- [x] Added CSS isolation for react-pdf in workspace-canvas.css
-- [x] Fixed 2 TypeScript errors (dynamic import ref typing, Uint8Array BlobPart)
-- [x] Verified 0 TypeScript errors on all document-signer files
-- [x] Updated TOOL-STATUS.md changelog
+- [x] Read ALL memory bank files and porting guide
+- [x] Deleted all 6 existing ai-chat files (2 workspaces, 2 stores, 2 manifests)
+- [x] Cleaned 4 shared files (page.tsx, store-adapters, manifests/index, shortcuts)
+- [x] Installed @lobehub/ui v5.6.4, antd, antd-style, motion
+- [x] Studied @lobehub/ui component APIs (ChatList, ChatItem, ChatInputArea, ChatHeader, BackBottom, DraggablePanel)
+- [x] Updated next.config.ts with transpilePackages
+- [x] Created new Zustand+persist store (ai-chat-editor.ts ~300 lines)
+- [x] Built new AIChatWorkspace using @lobehub/ui components (~620 lines)
+- [x] Wired page.tsx, store-adapters.ts
+- [x] Consolidated ai-chat + ai-chat-v2 into single tool in tools.ts
+- [x] Verified 0 TypeScript errors across entire project
+- [x] Updated TOOL-STATUS.md (entry + changelog)
+- [x] Updated memory bank (activeContext, progress)
 
 ---
 
-## Previous Work: AI Chat — Vercel AI SDK Migration — COMPLETE ✅
+## Previous Work: Document Signer — NPM Package Upgrade — COMPLETE ✅
 
 ### Session: Replace Raw Fetch with Vercel AI SDK streamText()
 

@@ -1,274 +1,114 @@
-"use client";
+// =============================================================================
+// DMSuite — AI Chat Store (LobeChat-style)
+// Zustand store powering the @lobehub/ui–based AI Chat workspace.
+// Persist key: "dmsuite-ai-chat"
+// =============================================================================
+
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { immer } from "zustand/middleware/immer";
-import { v4 as uuid } from "uuid";
 
 // ---------------------------------------------------------------------------
-// Types — Lobe Chat–inspired multi-model, agent/persona, topic-based chat
+// Types
 // ---------------------------------------------------------------------------
 
-export type ChatProvider = "claude" | "openai" | "gemini" | "deepseek";
+export type Provider = "claude" | "openai" | "gemini" | "deepseek";
 
-export type ChatModel =
-  | "claude-sonnet-4-20250514"
-  | "claude-haiku-4-20250414"
-  | "gpt-4o"
-  | "gpt-4o-mini"
-  | "gemini-2.0-flash"
-  | "deepseek-chat";
-
-export interface ModelOption {
-  id: ChatModel;
-  label: string;
-  provider: ChatProvider;
-  maxTokens: number;
-  description: string;
-}
-
-export const MODEL_OPTIONS: ModelOption[] = [
-  { id: "claude-sonnet-4-20250514", label: "Claude Sonnet 4", provider: "claude", maxTokens: 8192, description: "Best balance of intelligence and speed" },
-  { id: "claude-haiku-4-20250414", label: "Claude Haiku 4", provider: "claude", maxTokens: 8192, description: "Fastest, most affordable" },
-  { id: "gpt-4o", label: "GPT-4o", provider: "openai", maxTokens: 4096, description: "OpenAI's flagship multimodal model" },
-  { id: "gpt-4o-mini", label: "GPT-4o Mini", provider: "openai", maxTokens: 4096, description: "Small, fast, affordable" },
-  { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash", provider: "gemini", maxTokens: 8192, description: "Google's fast multimodal model" },
-  { id: "deepseek-chat", label: "DeepSeek V3", provider: "deepseek", maxTokens: 4096, description: "Open-source reasoning model" },
-];
-
-export interface FileAttachment {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  dataUrl: string; // base64 data URL
-}
-
-export interface ChatMessage {
+export interface ChatMsg {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
-  createdAt: number;
-  model?: ChatModel;
-  provider?: ChatProvider;
-  attachments?: FileAttachment[];
-  tokenEstimate?: number;
-  parentId?: string;           // for fork chains
-  bookmarked?: boolean;
-  isError?: boolean;
-}
-
-export interface AgentPersona {
-  id: string;
-  name: string;
-  avatar: string;              // emoji or icon key
-  description: string;
-  systemPrompt: string;
-  model: ChatModel;
-  temperature: number;
-  maxTokens: number;
-  tags: string[];
-  createdAt: number;
-  updatedAt: number;
-  isBuiltin?: boolean;
-}
-
-export interface Topic {
-  id: string;
-  title: string;
-  createdAt: number;
-  updatedAt: number;
-  messageCount: number;
-  favorite?: boolean;
+  createAt: number;
+  updateAt: number;
+  meta: { avatar?: string; title?: string; backgroundColor?: string };
+  parentId?: string;
+  error?: { message: string; type: string; body?: unknown };
 }
 
 export interface Conversation {
   id: string;
   title: string;
-  agentId: string;             // which agent persona
-  topicId?: string;            // topic threading
-  messages: ChatMessage[];
+  messages: ChatMsg[];
+  model: string;
+  provider: Provider;
+  systemPrompt: string;
   createdAt: number;
   updatedAt: number;
   pinned?: boolean;
-  archived?: boolean;
-  temporary?: boolean;
 }
 
-// ---------------------------------------------------------------------------
-// Built-in agent personas (Lobe Chat pattern)
-// ---------------------------------------------------------------------------
-
-export const BUILTIN_AGENTS: AgentPersona[] = [
-  {
-    id: "default",
-    name: "DMSuite Assistant",
-    avatar: "🤖",
-    description: "General-purpose AI assistant",
-    systemPrompt: "You are a helpful, knowledgeable AI assistant. You provide clear, accurate, and concise answers. Format your responses with Markdown when appropriate. Use code blocks with language specifiers for code.",
-    model: "claude-sonnet-4-20250514",
-    temperature: 0.7,
-    maxTokens: 4096,
-    tags: ["general", "assistant"],
-    createdAt: 0,
-    updatedAt: 0,
-    isBuiltin: true,
-  },
-  {
-    id: "creative-writer",
-    name: "Creative Writer",
-    avatar: "✍️",
-    description: "Expert at creative writing, copywriting, and storytelling",
-    systemPrompt: "You are a masterful creative writer. You excel at storytelling, persuasive copy, poetry, screenwriting, and all forms of creative text. Adapt your tone and style to the user's needs. Use vivid language and compelling narrative techniques.",
-    model: "claude-sonnet-4-20250514",
-    temperature: 0.9,
-    maxTokens: 4096,
-    tags: ["creative", "writing", "copy"],
-    createdAt: 0,
-    updatedAt: 0,
-    isBuiltin: true,
-  },
-  {
-    id: "code-assistant",
-    name: "Code Assistant",
-    avatar: "💻",
-    description: "Expert programmer across all languages and frameworks",
-    systemPrompt: "You are an expert software engineer. You write clean, efficient, well-documented code. Always use proper code blocks with language identifiers. Explain your reasoning. Follow best practices and modern patterns. Consider edge cases and error handling.",
-    model: "claude-sonnet-4-20250514",
-    temperature: 0.3,
-    maxTokens: 8192,
-    tags: ["code", "programming", "development"],
-    createdAt: 0,
-    updatedAt: 0,
-    isBuiltin: true,
-  },
-  {
-    id: "data-analyst",
-    name: "Data Analyst",
-    avatar: "📊",
-    description: "Data analysis, statistics, visualization, and insights",
-    systemPrompt: "You are a senior data analyst. You excel at statistical analysis, data visualization recommendations, SQL queries, Python/R data processing, and extracting actionable insights from data. Use tables and structured formats when presenting data.",
-    model: "gpt-4o",
-    temperature: 0.4,
-    maxTokens: 4096,
-    tags: ["data", "analytics", "statistics"],
-    createdAt: 0,
-    updatedAt: 0,
-    isBuiltin: true,
-  },
-  {
-    id: "business-advisor",
-    name: "Business Advisor",
-    avatar: "💼",
-    description: "Strategic business consulting and planning",
-    systemPrompt: "You are a seasoned business consultant with expertise in strategy, marketing, finance, and operations. Provide actionable business advice backed by frameworks and real-world examples. Use structured formats for plans and analyses.",
-    model: "claude-sonnet-4-20250514",
-    temperature: 0.6,
-    maxTokens: 4096,
-    tags: ["business", "strategy", "consulting"],
-    createdAt: 0,
-    updatedAt: 0,
-    isBuiltin: true,
-  },
-  {
-    id: "design-consultant",
-    name: "Design Consultant",
-    avatar: "🎨",
-    description: "UI/UX, graphic design, and creative direction",
-    systemPrompt: "You are a senior design consultant with deep expertise in UI/UX, graphic design, typography, color theory, and brand identity. Provide specific, actionable design guidance with rationale. Reference design principles and modern trends.",
-    model: "claude-sonnet-4-20250514",
-    temperature: 0.7,
-    maxTokens: 4096,
-    tags: ["design", "ui", "ux", "creative"],
-    createdAt: 0,
-    updatedAt: 0,
-    isBuiltin: true,
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Default form state
-// ---------------------------------------------------------------------------
-
-interface AIChatForm {
+export interface AIChatState {
+  // -- Data ---------------------------------------------------------------
   conversations: Conversation[];
-  activeConversationId: string;
-  agents: AgentPersona[];
-  activeAgentId: string;
-  topics: Topic[];
-  selectedModel: ChatModel;
-}
+  activeConversationId: string | null;
+  inputValue: string;
+  isStreaming: boolean;
 
-const DEFAULT_FORM: AIChatForm = {
-  conversations: [],
-  activeConversationId: "",
-  agents: [],
-  activeAgentId: "default",
-  topics: [],
-  selectedModel: "claude-sonnet-4-20250514",
-};
+  // -- Model settings -----------------------------------------------------
+  model: string;
+  provider: Provider;
+  systemPrompt: string;
+  temperature: number;
+  maxTokens: number;
 
-// ---------------------------------------------------------------------------
-// Store interface
-// ---------------------------------------------------------------------------
+  // -- UI -----------------------------------------------------------------
+  sidebarOpen: boolean;
+  sidebarWidth: number;
 
-interface AIChatState {
-  form: AIChatForm;
-
-  // Form CRUD
-  setForm: (form: AIChatForm) => void;
-  resetForm: () => void;
-
-  // Conversation CRUD
-  createConversation: (agentId?: string, temporary?: boolean) => string;
+  // -- Actions ------------------------------------------------------------
+  createConversation: () => string;
   deleteConversation: (id: string) => void;
-  renameConversation: (id: string, title: string) => void;
   setActiveConversation: (id: string) => void;
-  pinConversation: (id: string) => void;
-  archiveConversation: (id: string) => void;
-  duplicateConversation: (id: string) => string;
+  setInputValue: (v: string) => void;
+  setModel: (model: string, provider: Provider) => void;
+  setSystemPrompt: (prompt: string) => void;
+  setTemperature: (t: number) => void;
+  setMaxTokens: (t: number) => void;
+  toggleSidebar: () => void;
+  setSidebarWidth: (w: number) => void;
+  renameConversation: (id: string, title: string) => void;
+  togglePinConversation: (id: string) => void;
+  clearConversation: (id: string) => void;
 
-  // Message CRUD
-  addMessage: (convId: string, msg: Omit<ChatMessage, "id" | "createdAt">) => string;
-  editMessage: (convId: string, msgId: string, content: string) => void;
+  // -- Messaging ----------------------------------------------------------
+  sendMessage: () => Promise<void>;
+  stopStreaming: () => void;
   deleteMessage: (convId: string, msgId: string) => void;
-  bookmarkMessage: (convId: string, msgId: string) => void;
-  forkFromMessage: (convId: string, msgId: string) => string;
-  regenerateMessage: (convId: string, msgId: string) => void;
+  editMessage: (convId: string, msgId: string, content: string) => void;
 
-  // Agent CRUD
-  createAgent: (agent: Omit<AgentPersona, "id" | "createdAt" | "updatedAt">) => string;
-  updateAgent: (id: string, patch: Partial<AgentPersona>) => void;
-  deleteAgent: (id: string) => void;
-  setActiveAgent: (id: string) => void;
-
-  // Topic CRUD
-  createTopic: (title: string) => string;
-  renameTopic: (id: string, title: string) => void;
-  deleteTopic: (id: string) => void;
-  toggleTopicFav: (id: string) => void;
-  assignTopic: (convId: string, topicId: string) => void;
-  autoNameTopic: (topicId: string, firstMessage: string) => void;
-
-  // Model selection
-  setSelectedModel: (model: ChatModel) => void;
-
-  // Export/Import
-  exportConversation: (convId: string, format: "json" | "markdown" | "text") => string;
-  importConversations: (data: string) => number;
-
-  // Helpers
-  getActiveConversation: () => Conversation | undefined;
-  getActiveAgent: () => AgentPersona;
-  getConversationsByTopic: (topicId: string) => Conversation[];
-  getAllAgents: () => AgentPersona[];
+  // -- Bulk ---------------------------------------------------------------
+  resetStore: () => void;
 }
 
 // ---------------------------------------------------------------------------
-// Helper: estimate tokens (~4 chars per token)
+// Helpers
 // ---------------------------------------------------------------------------
-function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4);
+
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+const now = () => Date.now();
+
+const DEFAULT_MODEL = "claude-sonnet-4-20250514";
+const DEFAULT_PROVIDER: Provider = "claude";
+const DEFAULT_SYSTEM_PROMPT = "You are a helpful AI assistant. Be concise, clear, and accurate.";
+
+function makeConversation(model: string, provider: Provider, systemPrompt: string): Conversation {
+  const t = now();
+  return {
+    id: uid(),
+    title: "New Chat",
+    messages: [],
+    model,
+    provider,
+    systemPrompt,
+    createdAt: t,
+    updatedAt: t,
+  };
 }
+
+// ---------------------------------------------------------------------------
+// Abort controller for streaming
+// ---------------------------------------------------------------------------
+
+let abortCtrl: AbortController | null = null;
 
 // ---------------------------------------------------------------------------
 // Store
@@ -276,286 +116,281 @@ function estimateTokens(text: string): number {
 
 export const useAIChatEditor = create<AIChatState>()(
   persist(
-    immer((set, get) => ({
-      form: DEFAULT_FORM,
+    (set, get) => ({
+      // -- Defaults -----------------------------------------------------------
+      conversations: [],
+      activeConversationId: null,
+      inputValue: "",
+      isStreaming: false,
+      model: DEFAULT_MODEL,
+      provider: DEFAULT_PROVIDER,
+      systemPrompt: DEFAULT_SYSTEM_PROMPT,
+      temperature: 0.7,
+      maxTokens: 4096,
+      sidebarOpen: true,
+      sidebarWidth: 280,
 
-      setForm: (form) => set({ form }),
-      resetForm: () => set({ form: { ...DEFAULT_FORM, conversations: [], agents: [], topics: [] } }),
+      // -- Actions ------------------------------------------------------------
 
-      // ── Conversations ──
-      createConversation: (agentId, temporary) => {
-        const id = uuid();
-        const agent = agentId || get().form.activeAgentId;
-        set((s) => {
-          s.form.conversations.unshift({
-            id,
-            title: "New Conversation",
-            agentId: agent,
-            messages: [],
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-            temporary: temporary || false,
-          });
-          s.form.activeConversationId = id;
-        });
-        return id;
+      createConversation: () => {
+        const { model, provider, systemPrompt } = get();
+        const conv = makeConversation(model, provider, systemPrompt);
+        set((s) => ({
+          conversations: [conv, ...s.conversations],
+          activeConversationId: conv.id,
+          inputValue: "",
+        }));
+        return conv.id;
       },
 
-      deleteConversation: (id) => set((s) => {
-        s.form.conversations = s.form.conversations.filter((c) => c.id !== id);
-        if (s.form.activeConversationId === id) {
-          s.form.activeConversationId = s.form.conversations[0]?.id || "";
-        }
-      }),
-
-      renameConversation: (id, title) => set((s) => {
-        const conv = s.form.conversations.find((c) => c.id === id);
-        if (conv) { conv.title = title; conv.updatedAt = Date.now(); }
-      }),
-
-      setActiveConversation: (id) => set((s) => { s.form.activeConversationId = id; }),
-
-      pinConversation: (id) => set((s) => {
-        const conv = s.form.conversations.find((c) => c.id === id);
-        if (conv) conv.pinned = !conv.pinned;
-      }),
-
-      archiveConversation: (id) => set((s) => {
-        const conv = s.form.conversations.find((c) => c.id === id);
-        if (conv) conv.archived = !conv.archived;
-      }),
-
-      duplicateConversation: (id) => {
-        const newId = uuid();
+      deleteConversation: (id) =>
         set((s) => {
-          const src = s.form.conversations.find((c) => c.id === id);
-          if (!src) return;
-          s.form.conversations.unshift({
-            ...JSON.parse(JSON.stringify(src)),
-            id: newId,
-            title: `${src.title} (copy)`,
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-            pinned: false,
-          });
-          s.form.activeConversationId = newId;
-        });
-        return newId;
-      },
+          const remaining = s.conversations.filter((c) => c.id !== id);
+          return {
+            conversations: remaining,
+            activeConversationId:
+              s.activeConversationId === id
+                ? remaining[0]?.id ?? null
+                : s.activeConversationId,
+          };
+        }),
 
-      // ── Messages ──
-      addMessage: (convId, msg) => {
-        const msgId = uuid();
-        set((s) => {
-          const conv = s.form.conversations.find((c) => c.id === convId);
-          if (!conv) return;
-          conv.messages.push({
-            ...msg,
-            id: msgId,
-            createdAt: Date.now(),
-            tokenEstimate: estimateTokens(msg.content),
-          });
-          conv.updatedAt = Date.now();
-          // Auto-rename on first user message
-          if (conv.messages.length === 1 && msg.role === "user") {
-            conv.title = msg.content.slice(0, 50) + (msg.content.length > 50 ? "…" : "");
-          }
-        });
-        return msgId;
-      },
+      setActiveConversation: (id) => set({ activeConversationId: id, inputValue: "" }),
 
-      editMessage: (convId, msgId, content) => set((s) => {
-        const conv = s.form.conversations.find((c) => c.id === convId);
+      setInputValue: (v) => set({ inputValue: v }),
+
+      setModel: (model, provider) => set({ model, provider }),
+
+      setSystemPrompt: (prompt) => set({ systemPrompt: prompt }),
+      setTemperature: (t) => set({ temperature: t }),
+      setMaxTokens: (t) => set({ maxTokens: t }),
+
+      toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+      setSidebarWidth: (w) => set({ sidebarWidth: w }),
+
+      renameConversation: (id, title) =>
+        set((s) => ({
+          conversations: s.conversations.map((c) =>
+            c.id === id ? { ...c, title, updatedAt: now() } : c,
+          ),
+        })),
+
+      togglePinConversation: (id) =>
+        set((s) => ({
+          conversations: s.conversations.map((c) =>
+            c.id === id ? { ...c, pinned: !c.pinned, updatedAt: now() } : c,
+          ),
+        })),
+
+      clearConversation: (id) =>
+        set((s) => ({
+          conversations: s.conversations.map((c) =>
+            c.id === id ? { ...c, messages: [], updatedAt: now() } : c,
+          ),
+        })),
+
+      // -- Messaging ----------------------------------------------------------
+
+      sendMessage: async () => {
+        const { activeConversationId, conversations, inputValue, isStreaming } = get();
+        if (!activeConversationId || !inputValue.trim() || isStreaming) return;
+
+        const conv = conversations.find((c) => c.id === activeConversationId);
         if (!conv) return;
-        const msg = conv.messages.find((m) => m.id === msgId);
-        if (msg) {
-          msg.content = content;
-          msg.tokenEstimate = estimateTokens(content);
-          conv.updatedAt = Date.now();
-        }
-      }),
 
-      deleteMessage: (convId, msgId) => set((s) => {
-        const conv = s.form.conversations.find((c) => c.id === convId);
-        if (conv) {
-          conv.messages = conv.messages.filter((m) => m.id !== msgId);
-          conv.updatedAt = Date.now();
-        }
-      }),
+        const userMsg: ChatMsg = {
+          id: uid(),
+          role: "user",
+          content: inputValue.trim(),
+          createAt: now(),
+          updateAt: now(),
+          meta: { avatar: "👤", title: "You" },
+        };
 
-      bookmarkMessage: (convId, msgId) => set((s) => {
-        const conv = s.form.conversations.find((c) => c.id === convId);
-        if (!conv) return;
-        const msg = conv.messages.find((m) => m.id === msgId);
-        if (msg) msg.bookmarked = !msg.bookmarked;
-      }),
+        const assistantMsg: ChatMsg = {
+          id: uid(),
+          role: "assistant",
+          content: "",
+          createAt: now(),
+          updateAt: now(),
+          meta: { avatar: "🤖", title: conv.model },
+        };
 
-      forkFromMessage: (convId, msgId) => {
-        const newId = uuid();
-        set((s) => {
-          const conv = s.form.conversations.find((c) => c.id === convId);
-          if (!conv) return;
-          const idx = conv.messages.findIndex((m) => m.id === msgId);
-          if (idx < 0) return;
-          const forkedMessages = JSON.parse(JSON.stringify(conv.messages.slice(0, idx + 1)));
-          s.form.conversations.unshift({
-            id: newId,
-            title: `Fork: ${conv.title}`,
-            agentId: conv.agentId,
-            messages: forkedMessages,
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-          });
-          s.form.activeConversationId = newId;
-        });
-        return newId;
-      },
+        // Add both messages & clear input
+        set((s) => ({
+          inputValue: "",
+          isStreaming: true,
+          conversations: s.conversations.map((c) =>
+            c.id === activeConversationId
+              ? { ...c, messages: [...c.messages, userMsg, assistantMsg], updatedAt: now() }
+              : c,
+          ),
+        }));
 
-      regenerateMessage: (convId, msgId) => set((s) => {
-        const conv = s.form.conversations.find((c) => c.id === convId);
-        if (!conv) return;
-        const idx = conv.messages.findIndex((m) => m.id === msgId);
-        if (idx < 0) return;
-        // Remove from this message onward if it's an assistant message
-        if (conv.messages[idx]?.role === "assistant") {
-          conv.messages = conv.messages.slice(0, idx);
-          conv.updatedAt = Date.now();
-        }
-      }),
+        // Build message history
+        const apiMessages = [...conv.messages, userMsg].map((m) => ({
+          role: m.role,
+          content: m.content,
+        }));
 
-      // ── Agents ──
-      createAgent: (agent) => {
-        const id = uuid();
-        set((s) => {
-          s.form.agents.push({
-            ...agent,
-            id,
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-          });
-        });
-        return id;
-      },
+        abortCtrl = new AbortController();
 
-      updateAgent: (id, patch) => set((s) => {
-        const agent = s.form.agents.find((a) => a.id === id);
-        if (agent) Object.assign(agent, patch, { updatedAt: Date.now() });
-      }),
-
-      deleteAgent: (id) => set((s) => {
-        s.form.agents = s.form.agents.filter((a) => a.id !== id);
-        if (s.form.activeAgentId === id) s.form.activeAgentId = "default";
-      }),
-
-      setActiveAgent: (id) => set((s) => { s.form.activeAgentId = id; }),
-
-      // ── Topics ──
-      createTopic: (title) => {
-        const id = uuid();
-        set((s) => {
-          s.form.topics.push({ id, title, createdAt: Date.now(), updatedAt: Date.now(), messageCount: 0 });
-        });
-        return id;
-      },
-
-      renameTopic: (id, title) => set((s) => {
-        const topic = s.form.topics.find((t) => t.id === id);
-        if (topic) { topic.title = title; topic.updatedAt = Date.now(); }
-      }),
-
-      deleteTopic: (id) => set((s) => {
-        s.form.topics = s.form.topics.filter((t) => t.id !== id);
-        // Unassign conversations
-        for (const conv of s.form.conversations) {
-          if (conv.topicId === id) conv.topicId = undefined;
-        }
-      }),
-
-      toggleTopicFav: (id) => set((s) => {
-        const topic = s.form.topics.find((t) => t.id === id);
-        if (topic) topic.favorite = !topic.favorite;
-      }),
-
-      assignTopic: (convId, topicId) => set((s) => {
-        const conv = s.form.conversations.find((c) => c.id === convId);
-        if (conv) conv.topicId = topicId;
-        const topic = s.form.topics.find((t) => t.id === topicId);
-        if (topic) {
-          topic.messageCount = s.form.conversations.filter((c) => c.topicId === topicId).reduce((n, c) => n + c.messages.length, 0);
-        }
-      }),
-
-      autoNameTopic: (topicId, firstMessage) => set((s) => {
-        const topic = s.form.topics.find((t) => t.id === topicId);
-        if (topic && topic.title === "New Topic") {
-          topic.title = firstMessage.slice(0, 40) + (firstMessage.length > 40 ? "…" : "");
-        }
-      }),
-
-      // ── Model ──
-      setSelectedModel: (model) => set((s) => { s.form.selectedModel = model; }),
-
-      // ── Export / Import ──
-      exportConversation: (convId, format) => {
-        const conv = get().form.conversations.find((c) => c.id === convId);
-        if (!conv) return "";
-        if (format === "json") return JSON.stringify(conv, null, 2);
-        if (format === "markdown") {
-          let md = `# ${conv.title}\n\n`;
-          for (const msg of conv.messages) {
-            const role = msg.role === "user" ? "**You**" : msg.role === "assistant" ? "**AI**" : "**System**";
-            md += `### ${role}\n${msg.content}\n\n---\n\n`;
-          }
-          return md;
-        }
-        // text
-        return conv.messages.map((m) => `[${m.role}]: ${m.content}`).join("\n\n");
-      },
-
-      importConversations: (data) => {
         try {
-          const parsed = JSON.parse(data);
-          const convs = Array.isArray(parsed) ? parsed : [parsed];
-          let imported = 0;
-          set((s) => {
-            for (const conv of convs) {
-              if (conv.id && Array.isArray(conv.messages)) {
-                s.form.conversations.unshift({
-                  ...conv,
-                  id: uuid(), // new ID to avoid collision
-                  createdAt: conv.createdAt || Date.now(),
-                  updatedAt: Date.now(),
-                });
-                imported++;
-              }
-            }
+          const res = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              messages: apiMessages,
+              model: conv.model,
+              provider: conv.provider,
+              systemPrompt: conv.systemPrompt,
+              temperature: get().temperature,
+              maxTokens: get().maxTokens,
+            }),
+            signal: abortCtrl.signal,
           });
-          return imported;
-        } catch { return 0; }
+
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: "Request failed" }));
+            set((s) => ({
+              isStreaming: false,
+              conversations: s.conversations.map((c) =>
+                c.id === activeConversationId
+                  ? {
+                      ...c,
+                      messages: c.messages.map((m) =>
+                        m.id === assistantMsg.id
+                          ? { ...m, content: "", error: { message: err.error || "Error", type: "api" } }
+                          : m,
+                      ),
+                    }
+                  : c,
+              ),
+            }));
+            return;
+          }
+
+          // Stream the response
+          const reader = res.body?.getReader();
+          const decoder = new TextDecoder();
+          let accumulated = "";
+
+          if (reader) {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              accumulated += decoder.decode(value, { stream: true });
+
+              // Update assistant message content
+              set((s) => ({
+                conversations: s.conversations.map((c) =>
+                  c.id === activeConversationId
+                    ? {
+                        ...c,
+                        messages: c.messages.map((m) =>
+                          m.id === assistantMsg.id
+                            ? { ...m, content: accumulated, updateAt: now() }
+                            : m,
+                        ),
+                      }
+                    : c,
+                ),
+              }));
+            }
+          }
+
+          // Auto-title from first user message
+          if (conv.messages.length === 0) {
+            const title = userMsg.content.slice(0, 50) + (userMsg.content.length > 50 ? "…" : "");
+            set((s) => ({
+              conversations: s.conversations.map((c) =>
+                c.id === activeConversationId ? { ...c, title, updatedAt: now() } : c,
+              ),
+            }));
+          }
+        } catch (err) {
+          if ((err as Error).name !== "AbortError") {
+            set((s) => ({
+              conversations: s.conversations.map((c) =>
+                c.id === activeConversationId
+                  ? {
+                      ...c,
+                      messages: c.messages.map((m) =>
+                        m.id === assistantMsg.id
+                          ? { ...m, error: { message: (err as Error).message, type: "network" } }
+                          : m,
+                      ),
+                    }
+                  : c,
+              ),
+            }));
+          }
+        } finally {
+          abortCtrl = null;
+          set({ isStreaming: false });
+        }
       },
 
-      // ── Helpers (non-mutating) ──
-      getActiveConversation: () => {
-        const s = get().form;
-        return s.conversations.find((c) => c.id === s.activeConversationId);
+      stopStreaming: () => {
+        abortCtrl?.abort();
+        abortCtrl = null;
+        set({ isStreaming: false });
       },
 
-      getActiveAgent: () => {
-        const s = get().form;
-        return (
-          [...BUILTIN_AGENTS, ...s.agents].find((a) => a.id === s.activeAgentId) ||
-          BUILTIN_AGENTS[0]
-        );
-      },
+      deleteMessage: (convId, msgId) =>
+        set((s) => ({
+          conversations: s.conversations.map((c) =>
+            c.id === convId
+              ? { ...c, messages: c.messages.filter((m) => m.id !== msgId), updatedAt: now() }
+              : c,
+          ),
+        })),
 
-      getConversationsByTopic: (topicId) => {
-        return get().form.conversations.filter((c) => c.topicId === topicId);
-      },
+      editMessage: (convId, msgId, content) =>
+        set((s) => ({
+          conversations: s.conversations.map((c) =>
+            c.id === convId
+              ? {
+                  ...c,
+                  messages: c.messages.map((m) =>
+                    m.id === msgId ? { ...m, content, updateAt: now() } : m,
+                  ),
+                  updatedAt: now(),
+                }
+              : c,
+          ),
+        })),
 
-      getAllAgents: () => {
-        return [...BUILTIN_AGENTS, ...get().form.agents];
-      },
-    })),
-    { name: "dmsuite-ai-chat" }
-  )
+      // -- Bulk ---------------------------------------------------------------
+
+      resetStore: () =>
+        set({
+          conversations: [],
+          activeConversationId: null,
+          inputValue: "",
+          isStreaming: false,
+          model: DEFAULT_MODEL,
+          provider: DEFAULT_PROVIDER,
+          systemPrompt: DEFAULT_SYSTEM_PROMPT,
+          temperature: 0.7,
+          maxTokens: 4096,
+          sidebarOpen: true,
+          sidebarWidth: 280,
+        }),
+    }),
+    {
+      name: "dmsuite-ai-chat",
+      partialize: (s) => ({
+        conversations: s.conversations,
+        activeConversationId: s.activeConversationId,
+        model: s.model,
+        provider: s.provider,
+        systemPrompt: s.systemPrompt,
+        temperature: s.temperature,
+        maxTokens: s.maxTokens,
+        sidebarOpen: s.sidebarOpen,
+        sidebarWidth: s.sidebarWidth,
+      }),
+    },
+  ),
 );
