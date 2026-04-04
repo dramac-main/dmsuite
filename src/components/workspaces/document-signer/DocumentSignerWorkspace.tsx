@@ -15,6 +15,7 @@ import {
   DOCUMENT_TEMPLATES,
 } from "@/stores/document-signer-editor";
 import { printHTML } from "@/lib/print";
+import { downloadDocumentPdf } from "@/lib/document-signer/pdf-export";
 import { useChikoActions } from "@/hooks/useChikoActions";
 import { createDocumentSignerManifest } from "@/lib/chiko/manifests/document-signer";
 import { dispatchDirty, dispatchProgress } from "@/lib/workspace-events";
@@ -177,11 +178,18 @@ export default function DocumentSignerWorkspace() {
   }, []);
 
   // Print / Export
-  const handlePrint = useCallback(() => {
-    const html = buildPrintHTML(form);
-    printHTML(html);
-    addAuditEntry("document_exported", "User", "Document exported as PDF");
-    dispatchProgress("exported");
+  const handlePrint = useCallback(async () => {
+    try {
+      await downloadDocumentPdf(form);
+      addAuditEntry("document_exported", "User", "Document exported as PDF (pdf-lib)");
+      dispatchProgress("exported");
+    } catch {
+      // Fallback to HTML print if pdf-lib fails
+      const html = buildPrintHTML(form);
+      printHTML(html);
+      addAuditEntry("document_exported", "User", "Document exported as PDF (print fallback)");
+      dispatchProgress("exported");
+    }
   }, [form, addAuditEntry]);
 
   useEffect(() => {

@@ -294,3 +294,41 @@
     cursor: default !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Document Signer — react-pdf CSS isolation
+   Prevents Tailwind v4 preflight from breaking PDF page rendering.
+   --------------------------------------------------------------------------- */
+
+.document-signer-wrapper .react-pdf__Document {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.document-signer-wrapper .react-pdf__Page {
+  position: relative;
+  background: white;
+}
+
+.document-signer-wrapper .react-pdf__Page canvas {
+  display: block;
+  width: 100% !important;
+  height: auto !important;
+}
+
+.document-signer-wrapper .react-pdf__Page__textContent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  opacity: 0.2;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.document-signer-wrapper .react-pdf__Page__annotations {
+  display: none;
+}

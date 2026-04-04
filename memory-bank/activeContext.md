@@ -1,7 +1,40 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Resume Builder V2 (Reactive Resume port) — SCAFFOLD COMPLETE
+**Phase:** Open Source Tool Porting — Document Signer NPM Package Upgrade — COMPLETE ✅
+
+### Session: Document Signer — NPM Package Upgrade
+
+Upgraded the existing Document Signer & Form Filler tool from custom canvas-based implementations to proper MIT-licensed npm packages. DocuSeal (AGPL-3.0) cannot be used directly, so the tool is composed from three MIT/Apache-licensed packages.
+
+#### Packages Installed
+- **react-signature-canvas** (MIT) — Smooth Bézier curve signature drawing with touch support
+- **react-pdf** (Apache-2.0) — Real PDF page rendering in browser via pdfjs-dist
+- **@types/react-signature-canvas** — TypeScript types
+- **pdf-lib** (MIT) — Already installed, used for real PDF export
+
+#### Files Modified
+- **MODIFIED: src/components/workspaces/document-signer/tabs/DocumentSignerSettingsTab.tsx** — Replaced custom canvas mouseDown/mouseMove/mouseUp signature drawing with `<SignatureCanvas>` component (dynamic import, SSR false). Uses `getTrimmedCanvas().toDataURL()` for clean capture, `clear()` for reset.
+- **MODIFIED: src/components/workspaces/document-signer/DocumentSignerRenderer.tsx** — Added react-pdf `Document`/`Page` for real PDF viewing when `uploadedPdfData` exists. Dual-mode renderer (PDF pages vs HTML template). Shared `renderFieldOverlay()` for draggable fields on both modes.
+- **CREATED: src/lib/document-signer/pdf-export.ts** — Real PDF generation via pdf-lib + @pdf-lib/fontkit. `exportUploadedPdf()` loads original PDF and embeds signatures/field values in-place. `exportTemplatePdf()` generates new A4 PDF with title/company/description/fields. `downloadDocumentPdf()` triggers browser download.
+- **MODIFIED: src/components/workspaces/document-signer/DocumentSignerWorkspace.tsx** — Export button now uses `downloadDocumentPdf()` (pdf-lib) with `buildPrintHTML()`/`printHTML()` as fallback.
+- **MODIFIED: src/styles/workspace-canvas.css** — Added `.document-signer-wrapper` CSS isolation for react-pdf (prevents Tailwind preflight breaking PDF rendering).
+- **UPDATED: TOOL-STATUS.md** — New changelog entry for 2026-04-04.
+
+#### Key Decisions
+- **Fallback export**: If pdf-lib export fails, automatically falls back to HTML print
+- **Dynamic imports with SSR false** for both react-signature-canvas and react-pdf (browser-only dependencies)
+- **pdf-lib fontkit** for custom font embedding in generated PDFs
+- **Shared field overlay function** used by both PDF and HTML rendering paths
+
+#### Status
+- 0 TypeScript errors on all document-signer files
+- devStatus remains "complete" in tools.ts
+- Ready for next open-source tool porting task
+
+---
+
+### Previous Focus: Resume Builder V2 (Reactive Resume port) — SCAFFOLD COMPLETE
 
 ### Session: Resume CV V2 — Reactive Resume v5 Port
 

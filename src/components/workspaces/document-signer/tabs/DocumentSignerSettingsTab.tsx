@@ -1,12 +1,19 @@
 // =============================================================================
 // DMSuite — Document Signer — Settings Tab
-// Email notifications, signature config, audit trail
+// Email notifications, signature config (react-signature-canvas), audit trail
 // =============================================================================
 
 "use client";
 
-import { useCallback, useRef, useState, useEffect } from "react";
+import { useCallback, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useDocumentSignerEditor, type SignatureMode } from "@/stores/document-signer-editor";
+
+// react-signature-canvas — MIT license, smooth Bézier curves, touch support
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const SignatureCanvas = dynamic(() => import("react-signature-canvas"), {
+  ssr: false,
+}) as any;
 
 const SIGNATURE_FONTS = [
   "Dancing Script",
@@ -78,70 +85,20 @@ function SignatureSection({
   config: { mode: SignatureMode; drawData: string; typeText: string; typeFont: string; uploadData: string; color: string; penWidth: number };
   onUpdate: (patch: Partial<typeof config>) => void;
 }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const isDrawingRef = useRef(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sigCanvasRef = useRef<any>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
 
-  // Initialize canvas
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    canvas.width = canvas.offsetWidth * 2;
-    canvas.height = canvas.offsetHeight * 2;
-    ctx.scale(2, 2);
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-
-    // Restore existing drawing
-    if (config.drawData) {
-      const img = new Image();
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, canvas.offsetWidth, canvas.offsetHeight);
-      };
-      img.src = config.drawData;
-    }
-  }, [config.mode]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const startDraw = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    isDrawingRef.current = true;
-    const rect = canvas.getBoundingClientRect();
-    ctx.beginPath();
-    ctx.strokeStyle = config.color;
-    ctx.lineWidth = config.penWidth;
-    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-  }, [config.color, config.penWidth]);
-
-  const draw = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawingRef.current) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-    ctx.stroke();
-  }, []);
-
-  const endDraw = useCallback(() => {
-    isDrawingRef.current = false;
-    const canvas = canvasRef.current;
-    if (canvas) {
-      onUpdate({ drawData: canvas.toDataURL("image/png") });
-    }
+  const handleEndDraw = useCallback(() => {
+    const canvas = sigCanvasRef.current;
+    if (!canvas || canvas.isEmpty()) return;
+    // getTrimmedCanvas() crops whitespace for a clean signature
+    const trimmed = canvas.getTrimmedCanvas();
+    onUpdate({ drawData: trimmed.toDataURL("image/png") });
   }, [onUpdate]);
 
   const clearCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    sigCanvasRef.current?.clear();
     onUpdate({ drawData: "" });
   }, [onUpdate]);
 
@@ -181,7 +138,7 @@ function SignatureSection({
         ))}
       </div>
 
-      {/* Draw mode */}
+      {/* Draw mode — react-signature-canvas */}
       {config.mode === "draw" && (
         <div className="space-y-2">
           <div className="flex items-center gap-2 mb-2">
@@ -190,7 +147,10 @@ function SignatureSection({
               {SIG_COLORS.map((c) => (
                 <button
                   key={c}
-                  onClick={() => onUpdate({ color: c })}
+                  onClick={() => {
+                    onUpdate({ color: c });
+                    // SignatureCanvas doesn't update color dynamically; clear and let user redraw
+                  }}
                   className={`w-5 h-5 rounded-full transition-all ${
                     config.color === c ? "ring-2 ring-white/30 scale-110" : ""
                   }`}
@@ -202,7 +162,7 @@ function SignatureSection({
               <label className="text-[9px] text-gray-500">Width</label>
               <input
                 type="range"
-                min={1}
+                min={0.5}
                 max={5}
                 step={0.5}
                 value={config.penWidth}
@@ -212,21 +172,30 @@ function SignatureSection({
             </div>
           </div>
           <div className="rounded-xl border border-gray-700/40 bg-white overflow-hidden">
-            <canvas
-              ref={canvasRef}
-              className="w-full h-28 cursor-crosshair"
-              onMouseDown={startDraw}
-              onMouseMove={draw}
-              onMouseUp={endDraw}
-              onMouseLeave={endDraw}
+            <SignatureCanvas
+              ref={sigCanvasRef}
+              penColor={config.color}
+              minWidth={config.penWidth * 0.5}
+              maxWidth={config.penWidth * 1.5}
+              velocityFilterWeight={0.7}
+              canvasProps={{
+                className: "w-full h-28",
+                style: { width: "100%", height: "112px" },
+              }}
+              onEnd={handleEndDraw}
             />
           </div>
-          <button
-            onClick={clearCanvas}
-            className="text-[10px] text-gray-500 hover:text-gray-400 transition-colors"
-          >
-            Clear Signature
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={clearCanvas}
+              className="text-[10px] text-gray-500 hover:text-gray-400 transition-colors"
+            >
+              Clear Signature
+            </button>
+            {config.drawData && (
+              <span className="text-[9px] text-green-500/70">✓ Captured</span>
+            )}
+          </div>
         </div>
       )}
 

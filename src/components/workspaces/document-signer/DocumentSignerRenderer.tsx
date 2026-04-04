@@ -1,12 +1,37 @@
 // =============================================================================
 // DMSuite — Document Signer & Form Filler — Preview Renderer
-// Renders document pages with overlaid fields in the preview canvas.
+// Renders document pages with overlaid fields.
+// Uses react-pdf (pdfjs-dist) for uploaded PDFs, HTML for templates.
 // =============================================================================
 
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState, useMemo } from "react";
+import dynamic from "next/dynamic";
 import type { DocumentSignerForm, DocumentField, SignerRole } from "@/stores/document-signer-editor";
+
+// react-pdf — Apache-2.0, renders real PDF pages in browser via pdfjs-dist
+const PDFDocument = dynamic(
+  () => import("react-pdf").then((m) => m.Document),
+  { ssr: false }
+);
+const PDFPage = dynamic(
+  () => import("react-pdf").then((m) => m.Page),
+  { ssr: false }
+);
+
+// Configure pdfjs worker
+let workerConfigured = false;
+function configurePdfWorker() {
+  if (workerConfigured || typeof window === "undefined") return;
+  workerConfigured = true;
+  import("react-pdf").then((rp) => {
+    rp.pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+      "pdfjs-dist/build/pdf.worker.min.mjs",
+      import.meta.url
+    ).toString();
+  });
+}
 
 // ── Page dimensions (Points → px at 96 DPI) ────────────────────────────────
 export const PAGE_PX = {
@@ -145,23 +170,46 @@ export default function DocumentSignerRenderer({
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const dim = PAGE_PX.a4;
+  const [pdfNumPages, setPdfNumPages] = useState(0);
+  const hasPdf = !!form.uploadedPdfData;
+
+  // Configure PDF worker on mount
+  useEffect(() => {
+    if (hasPdf) configurePdfWorker();
+  }, [hasPdf]);
+
+  // Determine total page count
+  const totalPages = hasPdf ? pdfNumPages : form.pages.length;
 
   // Report page count
   useEffect(() => {
-    onPageCount?.(form.pages.length);
-  }, [form.pages.length, onPageCount]);
+    onPageCount?.(Math.max(1, totalPages));
+  }, [totalPages, onPageCount]);
+
+  const handlePdfLoadSuccess = useCallback(
+    (pdf: { numPages: number }) => {
+      setPdfNumPages(pdf.numPages);
+    },
+    []
+  );
 
   // Signer color map
-  const signerColorMap = new Map<string, string>();
-  form.signers.forEach((s) => signerColorMap.set(s.id, s.color));
+  const signerColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    form.signers.forEach((s) => map.set(s.id, s.color));
+    return map;
+  }, [form.signers]);
 
   // Group fields by page
-  const fieldsByPage = new Map<number, DocumentField[]>();
-  form.fields.forEach((f) => {
-    const arr = fieldsByPage.get(f.page) || [];
-    arr.push(f);
-    fieldsByPage.set(f.page, arr);
-  });
+  const fieldsByPage = useMemo(() => {
+    const map = new Map<number, DocumentField[]>();
+    form.fields.forEach((f) => {
+      const arr = map.get(f.page) || [];
+      arr.push(f);
+      map.set(f.page, arr);
+    });
+    return map;
+  }, [form.fields]);
 
   // Drag state
   const dragRef = useRef<{
@@ -195,7 +243,6 @@ export default function DocumentSignerRenderer({
         const rect = pg.getBoundingClientRect();
         const newX = origX + (dx / rect.width) * 100;
         const newY = origY + (dy / rect.height) * 100;
-        // Live visual update via direct DOM
         const el = pg.querySelector(`[data-field-id="${dragRef.current.fieldId}"]`) as HTMLElement;
         if (el) {
           el.style.left = `${Math.max(0, Math.min(100 - field.width, newX))}%`;
@@ -223,180 +270,229 @@ export default function DocumentSignerRenderer({
     [onFieldClick, onFieldDragEnd]
   );
 
-  return (
-    <div ref={containerRef} className="inline-flex flex-col items-center">
-      {form.pages.map((page, pageIdx) => {
-        const pageFields = fieldsByPage.get(page.number) || [];
-        return (
-          <div key={page.id} style={{ marginBottom: pageIdx < form.pages.length - 1 ? pageGap : 0 }}>
+  // ── Field overlay (shared by both PDF and HTML modes) ──
+  const renderFieldOverlay = (pageNumber: number) => {
+    const pageFields = fieldsByPage.get(pageNumber) || [];
+    return pageFields.map((field) => {
+      const signerColor = signerColorMap.get(field.assignedTo) || "#8b5cf6";
+      const isSelected = selectedFieldId === field.id;
+      const hasValue = !!field.value;
+
+      return (
+        <div
+          key={field.id}
+          data-field-id={field.id}
+          data-doc-section="field"
+          className={`absolute cursor-move group transition-shadow ${
+            isSelected ? "ring-2 ring-offset-1 z-20" : "hover:ring-1 hover:ring-offset-1 z-10"
+          }`}
+          style={{
+            left: `${field.x}%`,
+            top: `${field.y}%`,
+            width: `${field.width}%`,
+            height: `${field.height}%`,
+            borderWidth: 1.5,
+            borderStyle: form.style.fieldBorderStyle,
+            borderColor: signerColor,
+            backgroundColor: `${signerColor}${Math.round(form.style.fieldBackgroundOpacity * 255)
+              .toString(16)
+              .padStart(2, "0")}`,
+            borderRadius: 4,
+            outlineColor: signerColor,
+          }}
+          onMouseDown={(e) => {
+            const pageEl = e.currentTarget.closest("[data-page]") as HTMLDivElement;
+            if (pageEl) handleFieldMouseDown(e, field, pageEl);
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onFieldClick?.(field.id);
+          }}
+        >
+          {/* Label */}
+          {form.style.showFieldLabels && (
             <div
-              data-page={page.number}
-              className="relative bg-white shadow-xl"
-              style={{ width: dim.w, height: dim.h }}
+              className="absolute -top-4 left-0 text-[8px] font-medium truncate max-w-full px-1 rounded-t"
+              style={{ color: signerColor }}
             >
-              {/* Page content */}
-              <div className="absolute inset-0 p-10">
-                {/* Title on first page */}
-                {page.number === 1 && (
-                  <div data-doc-section="header" className="mb-6">
-                    {form.style.companyName && (
-                      <p className="text-center text-xs text-gray-500 mb-1" style={{ fontFamily: form.style.fontFamily }}>
-                        {form.style.companyName}
-                      </p>
-                    )}
-                    <h1
-                      className="text-center text-xl font-bold mb-1"
-                      style={{ color: form.style.accentColor, fontFamily: form.style.fontFamily }}
-                    >
-                      {form.documentName || "Untitled Document"}
-                    </h1>
-                    {form.description && (
-                      <p className="text-center text-[11px] text-gray-500" style={{ fontFamily: form.style.fontFamily }}>
-                        {form.description}
-                      </p>
-                    )}
-                    <div className="mt-3 border-b border-gray-200" />
-                  </div>
-                )}
+              {field.label}
+              {form.style.showRequiredIndicator && field.required && (
+                <span className="text-red-500 ml-0.5">*</span>
+              )}
+            </div>
+          )}
 
-                {/* Page content HTML */}
-                {page.content && (
-                  <div
-                    className="text-sm leading-relaxed text-gray-700"
-                    style={{ fontFamily: form.style.fontFamily }}
-                    dangerouslySetInnerHTML={{ __html: page.content }}
+          {/* Field content */}
+          <div className="w-full h-full flex items-center justify-center overflow-hidden px-1">
+            {hasValue ? (
+              field.type === "signature" || field.type === "initials" || field.type === "stamp" || field.type === "image" ? (
+                field.value.startsWith("data:") ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={field.value}
+                    alt={field.label}
+                    className="max-w-full max-h-full object-contain"
                   />
-                )}
-
-                {/* Page number */}
-                <div className="absolute bottom-4 left-0 right-0 text-center text-[9px] text-gray-400">
-                  Page {page.number} of {form.pages.length}
-                </div>
-              </div>
-
-              {/* Fields overlay */}
-              {pageFields.map((field) => {
-                const signerColor = signerColorMap.get(field.assignedTo) || "#8b5cf6";
-                const isSelected = selectedFieldId === field.id;
-                const hasValue = !!field.value;
-
-                return (
-                  <div
-                    key={field.id}
-                    data-field-id={field.id}
-                    data-doc-section="field"
-                    className={`absolute cursor-move group transition-shadow ${
-                      isSelected ? "ring-2 ring-offset-1 z-20" : "hover:ring-1 hover:ring-offset-1 z-10"
-                    }`}
+                ) : (
+                  <span
+                    className="text-lg italic"
                     style={{
-                      left: `${field.x}%`,
-                      top: `${field.y}%`,
-                      width: `${field.width}%`,
-                      height: `${field.height}%`,
-                      borderWidth: 1.5,
-                      borderStyle: form.style.fieldBorderStyle,
-                      borderColor: signerColor,
-                      backgroundColor: `${signerColor}${Math.round(form.style.fieldBackgroundOpacity * 255)
-                        .toString(16)
-                        .padStart(2, "0")}`,
-                      borderRadius: 4,
-                      outlineColor: signerColor,
-                    }}
-                    onMouseDown={(e) => {
-                      const pageEl = e.currentTarget.closest("[data-page]") as HTMLDivElement;
-                      if (pageEl) handleFieldMouseDown(e, field, pageEl);
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onFieldClick?.(field.id);
+                      fontFamily: "'Dancing Script', cursive",
+                      color: field.fontColor || "#1a1a2e",
                     }}
                   >
-                    {/* Label */}
-                    {form.style.showFieldLabels && (
-                      <div
-                        className="absolute -top-4 left-0 text-[8px] font-medium truncate max-w-full px-1 rounded-t"
-                        style={{ color: signerColor }}
-                      >
-                        {field.label}
-                        {form.style.showRequiredIndicator && field.required && (
-                          <span className="text-red-500 ml-0.5">*</span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Field content */}
-                    <div className="w-full h-full flex items-center justify-center overflow-hidden px-1">
-                      {hasValue ? (
-                        // Show value
-                        field.type === "signature" || field.type === "initials" || field.type === "stamp" || field.type === "image" ? (
-                          field.value.startsWith("data:") ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={field.value}
-                              alt={field.label}
-                              className="max-w-full max-h-full object-contain"
-                            />
-                          ) : (
-                            <span
-                              className="text-lg italic"
-                              style={{
-                                fontFamily: "'Dancing Script', cursive",
-                                color: field.fontColor || "#1a1a2e",
-                              }}
-                            >
-                              {field.value}
-                            </span>
-                          )
-                        ) : field.type === "checkbox" ? (
-                          <span className="text-base">
-                            {field.value === "true" ? "☑" : "☐"}
-                          </span>
-                        ) : (
-                          <span
-                            className="text-xs truncate w-full"
-                            style={{
-                              fontSize: field.fontSize || 14,
-                              color: field.fontColor || "#1a1a2e",
-                            }}
-                          >
-                            {field.value}
-                          </span>
-                        )
-                      ) : (
-                        // Show placeholder
-                        <div className="flex items-center gap-1 opacity-50">
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke={signerColor}
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d={FIELD_ICONS[field.type] || FIELD_ICONS.text} />
-                          </svg>
-                          <span className="text-[8px]" style={{ color: signerColor }}>
-                            {field.placeholder || field.label}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Resize handle */}
-                    {isSelected && (
-                      <div className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white cursor-se-resize"
-                        style={{ backgroundColor: signerColor }}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                    {field.value}
+                  </span>
+                )
+              ) : field.type === "checkbox" ? (
+                <span className="text-base">
+                  {field.value === "true" ? "☑" : "☐"}
+                </span>
+              ) : (
+                <span
+                  className="text-xs truncate w-full"
+                  style={{
+                    fontSize: field.fontSize || 14,
+                    color: field.fontColor || "#1a1a2e",
+                  }}
+                >
+                  {field.value}
+                </span>
+              )
+            ) : (
+              <div className="flex items-center gap-1 opacity-50">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke={signerColor}
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d={FIELD_ICONS[field.type] || FIELD_ICONS.text} />
+                </svg>
+                <span className="text-[8px]" style={{ color: signerColor }}>
+                  {field.placeholder || field.label}
+                </span>
+              </div>
+            )}
           </div>
-        );
-      })}
+
+          {/* Resize handle */}
+          {isSelected && (
+            <div
+              className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white cursor-se-resize"
+              style={{ backgroundColor: signerColor }}
+            />
+          )}
+        </div>
+      );
+    });
+  };
+
+  // ── PDF rendering mode (uploaded PDF) ──
+  if (hasPdf) {
+    return (
+      <div ref={containerRef} className="document-signer-wrapper inline-flex flex-col items-center">
+        <PDFDocument
+          file={form.uploadedPdfData}
+          onLoadSuccess={handlePdfLoadSuccess}
+          loading={
+            <div className="flex items-center justify-center bg-white shadow-xl" style={{ width: dim.w, height: dim.h }}>
+              <div className="text-center text-gray-400">
+                <svg className="animate-spin h-8 w-8 mx-auto mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                  <path d="M12 2a10 10 0 019.95 9" strokeLinecap="round" />
+                </svg>
+                <span className="text-xs">Loading PDF...</span>
+              </div>
+            </div>
+          }
+          error={
+            <div className="flex items-center justify-center bg-white shadow-xl" style={{ width: dim.w, height: dim.h }}>
+              <div className="text-center text-red-400">
+                <span className="text-sm">Failed to load PDF</span>
+              </div>
+            </div>
+          }
+        >
+          {Array.from({ length: pdfNumPages }, (_, i) => (
+            <div key={`pdf-page-${i}`} style={{ marginBottom: i < pdfNumPages - 1 ? pageGap : 0 }}>
+              <div
+                data-page={i + 1}
+                className="relative shadow-xl"
+                style={{ width: dim.w, height: dim.h, overflow: "hidden" }}
+              >
+                <PDFPage
+                  pageNumber={i + 1}
+                  width={dim.w}
+                  renderTextLayer={false}
+                  renderAnnotationLayer={false}
+                />
+                {/* Fields overlay on PDF page */}
+                {renderFieldOverlay(i + 1)}
+              </div>
+            </div>
+          ))}
+        </PDFDocument>
+      </div>
+    );
+  }
+
+  // ── HTML template rendering mode ──
+  return (
+    <div ref={containerRef} className="document-signer-wrapper inline-flex flex-col items-center">
+      {form.pages.map((page, pageIdx) => (
+        <div key={page.id} style={{ marginBottom: pageIdx < form.pages.length - 1 ? pageGap : 0 }}>
+          <div
+            data-page={page.number}
+            className="relative bg-white shadow-xl"
+            style={{ width: dim.w, height: dim.h }}
+          >
+            {/* Page content */}
+            <div className="absolute inset-0 p-10">
+              {page.number === 1 && (
+                <div data-doc-section="header" className="mb-6">
+                  {form.style.companyName && (
+                    <p className="text-center text-xs text-gray-500 mb-1" style={{ fontFamily: form.style.fontFamily }}>
+                      {form.style.companyName}
+                    </p>
+                  )}
+                  <h1
+                    className="text-center text-xl font-bold mb-1"
+                    style={{ color: form.style.accentColor, fontFamily: form.style.fontFamily }}
+                  >
+                    {form.documentName || "Untitled Document"}
+                  </h1>
+                  {form.description && (
+                    <p className="text-center text-[11px] text-gray-500" style={{ fontFamily: form.style.fontFamily }}>
+                      {form.description}
+                    </p>
+                  )}
+                  <div className="mt-3 border-b border-gray-200" />
+                </div>
+              )}
+
+              {page.content && (
+                <div
+                  className="text-sm leading-relaxed text-gray-700"
+                  style={{ fontFamily: form.style.fontFamily }}
+                  dangerouslySetInnerHTML={{ __html: page.content }}
+                />
+              )}
+
+              <div className="absolute bottom-4 left-0 right-0 text-center text-[9px] text-gray-400">
+                Page {page.number} of {form.pages.length}
+              </div>
+            </div>
+
+            {/* Fields overlay on HTML page */}
+            {renderFieldOverlay(page.number)}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
