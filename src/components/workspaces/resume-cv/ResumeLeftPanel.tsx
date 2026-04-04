@@ -8,12 +8,13 @@
 
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useResumeEditor } from "@/stores/resume-editor";
-import type { SectionKey } from "@/lib/resume/schema";
+import type { SectionKey, ResumeData } from "@/lib/resume/schema";
 import { SECTION_META } from "@/lib/resume/schema";
 import { AccordionSection, Icons, SIcon, FormInput, ConfirmDialog } from "@/components/workspaces/shared/WorkspaceUIKit";
 import BasicsSection from "./sections/BasicsSection";
 import SummarySection from "./sections/SummarySection";
 import ListSection from "./sections/ListSection";
+import ImportDialog from "./ImportDialog";
 
 // ---------------------------------------------------------------------------
 // Section icons (inline SVGs for each section)
@@ -64,9 +65,9 @@ export default function ResumeLeftPanel({ className }: ResumeLeftPanelProps) {
 
   const [openSections, setOpenSections] = useState<Set<string>>(() => new Set(["basics", "summary"]));
   const [showClear, setShowClear] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [showCustomAdd, setShowCustomAdd] = useState(false);
   const [customTitle, setCustomTitle] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const toggleSection = useCallback((key: string) => {
     setOpenSections((prev) => {
@@ -77,29 +78,10 @@ export default function ResumeLeftPanel({ className }: ResumeLeftPanelProps) {
     });
   }, []);
 
-  // --- Import JSON ---
-  const handleImport = useCallback(() => {
-    fileRef.current?.click();
-  }, []);
-
-  const onImportFile = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const data = JSON.parse(reader.result as string);
-          if (data.basics) {
-            setResume(data);
-          } else {
-            alert("Invalid resume JSON format");
-          }
-        } catch {
-          alert("Failed to parse JSON file");
-        }
-      };
-      reader.readAsText(file);
+  // --- Import via dialog ---
+  const handleImportData = useCallback(
+    (data: ResumeData) => {
+      setResume(data);
     },
     [setResume],
   );
@@ -130,10 +112,10 @@ export default function ResumeLeftPanel({ className }: ResumeLeftPanelProps) {
       {/* Top controls */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800/40">
         <button
-          onClick={handleImport}
+          onClick={() => setShowImport(true)}
           className="flex-1 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 hover:text-primary-400 bg-gray-800/40 hover:bg-gray-800/60 transition-colors text-center"
         >
-          Import JSON
+          Import
         </button>
         <button
           onClick={() => setShowClear(true)}
@@ -141,7 +123,6 @@ export default function ResumeLeftPanel({ className }: ResumeLeftPanelProps) {
         >
           Clear All
         </button>
-        <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={onImportFile} />
       </div>
 
       {/* Section accordions */}
@@ -255,6 +236,13 @@ export default function ResumeLeftPanel({ className }: ResumeLeftPanelProps) {
         variant="danger"
         onConfirm={() => { resetResume(); setShowClear(false); }}
         onCancel={() => setShowClear(false)}
+      />
+
+      {/* Import dialog */}
+      <ImportDialog
+        open={showImport}
+        onClose={() => setShowImport(false)}
+        onImport={handleImportData}
       />
     </div>
   );

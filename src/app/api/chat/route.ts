@@ -1,351 +1,350 @@
-import { NextRequest } from "next/server";
-import { getAuthUser } from "@/lib/supabase/auth";
-import { checkCredits, deductCredits, refundCredits, getCreditCost, logTokenUsage } from "@/lib/supabase/credits";
+// =============================================================================
+// DMSuite — AI Chat Multi-Model Streaming API Route
+// POST /api/chat/route.ts
+// Supports Claude (Anthropic), GPT-4o (OpenAI), Gemini (Google), DeepSeek
+// Streaming responses with credit system integration
+// =============================================================================
 
-/* ── Environment ──────────────────────────────────────────── */
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthUser } from "@/lib/supabase/auth";
+import { checkCredits, deductCredits, refundCredits } from "@/lib/supabase/credits";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
-
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o";
+const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY;
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 
-type Provider = "claude" | "openai";
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
-const SYSTEM_PROMPT = `You are DMSuite AI — a professional creative assistant built into an AI-powered design & business suite. You help users with:
+interface ChatRequestMessage {
+  role: "user" | "assistant" | "system";
+  content: string | Array<{ type: string; text?: string; image_url?: { url: string }; source?: { type: string; media_type: string; data: string } }>;
+}
 
-- Copywriting (taglines, product descriptions, blog posts, social captions)
-- Creative brainstorming (campaign ideas, naming, brand strategy)
-- Business writing (proposals, emails, presentations)
-- Code assistance (web development, scripting, automation)
-- Design guidance (color theory, typography, layout advice)
-- Marketing strategy (SEO, content planning, audience research)
-- Logo design (SVG generation, branding concepts)
-- Social media content (post copy, engagement hooks)
+interface ChatRequestBody {
+  messages: ChatRequestMessage[];
+  model: string;
+  provider: "claude" | "openai" | "gemini" | "deepseek";
+  systemPrompt?: string;
+  temperature?: number;
+  maxTokens?: number;
+}
 
-Guidelines:
-- Be concise but thorough. Quality over quantity.
-- Use markdown formatting for readability (bold, lists, code blocks).
-- When generating copy, provide 2-3 variations unless asked for a specific number.
-- Always sound professional yet approachable.
-- If asked about design assets (logos, images, videos), explain what the user can do with the relevant DMSuite tools.
-- When asked to generate SVG logos, output clean valid SVG code directly.`;
+// ---------------------------------------------------------------------------
+// Provider: Anthropic (Claude)
+// ---------------------------------------------------------------------------
+
+async function streamClaude(
+  messages: ChatRequestMessage[],
+  model: string,
+  systemPrompt: string,
+  temperature: number,
+  maxTokens: number,
+): Promise<ReadableStream> {
+  if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
+
+  // Convert messages for Anthropic format (separate system prompt)
+  const apiMessages = messages
+    .filter((m) => m.role !== "system")
+    .map((m) => {
+      if (typeof m.content === "string") {
+        return { role: m.role, content: m.content };
+      }
+      // Multimodal: convert to Anthropic format
+      const parts = (m.content as Array<{ type: string; text?: string; image_url?: { url: string } }>).map((p) => {
+        if (p.type === "text") return { type: "text" as const, text: p.text || "" };
+        if (p.type === "image_url" && p.image_url?.url) {
+          const match = p.image_url.url.match(/^data:(image\/\w+);base64,(.+)/);
+          if (match) {
+            return {
+              type: "image" as const,
+              source: { type: "base64" as const, media_type: match[1], data: match[2] },
+            };
+          }
+        }
+        return { type: "text" as const, text: "" };
+      });
+      return { role: m.role, content: parts };
+    });
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: maxTokens,
+      temperature,
+      system: systemPrompt,
+      messages: apiMessages,
+      stream: true,
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Anthropic API error ${response.status}: ${err}`);
+  }
+
+  return transformSSE(response.body!, "claude");
+}
+
+// ---------------------------------------------------------------------------
+// Provider: OpenAI (GPT-4o)
+// ---------------------------------------------------------------------------
+
+async function streamOpenAI(
+  messages: ChatRequestMessage[],
+  model: string,
+  systemPrompt: string,
+  temperature: number,
+  maxTokens: number,
+): Promise<ReadableStream> {
+  if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY not configured");
+
+  const apiMessages = [
+    { role: "system", content: systemPrompt },
+    ...messages.filter((m) => m.role !== "system"),
+  ];
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: apiMessages,
+      max_tokens: maxTokens,
+      temperature,
+      stream: true,
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`OpenAI API error ${response.status}: ${err}`);
+  }
+
+  return transformSSE(response.body!, "openai");
+}
+
+// ---------------------------------------------------------------------------
+// Provider: Google Gemini
+// ---------------------------------------------------------------------------
+
+async function streamGemini(
+  messages: ChatRequestMessage[],
+  model: string,
+  systemPrompt: string,
+  temperature: number,
+  maxTokens: number,
+): Promise<ReadableStream> {
+  if (!GOOGLE_AI_API_KEY) throw new Error("GOOGLE_AI_API_KEY not configured");
+
+  const contents = messages
+    .filter((m) => m.role !== "system")
+    .map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: typeof m.content === "string"
+        ? [{ text: m.content }]
+        : (m.content as Array<{ type: string; text?: string }>).map((p) =>
+            p.type === "text" ? { text: p.text || "" } : { text: "" }
+          ),
+    }));
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${GOOGLE_AI_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents,
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        generationConfig: { temperature, maxOutputTokens: maxTokens },
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Gemini API error ${response.status}: ${err}`);
+  }
+
+  return transformSSE(response.body!, "gemini");
+}
+
+// ---------------------------------------------------------------------------
+// Provider: DeepSeek (OpenAI-compatible)
+// ---------------------------------------------------------------------------
+
+async function streamDeepSeek(
+  messages: ChatRequestMessage[],
+  model: string,
+  systemPrompt: string,
+  temperature: number,
+  maxTokens: number,
+): Promise<ReadableStream> {
+  if (!DEEPSEEK_API_KEY) throw new Error("DEEPSEEK_API_KEY not configured");
+
+  const apiMessages = [
+    { role: "system", content: systemPrompt },
+    ...messages.filter((m) => m.role !== "system"),
+  ];
+
+  const response = await fetch("https://api.deepseek.com/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: apiMessages,
+      max_tokens: maxTokens,
+      temperature,
+      stream: true,
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`DeepSeek API error ${response.status}: ${err}`);
+  }
+
+  return transformSSE(response.body!, "openai"); // DeepSeek uses OpenAI-compatible SSE
+}
+
+// ---------------------------------------------------------------------------
+// SSE → Text Stream Transform
+// ---------------------------------------------------------------------------
+
+function transformSSE(
+  body: ReadableStream<Uint8Array>,
+  format: "claude" | "openai" | "gemini",
+): ReadableStream {
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  return new ReadableStream({
+    async start(controller) {
+      const reader = body.getReader();
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const data = line.slice(6).trim();
+            if (data === "[DONE]") continue;
+
+            try {
+              const parsed = JSON.parse(data);
+              let text = "";
+
+              if (format === "claude") {
+                if (parsed.type === "content_block_delta" && parsed.delta?.text) {
+                  text = parsed.delta.text;
+                }
+              } else if (format === "openai") {
+                text = parsed.choices?.[0]?.delta?.content || "";
+              } else if (format === "gemini") {
+                text = parsed.candidates?.[0]?.content?.parts?.[0]?.text || "";
+              }
+
+              if (text) {
+                controller.enqueue(new TextEncoder().encode(text));
+              }
+            } catch {
+              // Skip malformed JSON lines
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+        controller.close();
+      }
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Route Handler
+// ---------------------------------------------------------------------------
 
 export async function POST(request: NextRequest) {
+  // Auth
   const user = await getAuthUser();
-  if (!user) {
-    return new Response("Unauthorized", { status: 401 });
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Credits
+  const creditCheck = await checkCredits(user.id, "chat-message");
+  if (!creditCheck.allowed) {
+    return NextResponse.json(
+      { error: "Insufficient credits", balance: creditCheck.balance, cost: creditCheck.cost },
+      { status: 402 },
+    );
+  }
+
+  const deduction = await deductCredits(user.id, "chat-message", "AI Chat message");
+  if (!deduction.success) {
+    return NextResponse.json({ error: deduction.error || "Credit deduction failed" }, { status: 402 });
   }
 
   try {
-    const creditCheck = await checkCredits(user.id, "chat-message");
-    if (!creditCheck.allowed) {
-      return new Response(
-        JSON.stringify({ error: "Insufficient credits", balance: creditCheck.balance, cost: creditCheck.cost }),
-        { status: 402, headers: { "Content-Type": "application/json" } }
-      );
+    const body = (await request.json()) as ChatRequestBody;
+    const { messages, model, provider, systemPrompt, temperature, maxTokens } = body;
+
+    if (!messages?.length || !model || !provider) {
+      await refundCredits(user.id, creditCheck.cost, "Refund: missing params");
+      return NextResponse.json({ error: "messages, model, and provider are required" }, { status: 400 });
     }
 
-    const { messages, provider: requestedProvider, systemPrompt: clientSystemPrompt } = await request.json();
+    const sysPrompt = systemPrompt || "You are a helpful AI assistant.";
+    const temp = typeof temperature === "number" ? Math.min(Math.max(temperature, 0), 2) : 0.7;
+    const tokens = typeof maxTokens === "number" ? Math.min(maxTokens, 8192) : 4096;
 
-    if (!messages || !Array.isArray(messages)) {
-      return new Response("Invalid request: messages array required", {
-        status: 400,
-      });
+    let stream: ReadableStream;
+
+    switch (provider) {
+      case "claude":
+        stream = await streamClaude(messages, model, sysPrompt, temp, tokens);
+        break;
+      case "openai":
+        stream = await streamOpenAI(messages, model, sysPrompt, temp, tokens);
+        break;
+      case "gemini":
+        stream = await streamGemini(messages, model, sysPrompt, temp, tokens);
+        break;
+      case "deepseek":
+        stream = await streamDeepSeek(messages, model, sysPrompt, temp, tokens);
+        break;
+      default:
+        await refundCredits(user.id, creditCheck.cost, "Refund: unsupported provider");
+        return NextResponse.json({ error: `Unsupported provider: ${provider}` }, { status: 400 });
     }
 
-    // Allow per-conversation system prompt override (sanitized — max 2000 chars)
-    const activeSystemPrompt =
-      typeof clientSystemPrompt === "string" && clientSystemPrompt.trim()
-        ? clientSystemPrompt.slice(0, 2000)
-        : SYSTEM_PROMPT;
-
-    // Deduct credits before making AI call
-    const deduction = await deductCredits(user.id, "chat-message", "AI Chat message");
-    if (!deduction.success) {
-      return new Response(
-        JSON.stringify({ error: deduction.error || "Credit deduction failed" }),
-        { status: 402, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    // Determine which provider to use
-    const provider = resolveProvider(requestedProvider);
-
-    let response: Response;
-    if (provider === "openai") {
-      response = await streamOpenAI(messages, activeSystemPrompt);
-    } else {
-      response = await streamClaude(messages, user.id, activeSystemPrompt);
-    }
-
-    // If the AI call itself failed, refund the credit
-    if (!response.ok) {
-      await refundCredits(user.id, creditCheck.cost, "Refund: AI Chat message failed");
-    }
-
-    return response;
-  } catch (error) {
-    console.error("Chat API error:", error);
-    await refundCredits(user.id, getCreditCost("chat-message"), "Refund: AI Chat error");
-    return new Response("Internal server error", { status: 500 });
-  }
-}
-
-/* ── Provider resolution ─────────────────────────────────── */
-
-function resolveProvider(requested?: string): Provider {
-  if (requested === "openai" && OPENAI_API_KEY) return "openai";
-  if (requested === "claude" && ANTHROPIC_API_KEY) return "claude";
-  if (ANTHROPIC_API_KEY) return "claude";
-  if (OPENAI_API_KEY) return "openai";
-  return "claude";
-}
-
-/* ── Anthropic Claude streaming ──────────────────────────── */
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function streamClaude(messages: { role: string; content: string | any[] }[], userId: string, sysPrompt: string = SYSTEM_PROMPT) {
-  if (!ANTHROPIC_API_KEY) {
-    return new Response(
-      "ANTHROPIC_API_KEY is not configured. Add it to your .env.local file.",
-      { status: 500 }
-    );
-  }
-
-  // Convert messages to Anthropic format, handling multimodal content
-  const anthropicMessages = messages.map((m) => {
-    const role = m.role === "user" ? "user" : "assistant";
-    // If content is a string, pass directly
-    if (typeof m.content === "string") {
-      return { role, content: m.content };
-    }
-    // If content is an array (multimodal), convert image_url parts to Anthropic format
-    const parts = (m.content as Array<Record<string, unknown>>).map((part) => {
-      if (part.type === "image_url") {
-        const url = (part.image_url as { url: string })?.url ?? "";
-        // Extract base64 data and media type from data URL
-        const match = url.match(/^data:(image\/[^;]+);base64,(.+)$/);
-        if (match) {
-          return {
-            type: "image",
-            source: { type: "base64", media_type: match[1], data: match[2] },
-          };
-        }
-        // Fallback: URL-based image (not base64)
-        return { type: "image", source: { type: "url", url } };
-      }
-      return part;
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Transfer-Encoding": "chunked",
+      },
     });
-    return { role, content: parts };
-  });
-
-  const anthropicResponse = await fetch(
-    "https://api.anthropic.com/v1/messages",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 4096,
-        system: sysPrompt,
-        messages: anthropicMessages,
-        stream: true,
-      }),
-    }
-  );
-
-  if (!anthropicResponse.ok) {
-    const errorText = await anthropicResponse.text();
-    console.error("Anthropic API error:", anthropicResponse.status, errorText);
-    return new Response(
-      `Anthropic API error: ${anthropicResponse.status}`,
-      { status: anthropicResponse.status }
-    );
+  } catch (err) {
+    await refundCredits(user.id, creditCheck.cost, "Refund: stream error");
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 502 });
   }
-
-  const reader = anthropicResponse.body?.getReader();
-  if (!reader) {
-    return new Response("No response body from Anthropic", { status: 500 });
-  }
-
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let inputTokens = 0;
-      let outputTokens = 0;
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const data = line.slice(6).trim();
-              if (data === "[DONE]") continue;
-
-              try {
-                const event = JSON.parse(data);
-                if (
-                  event.type === "content_block_delta" &&
-                  event.delta?.type === "text_delta"
-                ) {
-                  controller.enqueue(encoder.encode(event.delta.text));
-                }
-                // Capture token usage from stream events
-                if (event.type === "message_start" && event.message?.usage) {
-                  inputTokens = event.message.usage.input_tokens ?? 0;
-                }
-                if (event.type === "message_delta" && event.usage) {
-                  outputTokens = event.usage.output_tokens ?? 0;
-                }
-              } catch {
-                // Skip non-JSON lines
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Claude stream error:", error);
-      } finally {
-        // Log token usage after stream completes
-        if (inputTokens > 0 || outputTokens > 0) {
-          logTokenUsage(userId, "chat-message", {
-            inputTokens,
-            outputTokens,
-            model: ANTHROPIC_MODEL,
-          }).catch((e) => console.error("Failed to log token usage:", e));
-        }
-        controller.close();
-      }
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-cache",
-      "Transfer-Encoding": "chunked",
-    },
-  });
-}
-
-/* ── OpenAI streaming ────────────────────────────────────── */
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function streamOpenAI(messages: { role: string; content: string | any[] }[], sysPrompt: string = SYSTEM_PROMPT) {
-  if (!OPENAI_API_KEY) {
-    return new Response(
-      "OPENAI_API_KEY is not configured. Add it to your .env.local file.",
-      { status: 500 }
-    );
-  }
-
-  const openaiResponse = await fetch(
-    "https://api.openai.com/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: OPENAI_MODEL,
-        max_tokens: 4096,
-        messages: [
-          { role: "system", content: sysPrompt },
-          ...messages.map((m) => ({
-            role: m.role === "user" ? "user" : ("assistant" as const),
-            content: m.content,
-          })),
-        ],
-        stream: true,
-      }),
-    }
-  );
-
-  if (!openaiResponse.ok) {
-    const errorText = await openaiResponse.text();
-    console.error("OpenAI API error:", openaiResponse.status, errorText);
-    return new Response(
-      `OpenAI API error: ${openaiResponse.status}`,
-      { status: openaiResponse.status }
-    );
-  }
-
-  const reader = openaiResponse.body?.getReader();
-  if (!reader) {
-    return new Response("No response body from OpenAI", { status: 500 });
-  }
-
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const data = line.slice(6).trim();
-              if (data === "[DONE]") continue;
-
-              try {
-                const event = JSON.parse(data);
-                const content = event.choices?.[0]?.delta?.content;
-                if (content) {
-                  controller.enqueue(encoder.encode(content));
-                }
-              } catch {
-                // Skip non-JSON lines
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error("OpenAI stream error:", error);
-      } finally {
-        controller.close();
-      }
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-cache",
-      "Transfer-Encoding": "chunked",
-    },
-  });
-}
-
-/* ── GET: Provider status endpoint ───────────────────────── */
-
-export async function GET() {
-  return Response.json({
-    providers: {
-      claude: { available: !!ANTHROPIC_API_KEY, model: ANTHROPIC_MODEL },
-      openai: { available: !!OPENAI_API_KEY, model: OPENAI_MODEL },
-    },
-    defaultProvider: resolveProvider(),
-  });
 }

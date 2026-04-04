@@ -33,7 +33,6 @@ import { useAnalyticsStore } from "@/stores/analytics";
 import { usePreferencesStore } from "@/stores/preferences";
 import { useBusinessMemory } from "@/stores/business-memory";
 import { useAdvancedSettingsStore } from "@/stores/advanced-settings";
-import { useChatStore } from "@/stores/chat";
 import { useChikoStore } from "@/stores/chiko";
 
 // ---------------------------------------------------------------------------
@@ -66,14 +65,6 @@ function getBusinessMemorySnapshot(): Record<string, unknown> {
 function getAdvancedSettingsSnapshot(): Record<string, unknown> {
   const { settings } = useAdvancedSettingsStore.getState();
   return { settings };
-}
-
-function getChatSnapshot(): Record<string, unknown> {
-  const s = useChatStore.getState();
-  return {
-    conversations: s.conversations,
-    activeConversationId: s.activeConversationId,
-  };
 }
 
 function getChikoSnapshot(): Record<string, unknown> {
@@ -165,24 +156,6 @@ function restoreAdvancedSettings(data: Record<string, unknown>) {
   });
 }
 
-function restoreChat(data: Record<string, unknown>) {
-  if (!Array.isArray(data.conversations)) return;
-  const local = useChatStore.getState();
-  // Merge conversations — keep server ones, add local-only ones
-  const serverConvos = data.conversations as Array<{ id: string; updatedAt?: number }>;
-  const serverIds = new Set(serverConvos.map((c) => c.id));
-  const merged = [
-    ...serverConvos,
-    ...local.conversations.filter((c) => !serverIds.has(c.id)),
-  ];
-  const activeId =
-    (data.activeConversationId as string) || local.activeConversationId;
-  useChatStore.setState({
-    conversations: merged as typeof local.conversations,
-    activeConversationId: activeId,
-  });
-}
-
 function restoreChiko(data: Record<string, unknown>) {
   const patch: Record<string, unknown> = {};
   if (Array.isArray(data.messages)) patch.messages = data.messages;
@@ -208,7 +181,7 @@ const RESTORE_MAP: Record<
   preferences: restorePreferences,
   "business-memory": restoreBusinessMemory,
   "advanced-settings": restoreAdvancedSettings,
-  chat: restoreChat,
+  chat: () => {}, // AI Chat rebuilt — old synced data is ignored
   chiko: restoreChiko,
   notifications: () => {}, // Notifications are ephemeral — no server restore
   "export-history": () => {}, // Export history is session-local
@@ -244,11 +217,6 @@ const SYNC_CONFIGS: SyncConfig[] = [
     key: "advanced-settings",
     getSnapshot: getAdvancedSettingsSnapshot,
     subscribe: (cb) => useAdvancedSettingsStore.subscribe(cb),
-  },
-  {
-    key: "chat",
-    getSnapshot: getChatSnapshot,
-    subscribe: (cb) => useChatStore.subscribe(cb),
   },
   {
     key: "chiko",

@@ -27,12 +27,6 @@
   "categories": ["productivity", "business", "design"],
   "shortcuts": [
     {
-      "name": "AI Chat",
-      "short_name": "Chat",
-      "url": "/tools/ai-toolkit/ai-chat",
-      "description": "Chat with Claude AI"
-    },
-    {
       "name": "Logo Generator",
       "short_name": "Logo",
       "url": "/tools/design-creation/logo-generator",

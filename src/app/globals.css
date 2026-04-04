@@ -142,28 +142,47 @@ body {
 }
 
 /* ============================================================
-   Excalidraw — CSS Isolation
+   Excalidraw — CSS Isolation (comprehensive)
    ============================================================
-   Tailwind v4's preflight resets certain element styles globally
-   (button bg, svg display, input borders). These minimal overrides
-   prevent those resets from breaking Excalidraw's own UI chrome.
-   The actual Excalidraw CSS is imported in the component file.
+   Tailwind v4's preflight resets ALL element styles globally:
+   - `*, ::before, ::after { border-width: 0; border-style: solid }`
+   - `button { background-color: transparent }`
+   - `svg { display: block }`
+   - `input, textarea, select { border, background, color, padding }`
+   - `a { color: inherit; text-decoration: inherit }`
+   - `h1-h6 { font-size: inherit; font-weight: inherit }`
+   - `img { display: block; max-width: 100% }`
+   - `ul, ol { list-style: none; margin: 0; padding: 0 }`
+   
+   These overrides restore native/Excalidraw styling inside the
+   wrapper. The actual Excalidraw CSS is imported in the component.
    ============================================================ */
 
-/* Tailwind preflight sets `button { background-color: transparent }`
-   which strips Excalidraw toolbar button backgrounds */
+/* The most destructive rule: Tailwind sets border-width: 0 on EVERYTHING.
+   This breaks Excalidraw's color pickers, panel borders, dialog borders,
+   toolbar dividers, and virtually all UI chrome with borders. */
+.excalidraw-wrapper .excalidraw *,
+.excalidraw-wrapper .excalidraw *::before,
+.excalidraw-wrapper .excalidraw *::after {
+  border-width: revert-layer;
+  border-style: revert-layer;
+  border-color: revert-layer;
+}
+
+/* Button backgrounds, cursor */
 .excalidraw-wrapper .excalidraw button {
   background-color: revert-layer;
+  background-image: revert-layer;
+  cursor: revert-layer;
 }
 
-/* Tailwind preflight sets `svg { display: block }` which breaks
-   Excalidraw's inline icon layout in toolbar buttons */
+/* SVG display + alignment (toolbar icons) */
 .excalidraw-wrapper .excalidraw svg {
   display: revert-layer;
+  vertical-align: revert-layer;
 }
 
-/* Tailwind preflight resets input/textarea styling which can
-   break Excalidraw's text input fields and dialogs */
+/* Form elements — inputs, textareas, selects */
 .excalidraw-wrapper .excalidraw input,
 .excalidraw-wrapper .excalidraw textarea,
 .excalidraw-wrapper .excalidraw select {
@@ -171,4 +190,116 @@ body {
   background-color: revert-layer;
   color: revert-layer;
   padding: revert-layer;
+  font-size: revert-layer;
+  line-height: revert-layer;
+  appearance: revert-layer;
+  -webkit-appearance: revert-layer;
+}
+
+/* Color picker input — critical for the color panel */
+.excalidraw-wrapper .excalidraw input[type="color"] {
+  appearance: revert-layer;
+  -webkit-appearance: revert-layer;
+  padding: revert-layer;
+  border: revert-layer;
+  background: revert-layer;
+  width: revert-layer;
+  height: revert-layer;
+  cursor: pointer;
+}
+
+/* Range inputs (opacity/stroke width sliders) */
+.excalidraw-wrapper .excalidraw input[type="range"] {
+  appearance: revert-layer;
+  -webkit-appearance: revert-layer;
+  width: revert-layer;
+  height: revert-layer;
+  cursor: pointer;
+}
+
+/* Checkbox/radio inputs */
+.excalidraw-wrapper .excalidraw input[type="checkbox"],
+.excalidraw-wrapper .excalidraw input[type="radio"] {
+  appearance: revert-layer;
+  -webkit-appearance: revert-layer;
+  width: revert-layer;
+  height: revert-layer;
+}
+
+/* Anchors — Tailwind strips color & underline */
+.excalidraw-wrapper .excalidraw a {
+  color: revert-layer;
+  text-decoration: revert-layer;
+}
+
+/* Headings — Tailwind resets font-size/weight to inherit */
+.excalidraw-wrapper .excalidraw h1,
+.excalidraw-wrapper .excalidraw h2,
+.excalidraw-wrapper .excalidraw h3,
+.excalidraw-wrapper .excalidraw h4,
+.excalidraw-wrapper .excalidraw h5,
+.excalidraw-wrapper .excalidraw h6 {
+  font-size: revert-layer;
+  font-weight: revert-layer;
+}
+
+/* Images — Tailwind sets display: block, max-width: 100% */
+.excalidraw-wrapper .excalidraw img {
+  display: revert-layer;
+  max-width: revert-layer;
+  height: revert-layer;
+}
+
+/* Lists — Tailwind strips list-style, margin, padding */
+.excalidraw-wrapper .excalidraw ul,
+.excalidraw-wrapper .excalidraw ol {
+  list-style: revert-layer;
+  margin: revert-layer;
+  padding: revert-layer;
+}
+
+/* Horizontal rules */
+.excalidraw-wrapper .excalidraw hr {
+  border-top-width: revert-layer;
+  height: revert-layer;
+  color: revert-layer;
+}
+
+/* Labels */
+.excalidraw-wrapper .excalidraw label {
+  font-weight: revert-layer;
+  cursor: revert-layer;
+}
+
+/* Fieldset/legend */
+.excalidraw-wrapper .excalidraw fieldset {
+  margin: revert-layer;
+  padding: revert-layer;
+  border: revert-layer;
+}
+
+.excalidraw-wrapper .excalidraw legend {
+  padding: revert-layer;
+}
+
+/* Dialog overlays */
+.excalidraw-wrapper .excalidraw dialog {
+  padding: revert-layer;
+}
+
+/* Tables (library grid, help dialogs) */
+.excalidraw-wrapper .excalidraw table {
+  border-collapse: revert-layer;
+  border-spacing: revert-layer;
+}
+
+.excalidraw-wrapper .excalidraw th,
+.excalidraw-wrapper .excalidraw td {
+  padding: revert-layer;
+  text-align: revert-layer;
+}
+
+/* Paragraph margins (help dialogs, tooltips) */
+.excalidraw-wrapper .excalidraw p {
+  margin: revert-layer;
 }

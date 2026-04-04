@@ -62,7 +62,6 @@ export const changelog: ChangelogEntry[] = [
     type: "feature",
     description:
       "Meet Chiko — your contextual AI copilot that helps inside every workspace.",
-    toolId: "utilities/ai-chat",
   },
   {
     id: "cl-007",

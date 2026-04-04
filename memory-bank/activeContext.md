@@ -1,32 +1,55 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Resume Builder — Template Modernization & Renderer Enhancements — COMPLETE
+**Phase:** Resume Builder — V3 Enhancement Pass — COMPLETE
 
-### Session: Resume Template Redesign + Renderer Gap Fixes
+### Session: Resume Import System + DOCX Enhancement + Template Expansion
 
-Completely redesigned all 13 resume templates from generic to modern/minimalistic. Fixed 3 unimplemented renderer features (compact mode, timeline markers, 5 distinct skillStyle branches).
+Enhanced the Resume & CV Builder with three major improvements: multi-format import system, enhanced DOCX export, and expanded templates from 13 to 20.
 
 #### What Changed
-- **templates.ts** (complete rewrite, 280→412 lines): All 13 template configs redesigned with refined color palettes, modern font pairings, distinct design philosophies, and extensive inline docs
-- **TemplateRenderer.tsx** (700→802 lines): Implemented compact mode (tight spacing), hasTimeline (left-border + dot markers), and 5 distinct skillStyle branches (bars→progress-bar, dots→circles, plain→text-only, chips→badges, grouped→name+keywords)
+- **NEW: src/lib/resume/import.ts** (~600 lines): Multi-format resume import parser.
+  - 5 supported formats: DMSuite JSON, JSON Resume standard, Reactive Resume, LinkedIn export, plain text
+  - `detectFormat()` auto-detects format from JSON structure
+  - `autoImport()` dispatcher with warnings/format detection
+  - Deep merge helper preserves defaults for missing fields
+  - Email/phone extraction from plain text
+  - Proficiency→level and fluency→level converters
 
-#### Template Design Summary
-- **Onyx** (default): violet-700, banner+sidebarBg, IBM Plex Serif — executive
-- **Azurill**: slate-600, centered+no dividers, Inter — Nordic minimal
-- **Bronzor**: stone-800, centered+thick, Playfair/Source — editorial serif
-- **Chikorita**: teal-600, classic+none, Poppins — fresh geometric
-- **Ditto**: neutral-900, classic+line, IBM Plex Sans — Swiss precision
-- **Gengar**: indigo-700, sidebar-header+sidebarBg, DM Serif — bold studio
-- **Glalie**: slate-700, classic+dotted+compact, Raleway — corporate frost
-- **Kakuna**: amber-700, minimal+compact, sidebarWidth=0, Crimson Pro — single column
-- **Lapras**: blue-700, classic+chips, Inter — ocean professional
-- **Leafish**: green-700, classic+timeline, Cormorant — organic elegance
-- **Pikachu**: amber-600, split+double+chips, Montserrat — dynamic split
-- **Rhyhorn**: zinc-600, sidebar-header+thick+sidebarBg, Space Grotesk — structured matrix
-- **Ditgar**: purple-700, sidebar-header+sidebarBg, Poppins — midnight canvas
+- **NEW: src/components/workspaces/resume-cv/ImportDialog.tsx** (~280 lines): Import UI dialog.
+  - Drag-and-drop file upload with visual feedback
+  - Format auto-detection badge (shows detected format)
+  - Data preview before importing (name, headline, email, section counts)
+  - Warning display for partial imports
+  - Error state with retry option
 
-#### Commit: 7b55cac — Pushed to main
+- **MODIFIED: src/components/workspaces/resume-cv/ResumeLeftPanel.tsx**: Replaced basic JSON import button with ImportDialog integration. Removed hidden file input; now opens proper import dialog.
+
+- **REWRITTEN: src/lib/resume/docx-builder.ts** (~420 lines): Enhanced DOCX export.
+  - HTML→structured content parser (paragraphs + bullet points)
+  - Proper `<li>` items → numbered bullet points in DOCX
+  - Inline formatting: `<strong>`, `<em>`, `<a>` → bold/italic/hyperlinks
+  - Contact line with clickable mailto/tel/URL hyperlinks
+  - Social profiles row with hyperlinks
+  - Location, grade, fluency, proficiency on subtitle line
+  - Layout-aware section ordering from metadata (flattens pages→main+sidebar)
+  - Defined bullet numbering config (resume-bullets)
+
+- **MODIFIED: src/lib/resume/schema.ts**: Added 7 new template IDs (nidoran, eevee, snorlax, jolteon, clefairy, umbreon, mewtwo) to TEMPLATE_IDS array.
+
+- **MODIFIED: src/lib/resume/templates.ts**: Added 7 new template configs (total: 20):
+  - **Nidoran**: Executive Crimson — rose-700, banner+thick, Merriweather/Roboto
+  - **Eevee**: Adaptive Modern — purple-500, minimal+timeline, Garamond/Nunito
+  - **Snorlax**: Comfortable Classic — slate-500, centered+dotted, sidebarWidth=0, Raleway/Lato
+  - **Jolteon**: Electric Edge — amber-500, split+compact, Space Grotesk/Inter
+  - **Clefairy**: Soft Elegance — rose-600, centered+bars, Crimson Pro/Work Sans
+  - **Umbreon**: Dark Professional — blue-900, classic+double+timeline+sidebarBg, IBM Plex Serif
+  - **Mewtwo**: Monochrome Power — black, banner+thick+grouped+sidebarBg(left), Montserrat/Open Sans
+
+#### Status
+- 0 TypeScript errors (npx tsc --noEmit clean)
+- TOOL-STATUS.md changelog entry added
+- tools.ts already had devStatus: "complete" — no change needed
 
 ### Previous Focus: AI Chat V2 — LibreChat-Faithful UI Overhaul — COMPLETE
 

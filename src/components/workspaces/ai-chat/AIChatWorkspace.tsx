@@ -1,679 +1,482 @@
 "use client";
 
-import {
+import React, {
+  useState,
   useRef,
   useEffect,
-  useState,
   useCallback,
   useMemo,
-  Fragment,
 } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import rehypeHighlight from "rehype-highlight";
-import { useChatStore, BUILTIN_PRESETS } from "@/stores/chat";
-import type {
-  ChatMessage,
-  ChatConversation,
-  ChatProvider,
-  SystemPreset,
-  FileAttachment,
-} from "@/stores/chat";
+import rehypeKatex from "rehype-katex";
+import {
+  useAIChatEditor,
+  MODEL_OPTIONS,
+  BUILTIN_AGENTS,
+  type ChatMessage,
+  type ChatModel,
+  type Conversation,
+  type AgentPersona,
+} from "@/stores/ai-chat-editor";
 import { useChikoActions } from "@/hooks/useChikoActions";
 import { createAIChatManifest } from "@/lib/chiko/manifests/ai-chat";
 import {
   IconSend,
   IconPlus,
-  IconSparkles,
+  IconTrash,
   IconCopy,
   IconCheck,
   IconSearch,
-  IconDownload,
   IconX,
-  IconChevronDown,
-  IconChevronLeft,
-  IconFolder,
   IconStar,
-  IconRefresh,
+  IconFolder,
   IconSettings,
-  IconTrash,
-  IconUser,
+  IconDownload,
+  IconMenu,
+  IconRefresh,
+  IconChevronDown,
 } from "@/components/icons";
 
-/* ═══════════════════════════════════════════════════════════════
-   INLINE SVG ICONS — Chat-specific, not in global icons library
-   ═══════════════════════════════════════════════════════════════ */
+// ---------------------------------------------------------------------------
+// Markdown code block with copy button
+// ---------------------------------------------------------------------------
 
-type SvgProps = React.SVGProps<SVGSVGElement>;
-
-function PaperclipIcon(p: SvgProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-      <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-    </svg>
-  );
-}
-
-function StopIcon(p: SvgProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" {...p}>
-      <rect x="6" y="6" width="12" height="12" rx="1" />
-    </svg>
-  );
-}
-
-function PencilIcon(p: SvgProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-      <path d="m15 5 4 4" />
-    </svg>
-  );
-}
-
-function GitForkIcon(p: SvgProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-      <circle cx="12" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><circle cx="18" cy="6" r="3" />
-      <path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9" /><path d="M12 12v3" />
-    </svg>
-  );
-}
-
-function SidebarIcon(p: SvgProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-      <rect width="18" height="18" x="3" y="3" rx="2" /><path d="M9 3v18" />
-    </svg>
-  );
-}
-
-function BookmarkIcon(p: SvgProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-      <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
-    </svg>
-  );
-}
-
-function ArrowUpIcon(p: SvgProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...p}>
-      <path d="M12 19V5" /><path d="m5 12 7-7 7 7" />
-    </svg>
-  );
-}
-
-function MoreDotsIcon(p: SvgProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" {...p}>
-      <circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" />
-    </svg>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   CONSTANTS & HELPERS
-   ═══════════════════════════════════════════════════════════════ */
-
-const MODEL_OPTIONS: { id: ChatProvider; label: string; icon: string; desc: string }[] = [
-  { id: "claude", label: "Claude Sonnet", icon: "✦", desc: "Anthropic — nuanced reasoning" },
-  { id: "openai", label: "GPT-4o", icon: "◆", desc: "OpenAI — versatile, fast" },
-];
-
-const SUGGESTIONS = [
-  "Write a tagline for a tech startup",
-  "Create a product description for eco-friendly sneakers",
-  "Help me draft a cold email for B2B outreach",
-  "Generate 5 blog post ideas about AI in design",
-  "Explain the concept of RAG in simple terms",
-  "Design a color palette for a luxury brand",
-];
-
-function estimateTokens(t: string) {
-  return Math.ceil(t.length / 4);
-}
-
-function timeLabel(ts: number): string {
-  const d = Date.now() - ts;
-  const day = 86_400_000;
-  if (d < day) return "Today";
-  if (d < 2 * day) return "Yesterday";
-  if (d < 7 * day) return "This Week";
-  if (d < 30 * day) return "This Month";
-  return "Older";
-}
-
-function groupByDate(convs: ChatConversation[]) {
-  const groups: Record<string, ChatConversation[]> = {};
-  for (const c of convs) {
-    const label = timeLabel(c.updatedAt);
-    (groups[label] ??= []).push(c);
-  }
-  return groups;
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   CODE BLOCK — Language label + copy button
-   ═══════════════════════════════════════════════════════════════ */
-
-function CodeBlock({ language, children }: { language?: string; children: string }) {
+function CodeBlock({
+  className,
+  children,
+}: {
+  className?: string;
+  children?: React.ReactNode;
+}) {
   const [copied, setCopied] = useState(false);
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(children);
+  const lang = className?.replace("hljs language-", "")?.replace("language-", "") || "";
+  const code = String(children).replace(/\n$/, "");
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="relative group/code my-3 rounded-xl overflow-hidden border border-gray-700/50">
-      {/* Header bar */}
-      <div className="flex items-center justify-between px-4 py-1.5 bg-gray-950 text-xs text-gray-400">
-        <span>{language || "code"}</span>
+    <div className="group relative my-3 rounded-lg overflow-hidden border border-gray-700/50">
+      <div className="flex items-center justify-between bg-gray-800 px-4 py-1.5 text-xs text-gray-400">
+        <span>{lang || "code"}</span>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1 hover:text-gray-200 transition-colors"
+          className="flex items-center gap-1 rounded px-2 py-0.5 hover:bg-gray-700 transition-colors"
         >
-          {copied ? <IconCheck className="size-3.5" /> : <IconCopy className="size-3.5" />}
-          <span>{copied ? "Copied" : "Copy"}</span>
+          {copied ? (
+            <IconCheck className="h-3.5 w-3.5 text-green-400" />
+          ) : (
+            <IconCopy className="h-3.5 w-3.5" />
+          )}
+          {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      {/* Code content */}
-      <pre className="p-4 bg-gray-900 text-sm overflow-x-auto text-gray-200">
-        <code>{children}</code>
+      <pre className="overflow-x-auto p-4 text-sm leading-relaxed bg-gray-900/60">
+        <code className={className}>{children}</code>
       </pre>
     </div>
   );
 }
 
-/* Markdown component overrides for LibreChat-style rendering */
-function MarkdownComponents() {
-  return useMemo(
-    () => ({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      code({ className, children, ...props }: any) {
-        const match = /language-(\w+)/.exec(className || "");
-        const codeString = String(children).replace(/\n$/, "");
-        // Multi-line code = code block
-        if (codeString.includes("\n") || match) {
-          return <CodeBlock language={match?.[1]}>{codeString}</CodeBlock>;
-        }
-        // Inline code
-        return (
-          <code className="px-1.5 py-0.5 rounded-md bg-gray-800 text-primary-400 text-[0.8125em] font-mono" {...props}>
-            {children}
-          </code>
-        );
-      },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      pre({ children }: any) {
-        // The code component handles everything, so pre is a passthrough
-        return <>{children}</>;
-      },
-    }),
-    []
+// ---------------------------------------------------------------------------
+// Rendered markdown message
+// ---------------------------------------------------------------------------
+
+function MarkdownContent({ content }: { content: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm, remarkMath]}
+      rehypePlugins={[rehypeHighlight, rehypeKatex]}
+      components={{
+        code({ className, children, ...props }) {
+          const isInline = !className;
+          if (isInline) {
+            return (
+              <code
+                className="rounded bg-gray-700/60 px-1.5 py-0.5 text-sm font-mono text-primary-300"
+                {...props}
+              >
+                {children}
+              </code>
+            );
+          }
+          return <CodeBlock className={className}>{children}</CodeBlock>;
+        },
+        table({ children }) {
+          return (
+            <div className="my-3 overflow-x-auto">
+              <table className="min-w-full border-collapse text-sm">
+                {children}
+              </table>
+            </div>
+          );
+        },
+        th({ children }) {
+          return (
+            <th className="border border-gray-600 bg-gray-800 px-3 py-2 text-left text-xs font-semibold text-gray-300">
+              {children}
+            </th>
+          );
+        },
+        td({ children }) {
+          return (
+            <td className="border border-gray-700 px-3 py-2 text-gray-300">
+              {children}
+            </td>
+          );
+        },
+        a({ href, children }) {
+          return (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-400 hover:text-primary-300 underline underline-offset-2"
+            >
+              {children}
+            </a>
+          );
+        },
+        blockquote({ children }) {
+          return (
+            <blockquote className="my-3 border-l-3 border-primary-500 pl-4 text-gray-400 italic">
+              {children}
+            </blockquote>
+          );
+        },
+      }}
+    >
+      {content}
+    </ReactMarkdown>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   MESSAGE BUBBLE — LibreChat style
-   Full-width, left-aligned, avatar + content, hover actions
-   ═══════════════════════════════════════════════════════════════ */
+// ---------------------------------------------------------------------------
+// Message bubble
+// ---------------------------------------------------------------------------
 
 function MessageBubble({
   message,
-  conversationId,
-  isLast,
-  isGenerating,
+  agent,
+  onCopy,
+  onEdit,
+  onDelete,
+  onBookmark,
+  onFork,
   onRegenerate,
-  onEditAndResend,
 }: {
   message: ChatMessage;
-  conversationId: string;
-  isLast: boolean;
-  isGenerating: boolean;
-  onRegenerate?: () => void;
-  onEditAndResend?: (content: string) => void;
+  agent: AgentPersona;
+  onCopy: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onBookmark: () => void;
+  onFork: () => void;
+  onRegenerate: () => void;
 }) {
-  const [copied, setCopied] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [editText, setEditText] = useState(message.content);
-  const { bookmarkMessage, forkFromMessage } = useChatStore();
-  const mdComponents = MarkdownComponents();
   const isUser = message.role === "user";
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(message.content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleSaveEdit = () => {
-    if (editText.trim() && onEditAndResend) {
-      onEditAndResend(editText.trim());
-    }
-    setEditing(false);
-  };
+  const [showActions, setShowActions] = useState(false);
 
   return (
-    <div className="group/msg px-4 py-6 hover:bg-gray-800/30 transition-colors">
-      <div className="max-w-3xl xl:max-w-4xl mx-auto flex gap-4">
+    <div
+      className="group relative px-4 py-4 md:px-8"
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
+    >
+      <div className={`mx-auto max-w-3xl flex gap-4 ${isUser ? "flex-row-reverse" : ""}`}>
         {/* Avatar */}
-        <div className={`size-7 rounded-full flex items-center justify-center shrink-0 mt-1 ${
-          isUser
-            ? "bg-gray-700 text-gray-300"
-            : "bg-primary-500/20 text-primary-400"
-        }`}>
-          {isUser ? (
-            <IconUser className="size-3.5" />
-          ) : (
-            <IconSparkles className="size-3.5" />
-          )}
+        <div
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm ${
+            isUser
+              ? "bg-primary-500/20 text-primary-400"
+              : "bg-secondary-500/20 text-secondary-400"
+          }`}
+        >
+          {isUser ? "You" : agent.avatar}
         </div>
 
-        {/* Content column */}
-        <div className="flex-1 min-w-0">
-          {/* Name + provider tag */}
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-sm font-semibold text-gray-100">
-              {isUser ? "You" : "DMSuite AI"}
-            </span>
-            {message.provider && !isUser && (
-              <span className="text-[0.625rem] px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 font-medium">
-                {message.provider === "claude" ? "Claude" : "GPT-4o"}
-              </span>
+        {/* Content */}
+        <div className={`min-w-0 flex-1 ${isUser ? "text-right" : ""}`}>
+          <div
+            className={`inline-block max-w-full text-left ${
+              isUser
+                ? "rounded-2xl rounded-tr-sm bg-primary-500/10 px-4 py-3 text-gray-200"
+                : "text-gray-200"
+            }`}
+          >
+            {message.isError ? (
+              <p className="text-error text-sm">{message.content}</p>
+            ) : isUser ? (
+              <>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+                {message.attachments?.map((a) => (
+                  <div key={a.id} className="mt-2">
+                    {a.type.startsWith("image/") ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={a.dataUrl} alt={a.name} className="max-h-48 rounded-lg" />
+                    ) : (
+                      <span className="text-xs text-gray-400">📎 {a.name}</span>
+                    )}
+                  </div>
+                ))}
+              </>
+            ) : (
+              <div className="prose-sm prose-invert max-w-none leading-relaxed">
+                <MarkdownContent content={message.content} />
+              </div>
             )}
           </div>
 
-          {/* File attachments */}
-          {message.attachments && message.attachments.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-3">
-              {message.attachments.map((file) =>
-                file.type.startsWith("image/") ? (
-                  <img
-                    key={file.id}
-                    src={file.url}
-                    alt={file.name}
-                    className="max-w-48 max-h-48 rounded-lg border border-gray-700"
-                  />
-                ) : (
-                  <div key={file.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-xs text-gray-300">
-                    <PaperclipIcon className="size-3.5" />
-                    <span className="truncate max-w-40">{file.name}</span>
-                    <span className="text-gray-500">{(file.size / 1024).toFixed(0)}KB</span>
-                  </div>
-                )
-              )}
-            </div>
-          )}
-
-          {/* Message body */}
-          {editing ? (
-            <div className="space-y-3">
-              <textarea
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                className="w-full rounded-xl border border-gray-600 bg-gray-800 px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500 resize-none min-h-24"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSaveEdit();
-                  }
-                  if (e.key === "Escape") {
-                    setEditing(false);
-                    setEditText(message.content);
-                  }
-                }}
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={handleSaveEdit}
-                  className="px-4 py-1.5 rounded-lg bg-primary-500 text-gray-950 text-xs font-semibold hover:bg-primary-400 transition-colors"
-                >
-                  Save & Submit
-                </button>
-                <button
-                  onClick={() => { setEditing(false); setEditText(message.content); }}
-                  className="px-4 py-1.5 rounded-lg text-gray-400 hover:text-gray-200 text-xs hover:bg-gray-800 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : isUser ? (
-            <p className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
-              {message.content}
+          {/* Token count */}
+          {message.tokenEstimate && (
+            <p className={`mt-1 text-xs text-gray-500 ${isUser ? "text-right" : ""}`}>
+              ~{message.tokenEstimate} tokens
+              {message.model && ` · ${MODEL_OPTIONS.find((m) => m.id === message.model)?.label || message.model}`}
             </p>
-          ) : (
-            <div className="prose prose-sm prose-invert max-w-none prose-p:leading-relaxed prose-headings:text-gray-100 prose-a:text-primary-400 prose-strong:text-gray-100 prose-li:text-gray-300 [&>*:first-child]:mt-0">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeHighlight]}
-                components={mdComponents}
-              >
-                {message.content || (isLast && isGenerating ? "..." : "")}
-              </ReactMarkdown>
-            </div>
-          )}
-
-          {/* Action bar — visible on hover */}
-          {!editing && message.content && (
-            <div className="flex items-center gap-0.5 mt-2 opacity-0 group-hover/msg:opacity-100 transition-opacity">
-              <ActionButton onClick={handleCopy} title="Copy">
-                {copied ? <IconCheck className="size-4 text-primary-400" /> : <IconCopy className="size-4" />}
-              </ActionButton>
-
-              {isUser && onEditAndResend && (
-                <ActionButton onClick={() => setEditing(true)} title="Edit">
-                  <PencilIcon className="size-4" />
-                </ActionButton>
-              )}
-
-              <ActionButton
-                onClick={() => bookmarkMessage(conversationId, message.id)}
-                title={message.bookmarked ? "Remove bookmark" : "Bookmark"}
-                active={message.bookmarked}
-              >
-                <BookmarkIcon className={`size-4 ${message.bookmarked ? "fill-primary-400 text-primary-400" : ""}`} />
-              </ActionButton>
-
-              <ActionButton onClick={() => forkFromMessage(conversationId, message.id)} title="Fork from here">
-                <GitForkIcon className="size-4" />
-              </ActionButton>
-
-              {!isUser && isLast && onRegenerate && !isGenerating && (
-                <ActionButton onClick={onRegenerate} title="Regenerate">
-                  <IconRefresh className="size-4" />
-                </ActionButton>
-              )}
-            </div>
           )}
         </div>
+      </div>
+
+      {/* Message actions bar */}
+      {showActions && (
+        <div className={`absolute top-2 ${isUser ? "left-4" : "right-4"} flex items-center gap-1 rounded-lg bg-gray-800 border border-gray-700 px-1 py-0.5 shadow-lg`}>
+          <ActionBtn icon={<IconCopy className="h-3.5 w-3.5" />} label="Copy" onClick={onCopy} />
+          {isUser && <ActionBtn icon={<EditIcon />} label="Edit" onClick={onEdit} />}
+          <ActionBtn
+            icon={<IconStar className={`h-3.5 w-3.5 ${message.bookmarked ? "text-yellow-400 fill-yellow-400" : ""}`} />}
+            label="Bookmark"
+            onClick={onBookmark}
+          />
+          <ActionBtn icon={<ForkIcon />} label="Fork" onClick={onFork} />
+          {!isUser && <ActionBtn icon={<IconRefresh className="h-3.5 w-3.5" />} label="Regenerate" onClick={onRegenerate} />}
+          <ActionBtn icon={<IconTrash className="h-3.5 w-3.5 text-red-400" />} label="Delete" onClick={onDelete} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ActionBtn({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      title={label}
+      className="rounded p-1.5 text-gray-400 hover:bg-gray-700 hover:text-gray-200 transition-colors"
+    >
+      {icon}
+    </button>
+  );
+}
+
+function EditIcon() {
+  return (
+    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+
+function ForkIcon() {
+  return (
+    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><circle cx="18" cy="6" r="3" />
+      <path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9" /><path d="M12 12v3" />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Empty state
+// ---------------------------------------------------------------------------
+
+const SUGGESTIONS = [
+  { emoji: "✍️", text: "Help me write a professional email" },
+  { emoji: "💻", text: "Explain async/await in JavaScript" },
+  { emoji: "📊", text: "Create a marketing strategy" },
+  { emoji: "🎨", text: "Suggest a color palette for a tech brand" },
+  { emoji: "📝", text: "Summarise this article for me" },
+  { emoji: "🧮", text: "Help me with a budget spreadsheet" },
+];
+
+function EmptyState({ onSuggestion }: { onSuggestion: (text: string) => void }) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center px-6">
+      <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-500/10 text-3xl">
+        🤖
+      </div>
+      <h2 className="mb-2 text-xl font-semibold text-gray-100">How can I help you today?</h2>
+      <p className="mb-8 text-sm text-gray-400">Start a conversation or pick a suggestion below</p>
+      <div className="grid max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2">
+        {SUGGESTIONS.map((s) => (
+          <button
+            key={s.text}
+            onClick={() => onSuggestion(s.text)}
+            className="flex items-center gap-3 rounded-xl border border-gray-700/50 bg-gray-800/40 px-4 py-3 text-left text-sm text-gray-300 transition-all hover:border-primary-500/30 hover:bg-gray-800/80 hover:text-gray-100"
+          >
+            <span className="text-lg">{s.emoji}</span>
+            <span>{s.text}</span>
+          </button>
+        ))}
       </div>
     </div>
   );
 }
 
-/* Tiny action button for message actions */
-function ActionButton({
-  onClick,
-  title,
-  active,
-  children,
-}: {
-  onClick: () => void;
-  title: string;
-  active?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      title={title}
-      className={`p-1.5 rounded-lg transition-colors ${
-        active
-          ? "text-primary-400"
-          : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
+// ---------------------------------------------------------------------------
+// Conversation sidebar
+// ---------------------------------------------------------------------------
 
-/* ═══════════════════════════════════════════════════════════════
-   CONVERSATION ITEM — Sidebar entry
-   ═══════════════════════════════════════════════════════════════ */
-
-function ConvItem({
-  conv,
-  isActive,
+function ConversationSidebar({
+  conversations,
+  activeId,
   onSelect,
+  onNew,
   onDelete,
   onRename,
   onPin,
+  searchQuery,
+  onSearchChange,
 }: {
-  conv: ChatConversation;
-  isActive: boolean;
-  onSelect: () => void;
-  onDelete: () => void;
-  onRename: () => void;
-  onPin: () => void;
+  conversations: Conversation[];
+  activeId: string;
+  onSelect: (id: string) => void;
+  onNew: () => void;
+  onDelete: (id: string) => void;
+  onRename: (id: string, title: string) => void;
+  onPin: (id: string) => void;
+  searchQuery: string;
+  onSearchChange: (q: string) => void;
 }) {
-  return (
-    <button
-      onClick={onSelect}
-      className={`w-full group/ci text-left px-3 py-2.5 rounded-lg text-[0.8125rem] transition-colors flex items-center gap-2 ${
-        isActive
-          ? "bg-gray-800 text-gray-100"
-          : "text-gray-400 hover:bg-gray-800/60 hover:text-gray-300"
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    const list = conversations.filter(
+      (c) => !c.archived && (c.title.toLowerCase().includes(q) || c.messages.some((m) => m.content.toLowerCase().includes(q)))
+    );
+    const pinned = list.filter((c) => c.pinned);
+    const rest = list.filter((c) => !c.pinned);
+    return { pinned, rest };
+  }, [conversations, searchQuery]);
+
+  const startEdit = (id: string, title: string) => {
+    setEditId(id);
+    setEditValue(title);
+  };
+
+  const commitEdit = () => {
+    if (editId && editValue.trim()) {
+      onRename(editId, editValue.trim());
+    }
+    setEditId(null);
+  };
+
+  const renderItem = (conv: Conversation) => (
+    <div
+      key={conv.id}
+      onClick={() => onSelect(conv.id)}
+      className={`group flex items-center gap-2 rounded-lg px-3 py-2 text-sm cursor-pointer transition-colors ${
+        conv.id === activeId
+          ? "bg-primary-500/15 text-primary-300"
+          : "text-gray-400 hover:bg-gray-800/60 hover:text-gray-200"
       }`}
     >
-      <span className="flex-1 truncate">{conv.title}</span>
-
-      {/* Action icons — appear on hover */}
-      <span className="flex items-center gap-0.5 opacity-0 group-hover/ci:opacity-100 transition-opacity shrink-0">
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={(e) => { e.stopPropagation(); onRename(); }}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onRename(); } }}
-          className="p-1 rounded hover:bg-gray-700 text-gray-500 hover:text-gray-300 transition-colors"
+      {conv.temporary && (
+        <span className="shrink-0 rounded bg-purple-500/20 px-1 py-0.5 text-[10px] text-purple-400">TMP</span>
+      )}
+      {editId === conv.id ? (
+        <input
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={commitEdit}
+          onKeyDown={(e) => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") setEditId(null); }}
+          autoFocus
+          className="flex-1 bg-transparent border-b border-primary-500 text-sm text-gray-200 outline-none"
+          onClick={(e) => e.stopPropagation()}
+        />
+      ) : (
+        <span className="flex-1 truncate">{conv.title}</span>
+      )}
+      <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+        <button
+          onClick={(e) => { e.stopPropagation(); startEdit(conv.id, conv.title); }}
+          className="rounded p-1 hover:bg-gray-700"
           title="Rename"
         >
-          <PencilIcon className="size-3.5" />
-        </span>
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={(e) => { e.stopPropagation(); onPin(); }}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onPin(); } }}
-          className={`p-1 rounded hover:bg-gray-700 transition-colors ${conv.pinned ? "text-primary-400" : "text-gray-500 hover:text-gray-300"}`}
-          title={conv.pinned ? "Unpin" : "Pin"}
+          <EditIcon />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onPin(conv.id); }}
+          className={`rounded p-1 hover:bg-gray-700 ${conv.pinned ? "text-yellow-400" : ""}`}
+          title="Pin"
         >
-          <IconStar className={`size-3.5 ${conv.pinned ? "fill-primary-400" : ""}`} />
-        </span>
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onDelete(); } }}
-          className="p-1 rounded hover:bg-gray-700 text-gray-500 hover:text-red-400 transition-colors"
+          <IconStar className="h-3 w-3" />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(conv.id); }}
+          className="rounded p-1 hover:bg-gray-700 text-red-400"
           title="Delete"
         >
-          <IconTrash className="size-3.5" />
-        </span>
-      </span>
-    </button>
+          <IconTrash className="h-3 w-3" />
+        </button>
+      </div>
+    </div>
   );
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   CHAT SIDEBAR — LibreChat style: dark bg, new chat, search,
-   date-grouped conversations, pinned section
-   ═══════════════════════════════════════════════════════════════ */
-
-function ChatSidebar({ onClose }: { onClose?: () => void }) {
-  const {
-    conversations,
-    activeConversationId,
-    sidebarSearch,
-    folders,
-    setSidebarSearch,
-    setActiveConversation,
-    deleteConversation,
-    createConversation,
-    renameConversation,
-    pinConversation,
-    unpinConversation,
-  } = useChatStore();
-
-  const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [renameText, setRenameText] = useState("");
-
-  // Filter: exclude temporary, apply search
-  const filtered = useMemo(() => {
-    let list = conversations.filter((c) => !c.temporary);
-    if (sidebarSearch.trim()) {
-      const q = sidebarSearch.toLowerCase();
-      list = list.filter(
-        (c) =>
-          c.title.toLowerCase().includes(q) ||
-          c.messages.some((m) => m.content.toLowerCase().includes(q))
-      );
-    }
-    return list;
-  }, [conversations, sidebarSearch]);
-
-  const pinned = filtered.filter((c) => c.pinned);
-  const unpinned = filtered.filter((c) => !c.pinned && !c.folder);
-  const grouped = useMemo(() => groupByDate(unpinned), [unpinned]);
-
-  // Folder-grouped
-  const folderConvs = useMemo(() => {
-    const map: Record<string, ChatConversation[]> = {};
-    for (const f of folders) {
-      const items = filtered.filter((c) => c.folder === f && !c.pinned);
-      if (items.length > 0) map[f] = items;
-    }
-    return map;
-  }, [filtered, folders]);
-
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(folders));
-
-  const startRename = (conv: ChatConversation) => {
-    setRenamingId(conv.id);
-    setRenameText(conv.title);
-  };
-
-  const submitRename = () => {
-    if (renamingId && renameText.trim()) {
-      renameConversation(renamingId, renameText.trim());
-    }
-    setRenamingId(null);
-  };
-
-  const handleNewChat = () => {
-    createConversation();
-    onClose?.();
-  };
-
-  const selectConv = (id: string) => {
-    setActiveConversation(id);
-    onClose?.();
-  };
-
-  const renderConv = (conv: ChatConversation) => {
-    if (renamingId === conv.id) {
-      return (
-        <div key={conv.id} className="px-3 py-2">
-          <input
-            type="text"
-            value={renameText}
-            onChange={(e) => setRenameText(e.target.value)}
-            onBlur={submitRename}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") submitRename();
-              if (e.key === "Escape") setRenamingId(null);
-            }}
-            className="w-full bg-gray-800 border border-gray-600 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary-500/40"
-            autoFocus
-          />
-        </div>
-      );
-    }
-    return (
-      <ConvItem
-        key={conv.id}
-        conv={conv}
-        isActive={conv.id === activeConversationId}
-        onSelect={() => selectConv(conv.id)}
-        onDelete={() => deleteConversation(conv.id)}
-        onRename={() => startRename(conv)}
-        onPin={() => conv.pinned ? unpinConversation(conv.id) : pinConversation(conv.id)}
-      />
-    );
-  };
 
   return (
-    <div className="flex flex-col h-full w-64 bg-gray-950 border-r border-gray-800/60">
-      {/* New Chat button */}
-      <div className="p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleNewChat}
-            className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-200 hover:bg-gray-800 transition-colors"
-          >
-            <IconPlus className="size-4" />
-            New Chat
-          </button>
-          {onClose && (
-            <button onClick={onClose} className="lg:hidden p-2 text-gray-400 hover:text-gray-200 rounded-lg hover:bg-gray-800">
-              <IconX className="size-4" />
-            </button>
-          )}
-        </div>
+    <div className="flex h-full flex-col">
+      {/* New chat button */}
+      <div className="p-3">
+        <button
+          onClick={onNew}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-700/50 bg-gray-800/40 px-3 py-2.5 text-sm text-gray-300 transition-all hover:border-primary-500/40 hover:bg-primary-500/10 hover:text-primary-300"
+        >
+          <IconPlus className="h-4 w-4" />
+          New Chat
+        </button>
+      </div>
 
-        {/* Search */}
+      {/* Search */}
+      <div className="px-3 pb-2">
         <div className="relative">
-          <IconSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-gray-600" />
+          <IconSearch className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
           <input
             type="text"
-            value={sidebarSearch}
-            onChange={(e) => setSidebarSearch(e.target.value)}
-            placeholder="Search conversations..."
-            className="w-full h-8 rounded-lg pl-8 pr-3 bg-gray-900 border border-gray-800 text-xs text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-gray-600 transition-colors"
+            placeholder="Search conversations…"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="w-full rounded-lg bg-gray-800/60 py-2 pl-9 pr-3 text-xs text-gray-300 placeholder-gray-500 outline-none border border-transparent focus:border-primary-500/40"
           />
         </div>
       </div>
 
       {/* Conversation list */}
-      <div className="flex-1 overflow-y-auto px-2 pb-3 space-y-0.5 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
-        {/* Pinned */}
-        {pinned.length > 0 && (
-          <div className="mb-2">
-            <p className="text-[0.625rem] font-medium text-gray-600 uppercase tracking-wider px-3 py-1.5">
-              Pinned
-            </p>
-            {pinned.map(renderConv)}
-          </div>
+      <div className="flex-1 overflow-y-auto px-2 pb-4 space-y-0.5">
+        {filtered.pinned.length > 0 && (
+          <>
+            <p className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Pinned</p>
+            {filtered.pinned.map(renderItem)}
+          </>
         )}
-
-        {/* Folders */}
-        {Object.entries(folderConvs).map(([folder, convs]) => (
-          <div key={folder} className="mb-1">
-            <button
-              onClick={() => {
-                setExpandedFolders((prev) => {
-                  const next = new Set(prev);
-                  next.has(folder) ? next.delete(folder) : next.add(folder);
-                  return next;
-                });
-              }}
-              className="flex items-center gap-1.5 w-full px-3 py-1.5 text-[0.625rem] font-medium text-gray-600 uppercase tracking-wider hover:text-gray-400 transition-colors"
-            >
-              <IconChevronDown className={`size-3 transition-transform ${expandedFolders.has(folder) ? "" : "-rotate-90"}`} />
-              <IconFolder className="size-3" />
-              {folder}
-            </button>
-            {expandedFolders.has(folder) && convs.map(renderConv)}
-          </div>
-        ))}
-
-        {/* Date-grouped */}
-        {Object.entries(grouped).map(([label, convs]) => (
-          <Fragment key={label}>
-            <p className="text-[0.625rem] font-medium text-gray-600 uppercase tracking-wider px-3 py-1.5 mt-3 first:mt-0">
-              {label}
-            </p>
-            {convs.map(renderConv)}
-          </Fragment>
-        ))}
-
-        {filtered.length === 0 && (
-          <p className="text-xs text-gray-600 text-center py-12">
-            {sidebarSearch ? "No matches" : "No conversations yet"}
+        {filtered.rest.length > 0 && (
+          <>
+            {filtered.pinned.length > 0 && (
+              <p className="px-2 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Recent</p>
+            )}
+            {filtered.rest.map(renderItem)}
+          </>
+        )}
+        {filtered.pinned.length === 0 && filtered.rest.length === 0 && (
+          <p className="px-3 py-8 text-center text-xs text-gray-500">
+            {searchQuery ? "No conversations found" : "No conversations yet"}
           </p>
         )}
       </div>
@@ -681,370 +484,368 @@ function ChatSidebar({ onClose }: { onClose?: () => void }) {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   EMPTY STATE / LANDING — LibreChat style
-   Centered greeting + suggestion grid
-   ═══════════════════════════════════════════════════════════════ */
+// ---------------------------------------------------------------------------
+// Agent selector panel
+// ---------------------------------------------------------------------------
 
-function EmptyState({ onSuggestion }: { onSuggestion: (text: string) => void }) {
+function AgentSelector({
+  agents,
+  activeId,
+  onSelect,
+  onClose,
+}: {
+  agents: AgentPersona[];
+  activeId: string;
+  onSelect: (id: string) => void;
+  onClose: () => void;
+}) {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-6 pb-20">
-      {/* Logo */}
-      <div className="size-16 rounded-2xl bg-primary-500/10 border border-primary-500/20 flex items-center justify-center mb-6">
-        <IconSparkles className="size-8 text-primary-500" />
-      </div>
-
-      <h1 className="text-2xl font-semibold text-gray-100 mb-2">
-        How can I help you today?
-      </h1>
-      <p className="text-sm text-gray-500 mb-10 max-w-md text-center">
-        Chat with Claude or GPT-4o. Upload files, fork threads, bookmark messages.
-      </p>
-
-      {/* Suggestion grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-2xl w-full">
-        {SUGGESTIONS.map((s) => (
-          <button
-            key={s}
-            onClick={() => onSuggestion(s)}
-            className="text-left px-4 py-3.5 rounded-xl border border-gray-800 text-sm text-gray-400 hover:border-gray-600 hover:text-gray-200 hover:bg-gray-800/40 transition-all"
-          >
-            {s}
+    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="w-full max-w-lg rounded-2xl border border-gray-700 bg-gray-900 p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-100">Switch Agent</h3>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-800">
+            <IconX className="h-5 w-5" />
           </button>
-        ))}
+        </div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 max-h-80 overflow-y-auto">
+          {agents.map((a) => (
+            <button
+              key={a.id}
+              onClick={() => { onSelect(a.id); onClose(); }}
+              className={`flex items-start gap-3 rounded-xl border p-3 text-left transition-all ${
+                a.id === activeId
+                  ? "border-primary-500/50 bg-primary-500/10"
+                  : "border-gray-700/50 bg-gray-800/40 hover:border-gray-600"
+              }`}
+            >
+              <span className="text-2xl">{a.avatar}</span>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-gray-200 truncate">{a.name}</p>
+                <p className="mt-0.5 text-xs text-gray-400 line-clamp-2">{a.description}</p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {a.tags.slice(0, 3).map((t) => (
+                    <span key={t} className="rounded bg-gray-700/60 px-1.5 py-0.5 text-[10px] text-gray-400">{t}</span>
+                  ))}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   TEMPORARY CHAT BANNER
-   ═══════════════════════════════════════════════════════════════ */
+// ---------------------------------------------------------------------------
+// Model selector dropdown
+// ---------------------------------------------------------------------------
 
-function TempChatBanner() {
+function ModelSelector({
+  model,
+  onChange,
+}: {
+  model: ChatModel;
+  onChange: (m: ChatModel) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = MODEL_OPTIONS.find((m) => m.id === model) || MODEL_OPTIONS[0];
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
   return (
-    <div className="flex items-center justify-center gap-2 py-2 px-4 bg-violet-950/30 border-b border-violet-800/30 text-violet-300 text-xs">
-      <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-      </svg>
-      <span>Temporary chat — won&apos;t appear in your history and will be auto-deleted</span>
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 rounded-lg border border-gray-700/50 bg-gray-800/60 px-3 py-1.5 text-sm text-gray-300 transition-colors hover:border-gray-600 hover:bg-gray-800"
+      >
+        <span className="font-medium">{selected.label}</span>
+        <IconChevronDown className={`h-3.5 w-3.5 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full z-30 mt-1 w-72 rounded-xl border border-gray-700 bg-gray-900 py-1 shadow-xl">
+          {MODEL_OPTIONS.map((m) => (
+            <button
+              key={m.id}
+              onClick={() => { onChange(m.id); setOpen(false); }}
+              className={`flex w-full items-start gap-3 px-4 py-2.5 text-left transition-colors hover:bg-gray-800 ${
+                m.id === model ? "bg-primary-500/10" : ""
+              }`}
+            >
+              <div className="min-w-0 flex-1">
+                <p className={`text-sm font-medium ${m.id === model ? "text-primary-300" : "text-gray-200"}`}>
+                  {m.label}
+                </p>
+                <p className="text-xs text-gray-500">{m.description}</p>
+              </div>
+              <span className="shrink-0 rounded bg-gray-800 px-1.5 py-0.5 text-[10px] text-gray-500">{m.provider}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   SYSTEM PROMPT / PRESETS PANEL
-   ═══════════════════════════════════════════════════════════════ */
+// ---------------------------------------------------------------------------
+// Input area with file upload
+// ---------------------------------------------------------------------------
 
-function PresetsPanel({ onClose }: { onClose: () => void }) {
-  const {
-    systemPrompt,
-    setSystemPrompt,
-    customPresets,
-    addCustomPreset,
-    deleteCustomPreset,
-  } = useChatStore();
+function ChatInput({
+  onSend,
+  isStreaming,
+  onStop,
+}: {
+  onSend: (text: string, files: { id: string; name: string; type: string; size: number; dataUrl: string }[]) => void;
+  isStreaming: boolean;
+  onStop: () => void;
+}) {
+  const [text, setText] = useState("");
+  const [files, setFiles] = useState<{ id: string; name: string; type: string; size: number; dataUrl: string }[]>([]);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const allPresets: SystemPreset[] = [...BUILTIN_PRESETS, ...customPresets];
-  const [showSave, setShowSave] = useState(false);
-  const [presetLabel, setPresetLabel] = useState("");
-
-  const handleSave = () => {
-    if (!presetLabel.trim()) return;
-    addCustomPreset({ label: presetLabel.trim(), prompt: systemPrompt });
-    setPresetLabel("");
-    setShowSave(false);
+  const adjustHeight = () => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = Math.min(el.scrollHeight, 200) + "px";
+    }
   };
 
-  return (
-    <div className="w-72 h-full border-l border-gray-800/60 bg-gray-950 flex flex-col">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800/60">
-        <h3 className="text-sm font-semibold text-gray-200">Presets & Prompts</h3>
-        <button onClick={onClose} className="text-gray-500 hover:text-gray-300 p-1 rounded hover:bg-gray-800">
-          <IconX className="size-4" />
-        </button>
-      </div>
+  const handleSend = () => {
+    if ((!text.trim() && files.length === 0) || isStreaming) return;
+    onSend(text.trim(), files);
+    setText("");
+    setFiles([]);
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
+  };
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {/* Preset chips */}
-        <div className="flex flex-wrap gap-1.5">
-          {allPresets.map((p) => (
-            <div key={p.id} className="flex items-center">
-              <button
-                onClick={() => setSystemPrompt(p.prompt)}
-                className={`text-xs px-2.5 py-1 rounded-lg transition-colors ${
-                  systemPrompt === p.prompt
-                    ? "bg-primary-500/15 text-primary-400 border border-primary-500/30"
-                    : "text-gray-400 hover:text-gray-200 border border-gray-800 hover:border-gray-600"
-                }`}
-              >
-                {p.label}
-              </button>
-              {!BUILTIN_PRESETS.find((bp) => bp.id === p.id) && (
-                <button
-                  onClick={() => deleteCustomPreset(p.id)}
-                  className="ml-0.5 text-gray-600 hover:text-red-400 p-0.5"
-                >
-                  <IconX className="size-2.5" />
-                </button>
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list = e.target.files;
+    if (!list) return;
+    Array.from(list).forEach((f) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setFiles((prev) => [
+          ...prev,
+          { id: crypto.randomUUID(), name: f.name, type: f.type, size: f.size, dataUrl: reader.result as string },
+        ]);
+      };
+      reader.readAsDataURL(f);
+    });
+    e.target.value = "";
+  };
+
+  const removeFile = (id: string) => setFiles((prev) => prev.filter((f) => f.id !== id));
+
+  return (
+    <div className="mx-auto w-full max-w-3xl px-4 pb-4 pt-2">
+      {/* File chips */}
+      {files.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {files.map((f) => (
+            <div key={f.id} className="flex items-center gap-1.5 rounded-lg bg-gray-800 px-2.5 py-1 text-xs text-gray-300">
+              {f.type.startsWith("image/") ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={f.dataUrl} alt="" className="h-5 w-5 rounded object-cover" />
+              ) : (
+                <span>📎</span>
               )}
+              <span className="max-w-32 truncate">{f.name}</span>
+              <button onClick={() => removeFile(f.id)} className="text-gray-500 hover:text-gray-300">
+                <IconX className="h-3 w-3" />
+              </button>
             </div>
           ))}
         </div>
+      )}
 
-        {/* Save current */}
+      {/* Input bar */}
+      <div className="flex items-end gap-2 rounded-2xl border border-gray-700/50 bg-gray-800/60 px-4 py-2 focus-within:border-primary-500/40 transition-colors">
+        {/* Paperclip */}
         <button
-          onClick={() => setShowSave(!showSave)}
-          className="text-xs text-gray-500 hover:text-primary-400 transition-colors"
+          onClick={() => fileRef.current?.click()}
+          className="mb-1 rounded-lg p-1.5 text-gray-400 hover:bg-gray-700/60 hover:text-gray-200 transition-colors"
+          title="Attach file"
         >
-          + Save current as preset
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+          </svg>
         </button>
-        {showSave && (
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={presetLabel}
-              onChange={(e) => setPresetLabel(e.target.value)}
-              placeholder="Preset name..."
-              className="flex-1 h-7 rounded-lg border border-gray-700 bg-gray-900 px-2 text-xs text-gray-200 focus:outline-none focus:border-gray-500"
-              onKeyDown={(e) => e.key === "Enter" && handleSave()}
-            />
-            <button onClick={handleSave} className="px-2 py-1 text-xs rounded-lg bg-primary-500 text-gray-950 hover:bg-primary-400">
-              Save
-            </button>
-          </div>
-        )}
+        <input ref={fileRef} type="file" multiple accept="image/*,.pdf,.txt,.csv,.json,.md" onChange={handleFile} className="hidden" />
 
-        {/* System prompt editor */}
-        <div className="mt-3">
-          <label className="text-[0.625rem] font-medium text-gray-500 uppercase tracking-wider">
-            System Prompt
-          </label>
-          <textarea
-            value={systemPrompt}
-            onChange={(e) => setSystemPrompt(e.target.value)}
-            rows={6}
-            className="mt-1.5 w-full rounded-lg border border-gray-800 bg-gray-900 px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-gray-600 resize-none"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={(e) => { setText(e.target.value); adjustHeight(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
+          placeholder="Type a message…"
+          rows={1}
+          className="flex-1 resize-none bg-transparent text-sm text-gray-200 placeholder-gray-500 outline-none leading-relaxed py-1"
+        />
 
-/* ═══════════════════════════════════════════════════════════════
-   BOOKMARKS PANEL
-   ═══════════════════════════════════════════════════════════════ */
-
-function BookmarksPanel({
-  onClose,
-  onJumpToMessage,
-}: {
-  onClose: () => void;
-  onJumpToMessage: (convId: string, msgId: string) => void;
-}) {
-  const { conversations } = useChatStore();
-
-  const bookmarks = useMemo(() => {
-    const results: { conv: ChatConversation; msg: ChatMessage }[] = [];
-    for (const conv of conversations) {
-      for (const msg of conv.messages) {
-        if (msg.bookmarked) results.push({ conv, msg });
-      }
-    }
-    return results.sort((a, b) => b.msg.timestamp - a.msg.timestamp);
-  }, [conversations]);
-
-  return (
-    <div className="w-72 h-full border-l border-gray-800/60 bg-gray-950 flex flex-col">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800/60">
-        <h3 className="text-sm font-semibold text-gray-200">Bookmarks</h3>
-        <button onClick={onClose} className="text-gray-500 hover:text-gray-300 p-1 rounded hover:bg-gray-800">
-          <IconX className="size-4" />
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {bookmarks.length === 0 ? (
-          <p className="text-xs text-gray-600 text-center py-8">
-            No bookmarked messages yet
-          </p>
+        {/* Send / Stop */}
+        {isStreaming ? (
+          <button
+            onClick={onStop}
+            className="mb-1 flex h-8 w-8 items-center justify-center rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+            title="Stop"
+          >
+            <div className="h-3 w-3 rounded-sm bg-red-400" />
+          </button>
         ) : (
-          bookmarks.map(({ conv, msg }) => (
-            <button
-              key={msg.id}
-              onClick={() => onJumpToMessage(conv.id, msg.id)}
-              className="w-full text-left p-3 rounded-lg border border-gray-800 hover:border-gray-600 hover:bg-gray-800/40 transition-all"
-            >
-              <p className="text-[0.625rem] text-gray-500 mb-1 truncate">
-                {conv.title}
-              </p>
-              <p className="text-xs text-gray-300 line-clamp-3">
-                {msg.content.slice(0, 150)}
-              </p>
-            </button>
-          ))
+          <button
+            onClick={handleSend}
+            disabled={!text.trim() && files.length === 0}
+            className="mb-1 flex h-8 w-8 items-center justify-center rounded-full bg-primary-500 text-white transition-all hover:bg-primary-600 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Send"
+          >
+            <IconSend className="h-4 w-4" />
+          </button>
         )}
       </div>
+
+      <p className="mt-2 text-center text-[11px] text-gray-500">
+        DMSuite AI can make mistakes. Verify important information.
+      </p>
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   MAIN WORKSPACE — AIChatWorkspace
-   Full-bleed layout, no card wrapper, LibreChat design
-   ═══════════════════════════════════════════════════════════════ */
+// ---------------------------------------------------------------------------
+// Main workspace
+// ---------------------------------------------------------------------------
 
 export default function AIChatWorkspace() {
+  const store = useAIChatEditor;
   const {
-    conversations,
-    activeConversationId,
-    isGenerating,
-    inputDraft,
-    selectedProvider,
-    systemPrompt,
-    getActiveConversation,
+    form,
     createConversation,
+    deleteConversation,
+    renameConversation,
+    setActiveConversation,
+    pinConversation,
     addMessage,
-    updateLastAssistantMessage,
-    setIsGenerating,
-    setInputDraft,
-    setSelectedProvider,
+    editMessage,
+    deleteMessage,
+    bookmarkMessage,
+    forkFromMessage,
+    regenerateMessage,
+    setActiveAgent,
+    setSelectedModel,
     exportConversation,
-  } = useChatStore();
+    importConversations,
+    getActiveConversation,
+    getActiveAgent,
+    getAllAgents,
+  } = useAIChatEditor();
 
-  // Chiko integration
-  useChikoActions(useCallback(() => createAIChatManifest(), []));
+  // Chiko AI integration
+  useChikoActions(useCallback(() => createAIChatManifest(store), [store]));
 
+  // State
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileSidebar, setMobileSidebar] = useState(false);
+  const [agentPanel, setAgentPanel] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
+  const [showExport, setShowExport] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
   const hasDispatchedRef = useRef(false);
 
-  // UI state
-  const [showSidebar, setShowSidebar] = useState(false);
-  const [showModelPicker, setShowModelPicker] = useState(false);
-  const [rightPanel, setRightPanel] = useState<"closed" | "bookmarks" | "presets">("closed");
-  const [showExportMenu, setShowExportMenu] = useState(false);
-  const [pendingFiles, setPendingFiles] = useState<FileAttachment[]>([]);
+  const activeConv = getActiveConversation();
+  const activeAgent = getActiveAgent();
+  const allAgents = getAllAgents();
 
-  const activeConversation = getActiveConversation();
-  const isTemporary = activeConversation?.temporary ?? false;
-  const messages = useMemo(
-    () => activeConversation?.messages ?? [],
-    [activeConversation?.messages]
-  );
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [activeConv?.messages.length]);
 
-  const activeModel = MODEL_OPTIONS.find((m) => m.id === selectedProvider) ?? MODEL_OPTIONS[0];
-
-  // Workspace events on mount
+  // Dispatch workspace events on mount
   useEffect(() => {
     if (hasDispatchedRef.current) return;
     hasDispatchedRef.current = true;
-    window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "input" } }));
-  }, []);
+    if (form.conversations.length > 0) {
+      window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "content" } }));
+    }
+  }, [form.conversations.length]);
 
-  // Scroll to bottom
-  const lastMsgContent = messages[messages.length - 1]?.content;
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, lastMsgContent]);
-
-  // Focus input on conversation switch
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, [activeConversationId]);
-
-  /* ── File Upload Handler ── */
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const attachment: FileAttachment = {
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          url: reader.result as string,
-        };
-        setPendingFiles((prev) => [...prev, attachment]);
-      };
-      reader.readAsDataURL(file);
-    });
-
-    // Reset input
-    e.target.value = "";
-  }, []);
-
-  const removePendingFile = useCallback((id: string) => {
-    setPendingFiles((prev) => prev.filter((f) => f.id !== id));
-  }, []);
-
-  /* ── Send Message ── */
+  // ── Send message ──
   const handleSend = useCallback(
-    async (overrideContent?: string) => {
-      const content = (overrideContent ?? inputDraft).trim();
-      if (!content && pendingFiles.length === 0) return;
-      if (isGenerating) return;
-
-      let convId = activeConversationId;
-      if (!convId) {
-        convId = createConversation();
+    async (text: string, files: { id: string; name: string; type: string; size: number; dataUrl: string }[]) => {
+      let convId = form.activeConversationId;
+      if (!convId || !form.conversations.find((c) => c.id === convId)) {
+        convId = createConversation(form.activeAgentId);
       }
 
-      // Add user message with any pending files
-      addMessage({
+      // Add user message
+      addMessage(convId, {
         role: "user",
-        content: content || "(attached files)",
-        attachments: pendingFiles.length > 0 ? [...pendingFiles] : undefined,
+        content: text,
+        attachments: files.length > 0 ? files : undefined,
       });
-      setInputDraft("");
-      setPendingFiles([]);
-      setIsGenerating(true);
 
       window.dispatchEvent(new CustomEvent("workspace:dirty"));
+      window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "input" } }));
 
+      // Build messages for API
+      const conv = useAIChatEditor.getState().form.conversations.find((c) => c.id === convId);
+      if (!conv) return;
+
+      const agent = [...BUILTIN_AGENTS, ...useAIChatEditor.getState().form.agents].find(
+        (a) => a.id === conv.agentId
+      ) || BUILTIN_AGENTS[0];
+
+      const apiMessages = conv.messages.map((m) => {
+        if (m.attachments?.some((a) => a.type.startsWith("image/"))) {
+          const parts: Array<{ type: string; text?: string; image_url?: { url: string } }> = [];
+          if (m.content) parts.push({ type: "text", text: m.content });
+          for (const att of m.attachments) {
+            if (att.type.startsWith("image/")) {
+              parts.push({ type: "image_url", image_url: { url: att.dataUrl } });
+            }
+          }
+          return { role: m.role, content: parts };
+        }
+        return { role: m.role, content: m.content };
+      });
+
+      const selectedModel = useAIChatEditor.getState().form.selectedModel;
+      const modelOption = MODEL_OPTIONS.find((m) => m.id === selectedModel) || MODEL_OPTIONS[0];
+
+      // Start streaming
+      setIsStreaming(true);
       const controller = new AbortController();
-      abortControllerRef.current = controller;
+      abortRef.current = controller;
 
-      const convSystemPrompt = activeConversation?.systemPrompt ?? systemPrompt;
-
-      // Build messages array with potential multimodal content
-      const apiMessages = [
-        ...messages.map((m) => {
-          if (m.attachments && m.attachments.length > 0 && m.role === "user") {
-            /* eslint-disable @typescript-eslint/no-explicit-any */
-            const parts: any[] = [];
-            for (const att of m.attachments) {
-              if (att.type.startsWith("image/")) {
-                parts.push({ type: "image_url", image_url: { url: att.url } });
-              }
-            }
-            parts.push({ type: "text", text: m.content });
-            return { role: m.role, content: parts };
-          }
-          return { role: m.role, content: m.content };
-        }),
-        // Current message
-        (() => {
-          if (pendingFiles.length > 0) {
-            /* eslint-disable @typescript-eslint/no-explicit-any */
-            const parts: any[] = [];
-            for (const att of pendingFiles) {
-              if (att.type.startsWith("image/")) {
-                parts.push({ type: "image_url", image_url: { url: att.url } });
-              }
-            }
-            parts.push({ type: "text", text: content });
-            return { role: "user", content: parts };
-          }
-          return { role: "user", content };
-        })(),
-      ];
+      // Add empty assistant message
+      const assistantMsgId = addMessage(convId, {
+        role: "assistant",
+        content: "",
+        model: selectedModel,
+        provider: modelOption.provider,
+      });
 
       try {
         const response = await fetch("/api/chat", {
@@ -1052,451 +853,280 @@ export default function AIChatWorkspace() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             messages: apiMessages,
-            provider: selectedProvider,
-            systemPrompt: convSystemPrompt,
+            model: selectedModel,
+            provider: modelOption.provider,
+            systemPrompt: agent.systemPrompt,
+            temperature: agent.temperature,
+            maxTokens: agent.maxTokens,
           }),
           signal: controller.signal,
         });
 
         if (!response.ok) {
-          if (response.status === 402) {
-            const { handleCreditError } = await import("@/lib/credit-error");
-            addMessage({ role: "assistant", content: handleCreditError() });
-            return;
-          }
-          throw new Error(`API error: ${response.status}`);
+          const err = await response.json().catch(() => ({ error: "Unknown error" }));
+          editMessage(convId, assistantMsgId, err.error || `Error ${response.status}`);
+          // Mark as error
+          useAIChatEditor.setState((s) => {
+            const c = s.form.conversations.find((c) => c.id === convId);
+            if (c) {
+              const m = c.messages.find((m) => m.id === assistantMsgId);
+              if (m) m.isError = true;
+            }
+          });
+          return;
         }
 
         const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
         if (!reader) throw new Error("No response body");
 
-        addMessage({ role: "assistant", content: "", provider: selectedProvider });
+        const decoder = new TextDecoder();
+        let fullText = "";
 
-        let fullContent = "";
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          fullContent += decoder.decode(value, { stream: true });
-          updateLastAssistantMessage(fullContent);
+          const chunk = decoder.decode(value, { stream: true });
+          fullText += chunk;
+          editMessage(convId, assistantMsgId, fullText);
         }
 
         window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "content" } }));
-      } catch (error) {
-        if ((error as Error).name !== "AbortError") {
-          console.error("Chat error:", error);
-          addMessage({
-            role: "assistant",
-            content: "Something went wrong. Please check your API keys and try again.",
+      } catch (err) {
+        if ((err as Error).name === "AbortError") {
+          // User stopped — keep partial content
+        } else {
+          editMessage(convId, assistantMsgId, `Error: ${(err as Error).message}`);
+          useAIChatEditor.setState((s) => {
+            const c = s.form.conversations.find((c) => c.id === convId);
+            if (c) {
+              const m = c.messages.find((m) => m.id === assistantMsgId);
+              if (m) m.isError = true;
+            }
           });
         }
       } finally {
-        setIsGenerating(false);
-        abortControllerRef.current = null;
+        setIsStreaming(false);
+        abortRef.current = null;
       }
     },
-    [
-      inputDraft,
-      pendingFiles,
-      isGenerating,
-      activeConversationId,
-      createConversation,
-      addMessage,
-      setInputDraft,
-      setIsGenerating,
-      messages,
-      selectedProvider,
-      updateLastAssistantMessage,
-      systemPrompt,
-      activeConversation,
-    ]
+    [form.activeConversationId, form.conversations, form.activeAgentId, form.agents, form.selectedModel, createConversation, addMessage, editMessage]
   );
 
-  const handleStop = useCallback(() => {
-    abortControllerRef.current?.abort();
-    setIsGenerating(false);
-  }, [setIsGenerating]);
+  const handleStop = () => abortRef.current?.abort();
 
-  const handleEditAndResend = useCallback(
-    (newContent: string) => handleSend(newContent),
-    [handleSend]
-  );
+  const handleNewChat = () => {
+    createConversation(form.activeAgentId);
+    setMobileSidebar(false);
+  };
 
-  const handleRegenerate = useCallback(() => {
-    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
-    if (lastUserMsg) handleSend(lastUserMsg.content);
-  }, [messages, handleSend]);
+  // Export
+  const handleExport = (format: "json" | "markdown" | "text") => {
+    if (!activeConv) return;
+    const data = exportConversation(activeConv.id, format);
+    const ext = format === "json" ? "json" : format === "markdown" ? "md" : "txt";
+    const blob = new Blob([data], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${activeConv.title.replace(/[^a-zA-Z0-9]/g, "_")}.${ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setShowExport(false);
+    window.dispatchEvent(new CustomEvent("workspace:save"));
+    window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "exported" } }));
+  };
 
-  const handleExport = useCallback(
-    (format: "markdown" | "json" | "text") => {
-      if (!activeConversation) return;
-      const content = exportConversation(activeConversation.id, format);
-      const name = `chat-${activeConversation.title.replace(/\s+/g, "-").toLowerCase()}`;
-      const ext = format === "json" ? "json" : format === "markdown" ? "md" : "txt";
-      const blob = new Blob([content], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${name}.${ext}`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setShowExportMenu(false);
-      window.dispatchEvent(new CustomEvent("workspace:progress", { detail: { milestone: "exported" } }));
-      window.dispatchEvent(new CustomEvent("workspace:save"));
-    },
-    [activeConversation, exportConversation]
-  );
+  // Import
+  const handleImport = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const text = await file.text();
+      const count = importConversations(text);
+      if (count > 0) {
+        window.dispatchEvent(new CustomEvent("workspace:dirty"));
+      }
+    };
+    input.click();
+  };
 
-  const handleJumpToMessage = useCallback(
-    (convId: string, _msgId: string) => {
-      useChatStore.getState().setActiveConversation(convId);
-      setRightPanel("closed");
-    },
-    []
-  );
-
-  /* Keyboard shortcuts on input */
-  const handleInputKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+  // Regenerate last assistant message
+  const handleRegenerate = (msgId: string) => {
+    if (!activeConv || isStreaming) return;
+    regenerateMessage(activeConv.id, msgId);
+    // Re-send the last user message
+    const lastUserMsg = [...activeConv.messages].reverse().find((m) => m.role === "user");
+    if (lastUserMsg) {
+      handleSend(lastUserMsg.content, lastUserMsg.attachments || []);
     }
   };
 
-  /* Global keyboard shortcuts */
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "n") {
-        e.preventDefault();
-        createConversation();
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [createConversation]);
-
-  const isLanding = messages.length === 0 && !isGenerating;
-
   return (
-    <div className="h-full flex bg-gray-900">
-      {/* ═══ Left Sidebar — desktop ═══ */}
-      <div className="hidden lg:block shrink-0">
-        <ChatSidebar />
-      </div>
+    <div className="flex h-full bg-gray-950">
+      {/* ── Left sidebar (desktop) ── */}
+      {sidebarOpen && (
+        <div className="hidden lg:flex w-72 shrink-0 flex-col border-r border-gray-800/60 bg-gray-900/80">
+          <ConversationSidebar
+            conversations={form.conversations}
+            activeId={form.activeConversationId}
+            onSelect={setActiveConversation}
+            onNew={handleNewChat}
+            onDelete={deleteConversation}
+            onRename={renameConversation}
+            onPin={pinConversation}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
+        </div>
+      )}
 
-      {/* Mobile sidebar overlay */}
-      {showSidebar && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setShowSidebar(false)} />
-          <div className="relative z-10 h-full w-64">
-            <ChatSidebar onClose={() => setShowSidebar(false)} />
+      {/* ── Mobile sidebar overlay ── */}
+      {mobileSidebar && (
+        <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setMobileSidebar(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div
+            className="absolute left-0 top-0 bottom-0 w-80 border-r border-gray-800 bg-gray-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ConversationSidebar
+              conversations={form.conversations}
+              activeId={form.activeConversationId}
+              onSelect={(id) => { setActiveConversation(id); setMobileSidebar(false); }}
+              onNew={handleNewChat}
+              onDelete={deleteConversation}
+              onRename={renameConversation}
+              onPin={pinConversation}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+            />
           </div>
         </div>
       )}
 
-      {/* ═══ Main Chat Area ═══ */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* ── Header bar ── */}
-        <header className="flex items-center gap-2 h-11 px-3 border-b border-gray-800/60 bg-gray-900 shrink-0">
-          {/* Sidebar toggle (mobile) */}
+      {/* ── Main chat area ── */}
+      <div className="flex flex-1 flex-col min-w-0">
+        {/* Top bar */}
+        <div className="flex items-center gap-3 border-b border-gray-800/60 px-4 py-2.5">
+          {/* Sidebar toggle (desktop) */}
           <button
-            onClick={() => setShowSidebar(true)}
-            className="lg:hidden text-gray-500 hover:text-gray-300 p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="hidden lg:flex rounded-lg p-1.5 text-gray-400 hover:bg-gray-800 hover:text-gray-200 transition-colors"
+            title="Toggle sidebar"
           >
-            <SidebarIcon className="size-4" />
+            <IconMenu className="h-5 w-5" />
           </button>
 
-          {/* New chat (desktop) */}
+          {/* Hamburger (mobile) */}
           <button
-            onClick={() => createConversation()}
-            className="hidden lg:flex text-gray-500 hover:text-gray-300 p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
-            title="New Chat (Ctrl+N)"
+            onClick={() => setMobileSidebar(!mobileSidebar)}
+            className="lg:hidden rounded-lg p-1.5 text-gray-400 hover:bg-gray-800"
           >
-            <PencilIcon className="size-4" />
+            <IconMenu className="h-5 w-5" />
           </button>
 
-          {/* Model selector — prominent, LEFT side like LibreChat */}
-          <div className="relative">
-            <button
-              onClick={() => setShowModelPicker(!showModelPicker)}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-sm font-medium text-gray-200 hover:bg-gray-800 transition-colors"
-            >
-              <span className="text-base leading-none">{activeModel.icon}</span>
-              <span>{activeModel.label}</span>
-              <IconChevronDown className="size-3 text-gray-500" />
-            </button>
+          {/* Model selector */}
+          <ModelSelector model={form.selectedModel} onChange={setSelectedModel} />
 
-            {showModelPicker && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowModelPicker(false)} />
-                <div className="absolute left-0 top-full mt-1 w-52 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl z-20 py-1">
-                  {MODEL_OPTIONS.map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => { setSelectedProvider(m.id); setShowModelPicker(false); }}
-                      className={`w-full text-left px-3 py-2.5 flex items-center gap-3 hover:bg-gray-700 transition-colors ${
-                        selectedProvider === m.id ? "text-primary-400" : "text-gray-300"
-                      }`}
-                    >
-                      <span className="text-lg leading-none">{m.icon}</span>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{m.label}</p>
-                        <p className="text-[0.625rem] text-gray-500">{m.desc}</p>
-                      </div>
-                      {selectedProvider === m.id && <IconCheck className="size-4 text-primary-400" />}
-                    </button>
-                  ))}
+          {/* Agent selector button */}
+          <button
+            onClick={() => setAgentPanel(true)}
+            className="flex items-center gap-2 rounded-lg border border-gray-700/50 bg-gray-800/40 px-3 py-1.5 text-sm text-gray-300 hover:border-gray-600 hover:bg-gray-800 transition-colors"
+          >
+            <span>{activeAgent.avatar}</span>
+            <span className="hidden sm:inline font-medium">{activeAgent.name}</span>
+          </button>
 
-                  {/* Temporary chat toggle */}
-                  <div className="border-t border-gray-700 mt-1 pt-1">
-                    <button
-                      onClick={() => {
-                        const conv = getActiveConversation();
-                        if (conv) {
-                          // Toggle temporary on current conversation
-                          useChatStore.setState((s) => {
-                            const c = s.conversations.find((x) => x.id === conv.id);
-                            if (c) c.temporary = !c.temporary;
-                          });
-                        } else {
-                          createConversation({ temporary: true });
-                        }
-                        setShowModelPicker(false);
-                      }}
-                      className={`w-full text-left px-3 py-2.5 flex items-center gap-3 hover:bg-gray-700 transition-colors ${
-                        isTemporary ? "text-violet-400" : "text-gray-400"
-                      }`}
-                    >
-                      <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-                      </svg>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">Temporary Chat</p>
-                        <p className="text-[0.625rem] text-gray-500">Won&apos;t save to history</p>
-                      </div>
-                      {isTemporary && <IconCheck className="size-4 text-violet-400" />}
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Right-side actions */}
-          <button
-            onClick={() => setRightPanel(rightPanel === "presets" ? "closed" : "presets")}
-            className={`p-1.5 rounded-lg transition-colors ${
-              rightPanel === "presets"
-                ? "bg-gray-800 text-primary-400"
-                : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
-            }`}
-            title="Presets & Prompts"
-          >
-            <IconSettings className="size-4" />
-          </button>
-
-          <button
-            onClick={() => setRightPanel(rightPanel === "bookmarks" ? "closed" : "bookmarks")}
-            className={`p-1.5 rounded-lg transition-colors ${
-              rightPanel === "bookmarks"
-                ? "bg-gray-800 text-primary-400"
-                : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
-            }`}
-            title="Bookmarks"
-          >
-            <BookmarkIcon className="size-4" />
-          </button>
-
+          {/* Export dropdown */}
           <div className="relative">
             <button
-              onClick={() => setShowExportMenu(!showExportMenu)}
-              className="text-gray-500 hover:text-gray-300 p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
+              onClick={() => setShowExport(!showExport)}
+              disabled={!activeConv}
+              className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-800 hover:text-gray-200 disabled:opacity-30 transition-colors"
               title="Export"
             >
-              <IconDownload className="size-4" />
+              <IconDownload className="h-5 w-5" />
             </button>
-            {showExportMenu && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
-                <div className="absolute right-0 top-full mt-1 w-36 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl z-20 py-1">
-                  {(["markdown", "json", "text"] as const).map((fmt) => (
-                    <button
-                      key={fmt}
-                      onClick={() => handleExport(fmt)}
-                      className="block w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-gray-700 capitalize transition-colors"
-                    >
-                      Export as {fmt}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        </header>
-
-        {/* ── Temporary chat banner ── */}
-        {isTemporary && <TempChatBanner />}
-
-        {/* ── Messages / Landing ── */}
-        {isLanding ? (
-          <EmptyState onSuggestion={(text) => { setInputDraft(text); inputRef.current?.focus(); }} />
-        ) : (
-          <div className="flex-1 overflow-y-auto">
-            {messages.map((msg, idx) => (
-              <MessageBubble
-                key={msg.id}
-                message={msg}
-                conversationId={activeConversation?.id ?? ""}
-                isLast={idx === messages.length - 1}
-                isGenerating={isGenerating}
-                onRegenerate={
-                  msg.role === "assistant" && idx === messages.length - 1
-                    ? handleRegenerate
-                    : undefined
-                }
-                onEditAndResend={msg.role === "user" ? handleEditAndResend : undefined}
-              />
-            ))}
-
-            {/* Typing indicator */}
-            {isGenerating && messages[messages.length - 1]?.role !== "assistant" && (
-              <div className="px-4 py-6">
-                <div className="max-w-3xl xl:max-w-4xl mx-auto flex gap-4">
-                  <div className="size-7 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center">
-                    <IconSparkles className="size-3.5" />
-                  </div>
-                  <div className="flex items-center gap-1.5 pt-2">
-                    <div className="size-2 rounded-full bg-gray-500 animate-bounce [animation-delay:0ms]" />
-                    <div className="size-2 rounded-full bg-gray-500 animate-bounce [animation-delay:150ms]" />
-                    <div className="size-2 rounded-full bg-gray-500 animate-bounce [animation-delay:300ms]" />
-                  </div>
-                </div>
+            {showExport && activeConv && (
+              <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-xl border border-gray-700 bg-gray-900 py-1 shadow-xl">
+                <button onClick={() => handleExport("markdown")} className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-800">
+                  Export as Markdown
+                </button>
+                <button onClick={() => handleExport("json")} className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-800">
+                  Export as JSON
+                </button>
+                <button onClick={() => handleExport("text")} className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-800">
+                  Export as Text
+                </button>
+                <hr className="my-1 border-gray-700" />
+                <button onClick={handleImport} className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-800">
+                  Import JSON
+                </button>
               </div>
             )}
-
-            <div ref={messagesEndRef} />
-          </div>
-        )}
-
-        {/* ═══ Input Area — LibreChat style ═══ */}
-        <div className={`px-4 pb-4 ${isLanding ? "" : "pt-2"}`}>
-          <div className="max-w-3xl xl:max-w-4xl mx-auto">
-            {/* Pending file previews */}
-            {pendingFiles.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2">
-                {pendingFiles.map((file) => (
-                  <div
-                    key={file.id}
-                    className="relative group/file flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-xs text-gray-300"
-                  >
-                    {file.type.startsWith("image/") ? (
-                      <img src={file.url} alt={file.name} className="size-8 rounded object-cover" />
-                    ) : (
-                      <PaperclipIcon className="size-4 text-gray-500" />
-                    )}
-                    <span className="truncate max-w-32">{file.name}</span>
-                    <button
-                      onClick={() => removePendingFile(file.id)}
-                      className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-gray-700 text-gray-300 hover:bg-red-500 hover:text-white flex items-center justify-center opacity-0 group-hover/file:opacity-100 transition-all"
-                    >
-                      <IconX className="size-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Input container — pill shape like LibreChat */}
-            <div
-              className={`relative flex flex-col rounded-3xl border transition-colors ${
-                isTemporary
-                  ? "border-violet-700/50 bg-gray-800/80"
-                  : "border-gray-700 bg-gray-800 focus-within:border-gray-600"
-              }`}
-            >
-              {/* Textarea */}
-              <textarea
-                ref={inputRef}
-                value={inputDraft}
-                onChange={(e) => setInputDraft(e.target.value)}
-                onKeyDown={handleInputKeyDown}
-                placeholder={`Message ${activeModel.label}...`}
-                rows={1}
-                className="w-full resize-none bg-transparent px-5 pt-4 pb-2 text-sm text-gray-100 placeholder:text-gray-500 focus:outline-none max-h-44"
-                style={{ minHeight: "44px" }}
-                onInput={(e) => {
-                  const el = e.target as HTMLTextAreaElement;
-                  el.style.height = "auto";
-                  el.style.height = `${Math.min(el.scrollHeight, 176)}px`;
-                }}
-                disabled={isGenerating}
-              />
-
-              {/* Bottom action row inside the pill */}
-              <div className="flex items-center justify-between px-3 pb-2.5">
-                {/* Left: Upload */}
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-1.5 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-gray-700 transition-colors"
-                    title="Attach file"
-                    disabled={isGenerating}
-                  >
-                    <PaperclipIcon className="size-5" />
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*,.pdf,.txt,.csv,.md"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                </div>
-
-                {/* Right: Send / Stop */}
-                {isGenerating ? (
-                  <button
-                    onClick={handleStop}
-                    className="size-8 rounded-full bg-gray-600 text-white flex items-center justify-center hover:bg-gray-500 transition-colors"
-                    aria-label="Stop"
-                  >
-                    <StopIcon className="size-4" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleSend()}
-                    disabled={!inputDraft.trim() && pendingFiles.length === 0}
-                    className="size-8 rounded-full bg-gray-100 text-gray-900 flex items-center justify-center hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                    aria-label="Send"
-                  >
-                    <ArrowUpIcon className="size-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Disclaimer */}
-            <p className="text-[0.625rem] text-gray-600 text-center mt-2">
-              DMSuite AI can make mistakes. Consider checking important information.
-            </p>
           </div>
         </div>
+
+        {/* Messages area */}
+        <div className="flex-1 overflow-y-auto">
+          {!activeConv || activeConv.messages.length === 0 ? (
+            <EmptyState onSuggestion={(text) => handleSend(text, [])} />
+          ) : (
+            <div className="py-4">
+              {activeConv.messages.map((msg) => (
+                <MessageBubble
+                  key={msg.id}
+                  message={msg}
+                  agent={activeAgent}
+                  onCopy={() => navigator.clipboard.writeText(msg.content)}
+                  onEdit={() => {
+                    if (editingMsgId === msg.id) {
+                      editMessage(activeConv.id, msg.id, editingContent);
+                      setEditingMsgId(null);
+                    } else {
+                      setEditingMsgId(msg.id);
+                      setEditingContent(msg.content);
+                    }
+                  }}
+                  onDelete={() => deleteMessage(activeConv.id, msg.id)}
+                  onBookmark={() => bookmarkMessage(activeConv.id, msg.id)}
+                  onFork={() => forkFromMessage(activeConv.id, msg.id)}
+                  onRegenerate={() => handleRegenerate(msg.id)}
+                />
+              ))}
+              {isStreaming && (
+                <div className="flex items-center gap-2 px-8 py-3">
+                  <div className="mx-auto max-w-3xl flex items-center gap-3 text-sm text-gray-400">
+                    <div className="flex gap-1">
+                      <span className="h-2 w-2 rounded-full bg-primary-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="h-2 w-2 rounded-full bg-primary-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="h-2 w-2 rounded-full bg-primary-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </div>
+                    <span>Generating…</span>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
+
+        {/* Input area */}
+        <ChatInput onSend={handleSend} isStreaming={isStreaming} onStop={handleStop} />
       </div>
 
-      {/* ═══ Right Panel ═══ */}
-      {rightPanel === "presets" && (
-        <div className="hidden md:block shrink-0">
-          <PresetsPanel onClose={() => setRightPanel("closed")} />
-        </div>
-      )}
-      {rightPanel === "bookmarks" && (
-        <div className="hidden md:block shrink-0">
-          <BookmarksPanel onClose={() => setRightPanel("closed")} onJumpToMessage={handleJumpToMessage} />
-        </div>
+      {/* Agent selector overlay */}
+      {agentPanel && (
+        <AgentSelector
+          agents={allAgents}
+          activeId={form.activeAgentId}
+          onSelect={setActiveAgent}
+          onClose={() => setAgentPanel(false)}
+        />
       )}
     </div>
   );

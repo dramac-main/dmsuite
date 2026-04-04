@@ -1,6 +1,6 @@
 // =============================================================================
 // DMSuite — Resume Template Definitions
-// 13 carefully crafted, modern & minimalist resume templates.
+// 20 carefully crafted, modern & minimalist resume templates.
 // Each template has a distinct visual identity, refined color palette,
 // curated font pairing, and intentional layout choices.
 //
@@ -397,6 +397,203 @@ export const TEMPLATE_CONFIGS: Record<TemplateId, TemplateConfig> = {
       headerStyle: "sidebar-header",
       sectionDivider: "line",
       skillStyle: "bars",
+      dateStyle: "right",
+      compact: false,
+      hasTimeline: false,
+      hasSidebarBg: true,
+    },
+  },
+
+  // ---------------------------------------------------------------------------
+  // 14. NIDORAN — Executive Crimson
+  // Commanding and sophisticated. Deep rose-red accent commands attention
+  // while Merriweather/Roboto pairing grounds it in credibility. Banner
+  // header with thick section dividers creates a structured, authoritative
+  // layout. Dot-style skills feel measured and precise.
+  // Best for: C-suite executives, board members, leadership roles.
+  // ---------------------------------------------------------------------------
+  nidoran: {
+    id: "nidoran",
+    name: "Nidoran",
+    description: "Executive crimson — commanding rose-red accent with serif authority",
+    thumbnail: "🔴",
+    accentColor: "rgba(190,18,60,1)",    // rose-700 — print-safe deep crimson
+    fontPairing: "merriweather-roboto",
+    sidebarWidth: 34,
+    sidebarLeft: false,
+    style: {
+      headerStyle: "banner",
+      sectionDivider: "thick",
+      skillStyle: "dots",
+      dateStyle: "right",
+      compact: false,
+      hasTimeline: false,
+      hasSidebarBg: true,
+    },
+  },
+
+  // ---------------------------------------------------------------------------
+  // 15. EEVEE — Adaptive Modern
+  // Versatile and balanced. Warm violet-pink accent with Garamond/Nunito
+  // pairing creates a template that adapts to any tone — corporate or
+  // creative. Minimal header keeps focus on content. Timeline markers
+  // add visual progression. Skills grouped for density.
+  // Best for: Career changers, hybrid roles, portfolio + experience mix.
+  // ---------------------------------------------------------------------------
+  eevee: {
+    id: "eevee",
+    name: "Eevee",
+    description: "Adaptive modern — warm violet-pink, timeline markers, versatile layout",
+    thumbnail: "🦊",
+    accentColor: "rgba(168,85,247,1)",   // purple-500 — vibrant yet professional
+    fontPairing: "garamond-nunito",
+    sidebarWidth: 33,
+    sidebarLeft: false,
+    style: {
+      headerStyle: "minimal",
+      sectionDivider: "line",
+      skillStyle: "grouped",
+      dateStyle: "right",
+      compact: false,
+      hasTimeline: true,
+      hasSidebarBg: false,
+    },
+  },
+
+  // ---------------------------------------------------------------------------
+  // 16. SNORLAX — Comfortable Classic
+  // Warm and inviting. Soft slate accent with generous whitespace creates
+  // a comfortable reading experience. Full-width single-column layout
+  // gives content maximum breathing room. Raleway/Lato for approachable
+  // typography. Dotted dividers add gentle rhythm.
+  // Best for: Teaching, counseling, healthcare, non-technical roles.
+  // ---------------------------------------------------------------------------
+  snorlax: {
+    id: "snorlax",
+    name: "Snorlax",
+    description: "Comfortable classic — soft slate, full-width, generous whitespace",
+    thumbnail: "😴",
+    accentColor: "rgba(100,116,139,1)",  // slate-500 — soft, approachable gray
+    fontPairing: "raleway-lato",
+    sidebarWidth: 0,
+    sidebarLeft: false,
+    style: {
+      headerStyle: "centered",
+      sectionDivider: "dotted",
+      skillStyle: "plain",
+      dateStyle: "below",
+      compact: false,
+      hasTimeline: false,
+      hasSidebarBg: false,
+    },
+  },
+
+  // ---------------------------------------------------------------------------
+  // 17. JOLTEON — Electric Edge
+  // Sharp and high-energy. Vibrant amber-yellow accent with Space Grotesk
+  // headings creates a bold, tech-forward impression. Split header for
+  // visual tension. Chip-style skills feel modern and tagged. Compact
+  // mode packs information densely for experienced professionals.
+  // Best for: Startup founders, growth marketers, product managers.
+  // ---------------------------------------------------------------------------
+  jolteon: {
+    id: "jolteon",
+    name: "Jolteon",
+    description: "Electric edge — vibrant amber, split header, compact & high-energy",
+    thumbnail: "⚡",
+    accentColor: "rgba(245,158,11,1)",   // amber-500 — electric, vibrant gold
+    fontPairing: "spacegrotesk-inter",
+    sidebarWidth: 35,
+    sidebarLeft: false,
+    style: {
+      headerStyle: "split",
+      sectionDivider: "line",
+      skillStyle: "chips",
+      dateStyle: "right",
+      compact: true,
+      hasTimeline: false,
+      hasSidebarBg: false,
+    },
+  },
+
+  // ---------------------------------------------------------------------------
+  // 18. CLEFAIRY — Soft Elegance
+  // Gentle and refined. Rose-pink accent with Crimson Pro/Work Sans
+  // creates a warm, welcoming impression. Centered header with no
+  // sidebar keeps the layout intimate. Thin line dividers provide
+  // structure without aggression. Bar-style skills for visual balance.
+  // Best for: HR, communications, event planning, creative services.
+  // ---------------------------------------------------------------------------
+  clefairy: {
+    id: "clefairy",
+    name: "Clefairy",
+    description: "Soft elegance — rose-pink accent, centered header, warm & refined",
+    thumbnail: "🌸",
+    accentColor: "rgba(225,29,72,1)",    // rose-600 — warm rose-pink
+    fontPairing: "crimsonpro-worksans",
+    sidebarWidth: 32,
+    sidebarLeft: false,
+    style: {
+      headerStyle: "centered",
+      sectionDivider: "line",
+      skillStyle: "bars",
+      dateStyle: "right",
+      compact: false,
+      hasTimeline: false,
+      hasSidebarBg: false,
+    },
+  },
+
+  // ---------------------------------------------------------------------------
+  // 19. UMBREON — Dark Professional
+  // Intriguing and modern. Deep blue-slate accent with IBM Plex Serif
+  // creates a distinctive, professional feel. Right sidebar with subtle
+  // background tint. Timeline markers add career progression visualization.
+  // Double dividers create a unique section rhythm.
+  // Best for: Architecture, design management, luxury brands, consulting.
+  // ---------------------------------------------------------------------------
+  umbreon: {
+    id: "umbreon",
+    name: "Umbreon",
+    description: "Dark professional — deep blue-slate, right sidebar with timeline",
+    thumbnail: "🌙",
+    accentColor: "rgba(30,58,138,1)",    // blue-900 — deep midnight blue
+    fontPairing: "ibmplex-serif",
+    sidebarWidth: 35,
+    sidebarLeft: false,
+    style: {
+      headerStyle: "classic",
+      sectionDivider: "double",
+      skillStyle: "dots",
+      dateStyle: "right",
+      compact: false,
+      hasTimeline: true,
+      hasSidebarBg: true,
+    },
+  },
+
+  // ---------------------------------------------------------------------------
+  // 20. MEWTWO — Monochrome Power
+  // Commanding and modern. Pure black accent with Montserrat/Open Sans
+  // creates a bold, high-contrast design. Left sidebar with tinted
+  // background gives strong structural hierarchy. Thick section dividers
+  // and grouped skills create information density. Banner header spans
+  // full width for maximum name presence.
+  // Best for: Executives, tech leaders, senior engineers, VPs.
+  // ---------------------------------------------------------------------------
+  mewtwo: {
+    id: "mewtwo",
+    name: "Mewtwo",
+    description: "Monochrome power — pure black, left sidebar, bold & commanding",
+    thumbnail: "⬛",
+    accentColor: "rgba(0,0,0,1)",        // pure black — maximum contrast
+    fontPairing: "montserrat-opensans",
+    sidebarWidth: 37,
+    sidebarLeft: true,
+    style: {
+      headerStyle: "banner",
+      sectionDivider: "thick",
+      skillStyle: "grouped",
       dateStyle: "right",
       compact: false,
       hasTimeline: false,

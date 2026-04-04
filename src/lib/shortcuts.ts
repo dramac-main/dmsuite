@@ -120,11 +120,6 @@ export const CANVAS_SHORTCUTS: Shortcut[] = [
 // ---------------------------------------------------------------------------
 
 export const WORKSPACE_SHORTCUTS: Record<string, Shortcut[]> = {
-  "ai-chat": [
-    { key: "Enter", ctrl: true, action: "send-message", description: "Send message", scope: "workspace" },
-    { key: "n", ctrl: true, action: "new-conversation", description: "New conversation", scope: "workspace" },
-    { key: "C", ctrl: true, shift: true, action: "copy-last-response", description: "Copy last response", scope: "workspace" },
-  ],
   presentation: [
     { key: "ArrowLeft", action: "prev-slide", description: "Previous slide", scope: "workspace" },
     { key: "ArrowRight", action: "next-slide", description: "Next slide", scope: "workspace" },
@@ -144,6 +139,10 @@ export const WORKSPACE_SHORTCUTS: Record<string, Shortcut[]> = {
     { key: "ArrowLeft", action: "prev-variant", description: "Previous variant", scope: "workspace" },
     { key: "ArrowRight", action: "next-variant", description: "Next variant", scope: "workspace" },
     { key: "g", ctrl: true, action: "generate-ai", description: "Generate AI variants", scope: "workspace" },
+  ],
+  "ai-chat": [
+    { key: "n", ctrl: true, action: "new-chat", description: "New chat", scope: "workspace" },
+    { key: "e", ctrl: true, action: "export-chat", description: "Export chat", scope: "workspace" },
   ],
 };
 
