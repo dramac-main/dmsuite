@@ -1280,19 +1280,7 @@ export const toolCategories: ToolCategory[] = [
         id: "sketch-board",
         name: "Sketch Board",
         description:
-          "Full-featured infinite canvas whiteboard — drawing, shapes, arrows, sticky notes, frames, embeds, and multiplayer-ready",
-        icon: "whiteboard",
-        status: "ready",
-        devStatus: "complete",
-        tags: ["whiteboard", "canvas", "drawing", "diagram", "flowchart", "sketch", "infinite canvas", "freehand"],
-        outputs: ["png", "svg"],
-        supportsPartEdit: true,
-      },
-      {
-        id: "sketch-board-v2",
-        name: "Sketch Board V2",
-        description:
-          "Excalidraw-powered infinite canvas — hand-drawn style diagrams, shapes, arrows, text, mermaid support, PNG/SVG/clipboard export, and offline-ready",
+          "Excalidraw-powered infinite canvas — hand-drawn style diagrams, shapes, arrows, text, mermaid support, 1,000+ bundled library items, PNG/SVG/clipboard export, and offline-ready",
         icon: "whiteboard",
         status: "ready",
         devStatus: "complete",

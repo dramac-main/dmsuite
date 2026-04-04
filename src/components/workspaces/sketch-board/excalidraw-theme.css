@@ -1,0 +1,31 @@
+/*
+ * Excalidraw CSS — loaded via direct filesystem path.
+ *
+ * The @excalidraw/excalidraw package.json exports map for "./index.css"
+ * only defines "development" and "production" conditions (no "style",
+ * "import", or "default").  Turbopack cannot resolve conditional CSS
+ * exports, so both `@import "@excalidraw/excalidraw/index.css"` in a
+ * .css file and `import "…/index.css"` in a .tsx file silently fail.
+ *
+ * Bypassing the exports map with a direct node_modules path works
+ * because Turbopack treats it as a plain relative file import.
+ */
+@import "../../../../node_modules/@excalidraw/excalidraw/dist/prod/index.css";
+
+/* ── Self-contained: hide external Excalidraw platform links ── */
+
+/* "Browse libraries" button links to libraries.excalidraw.com */
+.excalidraw .library-actions--browse {
+  display: none !important;
+}
+
+/* Catch any remaining external links to Excalidraw properties */
+.excalidraw-wrapper a[href*="libraries.excalidraw.com"],
+.excalidraw-wrapper a[href*="github.com/excalidraw"],
+.excalidraw-wrapper a[href*="discord.gg"],
+.excalidraw-wrapper a[href*="twitter.com/excalidraw"],
+.excalidraw-wrapper a[href*="x.com/excalidraw"],
+.excalidraw-wrapper a[href*="plus.excalidraw.com"],
+.excalidraw-wrapper a[href*="blog.excalidraw.com"] {
+  display: none !important;
+}
