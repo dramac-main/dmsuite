@@ -265,6 +265,7 @@ export const TOOL_CREDIT_MAP: Record<string, string> = {
   "color-palette":         "palette-project",
   "photo-retoucher":       "image-analysis",
   "presentation":          "presentation-design",
+  "reveal-presenter":      "presentation-design",
 
   /* ── Utilities ─── PDF Tools (free — all client-side) ──── */
   "pdf-tools":             "image-search",

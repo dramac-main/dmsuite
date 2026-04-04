@@ -303,3 +303,84 @@ body {
 .excalidraw-wrapper .excalidraw p {
   margin: revert-layer;
 }
+
+/* ============================================================
+   Reveal.js — CSS Isolation
+   ============================================================
+   Same rationale as Excalidraw above: Tailwind v4 preflight
+   resets destroy reveal.js internal UI.  Restore native styles
+   inside the .reveal-presenter-wrapper boundary.
+   ============================================================ */
+
+.reveal-presenter-wrapper .reveal *,
+.reveal-presenter-wrapper .reveal *::before,
+.reveal-presenter-wrapper .reveal *::after {
+  border-width: revert-layer;
+  border-style: revert-layer;
+  border-color: revert-layer;
+}
+
+.reveal-presenter-wrapper .reveal button {
+  background-color: revert-layer;
+  background-image: revert-layer;
+  cursor: revert-layer;
+}
+
+.reveal-presenter-wrapper .reveal svg {
+  display: revert-layer;
+  vertical-align: revert-layer;
+}
+
+.reveal-presenter-wrapper .reveal input,
+.reveal-presenter-wrapper .reveal textarea,
+.reveal-presenter-wrapper .reveal select {
+  border: revert-layer;
+  background-color: revert-layer;
+  color: revert-layer;
+  padding: revert-layer;
+  font-size: revert-layer;
+  line-height: revert-layer;
+}
+
+.reveal-presenter-wrapper .reveal a {
+  color: revert-layer;
+  text-decoration: revert-layer;
+}
+
+.reveal-presenter-wrapper .reveal h1,
+.reveal-presenter-wrapper .reveal h2,
+.reveal-presenter-wrapper .reveal h3,
+.reveal-presenter-wrapper .reveal h4,
+.reveal-presenter-wrapper .reveal h5,
+.reveal-presenter-wrapper .reveal h6 {
+  font-size: revert-layer;
+  font-weight: revert-layer;
+}
+
+.reveal-presenter-wrapper .reveal img {
+  display: revert-layer;
+  max-width: revert-layer;
+  height: revert-layer;
+}
+
+.reveal-presenter-wrapper .reveal ul,
+.reveal-presenter-wrapper .reveal ol {
+  list-style: revert-layer;
+  margin: revert-layer;
+  padding: revert-layer;
+}
+
+.reveal-presenter-wrapper .reveal p {
+  margin: revert-layer;
+}
+
+.reveal-presenter-wrapper .reveal table {
+  border-collapse: revert-layer;
+  border-spacing: revert-layer;
+}
+
+.reveal-presenter-wrapper .reveal th,
+.reveal-presenter-wrapper .reveal td {
+  padding: revert-layer;
+  text-align: revert-layer;
+}

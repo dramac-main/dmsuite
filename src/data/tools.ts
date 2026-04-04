@@ -801,6 +801,21 @@ export const toolCategories: ToolCategory[] = [
         printSizes: ["A4", "letter"],
       },
       {
+        id: "reveal-presenter",
+        name: "Reveal.js Presenter",
+        description:
+          "Reveal.js-powered slide deck editor with 14 themes, 6 transitions, speaker notes, syntax highlighting, math rendering, fullscreen presenter mode, and standalone HTML export",
+        icon: "presentation",
+        status: "ready",
+        tags: ["presentation", "slides", "reveal.js", "keynote", "powerpoint", "speaker"],
+        devStatus: "scaffold",
+        aiProviders: ["claude"],
+        outputs: ["html"],
+        supportsPartEdit: true,
+        printReady: false,
+        printSizes: [],
+      },
+      {
         id: "report-generator",
         name: "Report Generator",
         description:

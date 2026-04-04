@@ -159,6 +159,9 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   // ── AI Flow Builder ──
   "ai-flow-builder": dynamic(() => import("@/components/workspaces/ai-flow-builder/AIFlowBuilderWorkspace")),
 
+  // ── Reveal.js Presenter ──
+  "reveal-presenter": dynamic(() => import("@/components/workspaces/reveal-presenter/RevealPresenterWorkspace")),
+
   // ── AI Chat ──
   "ai-chat": dynamic(() => import("@/components/workspaces/ai-chat/AIChatWorkspace")),
   "ai-chat-v2": dynamic(() => import("@/components/workspaces/ai-chat-v2/AIChatV2Workspace")),
