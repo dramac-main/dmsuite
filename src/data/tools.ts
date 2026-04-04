@@ -13,6 +13,8 @@ export type ToolStatus = "ready" | "beta" | "coming-soon";
 export type AIProvider =
   | "claude"
   | "openai"
+  | "gemini"
+  | "deepseek"
   | "luma"
   | "runway"
   | "elevenlabs"
