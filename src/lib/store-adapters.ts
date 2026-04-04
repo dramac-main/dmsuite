@@ -695,11 +695,33 @@ function getAIChatAdapter(): StoreAdapter {
 // Generic adapter for tools that don't have dedicated stores
 // ---------------------------------------------------------------------------
 
+function getRevealPresenterAdapter(): StoreAdapter {
+  const { useRevealPresenterEditor } = require("@/stores/reveal-presenter-editor");
+  return {
+    getSnapshot: () => ({ form: useRevealPresenterEditor.getState().form }),
+    restoreSnapshot: (data: Record<string, unknown>) => {
+      if (data.form) {
+        useRevealPresenterEditor.getState().setForm(data.form as never);
+      }
+    },
+    resetStore: () => {
+      useRevealPresenterEditor.getState().resetForm();
+      nukePersistStorage("dmsuite-reveal-presenter");
+    },
+    subscribe: (cb: () => void) => useRevealPresenterEditor.subscribe(cb),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Generic adapter for tools that don't have dedicated stores
+// ---------------------------------------------------------------------------
+
 function getGenericAdapter(): StoreAdapter {
   return {
     getSnapshot: () => ({}),
     restoreSnapshot: () => {},
     resetStore: () => {},
+    subscribe: () => () => {},
   };
 }
 
@@ -764,6 +786,8 @@ const ADAPTER_FACTORIES: Record<string, () => StoreAdapter> = {
   "sketch-board": getGenericAdapter,
   // AI Flow Builder
   "ai-flow-builder": getAIFlowBuilderAdapter,
+  // Reveal.js Presenter
+  "reveal-presenter": getRevealPresenterAdapter,
   // AI Chat
   "ai-chat": getAIChatAdapter,
 };
