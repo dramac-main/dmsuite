@@ -220,10 +220,10 @@ export function createAIChatV2Manifest(
     // -----------------------------------------------------------------------
     // executeAction
     // -----------------------------------------------------------------------
-    async executeAction(
+    executeAction(
       actionName: string,
       params: Record<string, unknown>
-    ): Promise<ChikoActionResult> {
+    ): ChikoActionResult {
       try {
         const s = store.getState();
 
