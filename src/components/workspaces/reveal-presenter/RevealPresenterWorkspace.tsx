@@ -1,8 +1,8 @@
-﻿// =============================================================================
-// DMSuite â€” Reveal.js Presenter Workspace
-// Full-featured presentation designer powered by reveal.js (68Kâ˜…, MIT).
+// =============================================================================
+// DMSuite -- Reveal.js Presenter Workspace
+// Full-featured presentation designer powered by reveal.js (68K+, MIT).
 //
-// Originally based on reveal.js â€” MIT License
+// Originally based on reveal.js -- MIT License
 // Copyright (c) 2011-2026 Hakim El Hattab, https://hakim.se
 // See: https://github.com/hakimel/reveal.js/blob/master/LICENSE
 // =============================================================================
@@ -609,7 +609,7 @@ function RevealPreview({
 
   return (
     <div className="reveal-presenter-wrapper h-full w-full relative overflow-hidden bg-gray-950">
-      {/* Theme stylesheet â€” loaded dynamically */}
+      {/* Theme stylesheet -- loaded dynamically */}
       <RevealThemeLoader themeId={form.themeId} />
 
       <div
@@ -640,7 +640,7 @@ function RevealThemeLoader({ themeId }: { themeId: RevealThemeId }) {
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.setAttribute("data-reveal-theme", themeId);
-    // Use the npm package path directly â€” Next.js resolves this
+    // Use the npm package path directly -- Next.js resolves this
     // Fallback to CDN for reliable loading
     link.href = `https://cdn.jsdelivr.net/npm/reveal.js@6/dist/theme/${themeId}.css`;
     document.head.appendChild(link);
