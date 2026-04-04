@@ -185,6 +185,7 @@ const RESTORE_MAP: Record<
   chiko: restoreChiko,
   notifications: () => {}, // Notifications are ephemeral — no server restore
   "export-history": () => {}, // Export history is session-local
+  "sketch-library": () => {}, // Sketch library restored directly in SketchBoardWorkspace
 };
 
 // ---------------------------------------------------------------------------
