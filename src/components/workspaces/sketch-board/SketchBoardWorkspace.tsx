@@ -37,6 +37,7 @@ export default function SketchBoardWorkspace() {
   const dirtyCountRef = useRef(0);
   const hasDispatchedRef = useRef(false);
   const libraryLoadedRef = useRef(false);
+  const isLoadingLibraryRef = useRef(false);
   const [mod, setMod] = useState<ExcalidrawMod | null>(null);
 
   // ── Chiko AI integration ──
@@ -81,6 +82,9 @@ export default function SketchBoardWorkspace() {
   const handleChange = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (elements: readonly any[], appState: Record<string, unknown>) => {
+      // Skip onChange events fired during bulk library injection
+      if (isLoadingLibraryRef.current) return;
+
       dispatchDirty();
 
       // Persist scene (debounced via React batching)
@@ -122,11 +126,16 @@ export default function SketchBoardWorkspace() {
           .then((res) => res.json())
           .then((data) => {
             if (data?.libraryItems?.length) {
-              api.updateLibrary({
-                libraryItems: data.libraryItems,
-                merge: true,
-                openLibraryMenu: false,
-              });
+              isLoadingLibraryRef.current = true;
+              api
+                .updateLibrary({
+                  libraryItems: data.libraryItems,
+                  merge: true,
+                  openLibraryMenu: false,
+                })
+                .finally(() => {
+                  isLoadingLibraryRef.current = false;
+                });
             }
           })
           .catch(() => {
