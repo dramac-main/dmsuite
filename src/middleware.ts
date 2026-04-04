@@ -14,6 +14,6 @@ export const config = {
      * - favicon.ico, sitemap.xml, robots.txt (metadata files)
      * - Public assets in /public folder
      */
-    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|icon-|apple-touch|og-|manifest.json|sw.js|chiko/).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|icon-|apple-touch|og-|manifest.json|sw.js|chiko/|libraries/|templates/).*)",
   ],
 };

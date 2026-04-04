@@ -65,7 +65,8 @@ export type UserDataKey =
   | "chiko"
   | "chat"
   | "notifications"
-  | "export-history";
+  | "export-history"
+  | "sketch-library";
 
 // ---------------------------------------------------------------------------
 // CRUD operations

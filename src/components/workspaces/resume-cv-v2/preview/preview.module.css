@@ -1,0 +1,169 @@
+/* ═══════════════════════════════════════════════════════
+   Resume V2 Preview — Page Rendering CSS Module
+   Adapted from Reactive Resume v5 preview.module.css
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── Page Container ───────────────────────────────── */
+.rv2Page {
+  width: var(--page-width);
+  min-height: var(--page-height, auto);
+  padding: var(--page-margin-y) var(--page-margin-x);
+  color: var(--page-text-color, #000);
+  background-color: var(--page-background-color, #fff);
+  font-family: var(--page-body-font-family, system-ui);
+  font-size: var(--page-body-font-size, 14px);
+  font-weight: var(--page-body-font-weight, 400);
+  line-height: var(--page-body-line-height, 1.5);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 4px 20px rgb(0 0 0 / 0.15);
+}
+
+/* Free-form pages: no fixed height */
+.rv2Page[data-format="free-form"] {
+  min-height: auto;
+  height: auto;
+}
+
+/* ─── Headings ─────────────────────────────────────── */
+.rv2Page h1,
+.rv2Page h2,
+.rv2Page h3,
+.rv2Page h4,
+.rv2Page h5,
+.rv2Page h6 {
+  font-family: var(--page-heading-font-family, inherit);
+  font-weight: var(--page-heading-font-weight-bold, 700);
+  line-height: var(--page-heading-line-height, 1.3);
+}
+
+.rv2Page h1 {
+  font-size: calc(var(--page-heading-font-size, 16px) * 1.5);
+}
+
+.rv2Page h2 {
+  font-size: calc(var(--page-heading-font-size, 16px) * 1.2);
+}
+
+.rv2Page h3 {
+  font-size: var(--page-heading-font-size, 16px);
+}
+
+.rv2Page h4 {
+  font-size: calc(var(--page-heading-font-size, 16px) * 0.9);
+}
+
+/* ─── Links ────────────────────────────────────────── */
+.rv2Page a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  color: inherit;
+}
+
+.rv2Page a:hover {
+  color: var(--page-primary-color, currentColor);
+}
+
+/* ─── Tiptap Content ─────────────────────────────── */
+.rv2Page :global(.rv2-tiptap) p {
+  margin: 0;
+}
+
+.rv2Page :global(.rv2-tiptap) ul {
+  list-style: disc;
+  padding-left: 1.5em;
+  margin: 0.25em 0;
+}
+
+.rv2Page :global(.rv2-tiptap) ol {
+  list-style: decimal;
+  padding-left: 1.5em;
+  margin: 0.25em 0;
+}
+
+.rv2Page :global(.rv2-tiptap) li {
+  margin: 0.1em 0;
+}
+
+.rv2Page :global(.rv2-tiptap) strong {
+  font-weight: var(--page-body-font-weight-bold, 700);
+}
+
+.rv2Page :global(.rv2-tiptap) a {
+  text-decoration: underline;
+}
+
+/* ─── Section Heading (rv2-heading) ─────────────── */
+.rv2Page :global(.rv2-heading) {
+  font-family: var(--page-heading-font-family, inherit);
+  font-size: var(--page-heading-font-size, 16px);
+  font-weight: var(--page-heading-font-weight-bold, 700);
+  line-height: var(--page-heading-line-height, 1.3);
+  color: var(--page-primary-color);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 2px;
+  margin-bottom: 6px;
+}
+
+/* ─── Section Link ────────────────────────────────── */
+.rv2Page :global(.rv2-link) {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ─── Template Variants ──────────────────────────── */
+
+/* Glalie: double-line headings */
+.rv2Page :global(.rv2-template-glalie) :global(.rv2-heading) {
+  border-bottom: 2px double var(--page-primary-color);
+}
+
+/* Kakuna: boxed sections */
+.rv2Page :global(.rv2-template-kakuna) :global(.rv2-heading) {
+  background-color: color-mix(in srgb, var(--page-primary-color) 10%, transparent);
+  padding: 2px 6px;
+  border-bottom: none;
+  border-left: 3px solid var(--page-primary-color);
+}
+
+/* Leafish: rounded elements */
+.rv2Page :global(.rv2-template-leafish) :global(.rv2-heading) {
+  border-bottom: none;
+  border-radius: 4px;
+  background-color: color-mix(in srgb, var(--page-primary-color) 8%, transparent);
+  padding: 2px 8px;
+}
+
+/* Rhyhorn: bold geometric */
+.rv2Page :global(.rv2-template-rhyhorn) :global(.rv2-heading) {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 3px solid var(--page-primary-color);
+  padding-bottom: 3px;
+}
+
+/* ─── Print Styles ─────────────────────────────────── */
+@media print {
+  .rv2Page {
+    box-shadow: none;
+    margin: 0;
+    padding: var(--page-margin-y) var(--page-margin-x);
+    page-break-after: always;
+    break-after: page;
+  }
+}
+
+/* ─── RTL Support ──────────────────────────────────── */
+.rv2Page[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+}
+
+.rv2Page[dir="rtl"] :global(.rv2-tiptap) ul,
+.rv2Page[dir="rtl"] :global(.rv2-tiptap) ol {
+  padding-left: 0;
+  padding-right: 1.5em;
+}

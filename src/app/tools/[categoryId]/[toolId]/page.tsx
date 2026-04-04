@@ -39,6 +39,7 @@ const workspaceComponents: Record<string, React.ComponentType> = {
   "banner-ad": dynamic(() => import("@/components/workspaces/BannerAdWorkspace")),
   "presentation": dynamic(() => import("@/components/workspaces/slidev-presenter/SlidevPresenterWorkspace")),
   "resume-cv": dynamic(() => import("@/components/workspaces/resume-cv/ResumeBuilderWorkspace")),
+  "resume-cv-v2": dynamic(() => import("@/components/workspaces/resume-cv-v2/ResumeCVV2Workspace")),
   "invoice-designer": dynamic(() => import("@/components/workspaces/SalesBookWrappers").then((m) => ({ default: m.InvoiceBookWorkspace }))),
   "email-template": dynamic(() => import("@/components/workspaces/EmailTemplateWorkspace")),
 
@@ -160,6 +161,7 @@ const workspaceComponents: Record<string, React.ComponentType> = {
 
   // ── AI Chat ──
   "ai-chat": dynamic(() => import("@/components/workspaces/ai-chat/AIChatWorkspace")),
+  "ai-chat-v2": dynamic(() => import("@/components/workspaces/ai-chat-v2/AIChatV2Workspace")),
 };
 
 export default function ToolWorkspacePage() {

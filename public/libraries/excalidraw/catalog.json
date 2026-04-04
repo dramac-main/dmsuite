@@ -1,0 +1,366 @@
+{
+  "version": 1,
+  "generated": "2026-04-04T06:36:04.431Z",
+  "categories": [
+    {
+      "id": "shapes-basics",
+      "name": "Shapes & Basics",
+      "description": "Fundamental geometric shapes, polygons, stars, and basic drawing elements",
+      "icon": "shapes",
+      "libraryCount": 5,
+      "totalItems": 59,
+      "libraries": [
+        {
+          "name": "Basic shapes",
+          "itemCount": 32,
+          "downloads": 16060
+        },
+        {
+          "name": "Polygons",
+          "itemCount": 6,
+          "downloads": 5329
+        },
+        {
+          "name": "Stars",
+          "itemCount": 12,
+          "downloads": 2881
+        },
+        {
+          "name": "Hearts",
+          "itemCount": 5,
+          "downloads": 2956
+        },
+        {
+          "name": "Clouds",
+          "itemCount": 4,
+          "downloads": 2804
+        }
+      ]
+    },
+    {
+      "id": "icons-symbols",
+      "name": "Icons & Symbols",
+      "description": "General-purpose icon collections for diagrams and presentations",
+      "icon": "icons",
+      "libraryCount": 4,
+      "totalItems": 135,
+      "libraries": [
+        {
+          "name": "Awesome Icons",
+          "itemCount": 24,
+          "downloads": 36069
+        },
+        {
+          "name": "Icons",
+          "itemCount": 65,
+          "downloads": 26890
+        },
+        {
+          "name": "Artem's icons",
+          "itemCount": 22,
+          "downloads": 11597
+        },
+        {
+          "name": "System Icons",
+          "itemCount": 24,
+          "downloads": 8282
+        }
+      ]
+    },
+    {
+      "id": "ui-wireframing",
+      "name": "UI/UX & Wireframing",
+      "description": "Wireframe kits, UI components, and design system elements",
+      "icon": "layout",
+      "libraryCount": 6,
+      "totalItems": 69,
+      "libraries": [
+        {
+          "name": "Lo-Fi Wireframing Kit",
+          "itemCount": 23,
+          "downloads": 20937
+        },
+        {
+          "name": "Web Kit",
+          "itemCount": 9,
+          "downloads": 14031
+        },
+        {
+          "name": "Universal UI kit",
+          "itemCount": 22,
+          "downloads": 10354
+        },
+        {
+          "name": "Dropdowns",
+          "itemCount": 3,
+          "downloads": 6901
+        },
+        {
+          "name": "Mobile Kit",
+          "itemCount": 3,
+          "downloads": 6054
+        },
+        {
+          "name": "Android",
+          "itemCount": 9,
+          "downloads": 2700
+        }
+      ]
+    },
+    {
+      "id": "software-logos",
+      "name": "Software & Tech Logos",
+      "description": "Technology brand logos, programming language icons, and software tools",
+      "icon": "code",
+      "libraryCount": 6,
+      "totalItems": 109,
+      "libraries": [
+        {
+          "name": "Software Logos",
+          "itemCount": 18,
+          "downloads": 61905
+        },
+        {
+          "name": "IT Logos",
+          "itemCount": 31,
+          "downloads": 13110
+        },
+        {
+          "name": "Some more logos",
+          "itemCount": 8,
+          "downloads": 5506
+        },
+        {
+          "name": "IT Logos (Extra)",
+          "itemCount": 7,
+          "downloads": 4777
+        },
+        {
+          "name": "Microsoft 365 icons",
+          "itemCount": 37,
+          "downloads": 3714
+        },
+        {
+          "name": "Microsoft Apps",
+          "itemCount": 8,
+          "downloads": 2620
+        }
+      ]
+    },
+    {
+      "id": "architecture-diagrams",
+      "name": "Architecture & Diagrams",
+      "description": "Software architecture, system design, UML, and technical diagram components",
+      "icon": "architecture",
+      "libraryCount": 4,
+      "totalItems": 61,
+      "libraries": [
+        {
+          "name": "Systems Design Components",
+          "itemCount": 6,
+          "downloads": 23425
+        },
+        {
+          "name": "Hexagonal Architecture",
+          "itemCount": 27,
+          "downloads": 7582
+        },
+        {
+          "name": "Software Architecture",
+          "itemCount": 7,
+          "downloads": 0
+        },
+        {
+          "name": "Shapes for UML & ER Diagrams",
+          "itemCount": 21,
+          "downloads": 0
+        }
+      ]
+    },
+    {
+      "id": "cloud-infrastructure",
+      "name": "Cloud & Infrastructure",
+      "description": "AWS, Azure, Google Cloud, and other cloud platform service icons",
+      "icon": "cloud",
+      "libraryCount": 5,
+      "totalItems": 244,
+      "libraries": [
+        {
+          "name": "Google Icons",
+          "itemCount": 139,
+          "downloads": 28000
+        },
+        {
+          "name": "Azure Compute",
+          "itemCount": 17,
+          "downloads": 3558
+        },
+        {
+          "name": "Azure General",
+          "itemCount": 19,
+          "downloads": 3051
+        },
+        {
+          "name": "Some common cloud apps",
+          "itemCount": 15,
+          "downloads": 3242
+        },
+        {
+          "name": "Snowflake Iconography",
+          "itemCount": 54,
+          "downloads": 3307
+        }
+      ]
+    },
+    {
+      "id": "networking-hardware",
+      "name": "Networking & Hardware",
+      "description": "Network topology, server racks, computers, and hardware device icons",
+      "icon": "network",
+      "libraryCount": 4,
+      "totalItems": 24,
+      "libraries": [
+        {
+          "name": "Network topology icons",
+          "itemCount": 10,
+          "downloads": 22258
+        },
+        {
+          "name": "Computers",
+          "itemCount": 4,
+          "downloads": 12824
+        },
+        {
+          "name": "Gadgets",
+          "itemCount": 5,
+          "downloads": 6169
+        },
+        {
+          "name": "Network locations",
+          "itemCount": 5,
+          "downloads": 3141
+        }
+      ]
+    },
+    {
+      "id": "data-charts",
+      "name": "Data & Charts",
+      "description": "Data visualizations, charts, graphs, and algorithm/data structure diagrams",
+      "icon": "chart",
+      "libraryCount": 4,
+      "totalItems": 70,
+      "libraries": [
+        {
+          "name": "Data Viz",
+          "itemCount": 32,
+          "downloads": 40627
+        },
+        {
+          "name": "Charts",
+          "itemCount": 4,
+          "downloads": 6873
+        },
+        {
+          "name": "Graphs",
+          "itemCount": 12,
+          "downloads": 6395
+        },
+        {
+          "name": "Algorithms & Data Structures",
+          "itemCount": 22,
+          "downloads": 21828
+        }
+      ]
+    },
+    {
+      "id": "people-characters",
+      "name": "People & Characters",
+      "description": "Stick figures, characters, emojis, and storytelling illustrations",
+      "icon": "people",
+      "libraryCount": 4,
+      "totalItems": 80,
+      "libraries": [
+        {
+          "name": "Stick Figures",
+          "itemCount": 9,
+          "downloads": 58169
+        },
+        {
+          "name": "Storytelling",
+          "itemCount": 16,
+          "downloads": 12880
+        },
+        {
+          "name": "Emojis",
+          "itemCount": 48,
+          "downloads": 10012
+        },
+        {
+          "name": "Robots",
+          "itemCount": 7,
+          "downloads": 7986
+        }
+      ]
+    },
+    {
+      "id": "business-productivity",
+      "name": "Business & Productivity",
+      "description": "Business models, office items, presentations, and productivity templates",
+      "icon": "briefcase",
+      "libraryCount": 5,
+      "totalItems": 42,
+      "libraries": [
+        {
+          "name": "Wardley Maps Symbols",
+          "itemCount": 10,
+          "downloads": 5665
+        },
+        {
+          "name": "Business Model Templates",
+          "itemCount": 2,
+          "downloads": 4317
+        },
+        {
+          "name": "Office Items",
+          "itemCount": 17,
+          "downloads": 3553
+        },
+        {
+          "name": "Presentation Templates",
+          "itemCount": 6,
+          "downloads": 3550
+        },
+        {
+          "name": "Simple Sticky Notes",
+          "itemCount": 7,
+          "downloads": 3049
+        }
+      ]
+    },
+    {
+      "id": "engineering-science",
+      "name": "Engineering & Science",
+      "description": "Electrical schematics, architecture floor plans, math, and media components",
+      "icon": "science",
+      "libraryCount": 3,
+      "totalItems": 72,
+      "libraries": [
+        {
+          "name": "Schematic Symbols",
+          "itemCount": 24,
+          "downloads": 4990
+        },
+        {
+          "name": "Architecture floor plan",
+          "itemCount": 42,
+          "downloads": 4610
+        },
+        {
+          "name": "Medias",
+          "itemCount": 6,
+          "downloads": 4518
+        }
+      ]
+    }
+  ]
+}

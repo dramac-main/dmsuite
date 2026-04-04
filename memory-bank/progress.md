@@ -4,7 +4,24 @@
 
 ---
 
-## Current Work: Resume Template Modernization — COMPLETE ✅
+## Current Work: Sketch Board V3 — Library System + Supabase — COMPLETE ✅
+
+### Session: Categorized Library System + Per-User Supabase Persistence
+
+- [x] Audited all Sketch Board files (workspace, library browser, theme CSS, globals.css isolation)
+- [x] Deleted orphaned _bundled.json (8.2MB)
+- [x] Fixed middleware matcher to exclude /libraries/ and /templates/ from auth (was 307 redirecting static files)
+- [x] Verified all 11 category JSONs + catalog.json accessible (200 status codes)
+- [x] Created migration 006_user_data.sql (user_data KV table with RLS)
+- [x] Added "sketch-library" to UserDataKey in user-data.ts
+- [x] Integrated Supabase into SketchBoardWorkspace.tsx (fetchUserData on mount, debouncedSaveUserData on change)
+- [x] TypeScript: 0 errors in sketch-board/user-data files
+- [x] Dev server tested — page loads correctly (200)
+- [x] Updated memory bank (activeContext.md, systemPatterns.md, progress.md)
+
+---
+
+## Previous Work: Resume Template Modernization — COMPLETE ✅
 
 ### Session: Template Redesign + Renderer Gap Fixes
 

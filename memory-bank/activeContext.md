@@ -1,57 +1,59 @@
 # DMSuite — Active Context
 
 ## Current Focus
-**Phase:** Resume Builder — V3 Enhancement Pass — COMPLETE
+**Phase:** Resume Builder V2 (Reactive Resume port) — SCAFFOLD COMPLETE
 
-### Session: Resume Import System + DOCX Enhancement + Template Expansion
+### Session: Resume CV V2 — Reactive Resume v5 Port
 
-Enhanced the Resume & CV Builder with three major improvements: multi-format import system, enhanced DOCX export, and expanded templates from 13 to 20.
+Ported Reactive Resume v5 (36.1K★, MIT) as a separate tool (`resume-cv-v2`) to sit alongside V1 for comparison.
 
-#### What Changed
-- **NEW: src/lib/resume/import.ts** (~600 lines): Multi-format resume import parser.
-  - 5 supported formats: DMSuite JSON, JSON Resume standard, Reactive Resume, LinkedIn export, plain text
-  - `detectFormat()` auto-detects format from JSON structure
-  - `autoImport()` dispatcher with warnings/format detection
-  - Deep merge helper preserves defaults for missing fields
-  - Email/phone extraction from plain text
-  - Proficiency→level and fluency→level converters
+#### Files Created/Modified
+- **NEW: src/lib/resume-v2/schema.ts** (~310 lines) — Full Zod schema, 13 templates, 11 section types, type exports
+- **NEW: src/lib/resume-v2/hooks.ts** — useCSSVariables, useWebfonts, createId, stripHtml
+- **NEW: src/stores/resume-v2-editor.ts** (~290 lines) — Zustand+Immer+persist+temporal store, 30+ actions
+- **NEW: src/components/workspaces/resume-cv-v2/preview/shared.tsx** — 12 section item renderers, PageSection, PageLevel
+- **NEW: src/components/workspaces/resume-cv-v2/preview/templates.tsx** — 13 Pokemon-named templates + registry
+- **NEW: src/components/workspaces/resume-cv-v2/preview/preview.module.css** — Page CSS with template variants
+- **NEW: src/components/workspaces/resume-cv-v2/preview/ResumePreview.tsx** — Artboard preview
+- **NEW: src/components/workspaces/resume-cv-v2/LeftSidebar.tsx** — 15 section editors, generic ListSectionEditor
+- **NEW: src/components/workspaces/resume-cv-v2/RightSidebar.tsx** — Template/layout/typography/design/page/CSS/notes/export
+- **NEW: src/components/workspaces/resume-cv-v2/ResumeCVV2Workspace.tsx** — 3-panel resizable workspace
+- **MODIFIED: src/app/tools/[categoryId]/[toolId]/page.tsx** — Added resume-cv-v2 dynamic import
+- **MODIFIED: src/data/tools.ts** — Added resume-cv-v2 tool entry (devStatus: "scaffold")
+- **MODIFIED: src/lib/store-adapters.ts** — Added getResumeV2Adapter
+- **MODIFIED: TOOL-STATUS.md** — Added scaffold entry + change log
 
-- **NEW: src/components/workspaces/resume-cv/ImportDialog.tsx** (~280 lines): Import UI dialog.
-  - Drag-and-drop file upload with visual feedback
-  - Format auto-detection badge (shows detected format)
-  - Data preview before importing (name, headline, email, section counts)
-  - Warning display for partial imports
-  - Error state with retry option
-
-- **MODIFIED: src/components/workspaces/resume-cv/ResumeLeftPanel.tsx**: Replaced basic JSON import button with ImportDialog integration. Removed hidden file input; now opens proper import dialog.
-
-- **REWRITTEN: src/lib/resume/docx-builder.ts** (~420 lines): Enhanced DOCX export.
-  - HTML→structured content parser (paragraphs + bullet points)
-  - Proper `<li>` items → numbered bullet points in DOCX
-  - Inline formatting: `<strong>`, `<em>`, `<a>` → bold/italic/hyperlinks
-  - Contact line with clickable mailto/tel/URL hyperlinks
-  - Social profiles row with hyperlinks
-  - Location, grade, fluency, proficiency on subtitle line
-  - Layout-aware section ordering from metadata (flattens pages→main+sidebar)
-  - Defined bullet numbering config (resume-bullets)
-
-- **MODIFIED: src/lib/resume/schema.ts**: Added 7 new template IDs (nidoran, eevee, snorlax, jolteon, clefairy, umbreon, mewtwo) to TEMPLATE_IDS array.
-
-- **MODIFIED: src/lib/resume/templates.ts**: Added 7 new template configs (total: 20):
-  - **Nidoran**: Executive Crimson — rose-700, banner+thick, Merriweather/Roboto
-  - **Eevee**: Adaptive Modern — purple-500, minimal+timeline, Garamond/Nunito
-  - **Snorlax**: Comfortable Classic — slate-500, centered+dotted, sidebarWidth=0, Raleway/Lato
-  - **Jolteon**: Electric Edge — amber-500, split+compact, Space Grotesk/Inter
-  - **Clefairy**: Soft Elegance — rose-600, centered+bars, Crimson Pro/Work Sans
-  - **Umbreon**: Dark Professional — blue-900, classic+double+timeline+sidebarBg, IBM Plex Serif
-  - **Mewtwo**: Monochrome Power — black, banner+thick+grouped+sidebarBg(left), Montserrat/Open Sans
+#### Key Architecture
+- Store uses `s.resume` (NOT `s.data`)
+- Action signatures: `updateBasics(field, value)`, `updatePicture(field, value)`, `updateSummary(field, value)`, `setCustomCSS(enabled, value)`
+- Schema field names: `website: {url, label}`, `period` (not date), `school` (not institution), `degree` (not studyType), `grade` (not score), `description` (not summary), `language` (not name for LanguageItem), `proficiency` (not description for SkillItem), `title` + `issuer` for certs
+- Undo/redo via `useResumeV2Editor.temporal.getState().undo/redo()`
+- react-resizable-panels: `Group` (orientation prop), `Panel`, `Separator`
 
 #### Status
-- 0 TypeScript errors (npx tsc --noEmit clean)
-- TOOL-STATUS.md changelog entry added
-- tools.ts already had devStatus: "complete" — no change needed
+- 0 TypeScript errors in resume-v2 files
+- All integration points wired (page.tsx, tools.ts, store-adapters.ts)
+- devStatus: "scaffold" — not yet reviewed/polished by Drake
 
-### Previous Focus: AI Chat V2 — LibreChat-Faithful UI Overhaul — COMPLETE
+- **NEW: supabase/migrations/006_user_data.sql** — user_data KV table migration:
+  - Composite PK (user_id, data_key), JSONB data column
+  - RLS: auth.uid() = user_id on all operations
+  - updated_at trigger via set_updated_at()
+
+- **CSS Isolation** (~150 lines in globals.css, lines 155-310):
+  - Comprehensive `revert-layer` overrides scoped to `.excalidraw-wrapper .excalidraw`
+  - Covers 20+ element types: *, buttons, SVGs, inputs, color pickers, range, checkbox/radio, anchors, h1-h6, images, lists, hr, labels, fieldsets, dialogs, tables, paragraphs
+  - Prevents Tailwind v4 preflight from breaking Excalidraw's internal UI
+
+- **excalidraw-theme.css** (35 lines) — CSS loaded via direct filesystem path to bypass Turbopack exports map + hides external platform links
+
+#### Status
+- 0 TypeScript errors in sketch-board files (27 pre-existing in other files)
+- All 11 category JSONs + catalog.json verified accessible (200 status codes)
+- Middleware fix deployed — libraries/ and templates/ excluded from auth
+- Dev server tested — page loads correctly (200)
+
+### Previous Focus: Resume Builder — V3 Enhancement Pass — COMPLETE
 
 #### What Changed
 - **AIChatWorkspace.tsx**: Complete rewrite (1055 insertions, 787 deletions). Removed old DMSuite card-in-card patterns.

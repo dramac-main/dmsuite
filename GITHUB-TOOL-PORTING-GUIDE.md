@@ -1,18 +1,18 @@
 # DMSuite — GitHub Open-Source Tool Porting Guide
 
-> **Purpose:** A comprehensive, zero-fault guide for porting any tested open-source tool from GitHub into DMSuite. Covers fresh builds AND full rebuilds of existing tools. Two paths: **Fast Path** (same-stack repos — copy-paste-and-adapt) and **Full Rewrite Path** (different-stack repos). Follow every step — skip nothing.
+> **Purpose:** A comprehensive, zero-fault guide for porting any tested open-source tool from GitHub into DMSuite. **ONE approach: always copy the original tool directly** — install it as an npm package or copy its source files, then wrap it in a thin DMSuite workspace. The source code IS the implementation. You adapt it, you don't reimagine it. Follow every step — skip nothing.
 
 ---
 
 ## Table of Contents
 
 1. [Philosophy & Ground Rules](#1-philosophy--ground-rules)
-2. [Stack Compatibility Check — Which Path to Use](#2-stack-compatibility-check--which-path-to-use)
-3. [FAST PATH — Same-Stack Copy-Paste-and-Adapt](#3-fast-path--same-stack-copy-paste-and-adapt)
+2. [Pre-Port Assessment](#2-pre-port-assessment)
+3. [The Copy-Paste-and-Adapt Process](#3-the-copy-paste-and-adapt-process)
 4. [Branding & Theme Compliance Protocol](#4-branding--theme-compliance-protocol)
 5. [Pre-Port Analysis Checklist](#5-pre-port-analysis-checklist)
 6. [Platform Integration Points (The 8-Point Contract)](#6-platform-integration-points-the-8-point-contract)
-7. [FULL REWRITE PATH — Step-by-Step Build Process](#7-full-rewrite-path--step-by-step-build-process)
+7. [Handling Non-React Source Repos](#7-handling-non-react-source-repos)
 8. [Step-by-Step Rebuild Process — Replace Existing Tool](#8-step-by-step-rebuild-process--replace-existing-tool)
 9. [Dependency Management Rules](#9-dependency-management-rules)
 10. [Styling & Theme Compliance](#10-styling--theme-compliance)
@@ -31,147 +31,144 @@
 ## 1. Philosophy & Ground Rules
 
 ### The Core Principle
-**There are TWO paths, and you MUST pick the right one before writing any code:**
+**ALWAYS copy the tool directly from GitHub. Never rewrite from scratch.**
 
-| Path | When | What You Do |
-|------|------|-------------|
-| **🟢 FAST PATH** | Source repo uses React + Tailwind (+ TypeScript, + Next.js) | **Copy-paste the source files, then surgically adapt** — swap imports, state hooks, and hardcoded colors. The UI stays intact. TypeScript is your checklist. |
-| **🔴 FULL REWRITE PATH** | Source repo uses Vue/Svelte/Angular, CSS modules, styled-components, Redux, or any non-matching stack | **Rewrite from scratch** using DMSuite patterns. The source is a reference only. |
+There is ONE approach — find the best open-source implementation, bring it into DMSuite as-is, and surgically adapt only what's needed. The source code IS the implementation. You are a mechanic, not an architect.
 
-### Why Two Paths?
+| Variant | When | What You Do |
+|---------|------|-------------|
+| **📦 NPM Package** | Source is published on npm (e.g., `@excalidraw/excalidraw`, `@xyflow/react`) | **Install the package, create a thin wrapper workspace** — the package does everything, you just wire DMSuite integration. |
+| **📁 Source Copy** | Source is a full app repo (not a standalone npm package) | **Copy-paste the source files into DMSuite**, then surgically adapt — swap imports, state hooks, and hardcoded colors. The UI stays intact. TypeScript is your checklist. |
 
-**The old approach** (always rewrite from scratch) caused:
+### Why This Works (Proven by Sketch Board)
+
+**The old approach** (rewriting from scratch) caused:
 - AI agents "reimagining" the UI instead of replicating it → missing features, broken states
 - Edge cases dropped because the AI summarized the logic instead of preserving it
 - Hours spent recreating what already works
 
-**The new approach** (copy-paste-and-adapt for same-stack repos) ensures:
+**The copy-directly approach** (proven with Excalidraw → Sketch Board) ensures:
 - ✅ Every feature works because the proven code is preserved
 - ✅ Every edge case is handled because the original developer's work stays intact
-- ✅ AI agent's job is reduced to mechanical find-replace, not creative interpretation
+- ✅ AI agent's job is reduced to mechanical wiring, not creative interpretation
 - ✅ TypeScript compiler catches every remaining incompatibility — zero guessing
+- ✅ The source tool's community maintains and improves it — DMSuite benefits for free
 
-### Ground Rules (Both Paths)
+### Ground Rules
 
 | Rule | Why |
 |------|-----|
+| **NEVER rewrite a tool from scratch** | If a tested open-source version exists, USE IT. Wrapping > rewriting. |
 | **NEVER import the source repo's dependencies blindly** | They may conflict with DMSuite's existing deps. Check first. |
 | **NEVER hardcode colors, fonts, or spacing** | ALL visual tokens must come from DMSuite's Tailwind theme. |
 | **ALWAYS wire the 8 integration points** | These are ALWAYS written fresh — they're DMSuite-specific. |
-| **Test the source repo FIRST** | Run it locally. Use every feature. This is your spec. |
+| **Test the source repo FIRST** | Run it locally or its live demo. Use every feature. This is your spec. |
 | **One tool = one session** | Don't port 3 tools at once. Port one, verify end-to-end, commit. |
-
-### Ground Rules (Fast Path ONLY)
-
-| Rule | Why |
-|------|-----|
 | **Copy ALL component files, not just the "main" one** | Missing a sub-component causes runtime crashes. Copy the entire feature. |
 | **Let `tsc --noEmit` be your TODO list** | Every TypeScript error = one thing to adapt. Fix them ALL. When tsc passes, you're done. |
 | **Keep the UI structure exactly as source** | Don't "improve" the layout or reorganize components. The source UI is proven to work. |
 | **ONLY change what breaks or what violates DMSuite branding** | If it compiles and follows our theme tokens, leave it alone. |
 
-### Ground Rules (Full Rewrite Path ONLY)
-
-| Rule | Why |
-|------|-----|
-| **NEVER copy-paste React components verbatim** | Different styling, state, routing — nothing will resolve. |
-| **ALWAYS start from DMSuite's patterns, not the source** | Build the DMSuite shell first, THEN port the logic. |
-| **Map features, don't map files** | GitHub repos have their own file structure. DMSuite has a strict structure. |
-
 ### What "Porting" Actually Means
 
-#### Fast Path (Same-Stack):
+#### Variant A: NPM Package (Preferred)
+```
+@excalidraw/excalidraw (npm)          DMSuite (Target)
+├── npm install                →      Package in node_modules (UNTOUCHED)
+├── <Excalidraw /> component   →      Wrapped inside thin SketchBoardWorkspace.tsx
+├── Their CSS                  →      Imported + CSS isolation overrides in globals.css
+├── Their API (refs, callbacks)→      Wired to our theme, events, Chiko manifest
+├── Their library system       →      Adapted to our server-side categorized system
+└── Their settings/config      →      Mapped to our workspace props
+```
+
+#### Variant B: Source File Copy
 ```
 GitHub Repo (Source)                  DMSuite (Target)
 ├── Their components          →      COPY into our workspace folder, adapt imports
 ├── Their state (Zustand)     →      KEEP if Zustand, wrap with our persist/immer/temporal
-├── Their state (Context)     →      REWRITE to our Zustand pattern
+├── Their state (Context/etc) →      Convert to our Zustand pattern
 ├── Their Tailwind classes    →      KEEP — but replace any hardcoded colors with our tokens
+├── Their CSS/styles          →      Convert to Tailwind v4 tokens + CSS isolation if needed
 ├── Their core logic/engine   →      COPY as-is (pure functions need no changes)
 ├── Their config/types        →      COPY, rename to our conventions
 └── Their package deps        →      CHECK against our package.json — use ours where overlap exists
 ```
 
-#### Full Rewrite Path (Different Stack):
-```
-GitHub Repo (Reference)              DMSuite (Target)
-├── Their components          →      REWRITE as our workspace component(s)
-├── Their state (Redux/etc)   →      REWRITE as our Zustand store
-├── Their API calls           →      REWRITE as our api/ routes (if needed)
-├── Their CSS/styles          →      REWRITE using our Tailwind v4 tokens
-├── Their core logic/engine   →      COPY into our lib/ modules (THIS is what you actually reuse)
-├── Their config/types        →      ADAPT into our data/ + types/
-└── Their tests               →      REPLACE with our verification protocol
-```
-
-**What you ALWAYS copy verbatim (both paths):**
+**What you ALWAYS copy/preserve:**
+- The tool's core functionality (the ENTIRE library or component tree)
 - Pure computation logic (algorithms, parsers, transformers, math)
 - Data schemas/types (adapted to our naming conventions)
 - Template definitions (converted to our format)
 
-**What you ALWAYS write fresh (both paths):**
+**What you ALWAYS write fresh:**
 - The 8 integration points (store adapter, Chiko manifest, workspace events, etc.)
+- CSS isolation overrides (to protect the tool's UI from Tailwind preflight)
 - These are DMSuite-specific glue code that no source repo will have
 
 ---
 
-## 2. Stack Compatibility Check — Which Path to Use
+## 2. Pre-Port Assessment
 
-**This is the FIRST thing you do. Before any analysis, before any code, classify the source repo.**
+**This is the FIRST thing you do. Before any code, assess the source repo to plan your integration approach.**
 
-### The Decision Matrix
+### Step 1: Find the Best Open-Source Implementation
 
-| Source Repo Uses... | DMSuite Uses... | Match? | Path |
-|---------------------|-----------------|--------|------|
-| React | React 19 | ✅ | Fast Path candidate |
-| Vue / Svelte / Angular / Vanilla | React 19 | ❌ | Full Rewrite |
-| Tailwind CSS (any version) | Tailwind CSS v4 | ✅ | Fast Path candidate |
-| CSS Modules / styled-components / Emotion / SASS | Tailwind CSS v4 | ❌ | Full Rewrite |
-| TypeScript | TypeScript (strict) | ✅ | Fast Path candidate |
-| JavaScript (no types) | TypeScript (strict) | ⚠️ | Fast Path OK — add types during adaptation |
-| Next.js (App Router) | Next.js 16+ (App Router) | ✅ | Fast Path candidate |
-| Next.js (Pages Router) | Next.js 16+ (App Router) | ⚠️ | Fast Path OK — move routing to our [toolId] pattern |
-| Vite / CRA / Remix | Next.js 16+ (App Router) | ⚠️ | Fast Path OK — components are still React, just adapt routing |
-| Zustand | Zustand + immer + persist + zundo | ✅ | Fast Path — wrap with our middleware |
-| Redux / MobX / Recoil / Jotai | Zustand | ❌ for state | Fast Path for UI, but rewrite state management |
-| React Context (simple) | Zustand | ⚠️ | Fast Path — convert Context → Zustand |
-
-### Quick Classification Rule
-
-**Count the ✅ matches above:**
-- **3+ matches (React + Tailwind + TypeScript/JS)** → 🟢 **FAST PATH**
-- **React but NO Tailwind** → ⚠️ **FAST PATH for logic, REWRITE for styling** (still faster than full rewrite)
-- **NOT React** → 🔴 **FULL REWRITE PATH** (Section 7)
-
-### Fast Path Compatibility Scoring
+Before building anything, search GitHub for the best existing tool:
 
 ```
-Score the source repo (check all that apply):
-
-[+3] Uses React (functional components with hooks)          □
-[+2] Uses Tailwind CSS (any version)                        □
-[+2] Uses TypeScript                                        □
-[+1] Uses Next.js                                           □
-[+1] Uses Zustand                                           □
-[+1] Uses similar deps we already have (fabric, pdf-lib)    □
-
-[-5] Uses Vue, Svelte, Angular, or non-React framework      □
-[-3] Uses styled-components, CSS modules, or Emotion         □
-[-2] Uses Redux, MobX, or Recoil                             □
-[-1] Uses JavaScript (no TypeScript)                          □
-
-SCORE: ___
-
-  7+ = 🟢 FAST PATH — copy-paste-and-adapt (Section 3)
-  4-6 = ⚠️ HYBRID — copy logic, partially rewrite UI (use judgment)
-  <4  = 🔴 FULL REWRITE (Section 7)
+□ Search GitHub for: "[tool name] open source" — sort by stars
+□ Check npm for published packages: "npm search [tool name]"
+□ Compare top 3-5 results by: stars, last commit date, feature completeness, license
+□ Prefer: MIT/Apache-2.0 license, active maintenance, published npm package, React-based
+□ AVOID: AGPL/BSL/custom licenses, abandoned repos (>1yr no commits), massive bundle size
 ```
+
+### Step 2: Determine Integration Variant
+
+| If the source is... | Use Variant | Example |
+|---------------------|-------------|---------|
+| Published on npm as a React component | **📦 NPM Package** — install + thin wrapper | `@excalidraw/excalidraw`, `@xyflow/react`, `fabric` |
+| Published on npm as a non-React library | **📦 NPM Package** — install + build React wrapper around its API | `mermaid`, `highlight.js`, `pdfjs-dist` |
+| A full React app on GitHub (not on npm) | **📁 Source Copy** — copy component files, adapt imports | Custom resume builder repos, design tool repos |
+| A full non-React app (Vue/Svelte/Angular) | **📦 NPM Package** — look for the underlying library it uses (most Vue/Svelte tools use a framework-agnostic core) | Vue diagram editor → uses `elkjs` (pure JS) under the hood |
+| Pure vanilla JS / no framework | **📁 Source Copy** — copy the JS engine, build a React wrapper | Canvas libraries, algorithm implementations |
+
+### Step 3: Quick Viability Checklist
+
+```
+□ License is MIT / Apache-2.0 / BSD                          (BLOCKING if not)
+□ No production license enforcement (watermarks, feature gates) (BLOCKING if present)
+□ Works with React 19 (check peer deps)                       (fixable with --legacy-peer-deps)
+□ Bundle size is reasonable (<5MB gzipped for the core)       (warning if larger)
+□ Has TypeScript types (built-in or @types/)                  (nice-to-have, can add .d.ts)
+□ Active maintenance (commits in last 6 months)               (warning if stale)
+□ No hard dependency on a different React framework           (check for Next.js Pages Router, Remix, etc.)
+```
+
+### Key Insight: Every Tool Has a Core Library
+
+**Even non-React tools have a portable core.** The pattern is:
+
+```
+Vue/Svelte App (their repo)           What You Actually Install
+├── Vue components (SKIP)      →      ✗ Don't need these
+├── Svelte templates (SKIP)    →      ✗ Don't need these  
+├── Core JS engine (USE THIS)  →      ✓ npm install their-core-library
+└── API/types (USE THIS)       →      ✓ Import types, build React wrapper
+```
+
+**Real examples from DMSuite:**
+- Sketch Board → installed `@excalidraw/excalidraw` (npm package, React component)
+- AI Flow Builder → installed `@xyflow/react` (npm package, React component)
+- Fabric tools → installed `fabric` (npm package, vanilla JS canvas library)
+- PDF tools → installed `pdf-lib` (npm package, pure JS library)
 
 ---
 
-## 3. FAST PATH — Same-Stack Copy-Paste-and-Adapt
+## 3. The Copy-Paste-and-Adapt Process
 
-> **This is the preferred path when the source repo uses React + Tailwind.** The source code IS the implementation — you are adapting it to run inside DMSuite, not reimagining it. The UI stays intact. TypeScript catches everything that needs changing.
+> **This is THE process for every tool port.** The source code IS the implementation — you are adapting it to run inside DMSuite, not reimagining it. The UI stays intact. TypeScript catches everything that needs changing. If the source is an npm package, you install it and wrap it. If it's source files, you copy them and adapt.
 
 ### The Core Idea
 
@@ -191,8 +188,28 @@ SCORE: ___
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Phase F1: Fetch & Copy Source Files
+### Phase F1: Fetch & Integrate Source
 
+#### Variant A: NPM Package (Install + Wrap)
+```
+Step F1.1  □  Install the package:
+             npm install @scope/package-name --legacy-peer-deps  (if React 18 peer dep)
+Step F1.2  □  Create the workspace wrapper:
+             src/components/workspaces/tool-name/ToolNameWorkspace.tsx
+             - Dynamic import the package (avoid SSR issues):
+               const [mod, setMod] = useState(null);
+               useEffect(() => { import("package-name").then(setMod); }, []);
+             - Render their component with DMSuite theme sync
+             - Wire workspace events, Chiko manifest, persistence
+Step F1.3  □  Handle CSS:
+             - Import their CSS in a local .css file or excalidraw-theme.css pattern
+             - Add CSS isolation overrides in globals.css (Section 16: CSS Isolation)
+             - Tailwind preflight WILL break their UI — protect it
+Step F1.4  □  DO NOT copy: their source components, their build config, their routing
+             (You're using their PACKAGE, not their repo)
+```
+
+#### Variant B: Source File Copy
 ```
 Step F1.1  □  Fetch the source repo (clone or read via GitHub URL)
 Step F1.2  □  Identify ALL component files that make up the tool's UI
@@ -371,17 +388,18 @@ Step F6.4  □  Compare source repo side-by-side with DMSuite version:
              If something is missing or broken, the copy was incomplete — go back to F1.
 ```
 
-### Fast Path Checklist (copy this for each tool)
+### Port Checklist (copy this for each tool)
 
 ```markdown
-## Fast Path Port: [Tool Name] from [Source Repo URL]
+## Tool Port: [Tool Name] from [Source Repo URL]
 
-### Compatibility Score: ___/10
-- [ ] React: YES/NO
-- [ ] Tailwind: YES/NO
+### Source Assessment
+- [ ] Source type: NPM Package / Source Copy
+- [ ] License: MIT / Apache-2.0 / BSD / Other: ___
+- [ ] Package name (if npm): ___
+- [ ] React-based: YES/NO
 - [ ] TypeScript: YES/NO
-- [ ] Next.js: YES/NO
-- [ ] Zustand: YES/NO
+- [ ] Has Tailwind: YES/NO
 
 ### Files Copied
 - [ ] Listed ALL source files needed
@@ -711,175 +729,89 @@ window.dispatchEvent(new CustomEvent("workspace:save"));
 
 ---
 
-## 7. FULL REWRITE PATH — Step-by-Step Build Process
+## 7. Handling Non-React Source Repos
 
-> **Use this section ONLY when the source repo uses a different stack (Vue, Svelte, CSS modules, etc.) and scored <4 on the compatibility check in Section 2.**
+> **Even when the source repo uses Vue, Svelte, Angular, or vanilla JS — you still DON'T rewrite from scratch.** Instead, find the underlying library and install it. Every complex tool has a framework-agnostic core.
 
-Follow these steps IN ORDER for a fresh tool port from GitHub.
-
-### Phase 1: Analysis (Do NOT write code yet)
+### The Strategy: Install the Core, Wrap in React
 
 ```
-Step 1.1  □  Clone the GitHub repo and run it locally
-Step 1.2  □  Use every feature, take screenshots
-Step 1.3  □  Complete the Feature Inventory table (Section 2B)
-Step 1.4  □  Complete the Dependency Audit table (Section 2C)
-Step 1.5  □  Classify into Pattern A/B/C/D (Section 2D)
-Step 1.6  □  Identify the "engine" — the pure logic that does the work
-Step 1.7  □  Identify template data (if any)
-Step 1.8  □  Identify what needs API routes (if any)
+┌─────────────────────────────────────────────────────────────────────┐
+│  1. IDENTIFY the core library the source repo depends on            │
+│  2. INSTALL that library via npm (it's almost always available)     │
+│  3. CREATE a thin React wrapper workspace component                │
+│  4. WIRE the library's API to DMSuite integration points           │
+│  5. ADD CSS isolation to protect the library's UI from Tailwind    │
+│  6. NEVER rewrite the library's logic — use it as-is               │
+│                                                                    │
+│  RULE: If you find yourself writing >500 lines of custom logic,   │
+│  you're doing it wrong. Find a better library.                     │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Phase 2: Engine & Data (Pure logic, no UI)
+### Real Examples from DMSuite
+
+| Source Repo | Framework | What We Actually Used | How |
+|-------------|-----------|----------------------|-----|
+| Excalidraw (React app) | React | `@excalidraw/excalidraw` npm package | Installed, thin wrapper, CSS isolation |
+| ReactFlow (React lib) | React | `@xyflow/react` npm package | Installed, created FlowCanvas + custom nodes |
+| Fabric.js demos | Vanilla JS | `fabric` npm package | Installed, created `use-editor.ts` hook + FabricEditor |
+| PDF.js viewer apps | Various | `pdf-lib` npm package | Installed, used for PDF manipulation |
+
+### Step-by-Step: Non-React Source → DMSuite Tool
 
 ```
-Step 2.1  □  Create src/lib/tool-name/ directory (or single file for simple tools)
-Step 2.2  □  Port the core engine logic (algorithms, parsers, transformers)
-            - Strip all UI/framework code
-            - Strip all styling code
-            - Keep only pure functions
-            - Convert to TypeScript with strict types
-            - Add JSDoc comments for key functions
-Step 2.3  □  Create template data file if needed: src/data/tool-name-templates.ts
-            - Convert source templates to DMSuite format
-            - For Fabric.js tools: JSON template objects with named layers
-            - For form tools: TypeScript config objects
-Step 2.4  □  Create types file if complex: src/types/tool-name.ts
-Step 2.5  □  Run tsc --noEmit — fix ALL type errors before proceeding
+Step 1  □  Clone the source repo and study its package.json
+           - What is the CORE dependency that does the heavy lifting?
+           - Is that core dependency published on npm?
+           - Is it framework-agnostic (no React/Vue/Svelte required)?
+
+Step 2  □  Install the core library:
+           npm install core-library-name
+           npm install @types/core-library-name  (if separate types)
+
+Step 3  □  Create the workspace wrapper:
+           src/components/workspaces/tool-name/ToolNameWorkspace.tsx
+           "use client";
+
+           - Dynamic import the library (avoid SSR):
+             useEffect(() => { import("core-library").then(setLib); }, []);
+           - Initialize the library on a DOM ref (if it renders to canvas/DOM)
+           - Expose the library's API via refs for Chiko integration
+           - Sync DMSuite theme with the library's theme API
+
+Step 4  □  Handle the library's CSS:
+           - If the library has CSS: import it in a local .css wrapper file
+           - Add CSS isolation in globals.css to prevent Tailwind conflicts
+           - Test BOTH dark and light themes
+
+Step 5  □  Copy any supplementary logic from the source repo:
+           - Utility functions, data processing, export helpers
+           - Template definitions, preset configurations
+           - BUT NOT: their components, their state management, their routing
+
+Step 6  □  Wire the 8 DMSuite integration points (Section 6)
+           These are always written fresh — same as any other port.
+
+Step 7  □  Test: tsc --noEmit → npm run build → verify in browser
 ```
 
-### Phase 3: Store (State management)
+### What If There's No Published npm Package?
+
+Rare, but it happens. In this case:
 
 ```
-Step 3.1  □  Create src/stores/tool-name-editor.ts
-            - Use Zustand + persist + immer (+ temporal if undo/redo needed)
-            - Define form/state shape from source tool's data model
-            - Implement setForm(), resetForm(), and all mutation actions
-            - localStorage key: "dmsuite-tool-name" (MUST be unique)
-Step 3.2  □  Run tsc --noEmit — store must compile clean
-```
+1. Check if the repo's core logic is in a separate /lib or /src/lib folder
+   → Copy ONLY those pure JS/TS files into src/lib/tool-name/
+   → Build a React component around that logic
 
-### Phase 4: Workspace Component (UI)
+2. Check if someone has forked/extracted the core into a standalone package
+   → npm search for related packages
 
-```
-Step 4.1  □  Create src/components/workspaces/tool-name/ToolNameWorkspace.tsx
-            - Start with "use client" directive
-            - Import from DMSuite patterns, NOT from source repo
-            - Use DMSuite icons (from @/components/icons)
-            - Use DMSuite design tokens (Tailwind v4 classes only)
-            - NO hardcoded hex colors, NO pixel values
-            - Wire workspace events (dirty, progress, save)
-            - Wire Chiko manifest (useChikoActions hook)
-
-Step 4.2  □  For Pattern A (Fabric.js): Use thin FabricEditor wrapper pattern
-            - Define QUICK_EDIT_FIELDS array
-            - Define FabricEditorConfig
-            - Render <FabricEditor config={} onSave={} chikoManifestFactory={} />
-            - That's it — FabricEditor handles everything else
-
-Step 4.3  □  For Pattern B (Form-based): Use multi-panel layout
-            - Left panel: form inputs (tabs for organization)
-            - Center: live preview (rendered output)
-            - Right: optional layers/properties panel
-            - Use WorkspaceUIKit shared components where applicable
-
-Step 4.4  □  For Pattern C (Utility): Self-contained single-screen
-            - Upload area, settings, process button, results display
-            - Can be simpler — no persistent store needed sometimes
-            - Still dispatch workspace events
-
-Step 4.5  □  For Pattern D (AI Content): Input form → AI processing → output
-            - Form for prompts/settings
-            - Loading state during generation
-            - Output display with editing and export
-
-Step 4.6  □  Run tsc --noEmit — workspace must compile clean
-```
-
-### Phase 5: Integration Wiring
-
-```
-Step 5.1  □  Add dynamic import in page.tsx workspaceComponents Record
-            "your-tool-id": dynamic(() => import("@/components/workspaces/tool-name/ToolNameWorkspace")),
-
-Step 5.2  □  Add store adapter in src/lib/store-adapters.ts
-            - Create adapter function
-            - Add to ADAPTER_FACTORIES record
-            - VERIFY: localStorage key matches store's persist key
-
-Step 5.3  □  Create Chiko manifest in src/lib/chiko/manifests/tool-name.ts
-            - Export factory function
-            - Add to barrel export in manifests/index.ts
-
-Step 5.4  □  Update src/data/tools.ts entry
-            - Set status: "ready"
-            - Set devStatus: "complete"
-            - Add aiProviders, outputs, tags as needed
-
-Step 5.5  □  Update src/data/credit-costs.ts (if AI-powered)
-            - Add operation costs to CREDIT_COSTS
-            - Add tool mapping to TOOL_CREDIT_MAP
-
-Step 5.6  □  Add icon if needed in src/components/icons.tsx
-            - Create SVG component
-            - Register in iconMap
-
-Step 5.7  □  Create API route(s) if needed: src/app/api/chat/tool-name/route.ts
-            - Follow the existing pattern (auth check → credit check → AI call → credit deduct)
-```
-
-### Phase 6: Verification (MANDATORY — DO NOT SKIP)
-
-```
-Step 6.1  □  Run: npx tsc --noEmit
-            - Must exit with 0 errors
-            - If errors exist, fix ALL of them
-
-Step 6.2  □  Run: npm run build
-            - Must complete without errors
-            - Watch for dynamic import resolution errors
-
-Step 6.3  □  Run: npm run dev
-            - Navigate to the tool via dashboard
-            - Verify tool card appears with correct icon, name, status
-            - Click through to workspace — must load without blank screen
-
-Step 6.4  □  Functional testing (compare to source repo screenshots):
-            □  Feature 1 works exactly as in source ↔ DMSuite
-            □  Feature 2 works exactly as in source ↔ DMSuite
-            □  Feature N works exactly as in source ↔ DMSuite
-            □  Export/save works (PDF, PNG, etc.)
-            □  Undo/redo works (if applicable)
-            □  Template switching works (if applicable)
-            □  Mobile responsive (resize browser to 375px width)
-            □  Dark mode looks correct
-            □  Light mode looks correct
-
-Step 6.5  □  Integration testing:
-            □  Project auto-creates on first visit
-            □  Data persists after browser refresh (project system)
-            □  Chiko can read tool state ("what's in the tool?")
-            □  Chiko can execute at least one action
-            □  Credit deduction works (if AI-powered)
-            □  Workspace events fire (check via console: workspace:dirty dispatched)
-
-Step 6.6  □  Edge cases:
-            □  Empty state — tool loads without crashing
-            □  Large input — tool handles heavy data without freeze
-            □  Rapid clicks — no duplicate state mutations
-            □  Switch to another tool and back — state preserved
-```
-
-### Phase 7: Tracker Updates
-```
-Step 7.1  □  Update TOOL-STATUS.md
-            - Move tool to COMPLETE section (or update existing entry)
-            - Add changelog entry with date
-
-Step 7.2  □  Update tools.ts devStatus to "complete"
-
-Step 7.3  □  Commit with descriptive message:
-            "[tool-name] Full build: <what was ported>, <key features>, <source repo>"
+3. As a last resort: copy the source's component files verbatim
+   → Convert their framework-specific code to React
+   → This is STILL copying, not rewriting — preserve their logic exactly
+   → Only change what's needed to make it React + TypeScript
 ```
 
 ---
@@ -950,7 +882,7 @@ Step R2.8  □  Verify clean state:
 
 ### Phase R3: Build New Tool
 
-Follow Phase 2-7 from Section 4 (Step-by-Step Build Process — New Tool) exactly.
+Follow Section 3 (The Copy-Paste-and-Adapt Process) exactly — find the best open-source implementation, install it or copy it, and wire the 8 integration points.
 
 ### Phase R4: Data Migration Consideration
 
@@ -1539,7 +1471,7 @@ npm run lint              # No critical warnings
 
 ### Failure: Third-Party Component UI Invisible / Broken (CSS Isolation)
 
-**This is the #1 Fast Path failure mode.** When embedding a third-party React component (tldraw, xyflow, Fabric.js canvas UI, etc.), its internal styles can be overridden by:
+**This is the #1 failure mode when porting tools.** When embedding a third-party React component (Excalidraw, xyflow, Fabric.js canvas UI, etc.), its internal styles can be overridden by:
 
 1. **Tailwind v4 preflight** — Resets `button { background-color: transparent; color: inherit }` which leaks into the component's container and overrides its own CSS custom properties
 2. **DMSuite dark mode body styles** — `body { color: ... }` cascades into `color: inherit` rules inside the component, causing icons/text that use `currentColor` to become invisible
@@ -1730,15 +1662,17 @@ Increment the "Tools fully complete" count in the header.
 
 ## Quick Reference: The Porting Commandments
 
-1. **Thou shalt CHECK STACK COMPATIBILITY FIRST** — score the repo, pick Fast Path or Full Rewrite
-2. **Thou shalt COPY-PASTE for same-stack repos** — preserve the proven UI, don't reimagine it
-3. **Thou shalt let TypeScript be thy checklist** — `tsc --noEmit` errors = things to fix, nothing else
-4. **Thou shalt NEVER hardcode colors, fonts, or spacing** — all visual tokens from DMSuite's theme
-5. **Thou shalt wire ALL 8 integration points** — these are ALWAYS written fresh
-6. **Thou shalt run `tsc --noEmit` before AND after** — 0 errors is the only acceptable result
-7. **Thou shalt test in BOTH themes** — dark mode is default, but light must work too
-8. **Thou shalt NOT install competing libraries** — use what DMSuite already has
-9. **Thou shalt dispatch workspace events** — progress tracking breaks without them
-10. **Thou shalt verify Chiko access** — every tool must be AI-controllable
-11. **Thou shalt NOT "improve" the source UI** — if it works in the source, preserve it exactly
-12. **Thou shalt commit with a descriptive message and update TOOL-STATUS.md** — the tracker is law
+1. **Thou shalt NEVER rewrite from scratch** — find the best open-source tool, copy it directly, adapt only what's needed
+2. **Thou shalt ALWAYS search GitHub/npm FIRST** — someone has already built it better than you will from scratch
+3. **Thou shalt prefer npm packages over source copies** — install + thin wrapper is the ideal (Excalidraw pattern)
+4. **Thou shalt let TypeScript be thy checklist** — `tsc --noEmit` errors = things to fix, nothing else
+5. **Thou shalt NEVER hardcode colors, fonts, or spacing** — all visual tokens from DMSuite's theme
+6. **Thou shalt wire ALL 8 integration points** — these are ALWAYS written fresh
+7. **Thou shalt run `tsc --noEmit` before AND after** — 0 errors is the only acceptable result
+8. **Thou shalt test in BOTH themes** — dark mode is default, but light must work too
+9. **Thou shalt add CSS isolation for third-party components** — Tailwind preflight WILL break their UI
+10. **Thou shalt NOT install competing libraries** — use what DMSuite already has
+11. **Thou shalt dispatch workspace events** — progress tracking breaks without them
+12. **Thou shalt verify Chiko access** — every tool must be AI-controllable
+13. **Thou shalt NOT "improve" the source UI** — if it works in the source, preserve it exactly
+14. **Thou shalt commit with a descriptive message and update TOOL-STATUS.md** — the tracker is law

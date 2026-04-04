@@ -92,6 +92,27 @@ function getResumeAdapter(): StoreAdapter {
   };
 }
 
+function getResumeV2Adapter(): StoreAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useResumeV2Editor } = require("@/stores/resume-v2-editor");
+  return {
+    getSnapshot: () => {
+      const { data } = useResumeV2Editor.getState();
+      return { data };
+    },
+    restoreSnapshot: (snap) => {
+      if (snap.data) {
+        useResumeV2Editor.getState().initialize(snap.data as never);
+      }
+    },
+    resetStore: () => {
+      useResumeV2Editor.getState().resetResume();
+      nukePersistStorage("dmsuite-resume-v2");
+    },
+    subscribe: (cb) => useResumeV2Editor.subscribe(cb),
+  };
+}
+
 function getSalesBookAdapter(): StoreAdapter {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { useSalesBookEditor } = require("@/stores/sales-book-editor");
@@ -700,6 +721,7 @@ const ADAPTER_FACTORIES: Record<string, () => StoreAdapter> = {
   "credit-note": getInvoiceAdapter,
   "proforma-invoice": getInvoiceAdapter,
   "resume-cv": getResumeAdapter,
+  "resume-cv-v2": getResumeV2Adapter,
   "cover-letter": getCoverLetterAdapter,
   "sales-book": getSalesBookAdapter,
   "business-plan": getBusinessPlanAdapter,

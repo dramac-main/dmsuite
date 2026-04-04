@@ -9,6 +9,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useChikoActions } from "@/hooks/useChikoActions";
 import { createSketchBoardManifest } from "@/lib/chiko/manifests/sketch-board";
+import {
+  fetchUserData,
+  debouncedSaveUserData,
+} from "@/lib/supabase/user-data";
+import LibraryBrowser from "./LibraryBrowser";
 
 // Excalidraw types — imported separately for type-checking
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
@@ -21,12 +26,15 @@ import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
  *   - Workspace events (dirty, progress, save)
  *   - Chiko AI manifest for 20+ actions
  *   - localStorage-based scene persistence
- *   - 1,000+ bundled library items (shapes, icons, diagrams)
+ *   - 965 categorized library items across 11 categories (50 libraries)
+ *   - Server-side library storage — survives cache resets
+ *   - Per-user personal library persistence
  *   - Custom menu (no external Excalidraw platform links)
  */
 
 const PERSISTENCE_KEY = "dmsuite-sketch-board";
-const LIBRARY_URL = "/libraries/excalidraw/_bundled.json";
+const USER_LIBRARY_KEY = "dmsuite-sketch-library-user";
+const CATALOG_URL = "/libraries/excalidraw/catalog.json";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ExcalidrawMod = { Excalidraw: React.ComponentType<any>; MainMenu: any };
@@ -39,6 +47,10 @@ export default function SketchBoardWorkspace() {
   const libraryLoadedRef = useRef(false);
   const readyRef = useRef(false);
   const [mod, setMod] = useState<ExcalidrawMod | null>(null);
+  const [libraryBrowserOpen, setLibraryBrowserOpen] = useState(false);
+  const [loadedCategories, setLoadedCategories] = useState<Set<string>>(
+    new Set()
+  );
 
   // ── Chiko AI integration ──
   useChikoActions(
@@ -150,32 +162,133 @@ export default function SketchBoardWorkspace() {
     []
   );
 
-  // ── Load bundled libraries after API is available ──
+  // ── Load default library categories on mount ──
+  // Loads the 3 most popular categories automatically (People, Icons, Shapes).
+  // User can load more via the Library Browser panel.
   useEffect(() => {
     const api = apiRef.current;
     if (!mod || !api || libraryLoadedRef.current) return;
     libraryLoadedRef.current = true;
 
-    // Delay library injection to avoid colliding with initial render
-    const timer = setTimeout(() => {
-      fetch(LIBRARY_URL)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data?.libraryItems?.length && apiRef.current) {
+    const DEFAULT_CATEGORIES = [
+      "people-characters",
+      "icons-symbols",
+      "shapes-basics",
+    ];
+
+    const timer = setTimeout(async () => {
+      const loaded = new Set<string>();
+
+      // First, restore user personal library items.
+      // Priority: Supabase (durable) > localStorage (fallback).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let userItems: any[] = [];
+
+      try {
+        const remote = await fetchUserData("sketch-library");
+        if (remote && Array.isArray(remote.items) && remote.items.length > 0) {
+          userItems = remote.items;
+          // Sync remote → localStorage for offline access
+          localStorage.setItem(USER_LIBRARY_KEY, JSON.stringify(userItems));
+        }
+      } catch {
+        // Supabase unavailable — fall through to localStorage
+      }
+
+      if (userItems.length === 0) {
+        try {
+          const userLib = localStorage.getItem(USER_LIBRARY_KEY);
+          if (userLib) {
+            const parsed = JSON.parse(userLib);
+            if (Array.isArray(parsed)) userItems = parsed;
+          }
+        } catch {
+          // Corrupted user library — skip
+        }
+      }
+
+      if (userItems.length > 0 && apiRef.current) {
+        apiRef.current.updateLibrary({
+          libraryItems: userItems,
+          merge: true,
+          openLibraryMenu: false,
+        });
+      }
+
+      // Load default platform categories
+      for (const catId of DEFAULT_CATEGORIES) {
+        try {
+          const res = await fetch(
+            `/libraries/excalidraw/categories/${catId}.json`
+          );
+          const bundle = await res.json();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const allItems = bundle.libraries.flatMap((lib: any) => lib.items);
+
+          if (allItems.length > 0 && apiRef.current) {
             apiRef.current.updateLibrary({
-              libraryItems: data.libraryItems,
+              libraryItems: allItems,
               merge: true,
               openLibraryMenu: false,
             });
+            loaded.add(catId);
           }
-        })
-        .catch(() => {
-          // Library load failed — non-critical, user can still draw
-        });
+        } catch {
+          // Category load failed — non-critical
+        }
+      }
+
+      setLoadedCategories(loaded);
     }, 1000);
 
     return () => clearTimeout(timer);
   }, [mod]); // Run when Excalidraw module loads
+
+  // ── Library browser: inject items from a category ──
+  const handleLoadCategory = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (categoryId: string, items: any[]) => {
+      if (!apiRef.current || items.length === 0) return;
+
+      apiRef.current.updateLibrary({
+        libraryItems: items,
+        merge: true,
+        openLibraryMenu: false,
+      });
+
+      setLoadedCategories((prev) => new Set([...prev, categoryId]));
+    },
+    []
+  );
+
+  // ── Persist user library changes ──
+  // When user adds/removes items in the Excalidraw library UI,
+  // persist their personal items to localStorage + Supabase.
+  const handleLibraryChange = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (libraryItems: any[]) => {
+      // Only persist items that don't come from platform libraries
+      // (platform items have "published" status and known IDs).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const userItems = libraryItems.filter(
+        (item: any) => item.status === "unpublished"
+      );
+
+      try {
+        if (userItems.length > 0) {
+          localStorage.setItem(USER_LIBRARY_KEY, JSON.stringify(userItems));
+        } else {
+          localStorage.removeItem(USER_LIBRARY_KEY);
+        }
+      } catch {
+        // localStorage full — silently skip
+      }
+
+      // Debounced save to Supabase (3s batching)
+      debouncedSaveUserData("sketch-library", { items: userItems });
+    },
+    []
+  );
 
   // ── Loading state ──
   if (!mod) {
@@ -201,6 +314,7 @@ export default function SketchBoardWorkspace() {
         initialData={initialData}
         excalidrawAPI={handleExcalidrawAPI}
         onChange={handleChange}
+        onLibraryChange={handleLibraryChange}
         name="DMSuite Sketch Board"
         autoFocus
         UIOptions={{
@@ -218,8 +332,41 @@ export default function SketchBoardWorkspace() {
           <MainMenu.DefaultItems.ClearCanvas />
           <MainMenu.DefaultItems.ChangeCanvasBackground />
           <MainMenu.DefaultItems.Help />
+          <MainMenu.Separator />
+          <MainMenu.Item
+            onSelect={() => setLibraryBrowserOpen(true)}
+            icon={
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 20, height: 20 }}>
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+              </svg>
+            }
+          >
+            Browse Libraries
+          </MainMenu.Item>
         </MainMenu>
       </Excalidraw>
+
+      {/* Library Browser Panel — floating side panel */}
+      <LibraryBrowser
+        open={libraryBrowserOpen}
+        onClose={() => setLibraryBrowserOpen(false)}
+        onLoadCategory={handleLoadCategory}
+        loadedCategories={loadedCategories}
+      />
+
+      {/* Floating library button — always visible */}
+      {!libraryBrowserOpen && (
+        <button
+          onClick={() => setLibraryBrowserOpen(true)}
+          className="absolute bottom-4 right-4 z-40 flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 shadow-lg transition-all hover:bg-gray-50 hover:shadow-xl dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-750"
+          title="Browse 950+ library items across 11 categories"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+          </svg>
+          Libraries
+        </button>
+      )}
     </div>
   );
 }

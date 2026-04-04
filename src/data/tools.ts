@@ -1223,6 +1223,19 @@ export const toolCategories: ToolCategory[] = [
         supportsPartEdit: true,
       },
       {
+        id: "resume-cv-v2",
+        name: "Resume Builder V2 (Reactive)",
+        description:
+          "Advanced resume builder with 13 templates, 3-panel editor, zoom/pan artboard, and CSS variable theming — ported from Reactive Resume",
+        icon: "user",
+        status: "ready",
+        devStatus: "scaffold",
+        tags: ["resume", "CV", "career", "ATS", "reactive resume"],
+        aiProviders: ["claude"],
+        outputs: ["pdf", "json"],
+        supportsPartEdit: true,
+      },
+      {
         id: "cover-letter",
         name: "Cover Letter Writer",
         description:
@@ -2445,6 +2458,18 @@ export const toolCategories: ToolCategory[] = [
         devStatus: "complete",
         tags: ["AI", "chat", "assistant", "brainstorm", "Claude", "GPT-4o", "multi-model"],
         aiProviders: ["claude", "openai"],
+        outputs: ["json", "markdown", "text"],
+      },
+      {
+        id: "ai-chat-v2",
+        name: "AI Chat V2 (Lobe)",
+        description:
+          "Lobe Chat–inspired multi-model AI chat — session groups, topic threading, agent market, 3-panel layout, and rich message actions",
+        icon: "messageCircle",
+        status: "ready",
+        devStatus: "complete",
+        tags: ["AI", "chat", "Lobe", "multi-model", "agents", "topics", "sessions"],
+        aiProviders: ["claude", "openai", "gemini", "deepseek"],
         outputs: ["json", "markdown", "text"],
       },
       {

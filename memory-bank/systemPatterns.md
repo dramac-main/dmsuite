@@ -148,8 +148,10 @@ Table: user_data
   user_id (uuid FK), data_key (text), data (JSONB), updated_at
   Composite PK: (user_id, data_key)
   RLS: auth.uid() = user_id
+  Migration: 006_user_data.sql
 
-Data Keys: analytics, preferences, advanced-settings, business-memory, chiko, chat, notifications, export-history
+Data Keys: analytics, preferences, advanced-settings, business-memory, chiko, chat,
+           notifications, export-history, sketch-library
 
 Sync Flow (on mount):
   1. fetchAllUserData() — bulk load all user data keys from Supabase
@@ -158,6 +160,7 @@ Sync Flow (on mount):
      - business-memory: newer updatedAt wins
      - chat: merge conversations by ID (server + local-only)
      - preferences/advanced-settings/chiko: server wins
+     - sketch-library: server wins (items array), synced to localStorage for offline
   3. isRestoringRef prevents save-back loops during restore
 
 Sync Flow (on change):
@@ -168,6 +171,49 @@ Sync Flow (on change):
 
 Service: src/lib/supabase/user-data.ts
 Hook: src/hooks/useUserDataSync.ts (mounted in ClientShell.tsx)
+```
+
+### 2f. Sketch Board Library Architecture
+```
+Categorized Library System (965 items across 11 categories):
+  public/libraries/excalidraw/
+    ├── catalog.json — manifest (categories, item counts, library metadata)
+    └── categories/
+        ├── shapes-basics.json
+        ├── icons-symbols.json
+        ├── people-characters.json (default)
+        ├── ui-wireframing.json
+        ├── software-logos.json
+        ├── architecture-diagrams.json
+        ├── cloud-infrastructure.json
+        ├── networking-hardware.json
+        ├── data-charts.json
+        ├── business-productivity.json
+        └── engineering-science.json
+
+Loading Strategy:
+  ├── 3 default categories auto-loaded on mount (people, icons, shapes)
+  ├── Remaining 8 categories loaded on-demand via LibraryBrowser panel
+  ├── "Load All" button for bulk loading all categories
+  └── loadedCategories state tracked via Set<string>
+
+User Library Persistence:
+  ├── User-created items (status === "unpublished") persisted
+  ├── Primary: Supabase user_data["sketch-library"].items (durable)
+  ├── Fallback: localStorage["dmsuite-sketch-library-user"]
+  ├── On mount: Supabase first → sync to localStorage → fallback to localStorage
+  ├── On change: localStorage (immediate) + debouncedSaveUserData (3s batching)
+  └── Platform library items NOT persisted (re-injected from category JSONs on mount)
+
+CSS Isolation:
+  ├── ~150 lines of revert-layer overrides in globals.css
+  ├── Scoped to .excalidraw-wrapper .excalidraw (20+ element selectors)
+  ├── Prevents Tailwind v4 preflight from breaking Excalidraw UI
+  └── excalidraw-theme.css: direct filesystem CSS import + hides external links
+
+Middleware Fix:
+  ├── /libraries/ and /templates/ excluded from auth middleware matcher
+  └── Without this, static JSON files get 307 redirected through auth flow
 ```
 
 ### 3. Client Component Strategy
